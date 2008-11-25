@@ -1,3 +1,14 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2008, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |                                         **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+// $Id: OpenHashMap.scala 16055 2008-09-08 12:42:50Z lorch $
+
+
 package scala.collection.mutable;
 
 object OpenHashMap{

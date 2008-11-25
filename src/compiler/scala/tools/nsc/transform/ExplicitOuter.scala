@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: ExplicitOuter.scala 15029 2008-05-14 16:50:54Z odersky $
+// $Id: ExplicitOuter.scala 16487 2008-11-04 00:42:23Z DRMacIver $
 
 package scala.tools.nsc.transform
 
@@ -415,24 +415,10 @@ abstract class ExplicitOuter extends InfoTransform with TransMatcher with Patter
             q
           } else null
 
-		  /*
-          cases match { 
-            //if ((cases.length > 1) && ...(cases(0)))
-            //can't use treeInfo.isDefaultCase, because that diagnoses a Bind
-            case CaseDef(Ident(nme.WILDCARD), EmptyTree, _)::xs if !xs.isEmpty => 
-              // a hack to detect when explicit outer does not work correctly
-              // still needed?
-              assert(false,"transforming too much, " + tid)
-			  // no!
-            case _ =>
-          }
-		  */
-            
-          var nselector = transform(selector)
-          //assert(nselector.tpe =:= selector.tpe)
-          //val ncases = transformCaseDefs(cases)
 
-          def makeGuardDef(vs:SymList, guard:Tree) = {
+          var nselector = transform(selector)
+
+          def makeGuardDef(vs:List[Symbol], guard:Tree) = {
             import symtab.Flags._
             val gdname = cunit.fresh.newName(guard.pos, "gd")
             val fmls = new ListBuffer[Type]
@@ -482,34 +468,16 @@ abstract class ExplicitOuter extends InfoTransform with TransMatcher with Patter
           }
 
           ExplicitOuter.this.resultType = tree.tpe
-          //Console.println("TransMatcher currentOwner ="+currentOwner+")")
-          //Console.println("TransMatcher selector.tpe ="+selector.tpe+")")
-          //Console.println("TransMatcher resultType ="+resultType+")")
 
-          //println("handle pattern = "+nselector+"/"+ncases.toList+"/"+currentOwner+"/"+tree.tpe)
-          val t_untyped = handlePattern(nselector, ncases.toList, checkExhaustive, currentOwner, transform)
-          //println("t_untyped = "+t_untyped)
-	  try {
-            //Console.println("t_untyped "+t_untyped.toString())
-            val t = atPos(tree.pos) { localTyper.typed(t_untyped, resultType) }
-            //println("t_typed = "+t)
+          val t = atPos(tree.pos) { 
+            val t_untyped = handlePattern(nselector, ncases.toList, checkExhaustive, currentOwner, transform)(localTyper)
+            localTyper.typed(t_untyped, resultType) 
+          }
 
-            //t = transform(t)
-            //val t         = atPos(tree.pos) { typed(t_untyped, resultType) }
-            //val t         = atPos(tree.pos) { typed(t_untyped) }
-            //Console.println("t typed "+t.toString())
-            if (settings.debug.value)
-              Console.println("finished translation of " + tid)
+          if (settings.debug.value)
+            Console.println("finished translation of " + tid)
 
-            if(nguard.isEmpty) {t} else Block(nguard.toList, t) setType t.tpe
-	  } catch {
-	    case e => 
-	      e.printStackTrace()
-	      //treeBrowser.browse(Seq.single(unit).elements)
-	      Console.println("[died while typechecking the translated pattern match:]")
-	      Console.println(t_untyped)
-	    null
-	  }
+          if(nguard.isEmpty) {t} else Block(nguard.toList, t) setType t.tpe
         case _ =>
           val x = super.transform(tree)
 
@@ -523,5 +491,12 @@ abstract class ExplicitOuter extends InfoTransform with TransMatcher with Patter
       cunit = unit
       atPhase(phase.next) { super.transformUnit(unit) }
     }
+  }
+
+  override def newPhase(prev: scala.tools.nsc.Phase): StdPhase =
+    new Phase(prev)
+
+  class Phase(prev: scala.tools.nsc.Phase) extends super.Phase(prev) {
+    override val checkable = false
   }
 }

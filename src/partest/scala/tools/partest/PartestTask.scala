@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: PartestTask.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: PartestTask.scala 16512 2008-11-06 17:28:08Z dragos $
 
 package scala.tools.partest
 
@@ -31,6 +31,9 @@ class PartestTask extends Task {
 
   def addConfiguredRunTests(input: FileSet): Unit =
     runFiles = Some(input)
+
+  def addConfiguredJvm5Tests(input: FileSet): Unit =
+    jvm5Files = Some(input)
 
   def addConfiguredResidentTests(input: FileSet): Unit =
     residentFiles = Some(input)
@@ -86,6 +89,7 @@ class PartestTask extends Task {
   private var pos5Files: Option[FileSet] = None
   private var negFiles: Option[FileSet] = None
   private var runFiles: Option[FileSet] = None
+  private var jvm5Files: Option[FileSet] = None
   private var residentFiles: Option[FileSet] = None
   private var scriptFiles: Option[FileSet] = None
   private var shootoutFiles: Option[FileSet] = None
@@ -115,7 +119,7 @@ class PartestTask extends Task {
 
   private def getPos5Files: Array[File] =
     getFilesAndDirs(pos5Files)
-
+  
   private def getNegFiles: Array[File] =
     if (!negFiles.isEmpty) {
       val files = negFiles.get
@@ -131,6 +135,9 @@ class PartestTask extends Task {
     }
     else
       Array()
+  
+  private def getJvm5Files: Array[File] =
+    getFilesAndDirs(jvm5Files)
   
   private def getResidentFiles: Array[File] =
     if (!residentFiles.isEmpty) {
@@ -165,7 +172,7 @@ class PartestTask extends Task {
       (classpath.get.list map { fs => new File(fs) }) find { f =>
         f.getName match {
           case "scala-library.jar" => true
-          case "classes" if (f.getParentFile.getName == "library") => true
+          case "library" if (f.getParentFile.getName == "classes") => true
           case _ => false
         }
       }
@@ -241,6 +248,13 @@ class PartestTask extends Task {
     if (getRunFiles.size > 0) {
       log("Compiling and running files")
       val (successes, failures) = runTestsForFiles(getRunFiles, "run")
+      allSucesses += successes
+      allFailures += failures
+    }
+
+    if (getJvm5Files.size > 0) {
+      log("Compiling and running files")
+      val (successes, failures) = runTestsForFiles(getJvm5Files, "jvm5")
       allSucesses += successes
       allFailures += failures
     }

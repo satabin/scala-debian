@@ -3,7 +3,7 @@
  * @author  Iulian Dragos
  */
 
-// $Id: DeadCodeElimination.scala 16459 2008-10-31 11:58:07Z cunei $
+// $Id: DeadCodeElimination.scala 16438 2008-10-30 13:23:19Z dragos $
 
 package scala.tools.nsc.backend.opt
 

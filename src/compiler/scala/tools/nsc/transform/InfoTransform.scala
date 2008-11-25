@@ -2,7 +2,7 @@
  * Copyright 2005-2006 LAMP/EPFL
  * @author
  */
-// $Id: InfoTransform.scala 15298 2008-06-09 13:32:38Z rytz $
+// $Id: InfoTransform.scala 16315 2008-10-22 12:49:56Z rytz $
 
 package scala.tools.nsc.transform
 

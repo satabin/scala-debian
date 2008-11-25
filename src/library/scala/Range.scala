@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Range.scala 16002 2008-09-03 10:02:27Z phaller $
+// $Id: Range.scala 15954 2008-08-28 16:37:38Z phaller $
 
 
 package scala

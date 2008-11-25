@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Regex.scala 15612 2008-07-28 10:00:31Z odersky $
+// $Id: Regex.scala 16090 2008-09-11 10:39:02Z stepancheg $
 
 
 package scala.util.matching
@@ -15,6 +15,12 @@ import java.util.regex.{Pattern, Matcher}
 
 /** This class provides methods for creating and using regular expressions.
  *  It is based on the regular expressions of the JDK since 1.4.
+ *
+ *  <p>
+ *  You can use special pattern syntax construct <code>(?idmsux-idmsux)</code> to switch
+ *  various regex compilation options like <code>CASE_INSENSITIVE</code> or <code>UNICODE_CASE</code>.
+ *  See <code>java.util.regex.Pattern</code> javadoc for details.
+ *  </p>
  *
  *  @author  Thibaud Hottelier
  *  @author  Philipp Haller

@@ -3,7 +3,7 @@
  * @author  Martin Odersky
  */
 
-// $Id: GenICode.scala 16182 2008-10-01 07:02:18Z rytz $
+// $Id: GenICode.scala 16570 2008-11-18 11:20:05Z dragos $
 
 package scala.tools.nsc.backend.icode
 
@@ -1036,9 +1036,7 @@ abstract class GenICode extends SubComponent  {
             ctx.bb.emit(CALL_PRIMITIVE(Conversion(from, to)), pos);
         }
       } else if (from == SCALA_ALL) {
-        ctx.bb.emit(DROP(from))
-        ctx.bb.emit(getZeroOf(ctx.method.returnType))
-        ctx.bb.emit(RETURN(ctx.method.returnType))
+        ctx.bb.emit(THROW())
         ctx.bb.enterIgnoreMode
       } else if (from == SCALA_ALLREF) {
         ctx.bb.emit(DROP(from))

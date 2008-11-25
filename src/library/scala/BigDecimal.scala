@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: BigDecimal.scala 16019 2008-09-04 14:13:16Z rytz $
+// $Id: BigDecimal.scala 15937 2008-08-26 13:48:19Z michelou $
 
 package scala
 

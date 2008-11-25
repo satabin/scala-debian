@@ -3,7 +3,7 @@
  * @author Philipp Haller
  */
 
-// $Id: ReflectiveRunner.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: ReflectiveRunner.scala 16332 2008-10-24 18:39:21Z phaller $
 
 package scala.tools.partest.nest
 

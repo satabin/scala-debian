@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: FastScalac.scala 15995 2008-09-02 09:58:08Z rytz $
+// $Id: FastScalac.scala 16244 2008-10-10 16:54:02Z cunei $
 
 package scala.tools.ant
 
@@ -49,11 +49,7 @@ class FastScalac extends Scalac {
    *  @param input The value for <code>server</code>.
    */
   def setServer(input: String): Unit = {
-    def isHostNameValid(host: String): Boolean =
-      try { val _ = java.net.InetAddress.getByName(host); true }
-      catch { case _ => false }
-    if (isHostNameValid(input)) serverAddr = Some(input)
-    else error("Unknown server '" + input + "'")
+    serverAddr = Some(input)
   }
 
   /** Sets the <code>shutdown</code> attribute. Used by Ant.

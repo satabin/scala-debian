@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Seq.scala 16060 2008-09-08 13:09:30Z washburn $
+// $Id: Seq.scala 16059 2008-09-08 13:07:31Z washburn $
 
 
 package scala

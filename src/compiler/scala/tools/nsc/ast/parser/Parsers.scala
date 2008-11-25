@@ -2,13 +2,14 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Parsers.scala 15798 2008-08-15 16:27:10Z odersky $
+// $Id: Parsers.scala 16598 2008-11-22 22:35:23Z washburn $
 //todo: allow infix type patterns
 
 
 package scala.tools.nsc.ast.parser
 
-import scala.tools.nsc.util.{ListBuffer, Position, OffsetPosition, NoPosition, BatchSourceFile}
+import scala.collection.mutable.ListBuffer
+import scala.tools.nsc.util.{Position, OffsetPosition, NoPosition, BatchSourceFile}
 import symtab.Flags
 import Tokens._
 
@@ -1056,7 +1057,9 @@ trait Parsers extends NewScanners with MarkupParsers {
               t = (t /: annotations(false)) (makeAnnotated)
             } else {
               t = atPos(pos) { 
-                val tpt = if (location != Local) compoundType(false) else typ()
+                val tpt = 
+                  if (location != Local) infixType(false, InfixMode.FirstOp) 
+                  else typ()
                 if (isWildcard(t))
                   (placeholderParams: @unchecked) match {
                     case (vd @ ValDef(mods, name, _, _)) :: rest => 
@@ -1703,6 +1706,9 @@ trait Parsers extends NewScanners with MarkupParsers {
       val vds = new ListBuffer[List[ValDef]]
       val pos = inCurrentPos
       newLineOptWhenFollowedBy(LPAREN)
+      if (ofCaseClass && inToken != LPAREN)
+        deprecationWarning(in.currentPos, "case classes without a parameter list have been deprecated;\n"+
+                           "use either case objects or case classes with `()' as parameter list.")
       while (implicitmod == 0 && inToken == LPAREN) {
         inNextToken
         vds += paramClause()
@@ -2268,7 +2274,7 @@ trait Parsers extends NewScanners with MarkupParsers {
     def templateOpt(mods: Modifiers, name: Name, constrMods: Modifiers, vparamss: List[List[ValDef]]): Template = {
       val pos = inCurrentPos;
       val (parents0, argss, self, body) = 
-        if (inToken == EXTENDS || settings.Xexperimental.value && (mods hasFlag TRAIT) && inToken == SUBTYPE) {
+        if (inToken == EXTENDS || settings.Xexperimental.value && (mods hasFlag Flags.TRAIT) && inToken == SUBTYPE) {
           inNextToken
           template(mods hasFlag Flags.TRAIT)
         } else {
@@ -2497,7 +2503,7 @@ trait Parsers extends NewScanners with MarkupParsers {
 
     /** CompilationUnit ::= [package QualId semi] TopStatSeq 
      */
-    def compilationUnit(): Tree = {
+    def compilationUnit(): Tree = checkNoEscapingPlaceholders {
       var pos = inCurrentPos;
       {
         val ts = new ListBuffer[Tree]
@@ -2522,8 +2528,6 @@ trait Parsers extends NewScanners with MarkupParsers {
         } else {
           ts ++= topStatSeq()
         }
-        assert(placeholderParams.isEmpty)
-        assert(placeholderTypes.isEmpty)
         val stats = ts.toList
         val usePos = if (stats.isEmpty || stats.head.pos == NoPosition) i2p(pos) else stats.head.pos
         atPos(usePos) { stats match {        

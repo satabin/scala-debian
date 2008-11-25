@@ -2,7 +2,7 @@
  * Copyright 2005-2008 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Definitions.scala 16401 2008-10-28 17:58:19Z dragos $
+// $Id: Definitions.scala 16328 2008-10-24 13:53:16Z dragos $
 
 package scala.tools.nsc.symtab
 
@@ -44,6 +44,7 @@ trait Definitions {
     var NullClass: Symbol = _
     var NothingClass: Symbol = _
     var SingletonClass: Symbol = _
+    lazy val uncheckedStableClass = getClass("scala.uncheckedStable") 
 
     lazy val ClassClass: Symbol = getClass(sn.Class)
     lazy val StringClass: Symbol = getClass(sn.String)
@@ -659,9 +660,9 @@ trait Definitions {
       RootClass.info.decls.enter(RootPackage)
 
       AnyClass = newClass(ScalaPackageClass, nme.Any, List()).setFlag(ABSTRACT)
-      val anyparam = List(AnyClass.typeConstructor)
+      val any = List(AnyClass.typeConstructor)
 
-      AnyValClass = newClass(ScalaPackageClass, nme.AnyVal, anyparam)
+      AnyValClass = newClass(ScalaPackageClass, nme.AnyVal, any)
         .setFlag(FINAL | SEALED)
       AnyRefClass =
         newAlias(ScalaPackageClass, nme.AnyRef, ObjectClass.typeConstructor)
@@ -669,10 +670,10 @@ trait Definitions {
       NullClass = newClass(ScalaPackageClass, nme.Null, anyrefparam)
         .setFlag(ABSTRACT | TRAIT | FINAL)
 
-      NothingClass = newClass(ScalaPackageClass, nme.Nothing, anyparam)
+      NothingClass = newClass(ScalaPackageClass, nme.Nothing, any)
         .setFlag(ABSTRACT | TRAIT | FINAL)
 
-      SingletonClass = newClass(ScalaPackageClass, nme.Singleton, anyparam)
+      SingletonClass = newClass(ScalaPackageClass, nme.Singleton, any)
         .setFlag(ABSTRACT | TRAIT | FINAL)
 
       UnitClass =
@@ -725,9 +726,9 @@ trait Definitions {
       val booltype = BooleanClass.typeConstructor
 
       // members of class scala.Any
-      Any_== = newMethod(AnyClass, nme.EQ, anyparam, booltype) setFlag FINAL
-      Any_!= = newMethod(AnyClass, nme.NE, anyparam, booltype) setFlag FINAL
-      Any_equals = newMethod(AnyClass, nme.equals_, anyparam, booltype)
+      Any_== = newMethod(AnyClass, nme.EQ, any, booltype) setFlag FINAL
+      Any_!= = newMethod(AnyClass, nme.NE, any, booltype) setFlag FINAL
+      Any_equals = newMethod(AnyClass, nme.equals_, any, booltype)
       Any_hashCode = newMethod(
         AnyClass, nme.hashCode_, List(), IntClass.typeConstructor)
       Any_toString = newMethod(
@@ -758,7 +759,7 @@ trait Definitions {
         ObjectClass, "$asInstanceOf",
         tparam => MethodType(List(), tparam.typeConstructor)) setFlag FINAL
       String_+ = newMethod(
-        StringClass, "+", anyparam, StringClass.typeConstructor) setFlag FINAL
+        StringClass, "+", any, StringClass.typeConstructor) setFlag FINAL
 
       PatternWildcard = NoSymbol.newValue(NoPosition, "_").setInfo(NothingClass.typeConstructor)
 

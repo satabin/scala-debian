@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Queue.scala 16285 2008-10-18 10:18:39Z odersky $
+// $Id: Queue.scala 16113 2008-09-16 19:38:07Z spoon $
 
 
 package scala.collection.immutable

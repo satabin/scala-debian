@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author
  */
-// $Id: Constructors.scala 15660 2008-07-31 22:01:37Z dragos $
+// $Id: Constructors.scala 16246 2008-10-11 14:03:30Z washburn $
 
 package scala.tools.nsc.transform
 

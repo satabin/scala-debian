@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: RefChecks.scala 16023 2008-09-04 15:08:57Z DRMacIver $
+// $Id: RefChecks.scala 16491 2008-11-04 16:04:30Z washburn $
 
 package scala.tools.nsc.typechecker
 
@@ -72,7 +72,7 @@ abstract class RefChecks extends InfoTransform {
      *    1.1. M must have the same or stronger access privileges as O.
      *    1.2. O must not be final.
      *    1.3. O is deferred, or M has `override' modifier.
-     *    1.4. If O is an immutable value, then so is M.
+     *    1.4. If O is stable, then so is M.
      *     // @M: LIFTED 1.5. Neither M nor O are a parameterized type alias
      *    1.6. If O is a type alias, then M is an alias of O. 
      *    1.7. If O is an abstract type then 
@@ -198,7 +198,7 @@ abstract class RefChecks extends InfoTransform {
                    (other hasFlag ACCESSOR) && other.accessed.isVariable && !other.accessed.hasFlag(LAZY)) {
           overrideError("cannot override a mutable variable")
         } else if (other.isStable && !member.isStable) { // (1.4)
-          overrideError("needs to be an immutable value")
+          overrideError("is not stable")
         } else if (member.isValue && (member hasFlag LAZY) &&
                    other.isValue && !other.isSourceMethod && !other.isDeferred && !(other hasFlag LAZY)) {
           overrideError("cannot override a concrete non-lazy value")
@@ -218,9 +218,10 @@ abstract class RefChecks extends InfoTransform {
             //if (!member.typeParams.isEmpty) // (1.7)  @MAT
             //  overrideError("may not be parameterized");
             var memberTp = self.memberType(member)
-
-            if (!(self.memberInfo(other).bounds containsType memberTp)) { // (1.7.1) {
+            val otherTp = self.memberInfo(other)
+            if (!(otherTp.bounds containsType memberTp)) { // (1.7.1) {
               overrideTypeError(); // todo: do an explaintypes with bounds here
+              explainTypes(_.bounds containsType _, otherTp, memberTp)
             }
             
             // check overriding (abstract type --> abstract type or abstract type --> concrete type member (a type alias))
@@ -371,6 +372,8 @@ abstract class RefChecks extends InfoTransform {
             unit.error(clazz.pos, "illegal inheritance;\n " + clazz + 
                        " inherits different type instances of " + baseClass + 
                        ":\n" + tp1 + " and " + tp2);
+            explainTypes(tp1, tp2)
+            explainTypes(tp2, tp1)
         }
       }
     }

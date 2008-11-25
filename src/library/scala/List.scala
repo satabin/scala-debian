@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: List.scala 15799 2008-08-15 18:23:54Z odersky $
+// $Id: List.scala 16279 2008-10-16 16:35:43Z stepancheg $
 
 
 package scala
@@ -705,7 +705,7 @@ sealed abstract class List[+A] extends Seq[A] with Product {
   /** Returns the list wihout its rightmost <code>n</code> elements.
    *
    *  @param n the number of elements to take
-   *  @return the suffix of length <code>n</code> of the list
+   *  @return the list without its rightmost <code>n</code> elements
    */
   def dropRight(n: Int): List[A] = {
     def loop(lead: List[A], lag: List[A]): List[A] = lead match {

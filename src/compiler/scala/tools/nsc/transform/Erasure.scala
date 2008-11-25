@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: Erasure.scala 16455 2008-10-31 11:33:20Z odersky $
+// $Id: Erasure.scala 16456 2008-10-31 11:33:57Z odersky $
 
 package scala.tools.nsc.transform
 

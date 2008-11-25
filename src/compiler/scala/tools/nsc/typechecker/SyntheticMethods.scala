@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: SyntheticMethods.scala 15390 2008-06-17 17:44:30Z odersky $
+// $Id: SyntheticMethods.scala 16308 2008-10-22 07:45:47Z rytz $
 
 package scala.tools.nsc.typechecker
 
@@ -261,20 +261,24 @@ trait SyntheticMethods { self: Analyzer =>
 
     def addBeanGetterMethod(sym: Symbol) = {
       val getter = beanSetterOrGetter(sym)
-      if (getter != NoSymbol)
+      if (getter != NoSymbol) {
+        clazz.info.decls.enter(getter)
         ts += typer.typed(DefDef(
           getter,
           vparamss => if (sym hasFlag DEFERRED) EmptyTree else gen.mkAttributedRef(sym)))
+      }
     }
 
     def addBeanSetterMethod(sym: Symbol) = {
       val setter = beanSetterOrGetter(sym)
-      if (setter != NoSymbol)
+      if (setter != NoSymbol) {
+        clazz.info.decls.enter(setter)
         ts += typer.typed(DefDef(
           setter,
           vparamss =>
             if (sym hasFlag DEFERRED) EmptyTree 
             else Apply(gen.mkAttributedRef(sym), List(Ident(vparamss.head.head)))))
+      }
     }
 
     def isPublic(sym: Symbol) = 

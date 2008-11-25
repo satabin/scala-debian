@@ -2,7 +2,7 @@
  * Copyright 2005-2008 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Position.scala 15799 2008-08-15 18:23:54Z odersky $
+// $Id: Position.scala 16263 2008-10-15 13:58:23Z cunei $
 
 package scala.tools.nsc.util
 
@@ -71,7 +71,9 @@ trait Position {
 }
 
 case object NoPosition extends Position
-case class FakePos(msg: String) extends Position
+case class FakePos(msg: String) extends Position {
+  override def toString=msg
+}
 
 case class LinePosition(source0: SourceFile, line0: Int) extends Position {
   assert(line0 >= 1)

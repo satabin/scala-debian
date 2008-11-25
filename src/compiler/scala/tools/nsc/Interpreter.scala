@@ -2,7 +2,7 @@
  * Copyright 2005-2008 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Interpreter.scala 16294 2008-10-19 11:55:44Z washburn $
+// $Id: Interpreter.scala 16292 2008-10-18 21:32:45Z washburn $
 
 package scala.tools.nsc
 

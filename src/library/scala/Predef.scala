@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Predef.scala 15327 2008-06-10 13:53:56Z washburn $
+// $Id: Predef.scala 16048 2008-09-06 11:41:37Z odersky $
 
 
 package scala

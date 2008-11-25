@@ -3,11 +3,11 @@
  * @author  Lex Spoon
  */
 
-// $Id: MainGenericRunner.scala 15196 2008-05-25 15:02:28Z spoon $
+// $Id: MainGenericRunner.scala 16595 2008-11-21 16:50:31Z washburn $
 
 package scala.tools.nsc
 
-import java.io.File
+import java.io.{File, IOException}
 import java.lang.{ClassNotFoundException, NoSuchMethodException}
 import java.lang.reflect.InvocationTargetException
 import java.net.URL
@@ -29,22 +29,31 @@ object MainGenericRunner {
   private def addClasspathExtras(classpath: String): String = {
     val scalaHome = Properties.scalaHome
 
-    val extraClassPath = 
+    val extraClassPath =
       if (scalaHome eq null)
         ""
       else {
-        val libdir = new File(new File(scalaHome), "lib")
-        if (!libdir.exists || libdir.isFile)
-          return classpath
-        
-        val filesInLib = libdir.listFiles
-        val jarsInLib = 
-          filesInLib.filter(f => 
-            f.isFile && f.getName.endsWith(".jar"))
-  
-        jarsInLib.mkString("", File.pathSeparator, "")
-      }
-    
+        def listDir(name:String):Array[File] = {
+          val libdir = new File(new File(scalaHome), name)
+          if (!libdir.exists || libdir.isFile)
+            Array()
+          else       
+            libdir.listFiles
+        }
+        {
+          val filesInLib = listDir("lib")
+          val jarsInLib = 
+            filesInLib.filter(f => 
+              f.isFile && f.getName.endsWith(".jar"))
+          jarsInLib.toList
+        } ::: {
+          val filesInClasses = listDir("classes")
+          val dirsInClasses = 
+            filesInClasses.filter(f => f.isDirectory)
+          dirsInClasses.toList
+        }
+      }.mkString("", File.pathSeparator, "")
+
     if (classpath == "")
       extraClassPath + File.pathSeparator + "."
     else
@@ -77,32 +86,14 @@ object MainGenericRunner {
       return
     }
 
-
-    if (settings.help.value || settings.Xhelp.value || settings.Yhelp.value) {
-      if (command.settings.help.value) {
-        println(command.usageMsg)
-        println(sampleCompiler.pluginOptionsHelp)
-      }
-
-      if (settings.Xhelp.value) 
-        println(command.xusageMsg)
-
-      if (settings.Yhelp.value) 
-        println(command.yusageMsg)
-
+    if (command.shouldStopWithInfo) {
+      Console.println(command.getInfoMessage(sampleCompiler))
       return
     }
-
-
-    if (settings.showPhases.value) {
-      println(sampleCompiler.phaseDescriptions)
-      return
-    }
-
-    if (settings.showPlugins.value) {
-      println(sampleCompiler.pluginDescriptions)
-      return
-    }
+  
+    def exitSuccess : Nothing = exit(0)
+    def exitFailure : Nothing = exit(1)
+    def exitCond(b: Boolean) : Nothing = if(b) exitSuccess else exitFailure
 
     def fileToURL(f: File): Option[URL] =
       try { Some(f.toURL) }
@@ -142,9 +133,9 @@ object MainGenericRunner {
       case _ if settings.execute.value != "" =>
         val fullArgs =
 	  command.thingToRun.toList ::: command.arguments
-        ScriptRunner.runCommand(settings, 
-				settings.execute.value,
-				fullArgs)
+        exitCond(ScriptRunner.runCommand(settings, 
+		  			 settings.execute.value,
+					 fullArgs))
 
       case None =>
         (new InterpreterLoop).main(settings)
@@ -159,28 +150,31 @@ object MainGenericRunner {
           }
 
         if (isObjectName) {
-
           try {
             ObjectRunner.run(classpath, thingToRun, command.arguments)
           } catch {
             case e: ClassNotFoundException =>
               Console.println(e)
-              exit(1)
+              exitFailure
             case e: NoSuchMethodException =>
               Console.println(e)
-              exit(1)
+              exitFailure
             case e: InvocationTargetException =>
               e.getCause.printStackTrace
-              exit(1)
+              exitFailure
           }
-
         } else {
           try {
-            ScriptRunner.runScript(settings, thingToRun, command.arguments)
+            exitCond(ScriptRunner.runScript(settings, 
+					    thingToRun, 
+					    command.arguments))
           } catch {
+	    case e: IOException =>
+              Console.println(e.getMessage())
+              exitFailure
             case e: SecurityException =>
               Console.println(e)
-              exit(1)
+              exitFailure
           }
         }
     }

@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author
  */
-// $Id: LambdaLift.scala 15080 2008-05-19 14:55:51Z odersky $
+// $Id: LambdaLift.scala 16315 2008-10-22 12:49:56Z rytz $
 
 package scala.tools.nsc.transform
 

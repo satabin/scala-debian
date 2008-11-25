@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: jolib.scala 11950 2007-06-08 12:08:26Z michelou $
+// $Id: jolib.scala 16497 2008-11-05 21:28:07Z washburn $
 
 
 package scala.concurrent
@@ -18,7 +18,7 @@ package scala.concurrent
  * @author  Vincent Cremet
  * @version 1.0, 17/10/2003
  */ 
-object jolib {
+@deprecated object jolib {
 
   type Pattern = List[Signal]
 

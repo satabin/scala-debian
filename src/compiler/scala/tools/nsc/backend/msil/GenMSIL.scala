@@ -3,7 +3,7 @@
  * @author Nikolay Mihaylov
  */
 
-// $Id: GenMSIL.scala 16401 2008-10-28 17:58:19Z dragos $
+// $Id: GenMSIL.scala 16377 2008-10-27 16:25:50Z dragos $
 
 package scala.tools.nsc.backend.msil
 

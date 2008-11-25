@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Random.scala 15622 2008-07-29 13:19:54Z michelou $
+// $Id: Random.scala 16012 2008-09-04 07:22:31Z lorch $
 
 
 package scala
@@ -14,7 +14,7 @@ package scala
 /**
  *  @author Stephane Micheloud
  *
- *  Use class <code>scala.util.Random</code> instead.
+ *  @deprecated Use class <code>scala.util.Random</code> instead.
  */
 @deprecated
 class Random(val self: java.util.Random) {

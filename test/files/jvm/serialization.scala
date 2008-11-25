@@ -35,7 +35,6 @@ object Serialize {
 //############################################################################
 // Test classes in package "scala"
 
-@serializable
 object Test1_scala {
 
   private def arrayToString[A](arr: Array[A]): String =
@@ -130,6 +129,8 @@ object Test1_scala {
     println()
     println("x9 eq x10: " + (x9 eq x10) + " - x10 eq x9: " + (x10 eq x9))
     println("x9 equals x10: " + (x9 equals x10) + " - x10 equals x9: " + (x10 equals x9))
+    println("x9 eq y10: " + (x9 eq y10) + " - y10 eq x9: " + (y10 eq x9))
+    println("x9 equals y10: " + (x9 equals y10) + " - y10 equals x9: " + (y10 equals x9))
     println()
   }
   catch {

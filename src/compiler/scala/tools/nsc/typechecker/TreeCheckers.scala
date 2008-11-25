@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreeCheckers.scala 13819 2008-01-28 18:43:24Z odersky $
+// $Id: TreeCheckers.scala 16039 2008-09-05 15:22:09Z washburn $
 
 package scala.tools.nsc.typechecker
 
@@ -16,7 +16,8 @@ abstract class TreeCheckers extends Analyzer {
   val tpeOfTree = new scala.collection.mutable.HashMap[Tree, Type]
 
   def checkTrees {
-    Console.println("[consistency check at start of phase " + phase + "]")
+    if (settings.verbose.value)
+      Console.println("[consistency check at the beginning of phase " + phase + "]")
     for (unit <- currentRun.units) check(unit)
   }
 

@@ -3,7 +3,7 @@
  * @author Philipp Haller
  */
 
-// $Id: ConsoleRunner.scala 16470 2008-11-01 11:36:15Z phaller $
+// $Id: ConsoleRunner.scala 16472 2008-11-01 13:12:19Z phaller $
 
 package scala.tools.partest.nest
 
@@ -33,7 +33,7 @@ class ConsoleRunner extends DirectRunner with RunnerUtils {
               "Testing resident compiler"),
       TestSet("shootout", fileFilter, "shootout", "Testing shootout tests"),
       TestSet("script", fileFilter, "script", "Testing script tests"),
-      /*TestSet("scalacheck", fileFilter, "scalacheck", "Testing ScalaCheck tests")*/)
+      TestSet("scalacheck", fileFilter, "scalacheck", "Testing ScalaCheck tests"))
   }
 
   var fileManager: ConsoleFileManager = _

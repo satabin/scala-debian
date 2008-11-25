@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Enumeration.scala 16019 2008-09-04 14:13:16Z rytz $
+// $Id: Enumeration.scala 16575 2008-11-18 15:41:08Z washburn $
 
 
 package scala
@@ -129,6 +129,21 @@ abstract class Enumeration(initial: Int, names: String*) {
   def filter(p: Value => Boolean): Iterator[Value] = elements filter p
     
   override def toString(): String = updateCache.mkString("{", ", ", "}")
+
+  /** Returns a Value from this Enumeration whose name matches 
+   * the argument <var>s</var>.
+   * You must pass a String* set of names to the constructor,
+   * or initialize each Enumeration with Value(String),
+   * for valueOf to work.
+   * @param s an enumeration name
+   * @return <tt>Some(Value)</tt> if an enumeration's name matches <var>s</var>, 
+   * else <tt>None</tt>
+   */
+  def valueOf(s:String) = {
+    var v: Option[Value] = None
+    for( e <- elements ) if (s == e.toString()) v = Some(e)
+    v
+  }
 
   /** Creates a fresh value, part of this enumeration. */
   protected final def Value: Value =

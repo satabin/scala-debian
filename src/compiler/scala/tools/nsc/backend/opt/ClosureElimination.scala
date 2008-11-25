@@ -3,7 +3,7 @@
  * @author  Iulian Dragos
  */
 
-// $Id: ClosureElimination.scala 14803 2008-04-23 17:21:04Z dragos $
+// $Id: ClosureElimination.scala 16511 2008-11-06 17:26:52Z dragos $
 
 package scala.tools.nsc.backend.opt;
 
@@ -99,6 +99,7 @@ abstract class ClosureElimination extends SubComponent {
 
       for (bb <- linearizer.linearize(m)) {
         var info = cpp.in(bb)
+        log("Cpp info at entry to block " + bb + ": " + info)
 
         for (i <- bb.toList) {
           i match {

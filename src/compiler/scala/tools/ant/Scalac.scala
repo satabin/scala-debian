@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Scalac.scala 15995 2008-09-02 09:58:08Z rytz $
+// $Id: Scalac.scala 16315 2008-10-22 12:49:56Z rytz $
 
 package scala.tools.ant
 

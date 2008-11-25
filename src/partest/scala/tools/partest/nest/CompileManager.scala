@@ -3,7 +3,7 @@
  * @author Philipp Haller
  */
 
-// $Id: CompileManager.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: CompileManager.scala 16551 2008-11-13 18:03:56Z phaller $
 
 package scala.tools.partest.nest
 
@@ -36,7 +36,7 @@ class DirectCompiler(val fileManager: FileManager) extends SimpleCompiler {
     new Global(settings, reporter)
 
   def newGlobal(settings: Settings, logWriter: FileWriter): Global = {
-    val rep = new ExtConsoleReporter(new TestSettings(fileManager),
+    val rep = new ExtConsoleReporter(settings,
                                      Console.in,
                                      new PrintWriter(logWriter))
     rep.shortname = true
@@ -89,11 +89,11 @@ class DirectCompiler(val fileManager: FileManager) extends SimpleCompiler {
       case "scalacheck" =>
         ScalaCheckTestFile(files(0), fileManager, out.isEmpty)
     }
-    test.defineSettings(testSettings)
+    test.defineSettings(command.settings)
     out match {
       case Some(outDir) =>
-        testSettings.outdir.value = outDir.getAbsolutePath
-        testSettings.classpath.value = testSettings.classpath.value+
+        command.settings.outdir.value = outDir.getAbsolutePath
+        command.settings.classpath.value = command.settings.classpath.value+
           File.pathSeparator+outDir.getAbsolutePath
       case None =>
         // do nothing
@@ -120,38 +120,6 @@ class DirectCompiler(val fileManager: FileManager) extends SimpleCompiler {
     }
     !testRep.hasErrors
   }
-
-/*
-  def compile(file: File, kind: String): Boolean = {
-    val testSettings = newSettings
-    val testRep = newReporter(testSettings)
-    val args = List.fromArray(fileManager.SCALAC_OPTS.split("\\s"))
-    val command = new CompilerCommand(args, testSettings, x => {}, false)
-    val global = newGlobal(command.settings, testRep)
-
-    val test: TestFile = kind match {
-      case "pos"      => PosTestFile(file, fileManager)
-      case "neg"      => NegTestFile(file, fileManager)
-      case "run"      => RunTestFile(file, fileManager)
-      case "jvm"      => JvmTestFile(file, fileManager)
-      case "jvm5"     => Jvm5TestFile(file, fileManager)
-      case "shootout" => ShootoutTestFile(file, fileManager)
-    }
-    test.defineSettings(testSettings)
-
-    val toCompile = List(file.getPath)
-    try {
-      (new global.Run) compile toCompile
-      testRep.printSummary
-      testRep.writer.flush
-      testRep.writer.close
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-        return false
-    }
-    !testRep.hasErrors
-  }*/
 }
 
 class ReflectiveCompiler(val fileManager: ConsoleFileManager) extends SimpleCompiler {

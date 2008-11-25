@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Stepan Koltsov
  */
-// $Id: JLineReader.scala 15390 2008-06-17 17:44:30Z odersky $
+// $Id: JLineReader.scala 16289 2008-10-18 15:51:30Z washburn $
 
 
 package scala.tools.nsc.interpreter
@@ -22,7 +22,7 @@ class JLineReader extends InteractiveReader {
     r.setBellEnabled(false)
     r
   }
-  def readLine(prompt: String) = consoleReader.readLine(prompt)
+  def readOneLine(prompt: String) = consoleReader.readLine(prompt) 
   val interactive = true
 }
 

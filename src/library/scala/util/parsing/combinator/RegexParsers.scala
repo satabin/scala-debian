@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: RegexParsers.scala 16184 2008-10-01 10:09:11Z odersky $
+// $Id: RegexParsers.scala 16157 2008-09-24 14:52:09Z odersky $
 
 package scala.util.parsing.combinator
 

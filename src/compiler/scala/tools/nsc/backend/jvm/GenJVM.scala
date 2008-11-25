@@ -3,7 +3,7 @@
  * @author  Iulian Dragos
  */
 
-// $Id: GenJVM.scala 16415 2008-10-29 14:26:16Z dragos $
+// $Id: GenJVM.scala 16414 2008-10-29 14:09:23Z dragos $
 
 package scala.tools.nsc.backend.jvm
 

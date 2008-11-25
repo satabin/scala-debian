@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: OverridingPairs.scala 13220 2007-11-09 15:03:13Z odersky $
+// $Id: OverridingPairs.scala 16246 2008-10-11 14:03:30Z washburn $
 
 package scala.tools.nsc.transform
 

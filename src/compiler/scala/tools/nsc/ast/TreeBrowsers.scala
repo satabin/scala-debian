@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreeBrowsers.scala 15235 2008-05-30 09:54:49Z rytz $
+// $Id: TreeBrowsers.scala 16315 2008-10-22 12:49:56Z rytz $
 
 package scala.tools.nsc.ast
 

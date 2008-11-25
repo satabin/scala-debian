@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreeSet.scala 12005 2007-06-13 12:28:07Z michelou $
+// $Id$
 
 package scala.tools.nsc.util
 

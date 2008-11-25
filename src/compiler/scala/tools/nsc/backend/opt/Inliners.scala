@@ -3,7 +3,7 @@
  * @author  Iulian Dragos
  */
 
-// $Id: Inliners.scala 15951 2008-08-28 10:05:24Z dragos $
+// $Id: Inliners.scala 16511 2008-11-06 17:26:52Z dragos $
 
 package scala.tools.nsc.backend.opt
 
@@ -148,6 +148,9 @@ abstract class Inliners extends SubComponent {
          val newInstr = i match {
            case THIS(clasz) =>
              LOAD_LOCAL(inlinedThis);
+             
+           case STORE_THIS(_) =>
+             STORE_LOCAL(inlinedThis)
 
            case JUMP(whereto) =>
              JUMP(inlinedBlock(whereto));
@@ -363,7 +366,7 @@ abstract class Inliners extends SubComponent {
       m.normalize
     } catch {
       case e => 
-        Console.println("############# Cought exception: " + e + " #################");
+        Console.println("############# Caught exception: " + e + " #################");
         Console.println("\nMethod: " + m + 
                         "\nMethod owner: " + m.symbol.owner);
         e.printStackTrace();

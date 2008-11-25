@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Nothing$.scala 14416 2008-03-19 01:17:25Z mihaylov $
+// $Id: Nothing$.scala 16570 2008-11-18 11:20:05Z dragos $
 
 
 package scala.runtime
@@ -18,4 +18,4 @@ package scala.runtime
  * signatures, it is erased to this one.
  */
 
-sealed abstract class Nothing$
+sealed abstract class Nothing$ extends Throwable

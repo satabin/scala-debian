@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Stephane Micheloud
  */
-//$Id: Command.scala 10730 2007-04-18 14:10:07Z michelou $
+//$Id: Command.scala 15979 2008-09-01 09:15:17Z lorch $
 
 package scala.man1
 
@@ -36,7 +36,7 @@ trait Command {
   def authors = Section("AUTHOR",
 
     "Written by Martin Odersky and other members of the " &
-    Link("Scala team", "http://scala-lang.org/community/") & ".")
+    Link("Scala team", "http://www.scala-lang.org/node/89") & ".")
 
   def copyright = Section("COPYRIGHT",
 

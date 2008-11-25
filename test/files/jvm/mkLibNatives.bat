@@ -2,7 +2,7 @@
 
 rem ##########################################################################
 rem # Author  : Stephane Micheloud
-rem # Revision: $Id: mkLibNatives.bat 12000 2007-06-13 09:38:45Z michelou $
+rem # Revision: $Id: mkLibNatives.bat 16473 2008-11-01 20:01:29Z michelou $
 rem ##########################################################################
 
 rem ##########################################################################
@@ -16,7 +16,7 @@ set STDOUT=NUL
 if %DEBUG%==1 set STDOUT=CON
 
 set CLASS_NAME=Test$
-set CLASS_DIR=natives-jvm
+set CLASS_DIR=.
 
 set OBJ_NAME=natives
 set LIB_NAME=natives-32

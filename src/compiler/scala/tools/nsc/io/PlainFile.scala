@@ -2,7 +2,7 @@
  * Copyright 2005-2008 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: PlainFile.scala 14912 2008-05-05 14:09:00Z spoon $
+// $Id: PlainFile.scala 16266 2008-10-15 14:22:32Z odersky $
 
 
 package scala.tools.nsc.io
@@ -39,7 +39,7 @@ class PlainFile(val file: File) extends AbstractFile {
   override def input = new FileInputStream(file)
   override def output = new FileOutputStream(file)
   
-  override def size = Some(file.length.toInt)
+  override def sizeOption = Some(file.length.toInt)
   
   override def hashCode(): Int = fpath.hashCode
 

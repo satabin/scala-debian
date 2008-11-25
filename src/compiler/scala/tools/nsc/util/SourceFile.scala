@@ -3,16 +3,22 @@
  * @author  Martin Odersky
  */
 
-// $Id: SourceFile.scala 16222 2008-10-09 12:06:37Z milessabin $
+// $Id: SourceFile.scala 16407 2008-10-29 00:52:55Z DRMacIver $
 
 package scala.tools.nsc.util
 import scala.tools.nsc.io.{AbstractFile, VirtualFile}
 
 object SourceFile {
-  val LF: Char = 0x0A
-  val FF: Char = 0x0C
-  val CR: Char = 0x0D
-  val SU: Char = 0x1A
+  // Be very careful touching these.
+  // Apparently trivial changes to the way you write these constants 
+  // will cause Scanners.scala to go from a nice efficient switch to 
+  // a ghastly nested if statement which will bring the type checker
+  // to its knees. See ticket #1456
+  final val LF = '\u000A'
+  final val FF = '\u000C'
+  final val CR = '\u000D'
+  final val SU = '\u001A'
+
   def isLineBreak(c: Int) = c match {
   case LF|FF|CR|SU => true
   case _ => false
@@ -61,22 +67,21 @@ class BatchSourceFile(val file : AbstractFile, _content : Array[Char]) extends S
     
   val content = _content // don't sweat it...
   override val length = content.length
+
   override def identifier(pos : Position, compiler : scala.tools.nsc.Global) = pos match {
-  case OffsetPosition(source,offset) if source == this => 
-    import java.lang.Character
-    var i = offset + 1
-    while (i < content.length && 
-      (compiler.syntaxAnalyzer.isOperatorPart(content(i)) ||
-       compiler.syntaxAnalyzer.isIdentifierPart(content(i)))) i = i + 1
+    case OffsetPosition(source,offset) if source == this && offset != -1 =>  
+      import java.lang.Character
+      var i = offset + 1
+      while (i < content.length && 
+             (compiler.syntaxAnalyzer.isOperatorPart(content(i)) ||
+              compiler.syntaxAnalyzer.isIdentifierPart(content(i)))) i = i + 1
     
-    assert(i > offset)
-    if (i <= content.length && offset >= 0)
-      Some(new String(content, offset, i - offset))
-    else None
+      assert(i > offset)
+      if (i <= content.length && offset >= 0)
+        Some(new String(content, offset, i - offset))
+      else None
   case _ => super.identifier(pos, compiler)
   }
-  
-  
   
   def isLineBreak(idx: Int) =
     if (idx >= content.length) false

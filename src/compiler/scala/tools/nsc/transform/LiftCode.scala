@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Gilles Dubochet
  */
-// $Id: LiftCode.scala 14416 2008-03-19 01:17:25Z mihaylov $
+// $Id: LiftCode.scala 16246 2008-10-11 14:03:30Z washburn $
 
 package scala.tools.nsc.transform
 

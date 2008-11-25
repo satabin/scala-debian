@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author Stephane Micheloud
  */
-//$Id: fsc.scala 16015 2008-09-04 10:59:23Z rytz $
+//$Id: fsc.scala 16014 2008-09-04 10:57:31Z rytz $
 
 package scala.man1
 

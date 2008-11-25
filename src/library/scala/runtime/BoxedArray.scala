@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: BoxedArray.scala 16294 2008-10-19 11:55:44Z washburn $
+// $Id: BoxedArray.scala 16558 2008-11-14 22:17:56Z washburn $
 
 
 package scala.runtime
@@ -131,7 +131,7 @@ abstract class BoxedArray extends Array.Array0[Any] {
       case a: AnyRef if ScalaRunTime.isArray(a) =>
         ScalaRunTime.boxArray(a).deepMkString(start, sep, end)
       case _ =>
-        x.toString
+        ScalaRunTime.stringOf(x)
     }
     val buf = new StringBuilder()
     buf.append(start)

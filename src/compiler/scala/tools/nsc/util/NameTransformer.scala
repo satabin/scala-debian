@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: NameTransformer.scala 16188 2008-10-01 16:08:46Z washburn $
+// $Id: NameTransformer.scala 16187 2008-10-01 16:06:25Z washburn $
 
 package scala.tools.nsc.util
 

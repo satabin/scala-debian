@@ -2,7 +2,7 @@
  * Copyright 2005-2007 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreePrinters.scala 15894 2008-08-22 15:24:57Z washburn $
+// $Id: TreePrinters.scala 15893 2008-08-22 15:23:54Z washburn $
 
 package scala.tools.nsc.ast
 

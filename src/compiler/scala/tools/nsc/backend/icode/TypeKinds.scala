@@ -3,7 +3,7 @@
  * @author  Martin Odersky
  */
 
-// $Id: TypeKinds.scala 16182 2008-10-01 07:02:18Z rytz $
+// $Id: TypeKinds.scala 16180 2008-09-30 20:45:47Z dragos $
 
 package scala.tools.nsc.backend.icode
 

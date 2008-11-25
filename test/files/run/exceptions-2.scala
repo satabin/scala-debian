@@ -1,7 +1,7 @@
 /*
  * Try exception handling and finally blocks.
  *
- * $Id: exceptions-2.scala 14133 2008-02-26 08:12:56Z dragos $
+ * $Id: exceptions-2.scala 15975 2008-08-31 11:40:19Z cunei $
  */
 
 trait Tree extends Exception;
@@ -110,7 +110,7 @@ object Test {
     }
   } catch {
     case npe: NullPointerException => 
-      Console.println("Cought an NPE");
+      Console.println("Caught an NPE");
   }
 
   def withValue1: Unit = {
