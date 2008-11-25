@@ -1,0 +1,2 @@
+simpbuild/lib/scala-compiler.jar usr/share/java/
+debian/command-scripts/* usr/bin/

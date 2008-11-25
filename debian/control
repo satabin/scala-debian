@@ -1,0 +1,37 @@
+Source: scala
+Section: devel
+Priority: optional
+Maintainer: Min Huang <min.huang@alumni.usc.edu>
+Uploaders: Mehdi Dogguy <dogguy@pps.jussieu.fr>, Lex Spoon <lex@debian.org>
+DM-Upload-Allowed: yes
+Standards-Version: 3.8.0
+Build-Depends: java-gcj-compat-dev,  gij | java-virtual-machine, ant,  debhelper (>= 7)
+
+Package: scala
+Architecture: all
+Depends: scala-library, java-gcj-compat-dev, gij | java-virtual-machine
+Description: The Scala programming language
+ Scala is a Java-compatible programming language with many
+ modern language features.  It is Java-compatible in that
+ Scala and Java classes can directly reference each other and
+ subclass each other with no glue code needed.  It
+ includes modern language features such as closures,
+ pattern-matching, parametric types, and virtual type members.
+ .
+ This package includes the various tools used to develop
+ code written in Scala.  It includes a compiler (scalac),
+ an interpreter and script runner (scala), the offline
+ compiler (fsc), and source-scanning documentation
+ generator (scaladoc).
+
+Package: scala-library
+Architecture: all
+Depends: gij | java-virtual-machine
+Description: The Scala standard library
+ This run-time library is needed to run Scala programs.
+
+Package: scala-doc
+Architecture: all
+Section: doc
+Description: The Scala API documentation
+ This is the API documentation for Scala.
