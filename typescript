@@ -1,0 +1,112 @@
+Script started on Sun 30 Nov 2008 04:01:47 PM EST
+spoon@fluux-debian:~/debian-packages/scala/from-min/scala-2.7.2$ dpkg[Kdpkg-buildpackagge -rfakroo[K[K[Keroot
+dpkg-buildpackage: source package scala
+dpkg-buildpackage: source version 2.7.2-2
+dpkg-buildpackage: source changed by Lex Spoon <lex@debian.org>
+dpkg-buildpackage: host architecture i386
+ fakeroot debian/rules clean
+dh_testdir
+rm -rf simpbuild
+dh_clean
+	rm -f debian/scala.substvars
+	rm -f debian/scala.*.debhelper
+	rm -f debian/scala.debhelper.log
+	rm -rf debian/scala/
+	rm -f debian/scala-library.substvars
+	rm -f debian/scala-library.*.debhelper
+	rm -f debian/scala-library.debhelper.log
+	rm -rf debian/scala-library/
+	rm -f debian/scala-doc.substvars
+	rm -f debian/scala-doc.*.debhelper
+	rm -f debian/scala-doc.debhelper.log
+	rm -rf debian/scala-doc/
+	rm -f -- src/actors/scala/actors/ThreadPoolScheduler.scala dists build
+	rm -f debian/files
+	find .  \( \( -type f -a \
+	        \( -name '#*#' -o -name '.*~' -o -name '*~' -o -name DEADJOE \
+		 -o -name '*.orig' -o -name '*.rej' -o -name '*.bak' \
+		 -o -name '.*.orig' -o -name .*.rej -o -name '.SUMS' \
+		 -o -name TAGS -o \( -path '*/.deps/*' -a -name '*.P' \) \
+		\) -exec rm -f {} \; \) -o \
+		\( -type d -a -name autom4te.cache -prune -exec rm -rf {} \; \) \)
+	rm -f *-stamp
+ dpkg-source -b scala-2.7.2
+dpkg-source: warning: unknown information field 'Dm-Upload-Allowed' in input data in general section of control info file
+dpkg-source: building scala using existing scala_2.7.2.orig.tar.gz
+dpkg-source: building scala in scala_2.7.2-2.diff.gz
+dpkg-source: warning: newly created empty file 'typescript' will not be represented in diff
+dpkg-source: building scala in scala_2.7.2-2.dsc
+ debian/rules build
+dh_testdir
+ANT_OPTS=-Xmx1024M ant -f debian/simpbuild.xml build docs dist
+Buildfile: debian/simpbuild.xml
+     [echo] OS:   UNIX (Linux i386 2.6.18-5-686);
+     [echo] Java: 1.6.0_10 ('/usr/lib/jvm/java-6-sun-1.6.0.10/jre');
+     [echo] JVM:  Java HotSpot(TM) Client VM 11.0-b15;
+     [echo] Ant:  Apache Ant version 1.7.0 compiled on April 29 2008.
+
+build:
+    [mkdir] Created dir: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/library
+    [javac] Compiling 12 source files to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/library
+   [scalac] Compiling 1 source file to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/library
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/Predef.scala:159: warning: method format in object Console is deprecated
+   [scalac]   def format(text: String, xs: Any*) = Console.format(text, xs: _*)
+   [scalac]                                                ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/Console.scala:205: warning: method format in object Console is deprecated
+   [scalac]     format(text, args: _*)
+   [scalac]     ^
+   [scalac] two warnings found
+   [scalac] Compile suceeded with 2 warnings; see the compiler output for details.
+   [scalac] Compiling 337 source files to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/library
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/collection/immutable/TreeHashMap.scala:141: warning: case classes without a parameter list have been deprecated;
+   [scalac] use either case objects or case classes with `()' as parameter list.
+   [scalac]   private[collection] case class Nil[Key] extends AssocMap[Key, Nothing];
+   [scalac]                                           ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/util/Sorting.scala:553: warning: Trailing commas have been deprecated
+   [scalac]       3.724737288678125E10,
+   [scalac]                           ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/util/Sorting.scala:564: warning: Trailing commas have been deprecated
+   [scalac]       3.724737288678125E10f,
+   [scalac]                            ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/SeqProxy.scala:43: warning: method headOption in trait Seq is deprecated
+   [scalac]   override def headOption = self.headOption
+   [scalac]                                  ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/SeqProxy.scala:60: warning: method slice in trait Seq is deprecated
+   [scalac]   override def slice(from: Int) = self slice from
+   [scalac]                                        ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/SeqProxy.scala:69: warning: method subseq in trait Seq is deprecated
+   [scalac]   override def subseq(from: Int, end: Int) = self.subseq(from, end)
+   [scalac]                                                   ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/collection/immutable/Stack.scala:66: warning: method + in class Stack is deprecated
+   [scalac]   def push[B >: A](elems: B*): Stack[B] = this + elems
+   [scalac]                                                ^
+   [scalac] /home/spoon/debian-packages/scala/from-min/scala-2.7.2/src/library/scala/collection/immutable/Stack.scala:99: warning: method + in class Stack is deprecated
+   [scalac]     elems.foldLeft(this: Stack[B]){ (stack, elem) => stack + elem }
+   [scalac]                                                            ^
+   [scalac] 8 warnings found
+   [scalac] Compile suceeded with 8 warnings; see the compiler output for details.
+    [mkdir] Created dir: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/compiler
+   [scalac] Compiling 211 source files to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/compiler
+    [mkdir] Created dir: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/dbc
+   [scalac] Compiling 65 source files to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/dbc
+    [mkdir] Created dir: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/actors
+    [javac] Compiling 6 source files to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/actors
+   [scalac] Compiling 23 source files to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/actors
+    [mkdir] Created dir: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/swing
+   [scalac] Compiling 94 source files to /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/swing
+    [mkdir] Created dir: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/lib
+      [jar] Building jar: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/lib/scala-compiler.jar
+      [jar] Building jar: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/lib/scala-library.jar
+      [jar] Building jar: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/lib/scala-dbc.jar
+    [mkdir] Created dir: /home/spoon/debian-packages/scala/from-min/scala-2.7.2/simpbuild/bin
+
+BUILD FAILED
+/home/spoon/debian-packages/scala/from-min/scala-2.7.2/debian/simpbuild.xml:447: Execute failed: java.io.IOException: Cannot run program "chmod" (in directory "/home/spoon/debian-packages/scala/from-min/scala-2.7.2/debian"): java.io.IOException: error=12, Cannot allocate memory
+
+Total time: 2 minutes 51 seconds
+make: *** [build-stamp] Error 1
+dpkg-buildpackage: failure: debian/rules build gave error exit status 2
+spoon@fluux-debian:~/debian-packages/scala/from-min/scala-2.7.2$ 
+spoon@fluux-debian:~/debian-packages/scala/from-min/scala-2.7.2$ exit
+
+Script done on Sun 30 Nov 2008 04:08:18 PM EST
