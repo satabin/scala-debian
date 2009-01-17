@@ -1,8 +1,8 @@
 Source: scala
 Section: devel
 Priority: optional
-Maintainer: Min Huang <min.huang@alumni.usc.edu>
-Uploaders: Mehdi Dogguy <dogguy@pps.jussieu.fr>, Lex Spoon <lex@debian.org>
+Maintainer: Debian Scala Maintainers <pkg-scala-maint@lists.alioth.debian.org>
+Uploaders: Mehdi Dogguy <dogguy@pps.jussieu.fr>, Lex Spoon <lex@debian.org>, Min Huang <min.huang@alumni.usc.edu>
 DM-Upload-Allowed: yes
 Standards-Version: 3.8.0
 Build-Depends: default-jdk-builddep, ant, debhelper (>= 7)

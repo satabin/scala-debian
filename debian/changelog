@@ -1,9 +1,14 @@
 scala (2.7.3-1) unstable; urgency=low
 
+  [ Min Huang ]
   * New upstream release 
   * Crash with OpenJDK installed is fixed (Closes: #505913)
 
- -- Min Huang <min.huang@alumni.usc.edu>  Fri, 16 Jan 2009 17:14:06 -0800
+  [ Mehdi Dogguy ]
+  * Set Maintainer to "Debian Scala Maintainers" mailing-list and Min 
+    as Uploader.
+
+ -- Mehdi Dogguy <dogguy@pps.jussieu.fr>  Sat, 17 Jan 2009 18:33:13 +0100
 
 scala (2.7.2-2) unstable; urgency=low
 
