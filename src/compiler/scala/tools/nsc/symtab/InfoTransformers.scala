@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: InfoTransformers.scala 15228 2008-05-29 07:12:15Z rytz $
+// $Id: InfoTransformers.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.symtab
 

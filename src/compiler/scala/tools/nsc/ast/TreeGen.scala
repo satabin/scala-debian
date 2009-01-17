@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreeGen.scala 15238 2008-05-30 18:00:25Z odersky $
+// $Id: TreeGen.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.ast
 
@@ -301,6 +301,8 @@ abstract class TreeGen {
   def mkForwarder(target: Tree, vparamss: List[List[Symbol]]) =
     (target /: vparamss)((fn, vparams) => Apply(fn, vparams map paramToArg))
     
+  /** Used in situations where you need to access value of an expression several times
+   */
   def evalOnce(expr: Tree, owner: Symbol, unit: CompilationUnit)(within: (() => Tree) => Tree): Tree =
     if (treeInfo.isPureExpr(expr)) {
       within(() => expr);

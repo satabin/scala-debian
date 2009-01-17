@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Stream.scala 15229 2008-05-29 13:10:23Z stepancheg $
+// $Id: Stream.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala
@@ -440,17 +440,20 @@ abstract class Stream[+A] extends Seq.Projection[A] {
    *           this stream is <code>[a<sub>0</sub>, ..., a<sub>n</sub>]</code>.
    */
   override def flatMap[B](f: A => Iterable[B]): Stream[B] = {
-    // optimization: drop A's for which f yields no B
-    val fstream = dropWhile(a => f(a) isEmpty)
-    if (fstream isEmpty) Stream.empty
-    else {
-      val s: Stream[B] = f(fstream.head) match {
-        case x: Stream[_] => x
-        case y: List[_]   => y.toStream
-        case z            => z.toList.toStream
+    // drops A's for which f yields an empty Iterable[B]
+    def loop(s: Stream[A]): Stream[B] = {
+      if (s.isEmpty)
+        Stream.empty
+      else {
+        val i = f(s.head)
+        if (i isEmpty)
+          loop(s.tail)
+        else
+          i.toStream append loop(s.tail)
       }
-      s append (fstream.tail flatMap f)
     }
+
+    loop(this)
   }
 
   override def toStream = this

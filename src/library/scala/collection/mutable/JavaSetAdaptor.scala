@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2006, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: JavaSetAdaptor.scala 14532 2008-04-07 12:23:22Z washburn $
+// $Id: JavaSetAdaptor.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.collection.mutable

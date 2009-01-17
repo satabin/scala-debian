@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author
  */
-// $Id: LambdaLift.scala 15080 2008-05-19 14:55:51Z odersky $
+// $Id: LambdaLift.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.transform
 

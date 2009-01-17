@@ -2,13 +2,13 @@
 ##############################################################################
 #                      __                                                    #
 #      ________ ___   / /  ___     Scala Tools Launch Script                 #
-#     / __/ __// _ | / /  / _ |    (c) 2002-2008, LAMP/EPFL                  #
+#     / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL                  #
 #   __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/                    #
 #  /____/\___/_/ |_/____/_/ | |                                              #
 #                           |/                                               #
 ##############################################################################
 
-# $Id: scalatest 15826 2008-08-18 17:03:50Z rytz $
+# $Id: scalatest 16881 2009-01-09 16:28:11Z cunei $
 
 ##############################################################################
 # Error functions
@@ -191,7 +191,7 @@ test_print_help() {
 # Prints the scalatest version.
 test_print_version() {
     [ $# = 0 ] || abort "internal error";
-    echo "$SCRIPT "'$Revision: 15826 $';
+    echo "$SCRIPT "'$Revision: 16881 $';
 }
 
 # Prints the name of the specified test file.

@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: SemanticTokens.scala 14241 2008-03-03 14:53:47Z washburn $
+// $Id: SemanticTokens.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.models
 

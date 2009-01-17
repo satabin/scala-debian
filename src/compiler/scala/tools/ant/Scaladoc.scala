@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Ant Tasks                      **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2008, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Scaladoc.scala 15424 2008-06-24 09:24:03Z mcdirmid $
+// $Id: Scaladoc.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.ant
 

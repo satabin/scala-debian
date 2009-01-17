@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Actor.scala 16207 2008-10-06 08:59:54Z phaller $
+// $Id: Actor.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.actors
 
@@ -389,7 +389,6 @@ trait Actor extends AbstractActor {
    * @param  replyTo  the reply destination
    */
   def send(msg: Any, replyTo: OutputChannel[Any]) = synchronized {
-    tick()
     if (waitingFor(msg)) {
       received = Some(msg)
 
@@ -424,7 +423,6 @@ trait Actor extends AbstractActor {
     assert(Actor.self == this, "receive from channel belonging to other actor")
     if (shouldExit) exit() // links
     this.synchronized {
-      tick()
       val qel = mailbox.extractFirst((m: Any) => f.isDefinedAt(m))
       if (null eq qel) {
         waitingFor = f.isDefinedAt
@@ -454,7 +452,6 @@ trait Actor extends AbstractActor {
     assert(Actor.self == this, "receive from channel belonging to other actor")
     if (shouldExit) exit() // links
     this.synchronized {
-      tick()
       // first, remove spurious TIMEOUT message from mailbox if any
       val spurious = mailbox.extractFirst((m: Any) => m == TIMEOUT)
 
@@ -506,7 +503,6 @@ trait Actor extends AbstractActor {
     assert(Actor.self == this, "react on channel belonging to other actor")
     if (shouldExit) exit() // links
     this.synchronized {
-      tick()
       val qel = mailbox.extractFirst((m: Any) => f.isDefinedAt(m))
       if (null eq qel) {
         waitingFor = f.isDefinedAt
@@ -534,7 +530,6 @@ trait Actor extends AbstractActor {
     assert(Actor.self == this, "react on channel belonging to other actor")
     if (shouldExit) exit() // links
     this.synchronized {
-      tick()
       // first, remove spurious TIMEOUT message from mailbox if any
       val spurious = mailbox.extractFirst((m: Any) => m == TIMEOUT)
 
@@ -818,7 +813,9 @@ trait Actor extends AbstractActor {
    */
   def link(to: AbstractActor): AbstractActor = {
     assert(Actor.self == this, "link called on actor different from self")
-    links = to :: links
+    synchronized {
+      links = to :: links
+    }
     to.linkTo(this)
     to
   }
@@ -844,7 +841,9 @@ trait Actor extends AbstractActor {
    */
   def unlink(from: AbstractActor) {
     assert(Actor.self == this, "unlink called on actor different from self")
-    links = links.remove(from.==)
+    synchronized {
+      links = links.remove(from.==)
+    }
     from.unlinkFrom(this)
   }
 
@@ -892,9 +891,9 @@ trait Actor extends AbstractActor {
   private[actors] def exitLinked() {
     exiting = true
     // remove this from links
-    links = links.remove(this.==)
+    val mylinks = links.remove(this.==)
     // exit linked processes
-    links.foreach((linked: AbstractActor) => {
+    mylinks.foreach((linked: AbstractActor) => {
       unlink(linked)
       if (!linked.exiting)
         linked.exit(this, exitReason)

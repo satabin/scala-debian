@@ -2,7 +2,7 @@
  * @author Philipp Haller
  */
 
-// $Id: Worker.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: Worker.scala 16807 2008-12-18 15:04:27Z phaller $
 
 package scala.tools.partest.nest
 
@@ -253,6 +253,7 @@ class Worker(val fileManager: FileManager) extends Actor {
       " -Dscalatest.lib="+LATEST_LIB+
       " -Dscalatest.cwd="+outDir.getParent+
       " -Djavacmd="+JAVACMD+
+      " -Duser.language=en -Duser.country=US"+
       " scala.tools.nsc.MainGenericRunner"+
       " Test jvm"
     NestUI.verbose(cmd)
@@ -774,6 +775,7 @@ class Worker(val fileManager: FileManager) extends Actor {
         }
       }
       case "script" => {
+        val osName = System.getProperty("os.name", "")
         for (file <- files) {
           // when option "--failed" is provided
           // execute test only if log file is present
@@ -800,7 +802,14 @@ class Worker(val fileManager: FileManager) extends Actor {
             } else ""
 
             try {
-              val proc = Runtime.getRuntime.exec(file.getAbsolutePath+argString)
+              val cmdString =
+                if (osName startsWith "Windows") {
+                  val batchFile = new File(file.getParentFile, fileBase+".bat")
+                  NestUI.verbose("batchFile: "+batchFile)
+                  batchFile.getAbsolutePath
+                }
+                else file.getAbsolutePath
+              val proc = Runtime.getRuntime.exec(cmdString+argString)
               val in = proc.getInputStream
               val err = proc.getErrorStream
               val writer = new PrintWriter(new FileWriter(logFile), true)
@@ -847,6 +856,7 @@ class Worker(val fileManager: FileManager) extends Actor {
     }
     NestUI.verbose("finished testing "+kind+" with "+errors+" errors")
     NestUI.verbose("created "+compileMgr.numSeparateCompilers+" separate compilers")
+    compileMgr.timer.cancel()
     (files.length-errors, errors)
   }
 

@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: JoinType.scala 10890 2007-04-30 17:47:18Z michelou $
+// $Id: JoinType.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.dbc.statement

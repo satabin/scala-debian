@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: BitSet.scala 12340 2007-07-17 15:29:47Z mcdirmid $
+// $Id: BitSet.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.collection

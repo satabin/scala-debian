@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: ReachingDefinitions.scala 15167 2008-05-22 17:33:09Z dragos $
+// $Id: ReachingDefinitions.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.backend.icode.analysis
 

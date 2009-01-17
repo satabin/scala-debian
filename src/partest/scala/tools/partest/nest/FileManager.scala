@@ -1,9 +1,9 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2008 LAMP/EPFL
+ * Copyright 2007-2009 LAMP/EPFL
  * @author Philipp Haller
  */
 
-// $Id: FileManager.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: FileManager.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.partest.nest
 
@@ -63,5 +63,5 @@ trait FileManager {
   var SCALAC_OPTS = System.getProperty("scalatest.scalac_opts", "-deprecation")
   var JAVA_OPTS   = System.getProperty("scalatest.java_opts", "")
 
-  var timeout = "1200000"
+  var timeout = "2400000"
 }

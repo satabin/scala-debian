@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: InterpreterCommand.scala 15427 2008-06-24 12:45:25Z odersky $
+// $Id: InterpreterCommand.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 

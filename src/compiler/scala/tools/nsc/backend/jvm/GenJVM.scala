@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Iulian Dragos
  */
 
-// $Id: GenJVM.scala 16415 2008-10-29 14:26:16Z dragos $
+// $Id: GenJVM.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.backend.jvm
 

@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: ZipArchive.scala 14912 2008-05-05 14:09:00Z spoon $
+// $Id: ZipArchive.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.tools.nsc.io
@@ -118,8 +118,9 @@ final class ZipArchive(file: File, val archive: ZipFile) extends PlainFile(file)
              this.toString() + " - " + path);
       if (entry.isDirectory()) {
         val dir: DirEntry = getDir(dirs, path)
-        assert(dir.entry eq null, this.toString() + " - " + path)
-        dir.entry = entry
+        // this assertion causes an unnecessary bomb if a directory is twice listed in the jar
+        // assert(dir.entry eq null, this.toString() + " - " + path)
+        if (dir.entry eq null) dir.entry = entry
       } else {
         val index = path.lastIndexOf('/')
         val name = if (index < 0) path else path.substring(index + 1)
@@ -206,7 +207,7 @@ final class ZipArchive(file: File, val archive: ZipFile) extends PlainFile(file)
     def archive = ZipArchive.this.archive
     override def lastModified: Long = entry.getTime()
     override def input = archive.getInputStream(entry)
-    override def size = Some(entry.getSize().toInt)
+    override def sizeOption = Some(entry.getSize().toInt)
   }
 }
 
@@ -337,6 +338,6 @@ final class URLZipArchive(url: URL) extends AbstractFile {
         extends Entry(name, path) {
     override def lastModified: Long = entry.getTime()
     override def input = in
-    override def size = Some(entry.getSize().toInt)
+    override def sizeOption = Some(entry.getSize().toInt)
   }
 }

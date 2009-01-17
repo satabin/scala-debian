@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2006, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Nothing$.scala 14416 2008-03-19 01:17:25Z mihaylov $
+// $Id: Nothing$.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.runtime
@@ -18,4 +18,4 @@ package scala.runtime
  * signatures, it is erased to this one.
  */
 
-sealed abstract class Nothing$
+sealed abstract class Nothing$ extends Throwable

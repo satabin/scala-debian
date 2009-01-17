@@ -1,9 +1,9 @@
 <!--
 // NSC -- new Scala compiler
-// Copyright 2005-2007 LAMP/EPFL
+// Copyright 2005-2009 LAMP/EPFL
 // @author  Stephane Micheloud
 
-// $Id: script.js 16466 2008-10-31 16:30:32Z cunei $
+// $Id: script.js 16894 2009-01-13 13:09:41Z cunei $
 
 function setWindowTitle(title) {
   parent.document.title = title;
@@ -40,11 +40,12 @@ function get_api_root(key) {
   return root;
 }
 
-var scala_src_root = 'http://lampsvn.epfl.ch/trac/scala/browser/scala/tags/R_2_7_2_final/';
+var scala_src_root = 'http://lampsvn.epfl.ch/trac/scala/browser/scala/tags/R_2_7_3_final/';
 var lib_src_root = scala_src_root + 'src/library/';
 var comp_src_root = scala_src_root + 'src/compiler/';
 var actors_src_root = scala_src_root + 'src/actors/';
 var dbc_src_root = scala_src_root + 'src/dbc/';
+var swing_src_root = scala_src_root + 'src/swing/';
 
 //var liftweb_src_root = 'http://liftweb.googlecode.com/svn/trunk/liftweb/lift/src/main/scala/';
 
@@ -52,6 +53,7 @@ function get_src_root(key) {
   root = null;
   if      (key.indexOf("scala/actors/") == 0) { root = actors_src_root; }
   else if (key.indexOf("scala/dbc/"   ) == 0) { root = dbc_src_root; }
+  else if (key.indexOf("scala/swing/" ) == 0) { root = swing_src_root; }
   else if (key.indexOf("scala/tools/" ) == 0) { root = comp_src_root; }
   else if (key.indexOf("scala/"       ) == 0) { root = lib_src_root; }
   //else if (key.indexOf("net/liftweb/" ) == 0) { root = liftweb_src_root; }

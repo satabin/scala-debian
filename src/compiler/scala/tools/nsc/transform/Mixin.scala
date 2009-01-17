@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: Mixin.scala 16401 2008-10-28 17:58:19Z dragos $
+// $Id: Mixin.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.transform
 
@@ -960,6 +960,10 @@ abstract class Mixin extends InfoTransform {
           // assign to fields in some implementation class via an abstract
           // setter in the interface.
           localTyper.typed {
+            // println(lhs.symbol)
+            // println(lhs.symbol.owner.info.decls)
+            // println(needsExpandedSetterName(lhs.symbol))
+            // util.trace("generating tree: ") {
             atPos(tree.pos) {
               Apply(
                 Select(
@@ -969,7 +973,7 @@ abstract class Mixin extends InfoTransform {
                     needsExpandedSetterName(lhs.symbol))) setPos lhs.pos, 
                 List(rhs))
             }
-          }
+          } //}
         case _ =>
           tree
       }

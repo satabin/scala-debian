@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2006, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: LoggedNodeFactory.scala 8827 2006-10-03 14:57:15Z michelou $
+// $Id: LoggedNodeFactory.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.xml.factory

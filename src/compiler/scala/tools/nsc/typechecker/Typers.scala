@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Typers.scala 15830 2008-08-19 08:25:20Z washburn $
+// $Id: Typers.scala 16881 2009-01-09 16:28:11Z cunei $
 
 //todo: rewrite or disllow new T where T is a mixin (currently: <init> not a member of T)
 //todo: use inherited type info also for vars and values
@@ -253,7 +253,32 @@ trait Typers { self: Analyzer =>
      */
     def checkStable(tree: Tree): Tree =
       if (treeInfo.isPureExpr(tree)) tree
-      else errorTree(tree, "stable identifier required, but " + tree + " found.")
+      else errorTree(
+        tree, 
+        "stable identifier required, but "+tree+" found."+
+        (if (isStableExceptVolatile(tree)) {
+          val tpe = tree.symbol.tpe match {
+            case PolyType(_, rtpe) => rtpe
+            case t => t
+          }
+          "\n Note that "+tree.symbol+" is not stable because its type, "+tree.tpe+", is volatile."
+         } else ""))
+
+    /** Would tree be a stable (i.e. a pure expression) if the type
+     *  of its symbol was not volatile?
+     */
+    private def isStableExceptVolatile(tree: Tree) = {
+      tree.hasSymbol && tree.symbol != NoSymbol && tree.tpe.isVolatile &&
+      { val savedTpe = tree.symbol.info
+        val savedSTABLE = tree.symbol getFlag STABLE
+        tree.symbol setInfo AnyRefClass.tpe
+        tree.symbol setFlag STABLE
+       val result = treeInfo.isPureExpr(tree)
+        tree.symbol setInfo savedTpe
+        tree.symbol setFlag savedSTABLE
+        result
+      }
+    }
 
     /** Check that `tpt' refers to a non-refinement class type */
     def checkClassType(tpt: Tree, existentialOK: Boolean) {
@@ -262,6 +287,7 @@ trait Typers { self: Analyzer =>
         case ErrorType => ;
         case PolyType(_, restpe) => check(restpe)
         case ExistentialType(_, restpe) if existentialOK => check(restpe)
+        case AnnotatedType(_, underlying, _) => check(underlying)
         case t => error(tpt.pos, "class type required but "+t+" found")
       }
       check(tpt.tpe)
@@ -276,9 +302,7 @@ trait Typers { self: Analyzer =>
     def checkNonCyclic(pos: Position, tp: Type): Boolean = {
       def checkNotLocked(sym: Symbol): Boolean = {
         sym.initialize
-        if (sym hasFlag LOCKED) {
-          error(pos, "cyclic aliasing or subtyping involving "+sym); false
-        } else true
+	sym.lockOK || {error(pos, "cyclic aliasing or subtyping involving "+sym); false}
       }
       tp match {
         case TypeRef(pre, sym, args) =>
@@ -307,9 +331,11 @@ trait Typers { self: Analyzer =>
     }
 
     def checkNonCyclic(pos: Position, tp: Type, lockedSym: Symbol): Boolean = {
-      lockedSym.setFlag(LOCKED)
+      lockedSym.lock {
+        throw new TypeError("illegal cyclic reference involving " + lockedSym)
+      }
       val result = checkNonCyclic(pos, tp)
-      lockedSym.resetFlag(LOCKED)
+      lockedSym.unlock()
       result
     }
 
@@ -671,7 +697,9 @@ trait Typers { self: Analyzer =>
             (pt <:< functionType(mt.paramTypes map (t => WildcardType), WildcardType)))*/ { // (4.2)
           if (settings.debug.value) log("eta-expanding "+tree+":"+tree.tpe+" to "+pt)
           checkParamsConvertible(tree.pos, tree.tpe)
-          typed(etaExpand(context.unit, tree), mode, pt)
+          val tree1 = etaExpand(context.unit, tree)
+//          println("eta "+tree+" ---> "+tree1+":"+tree1.tpe)
+          typed(tree1, mode, pt)
         } else if (!meth.isConstructor && mt.paramTypes.isEmpty) { // (4.3)
           adapt(typed(Apply(tree, List()) setPos tree.pos), mode, pt)
         } else if (context.implicitsEnabled) {
@@ -2113,7 +2141,11 @@ trait Typers { self: Analyzer =>
         def apply(tp: Type): Type = tp match {
           case TypeRef(pre, sym, args) =>
             if (sym.isAliasType && containsLocal(tp)) apply(tp.normalize)
-            else mapOver(tp)
+            else {
+              if (pre.isVolatile) 
+                context.error(tree.pos, "Inferred type "+tree.tpe+" contains type selection from volatile type "+pre)
+              mapOver(tp) 
+            }
           case _ =>
             mapOver(tp)
         }
@@ -2213,6 +2245,9 @@ trait Typers { self: Analyzer =>
         if (wc.symbol == NoSymbol) { namer.enterSym(wc); wc.symbol setFlag EXISTENTIAL }
         else context.scope enter wc.symbol
       val whereClauses1 = typedStats(tree.whereClauses, context.owner)
+      for (vd @ ValDef(_, _, _, _) <- tree.whereClauses)
+        if (vd.symbol.tpe.isVolatile)
+          error(vd.pos, "illegal abstraction from value with volatile type "+vd.symbol.tpe)
       val tpt1 = typedType(tree.tpt, mode)
       val (typeParams, tpe) = existentialTransform(tree.whereClauses map (_.symbol), tpt1.tpe)
       //println(tpe + ": " + tpe.getClass )
@@ -2430,17 +2465,18 @@ trait Typers { self: Analyzer =>
             .setOriginal(tpt1) /* .setPos(tpt1.pos) */
             .setType(appliedType(tpt1.tpe, context.undetparams map (_.tpe)))
         }
+        /** If current tree <tree> appears in <val x(: T)? = <tree>>
+         *  return `tp with x.type' else return `tp'.
+         */
         def narrowRhs(tp: Type) = {
           var sym = context.tree.symbol
           if (sym != null && sym != NoSymbol && sym.owner.isClass && sym.getter(sym.owner) != NoSymbol) 
             sym = sym.getter(sym.owner)
           context.tree match {
-            case ValDef(_, _, _, Apply(Select(`tree`, _), _)) if (sym.isStable) =>
-//              println("narrowing...")
+            case ValDef(mods, _, _, Apply(Select(`tree`, _), _)) if !(mods hasFlag MUTABLE) =>
               val pre = if (sym.owner.isClass) sym.owner.thisType else NoPrefix
               intersectionType(List(tp, singleType(pre, sym)))
             case _ =>
-//              println("no narrow: "+sym+" "+sym.isStable+" "+context.tree+"//"+tree)
               tp
           }
         }
@@ -2524,11 +2560,13 @@ trait Typers { self: Analyzer =>
               if (phase.id <= currentRun.typerPhase.id &&
                   fun.symbol == Any_isInstanceOf && !targs.isEmpty)
                 checkCheckable(tree.pos, targs.head, "")
-              val resultpe0 = restpe.instantiateTypeParams(tparams, targs)
-              //@M TODO -- probably ok
-              //@M example why asSeenFrom is necessary: class Foo[a] { def foo[m[x]]: m[a] } (new Foo[Int]).foo[List] : List[Int]
-              //@M however, asSeenFrom widens a singleton type, thus cannot use it for those types
-              val resultpe = if (resultpe0.isInstanceOf[SingletonType]) resultpe0 else resultpe0.asSeenFrom(prefixType(fun), fun.symbol.owner) 
+              val resultpe = restpe.instantiateTypeParams(tparams, targs)
+              //@M substitution in instantiateParams needs to be careful!
+              //@M example: class Foo[a] { def foo[m[x]]: m[a] = error("") } (new Foo[Int]).foo[List] : List[Int]
+              //@M    --> first, m[a] gets changed to m[Int], then m gets substituted for List, 
+              //          this must preserve m's type argument, so that we end up with List[Int], and not List[a]
+              //@M related bug: #1438 
+              //println("instantiating type params "+restpe+" "+tparams+" "+targs+" = "+resultpe)
               copy.TypeApply(tree, fun, args) setType resultpe
             }
           } else {
@@ -3262,11 +3300,8 @@ trait Typers { self: Analyzer =>
           tree setType ref1.tpe.resultType
 
         case SelectFromTypeTree(qual, selector) =>
-/* maybe need to do this:
-          val res = typedSelect(typedType(qual, mode), selector)
-          tree setType res.tpe setSymbol res.symbol
-          res
-*/
+          val qual1 = typedType(qual, mode)
+          if (qual1.tpe.isVolatile) error(tree.pos, "illegal type selection from volatile type "+qual.tpe) 
           typedSelect(typedType(qual, mode), selector)
 
         case CompoundTypeTree(templ) =>
@@ -3399,7 +3434,7 @@ trait Typers { self: Analyzer =>
     /** Types a higher-kinded type tree -- pt denotes the expected kind*/
     def typedHigherKindedType(tree: Tree, mode: Int, pt: Type): Tree =
       if (pt.typeParams.isEmpty) typedType(tree, mode) // kind is known and it's *
-      else typed(tree, HKmode, pt)//!!!
+      else typed(tree, HKmode, pt)
       
     def typedHigherKindedType(tree: Tree, mode: Int): Tree = 
       typed(tree, HKmode, WildcardType)

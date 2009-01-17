@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2002-2008 LAMP/EPFL
+ * Copyright 2002-2009 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: Reporter.scala 15029 2008-05-14 16:50:54Z odersky $
+// $Id: Reporter.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.reporters
 

@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2008, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Iterator.scala 15611 2008-07-25 15:28:32Z odersky $
+// $Id: Iterator.scala 16881 2009-01-09 16:28:11Z cunei $
 
 
 package scala
@@ -351,6 +351,8 @@ trait Iterator[+A] {
    *  all elements of the result satisfy the predicate <code>p</code>. 
    *  The order of the elements is preserved.
    *
+   *  The behavior of <code>this</code> iterator is undefined after this method invocation.
+   *
    *  @param p the predicate used to filter the iterator.
    *  @return  the longest prefix of this iterator satisfying <code>p</code>.
    */
@@ -358,6 +360,8 @@ trait Iterator[+A] {
 
   /** Skips longest sequence of elements of this iterator which satisfy given 
    *  predicate <code>p</code>, and returns an iterator of the remaining elements.
+   *
+   *  The behavior of <code>this</code> iterator is undefined after this method invocation.
    *
    *  @param p the predicate used to skip elements.
    *  @return  an iterator consisting of the remaining elements

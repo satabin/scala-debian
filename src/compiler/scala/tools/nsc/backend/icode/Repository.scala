@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: Repository.scala 13784 2008-01-23 10:54:00Z michelou $
+// $Id: Repository.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.backend.icode
 

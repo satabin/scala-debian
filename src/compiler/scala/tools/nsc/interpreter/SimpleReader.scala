@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Stepan Koltsov
  */
-// $Id: SimpleReader.scala 14416 2008-03-19 01:17:25Z mihaylov $
+// $Id: SimpleReader.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.interpreter
 import java.io.{BufferedReader, PrintWriter}
@@ -16,7 +16,7 @@ class SimpleReader(
 extends InteractiveReader {
   def this() = this(Console.in, new PrintWriter(Console.out), true)
 
-  def readLine(prompt: String) = {
+  def readOneLine(prompt: String) = {
     if (interactive) {
       out.print(prompt)
       out.flush()

@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2006-2007 LAMP/EPFL
+ * Copyright 2006-2009 LAMP/EPFL
  * @author  Lex Spoon
  */
 
-// $Id: GenericRunnerSettings.scala 13035 2007-10-10 00:59:37Z spoon $
+// $Id: GenericRunnerSettings.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 

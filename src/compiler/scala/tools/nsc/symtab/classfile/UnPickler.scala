@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: UnPickler.scala 15799 2008-08-15 18:23:54Z odersky $
+// $Id: UnPickler.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.symtab.classfile
 

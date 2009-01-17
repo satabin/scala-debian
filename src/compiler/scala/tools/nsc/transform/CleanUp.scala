@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2006 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: CleanUp.scala 15682 2008-08-03 15:08:30Z phaller $
+// $Id: CleanUp.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.transform
 

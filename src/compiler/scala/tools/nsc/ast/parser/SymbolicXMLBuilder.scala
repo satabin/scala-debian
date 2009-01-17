@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Burak Emir
  */
-// $Id: SymbolicXMLBuilder.scala 14017 2008-02-15 11:30:46Z michelou $
+// $Id: SymbolicXMLBuilder.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.ast.parser
 

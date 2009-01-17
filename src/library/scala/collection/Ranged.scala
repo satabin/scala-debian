@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Ranged.scala 11110 2007-05-21 12:40:17Z mcdirmid $
+// $Id: Ranged.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.collection
 

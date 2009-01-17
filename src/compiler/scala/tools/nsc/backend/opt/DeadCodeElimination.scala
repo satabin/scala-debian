@@ -1,9 +1,9 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Iulian Dragos
  */
 
-// $Id: DeadCodeElimination.scala 16459 2008-10-31 11:58:07Z cunei $
+// $Id: DeadCodeElimination.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.backend.opt
 

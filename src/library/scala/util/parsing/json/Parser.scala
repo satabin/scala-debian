@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Parser.scala 15746 2008-08-11 17:33:54Z dchenbecker $
+// $Id: Parser.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.util.parsing.json

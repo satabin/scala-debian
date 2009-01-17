@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: FJTaskScheduler2.scala 16207 2008-10-06 08:59:54Z phaller $
+// $Id: FJTaskScheduler2.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.actors
 
@@ -45,6 +45,13 @@ class FJTaskScheduler2 extends Thread with IScheduler {
       case ace: java.security.AccessControlException =>
         null
     }
+  val timeFreqProp =
+    try {
+      System.getProperty("actors.timeFreq")
+    } catch {
+      case ace: java.security.AccessControlException =>
+        null
+    }
 
   val initCoreSize =
     if (null ne coreProp) Integer.parseInt(coreProp)
@@ -60,15 +67,19 @@ class FJTaskScheduler2 extends Thread with IScheduler {
     if (null ne maxProp) Integer.parseInt(maxProp)
     else 256
 
+  val timeFreq =
+    if (null ne timeFreqProp) Integer.parseInt(timeFreqProp)
+    else 10
+
   private var coreSize = initCoreSize
+
+  Debug.info(this+": corePoolSize = "+coreSize+", maxPoolSize = "+maxSize)
 
   private val executor =
     new FJTaskRunnerGroup(coreSize)
 
   private var terminating = false
   private var suspending = false
-
-  private var lastActivity = Platform.currentTime
 
   private var submittedTasks = 0
 
@@ -87,6 +98,12 @@ class FJTaskScheduler2 extends Thread with IScheduler {
 
   private var lockupHandler: () => Unit = null
 
+  private def allWorkersBlocked: Boolean =
+    executor.threads.forall(t => {
+      val s = t.getState()
+      s == Thread.State.BLOCKED || s == Thread.State.WAITING || s == Thread.State.TIMED_WAITING
+    })
+
   override def run() {
     try {
       while (!terminating) {
@@ -103,12 +120,11 @@ class FJTaskScheduler2 extends Thread with IScheduler {
             ActorGC.gc()
 
             // check if we need more threads
-            if (Platform.currentTime - lastActivity >= TICK_FREQ
-                && coreSize < maxSize
+            if (coreSize < maxSize
+                && allWorkersBlocked
                 && executor.checkPoolSize()) {
                   //Debug.info(this+": increasing thread pool size")
                   coreSize += 1
-                  lastActivity = Platform.currentTime
                 }
             else {
               if (ActorGC.allTerminated) {
@@ -152,9 +168,7 @@ class FJTaskScheduler2 extends Thread with IScheduler {
   /**
    *  @param  a the actor
    */
-  def tick(a: Actor) {
-    lastActivity = Platform.currentTime
-  }
+  def tick(a: Actor) = {}
 
   /** Shuts down all idle worker threads.
    */

@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2006 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: FreshNameCreator.scala 14714 2008-04-19 11:41:05Z mcdirmid $
+// $Id: FreshNameCreator.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.util
 

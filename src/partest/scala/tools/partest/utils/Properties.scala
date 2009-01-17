@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Parallel Testing               **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2008, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Properties.scala 14415 2008-03-19 00:53:09Z mihaylov $
+// $Id: Properties.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.partest.utils
 
@@ -38,7 +38,7 @@ object Properties {
   }
   
   val copyrightString: String = {
-    val defaultString = "(c) 2002-2007 LAMP/EPFL"
+    val defaultString = "(c) 2002-2009 LAMP/EPFL"
     props.getProperty("copyright.string", defaultString)
   }
 

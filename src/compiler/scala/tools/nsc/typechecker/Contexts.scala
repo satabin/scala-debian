@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Contexts.scala 15798 2008-08-15 16:27:10Z odersky $
+// $Id: Contexts.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.typechecker
 
@@ -157,7 +157,7 @@ trait Contexts { self: Analyzer =>
         assert(inIDE)
         def eq[T](x : T, y : T) = x == y
         val a0 = {
-          if (tree ne null) tree.setType(null)
+          if ((tree ne null) && (tree ne EmptyTree)) tree.setType(null)
           if ((tree eq null) || (that.tree eq null)) tree == that.tree else 
             tree equalsStructure that.tree;
         } 
@@ -346,7 +346,7 @@ trait Contexts { self: Analyzer =>
     }
 
     def error(pos: Position, msg: String) {
-      if (reportGeneralErrors || inIDE)
+      if (reportGeneralErrors)
         unit.error(pos, if (checking) "**** ERROR DURING INTERNAL CHECKING ****\n" + msg else msg)
       else
         throw new TypeError(pos, msg)
@@ -355,7 +355,7 @@ trait Contexts { self: Analyzer =>
     def warning(pos:  Position, msg: String) {
       if (reportGeneralErrors) unit.warning(pos, msg)
     }
-
+ 
     /**
      *  @param pos  ...
      *  @param pre  ...

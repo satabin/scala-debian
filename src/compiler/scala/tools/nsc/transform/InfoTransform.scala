@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2006 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author
  */
-// $Id: InfoTransform.scala 15298 2008-06-09 13:32:38Z rytz $
+// $Id: InfoTransform.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.transform
 

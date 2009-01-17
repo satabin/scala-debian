@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2006-2008 LAMP/EPFL
+ * Copyright 2006-2009 LAMP/EPFL
  * @author  Stephane Micheloud
  */
 
-// $Id: Properties.scala 15120 2008-05-20 20:31:20Z odersky $
+// $Id: Properties.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc
 
@@ -35,7 +35,7 @@ object Properties {
   }
   
   val copyrightString: String = {
-    val defaultString = "(c) 2002-2008 LAMP/EPFL"
+    val defaultString = "(c) 2002-2009 LAMP/EPFL"
     props.getProperty("copyright.string", defaultString)
   }
 

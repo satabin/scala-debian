@@ -1,9 +1,9 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2008 LAMP/EPFL
+ * Copyright 2007-2009 LAMP/EPFL
  * @author Philipp Haller
  */
 
-// $Id: NestRunner.scala 14415 2008-03-19 00:53:09Z mihaylov $
+// $Id: NestRunner.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.partest.nest
 

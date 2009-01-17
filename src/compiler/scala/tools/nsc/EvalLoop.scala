@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: EvalLoop.scala 14886 2008-05-02 16:06:59Z michelou $
+// $Id: EvalLoop.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc
 

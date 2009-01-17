@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Stephane Micheloud
  */
-//$Id: Command.scala 10730 2007-04-18 14:10:07Z michelou $
+//$Id: Command.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.man1
 
@@ -36,7 +36,7 @@ trait Command {
   def authors = Section("AUTHOR",
 
     "Written by Martin Odersky and other members of the " &
-    Link("Scala team", "http://scala-lang.org/community/") & ".")
+    Link("Scala team", "http://www.scala-lang.org/node/89") & ".")
 
   def copyright = Section("COPYRIGHT",
 

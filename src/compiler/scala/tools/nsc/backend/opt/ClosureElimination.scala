@@ -1,9 +1,9 @@
  /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Iulian Dragos
  */
 
-// $Id: ClosureElimination.scala 14803 2008-04-23 17:21:04Z dragos $
+// $Id: ClosureElimination.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.backend.opt;
 
@@ -99,6 +99,7 @@ abstract class ClosureElimination extends SubComponent {
 
       for (bb <- linearizer.linearize(m)) {
         var info = cpp.in(bb)
+        log("Cpp info at entry to block " + bb + ": " + info)
 
         for (i <- bb.toList) {
           i match {

@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: HashSet.scala 13675 2008-01-09 11:24:54Z washburn $
+// $Id: HashSet.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.util
 

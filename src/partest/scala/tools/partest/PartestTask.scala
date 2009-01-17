@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Parallel Testing               **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2008, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: PartestTask.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: PartestTask.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.partest
 
@@ -31,6 +31,9 @@ class PartestTask extends Task {
 
   def addConfiguredRunTests(input: FileSet): Unit =
     runFiles = Some(input)
+
+  def addConfiguredJvm5Tests(input: FileSet): Unit =
+    jvm5Files = Some(input)
 
   def addConfiguredResidentTests(input: FileSet): Unit =
     residentFiles = Some(input)
@@ -76,6 +79,9 @@ class PartestTask extends Task {
   def setTimeout(delay: String): Unit =
     timeout = Some(delay)
 
+  def setDebug(input: Boolean): Unit =
+    debug = input
+
   private var classpath: Option[Path] = None
   private var javacmd: Option[File] = None
   private var javaccmd: Option[File] = None
@@ -86,12 +92,14 @@ class PartestTask extends Task {
   private var pos5Files: Option[FileSet] = None
   private var negFiles: Option[FileSet] = None
   private var runFiles: Option[FileSet] = None
+  private var jvm5Files: Option[FileSet] = None
   private var residentFiles: Option[FileSet] = None
   private var scriptFiles: Option[FileSet] = None
   private var shootoutFiles: Option[FileSet] = None
   private var errorOnFailed: Boolean = false
   private var scalacOpts: Option[String] = None
   private var timeout: Option[String] = None
+  private var debug = false
 
   private def getFilesAndDirs(fileSet: Option[FileSet]): Array[File] =
     if (!fileSet.isEmpty) {
@@ -115,7 +123,7 @@ class PartestTask extends Task {
 
   private def getPos5Files: Array[File] =
     getFilesAndDirs(pos5Files)
-
+  
   private def getNegFiles: Array[File] =
     if (!negFiles.isEmpty) {
       val files = negFiles.get
@@ -131,6 +139,9 @@ class PartestTask extends Task {
     }
     else
       Array()
+  
+  private def getJvm5Files: Array[File] =
+    getFilesAndDirs(jvm5Files)
   
   private def getResidentFiles: Array[File] =
     if (!residentFiles.isEmpty) {
@@ -157,7 +168,9 @@ class PartestTask extends Task {
       Array()
 
   override def execute(): Unit = {
-    
+    if (debug)
+      System.setProperty("partest.debug", "true")
+
     if (classpath.isEmpty)
       error("Mandatory attribute 'classpath' is not set.")
       
@@ -165,7 +178,7 @@ class PartestTask extends Task {
       (classpath.get.list map { fs => new File(fs) }) find { f =>
         f.getName match {
           case "scala-library.jar" => true
-          case "classes" if (f.getParentFile.getName == "library") => true
+          case "library" if (f.getParentFile.getName == "classes") => true
           case _ => false
         }
       }
@@ -241,6 +254,13 @@ class PartestTask extends Task {
     if (getRunFiles.size > 0) {
       log("Compiling and running files")
       val (successes, failures) = runTestsForFiles(getRunFiles, "run")
+      allSucesses += successes
+      allFailures += failures
+    }
+
+    if (getJvm5Files.size > 0) {
+      log("Compiling and running files")
+      val (successes, failures) = runTestsForFiles(getJvm5Files, "jvm5")
       allSucesses += successes
       allFailures += failures
     }

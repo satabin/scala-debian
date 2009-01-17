@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2007-2008 LAMP/EPFL
+ * Copyright 2007-2009 LAMP/EPFL
  * @author  Sean McDirmid
  */
-// $Id: ModelToXML.scala 14509 2008-04-05 15:16:36Z dragos $
+// $Id: ModelToXML.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.doc
 

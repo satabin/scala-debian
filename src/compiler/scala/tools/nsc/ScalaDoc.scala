@@ -1,9 +1,9 @@
 /* scaladoc, a documentation generator for Scala
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  * @author  Geoffrey Washburn
  */
-// $Id: ScalaDoc.scala 14270 2008-03-05 15:07:14Z washburn $
+// $Id: ScalaDoc.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc
 

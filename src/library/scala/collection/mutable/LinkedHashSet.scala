@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2008, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: LinkedHashSet.scala 14144 2008-02-26 17:50:12Z michelou $
+// $Id: LinkedHashSet.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.collection.mutable
 

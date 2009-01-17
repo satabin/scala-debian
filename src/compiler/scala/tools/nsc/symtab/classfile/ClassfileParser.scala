@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: ClassfileParser.scala 16401 2008-10-28 17:58:19Z dragos $
+// $Id: ClassfileParser.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.symtab.classfile
 
@@ -770,8 +770,7 @@ abstract class ClassfileParser {
           val t = pool.getType(index)
           val n = pool.getName(in.nextChar)
           val s = t.typeSymbol.linkedModuleOfClass.info.decls.lookup(n)
-          //assert (s != NoSymbol, "while processing " + in.file + ": " + t + "." + n + ": " + t.decls)
-          assert(s != NoSymbol, t) // avoid string concatenation!
+          assert(s != NoSymbol, t)
           Constant(s)
         case ARRAY_TAG  =>
           val arr = new ArrayBuffer[Constant]()

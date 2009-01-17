@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Stephane Micheloud
  */
-//$Id: scalac.scala 15902 2008-08-22 16:43:47Z rytz $
+//$Id: scalac.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.man1
 
