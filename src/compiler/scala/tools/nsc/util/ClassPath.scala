@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2006-2007 LAMP/EPFL
+ * Copyright 2006-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: ClassPath.scala 15820 2008-08-18 14:45:26Z dragos $
+// $Id: ClassPath.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.util
 
@@ -42,7 +42,7 @@ object ClassPath {
   /** Split path using platform-dependent path separator */
   def splitPath(path: String): List[String] = {
     val strtok = new StringTokenizer(path, File.pathSeparator)
-    val buf = new ListBuffer[String]
+    val buf = new collection.mutable.ListBuffer[String]
     while (strtok.hasMoreTokens()) {
       buf + strtok.nextToken()
     }

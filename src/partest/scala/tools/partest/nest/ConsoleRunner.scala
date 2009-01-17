@@ -1,9 +1,9 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2008 LAMP/EPFL
+ * Copyright 2007-2009 LAMP/EPFL
  * @author Philipp Haller
  */
 
-// $Id: ConsoleRunner.scala 16470 2008-11-01 11:36:15Z phaller $
+// $Id: ConsoleRunner.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.partest.nest
 
@@ -33,7 +33,7 @@ class ConsoleRunner extends DirectRunner with RunnerUtils {
               "Testing resident compiler"),
       TestSet("shootout", fileFilter, "shootout", "Testing shootout tests"),
       TestSet("script", fileFilter, "script", "Testing script tests"),
-      /*TestSet("scalacheck", fileFilter, "scalacheck", "Testing ScalaCheck tests")*/)
+      TestSet("scalacheck", fileFilter, "scalacheck", "Testing ScalaCheck tests"))
   }
 
   var fileManager: ConsoleFileManager = _

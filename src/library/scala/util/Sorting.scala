@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2007, Ross Judson           **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2009, Ross Judson           **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Sorting.scala 15504 2008-07-08 17:45:00Z dubochet $
+// $Id: Sorting.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.util

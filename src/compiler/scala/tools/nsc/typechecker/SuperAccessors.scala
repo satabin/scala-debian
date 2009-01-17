@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2006 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: SuperAccessors.scala 15165 2008-05-22 15:13:53Z odersky $
+// $Id: SuperAccessors.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.typechecker
 

@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Parsers.scala 15555 2008-07-15 17:02:57Z moors $
+// $Id: Parsers.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.util.parsing.combinator
 

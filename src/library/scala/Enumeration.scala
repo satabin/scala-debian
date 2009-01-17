@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2008, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Enumeration.scala 16019 2008-09-04 14:13:16Z rytz $
+// $Id: Enumeration.scala 16881 2009-01-09 16:28:11Z cunei $
 
 
 package scala
@@ -129,6 +129,21 @@ abstract class Enumeration(initial: Int, names: String*) {
   def filter(p: Value => Boolean): Iterator[Value] = elements filter p
     
   override def toString(): String = updateCache.mkString("{", ", ", "}")
+
+  /** Returns a Value from this Enumeration whose name matches 
+   * the argument <var>s</var>.
+   * You must pass a String* set of names to the constructor,
+   * or initialize each Enumeration with Value(String),
+   * for valueOf to work.
+   * @param s an enumeration name
+   * @return <tt>Some(Value)</tt> if an enumeration's name matches <var>s</var>, 
+   * else <tt>None</tt>
+   */
+  def valueOf(s:String) = {
+    var v: Option[Value] = None
+    for( e <- elements ) if (s == e.toString()) v = Some(e)
+    v
+  }
 
   /** Creates a fresh value, part of this enumeration. */
   protected final def Value: Value =

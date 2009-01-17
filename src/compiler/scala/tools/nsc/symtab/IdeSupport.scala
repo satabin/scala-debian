@@ -161,6 +161,8 @@ trait IdeSupport extends SymbolTable { // added to global, not analyzers.
   case Some(symbols) => symbols.foreach{sym =>
       def f(sym : Symbol) = sym.owner.info.decls match {
       case scope : PersistentScope => reuse(scope, (sym))
+        case scope => 
+          check(false, scope + " is not persistent")
       }
       if (sym.isModuleClass) { 
         if (check(sym.name.isTypeName,"") && sym.hasRawInfo)
@@ -626,6 +628,11 @@ trait IdeSupport extends SymbolTable { // added to global, not analyzers.
   } 
   override def notifyImport(what : Name, container : Type, from : Name, to : Name) : Unit = {
     super.notifyImport(what, container, from, to)
+    // sanity checking.
+    if ((container eq null) || 
+        (what      eq null) ||
+        (from      eq null) ||
+        (currentClient eq null)) return   
     val from0 = if (what.isTypeName) from.toTypeName else from.toTermName
     val result = container.member(from0)
     if (result != NoSymbol)

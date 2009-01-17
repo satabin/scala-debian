@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: NewLinePrintWriter.scala 14416 2008-03-19 01:17:25Z mihaylov $
+// $Id: NewLinePrintWriter.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc
 import java.io.{Writer, PrintWriter}

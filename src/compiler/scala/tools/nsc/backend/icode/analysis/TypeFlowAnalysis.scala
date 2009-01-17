@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: TypeFlowAnalysis.scala 16027 2008-09-04 17:49:37Z dragos $
+// $Id: TypeFlowAnalysis.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.backend.icode.analysis
 

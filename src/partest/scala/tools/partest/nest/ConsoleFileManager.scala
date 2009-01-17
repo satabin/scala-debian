@@ -1,9 +1,9 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2008 LAMP/EPFL
+ * Copyright 2007-2009 LAMP/EPFL
  * @author Philipp Haller
  */
 
-// $Id: ConsoleFileManager.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: ConsoleFileManager.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.partest.nest
 

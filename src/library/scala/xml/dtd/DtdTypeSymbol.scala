@@ -1,15 +1,15 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2006, LAMP/EPFL             **
-**  __\ \/ /__/ __ |/ /__/ __ |                                         **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://www.scala-lang.org/           **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: DtdTypeSymbol.scala 6679 2006-03-10 16:09:08Z odersky $
+// $Id: DtdTypeSymbol.scala 16857 2009-01-07 20:34:03Z cunei $
 
 
-package scala.xml.dtd;
+package scala.xml.dtd
 
 
-trait DtdTypeSymbol;
+trait DtdTypeSymbol

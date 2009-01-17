@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: TypingTransformers.scala 13738 2008-01-18 19:53:56Z michelou $
+// $Id: TypingTransformers.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.transform
 

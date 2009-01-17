@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreeBuilder.scala 15799 2008-08-15 18:23:54Z odersky $
+// $Id: TreeBuilder.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.ast.parser
 
@@ -147,7 +147,7 @@ abstract class TreeBuilder {
       val x = nme.ANON_CLASS_NAME.toTypeName
       Block(
         List(ClassDef(
-          Modifiers(FINAL | SYNTHETIC), x, List(),
+          Modifiers(FINAL), x, List(),
           Template(parents, self, NoMods, List(List()), argss, stats))),
         New(Ident(x), List(List())))
     }

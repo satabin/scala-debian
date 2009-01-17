@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Analyzer.scala 15267 2008-06-04 13:08:18Z mcdirmid $
+// $Id: Analyzer.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.typechecker
 
@@ -25,6 +25,7 @@ trait Analyzer extends AnyRef
     val global: Analyzer.this.global.type = Analyzer.this.global
     val phaseName = "namer"
     def newPhase(_prev: Phase): StdPhase = new StdPhase(_prev) {
+      override val checkable = false
       def apply(unit: CompilationUnit) {
         newNamer(rootContext(unit)).enterSym(unit.body)
       }

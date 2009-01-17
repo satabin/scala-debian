@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: CharArrayReader.scala 15467 2008-07-02 08:05:41Z washburn $
+// $Id: CharArrayReader.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.util
 

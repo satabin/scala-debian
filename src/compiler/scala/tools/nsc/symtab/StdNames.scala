@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: StdNames.scala 16027 2008-09-04 17:49:37Z dragos $
+// $Id: StdNames.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.symtab
 
@@ -354,6 +354,7 @@ trait StdNames {
     val tag = newTermName("$tag")
     val tail = newTermName("tail")
     val toList = newTermName("toList")
+    val toSeq = newTermName("toSeq")
     val toString_ = newTermName("toString")
     val clone_ = newTermName("clone")
     val that = newTermName("that")

@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2006 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: ConstantFolder.scala 10086 2007-02-21 19:10:41Z odersky $
+// $Id: ConstantFolder.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.typechecker
 

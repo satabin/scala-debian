@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Ant Tasks                      **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: FastScalac.scala 15995 2008-09-02 09:58:08Z rytz $
+// $Id: FastScalac.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.ant
 
@@ -49,11 +49,7 @@ class FastScalac extends Scalac {
    *  @param input The value for <code>server</code>.
    */
   def setServer(input: String): Unit = {
-    def isHostNameValid(host: String): Boolean =
-      try { val _ = java.net.InetAddress.getByName(host); true }
-      catch { case _ => false }
-    if (isHostNameValid(input)) serverAddr = Some(input)
-    else error("Unknown server '" + input + "'")
+    serverAddr = Some(input)
   }
 
   /** Sets the <code>shutdown</code> attribute. Used by Ant.

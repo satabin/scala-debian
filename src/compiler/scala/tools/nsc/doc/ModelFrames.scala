@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Sean McDirmid
  */
-// $Id: ModelFrames.scala 15581 2008-07-22 07:34:45Z washburn $
+// $Id: ModelFrames.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.doc
 

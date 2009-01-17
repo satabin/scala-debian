@@ -1,9 +1,9 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author Stephane Micheloud
  * Adapted from Lex Spoon's sbaz manual
  */
-//$Id: EmitHtml.scala 15845 2008-08-19 17:48:04Z michelou $
+//$Id: EmitHtml.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.docutil
 

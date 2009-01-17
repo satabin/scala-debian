@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2008 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Scanners.scala 15327 2008-06-10 13:53:56Z washburn $
+// $Id: Scanners.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.tools.nsc.ast.parser
 

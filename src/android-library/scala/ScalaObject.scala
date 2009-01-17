@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2008, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: ScalaObject.scala 14498 2008-04-04 12:12:27Z washburn $
+// $Id: ScalaObject.scala 16881 2009-01-09 16:28:11Z cunei $
 
 
 package scala

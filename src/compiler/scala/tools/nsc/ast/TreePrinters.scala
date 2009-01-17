@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreePrinters.scala 15894 2008-08-22 15:24:57Z washburn $
+// $Id: TreePrinters.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc.ast
 

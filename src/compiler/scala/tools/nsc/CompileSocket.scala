@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: CompileSocket.scala 14416 2008-03-19 01:17:25Z mihaylov $
+// $Id: CompileSocket.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 
@@ -205,9 +205,9 @@ class CompileSocket {
       } else {
         val port = if(create) getPort(vmArgs) else pollPort()
         if(port < 0) return null
-        val hostName = InetAddress.getLocalHost().getHostName()
+        val hostAdr = InetAddress.getLocalHost()
         try {
-          val result = new Socket(hostName, port)
+          val result = new Socket(hostAdr, port)
           info("[Connected to compilation daemon at port " + port + "]")
           result
         } catch {
@@ -257,7 +257,18 @@ class CompileSocket {
     }
 
   def getPassword(port: Int): String = {
-    val f = new BufferedReader(new FileReader(portFile(port)))
+    val ff=portFile(port)
+    val f = new BufferedReader(new FileReader(ff))
+    // allow some time for the server to start up
+    var retry=50
+    while (ff.length()==0 && retry>0) {
+      Thread.sleep(100)
+      retry-=1
+    }
+    if (ff.length()==0) {
+      ff.delete()
+      fatal("Unable to establish connection to server.")
+    }
     val result = f.readLine()
     f.close()
     result

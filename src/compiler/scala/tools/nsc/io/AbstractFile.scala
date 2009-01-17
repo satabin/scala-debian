@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: AbstractFile.scala 14912 2008-05-05 14:09:00Z spoon $
+// $Id: AbstractFile.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.tools.nsc.io
@@ -121,7 +121,7 @@ abstract class AbstractFile extends AnyRef with Iterable[AbstractFile] {
   def output: OutputStream
 
   /** size of this file if it is a concrete file. */
-  def size: Option[Int] = None
+  def sizeOption: Option[Int] = None
 
   /** returns contents of file (if applicable) in a byte array.
    *  warning: use <code>Global.getSourceFile()</code> to use the proper
@@ -138,7 +138,7 @@ abstract class AbstractFile extends AnyRef with Iterable[AbstractFile] {
   @throws(classOf[IOException])
   final def toByteArray: Array[Byte] = {
     val in = input
-    var rest = size.get
+    var rest = sizeOption.get
     val arr = new Array[Byte](rest)
     while (rest > 0) {
       val res = in.read(arr, arr.length - rest, rest)

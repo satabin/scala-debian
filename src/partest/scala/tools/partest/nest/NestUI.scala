@@ -2,7 +2,7 @@
  * @author Philipp Haller
  */
 
-// $Id: NestUI.scala 16457 2008-10-31 11:54:42Z phaller $
+// $Id: NestUI.scala 16103 2008-09-15 17:43:28Z phaller $
 
 package scala.tools.partest.nest
 

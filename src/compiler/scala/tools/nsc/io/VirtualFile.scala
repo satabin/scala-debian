@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: VirtualFile.scala 14912 2008-05-05 14:09:00Z spoon $
+// $Id: VirtualFile.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.tools.nsc.io
@@ -50,7 +50,7 @@ class VirtualFile(val name: String, _path: String) extends AbstractFile {
   /** Returns null. */
   final def file: File = null
   
-  override def size: Option[Int] = Some(content.size)
+  override def sizeOption: Option[Int] = Some(content.size)
   
   def input : InputStream = new ByteArrayInputStream(content);
   

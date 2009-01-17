@@ -1,8 +1,8 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2007 LAMP/EPFL
+ * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Global.scala 15897 2008-08-22 15:42:17Z washburn $
+// $Id: Global.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 
@@ -23,7 +23,6 @@ import plugins.Plugins
 import ast._
 import ast.parser._
 import typechecker._
-//import matching.TransMatcher
 import transform._
 import backend.icode.{ICodes, GenICode, Checkers}
 import backend.ScalaPrimitives
@@ -313,10 +312,6 @@ class Global(var settings: Settings, var reporter: Reporter) extends SymbolTable
     val global: Global.this.type = Global.this
   } with TailCalls
 
-  //object transMatcher extends {
-  //  val global: Global.this.type = Global.this
-  //} with TransMatcher
-
 //  object checkDefined extends {
 //    val global: Global.this.type = Global.this
 //  } with CheckDefined
@@ -421,14 +416,14 @@ class Global(var settings: Settings, var reporter: Reporter) extends SymbolTable
     explicitOuter,   // replace C.this by explicit outer pointers, eliminate pattern matching
 //    checkDefined,
     erasure,         // erase generic types to Java 1.4 types, add interfaces for traits
-    lazyVals,
+    lazyVals,        // transforms local lazy vals into vars and initialized bits
     lambdaLift,      // move nested functions to top level
 //    detach, 
     constructors     // move field definitions into constructors
   ) ::: (
     if (forMSIL) List() else List(flatten) // get rid of inner classes
   ) ::: List(
-    mixer,           // do mixin composition
+    mixer,           // do mixin composition, translate lazy fields
     cleanup,         // some platform-specific cleanups
 
     genicode,        // generate portable intermediate code
@@ -587,11 +582,18 @@ class Global(var settings: Settings, var reporter: Reporter) extends SymbolTable
         if (settings.browse contains globalPhase.name) treeBrowser.browse(units)
         informTime(globalPhase.description, startTime)
         globalPhase = globalPhase.next
-        if (settings.check contains globalPhase.name) {
-          phase = globalPhase
-          if (globalPhase.id >= icodePhase.id) icodeChecker.checkICodes
-          else checker.checkTrees
+
+        if ((settings.check contains globalPhase.prev.name) ||
+	    (settings.check contains "all")) {
+          if (globalPhase.prev.checkable) {
+            phase = globalPhase
+            if (globalPhase.id >= icodePhase.id) icodeChecker.checkICodes
+            else checker.checkTrees
+	  } else if (!(settings.check contains "all")) {
+            warning("It is not possible to check the result of the "+globalPhase.name+" phase")
+	  }
         }
+
         if (settings.statistics.value) statistics.print(phase)
         advancePhase
       }
@@ -652,17 +654,19 @@ class Global(var settings: Settings, var reporter: Reporter) extends SymbolTable
 
     def compile(filenames: List[String]) {
       try {
-        val scriptMain = settings.script.value
-        if (scriptMain != "" && filenames.length != 1)
-          error("can only compile one script at a time")
-        val sources = filenames map (
-          if (scriptMain != "")
-            (x => ScriptRunner.wrappedScript(scriptMain, x, getSourceFile _))
-          else
-            getSourceFile)
-        compileSources(sources)
+        val scriptMain = settings.script.value        
+        // Are we compiling a script?
+        if (scriptMain != "") {
+          if(filenames.length != 1)
+            error("can only compile one script at a time")
+          val scriptFile = 
+	    ScriptRunner.wrappedScript(scriptMain, filenames.head, getSourceFile)
+          compileSources(List(scriptFile))
+        // No we are compiling regular source files
+	} else {
+          compileSources(filenames map getSourceFile)
+	}
       } catch {
-	case ScriptRunner.ScriptException(msg) => error(msg)
         case ex: IOException => error(ex.getMessage())
       }
     }

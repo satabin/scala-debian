@@ -1,12 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2007, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Scanners.scala 14544 2008-04-07 16:09:34Z odersky $
+// $Id: Scanners.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.util.parsing.combinator.lexical
