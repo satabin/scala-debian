@@ -5,13 +5,13 @@ Maintainer: Debian Scala Maintainers <pkg-scala-maint@lists.alioth.debian.org>
 Uploaders: Mehdi Dogguy <dogguy@pps.jussieu.fr>, Lex Spoon <lex@debian.org>, Min Huang <min.huang@alumni.usc.edu>
 DM-Upload-Allowed: yes
 Standards-Version: 3.8.0
-Build-Depends: default-jdk-builddep, ant, debhelper (>= 7)
+Build-Depends: openjdk-6-jdk, java-gcj-compat-dev, ant, debhelper (>= 7)
 Vcs-Browser: http://git.debian.org/?p=pkg-scala/packages/scala.git
 Vcs-Git: git://git.debian.org/git/pkg-scala/packages/scala.git
 
 Package: scala
-Architecture: all
-Depends: scala-library, default-jdk
+Architecture: amd64 i386 ia64 mips mipsel powerpc s390 sparc
+Depends: scala-library, java-gcj-compat, java-virtual-machine
 Description: The Scala programming language
  Scala is a Java-compatible programming language with many
  modern language features.  It is Java-compatible in that
@@ -27,8 +27,8 @@ Description: The Scala programming language
  generator (scaladoc).
 
 Package: scala-library
-Architecture: all
-Depends: default-jdk
+Architecture: amd64 i386 ia64 mips mipsel powerpc s390 sparc
+Depends: java-gcj-compat, java-virtual-machine
 Description: The Scala standard library
  This run-time library is needed to run Scala programs.
 
