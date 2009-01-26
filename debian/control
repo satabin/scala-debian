@@ -6,6 +6,7 @@ Uploaders: Mehdi Dogguy <dogguy@pps.jussieu.fr>, Lex Spoon <lex@debian.org>, Min
 DM-Upload-Allowed: yes
 Standards-Version: 3.8.0
 Build-Depends: openjdk-6-jdk, java-gcj-compat-dev, ant, debhelper (>= 7)
+Homepage: http://www.scala-lang.org/
 Vcs-Browser: http://git.debian.org/?p=pkg-scala/packages/scala.git
 Vcs-Git: git://git.debian.org/git/pkg-scala/packages/scala.git
 
