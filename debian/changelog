@@ -1,5 +1,7 @@
 scala (2.7.3-3) unstable; urgency=low
 
+  * Adding « java-virtual-machine » as an alternative runtime dependency
+    (Closes: #464552).
   * Switch arch back to « all ».
 
  -- Mehdi Dogguy <dogguy@pps.jussieu.fr>  Mon, 02 Feb 2009 17:36:22 +0100
