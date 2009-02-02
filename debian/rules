@@ -1,6 +1,5 @@
 #!/usr/bin/make -f
 
-# Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
 
 build: build-stamp
@@ -13,17 +12,5 @@ clean:
 	dh clean
 	rm -rf simpbuild
 
-install: build install-stamp
-install-stamp:
-	dh install
-	touch $@
-
-binary-indep: install
+%:
 	dh $@
-
-binary-arch: install
-	dh $@
-
-binary: binary-indep binary-arch
-
-.PHONY: build clean binary-indep binary-arch binary install
