@@ -1,3 +1,9 @@
+scala (2.7.3-3) unstable; urgency=low
+
+  * Switch arch back to « all ».
+
+ -- Mehdi Dogguy <dogguy@pps.jussieu.fr>  Mon, 02 Feb 2009 17:36:22 +0100
+
 scala (2.7.3-2) unstable; urgency=low
 
   * Add Homepage field in debian/control
