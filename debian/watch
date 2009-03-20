@@ -1,0 +1,3 @@
+version=3
+http://www.scala-lang.org/downloads \
+	/downloads/distrib/files/scala-(.*)\.final-sources\.tgz
