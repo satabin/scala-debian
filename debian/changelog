@@ -1,3 +1,10 @@
+scala (2.7.3-4) unstable; urgency=low
+
+  * Add a watch file.
+  * Add ${misc:Depends} as a dependency, thanks lintian.
+
+ -- Mehdi Dogguy <dogguy@pps.jussieu.fr>  Fri, 20 Mar 2009 13:09:56 +0100
+
 scala (2.7.3-3) unstable; urgency=low
 
   * Adding « java-virtual-machine » as an alternative runtime dependency
