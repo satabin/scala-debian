@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian Scala Maintainers <pkg-scala-maint@lists.alioth.debian.org>
 Uploaders: Mehdi Dogguy <dogguy@pps.jussieu.fr>, Lex Spoon <lex@debian.org>, Min Huang <min.huang@alumni.usc.edu>
 DM-Upload-Allowed: yes
-Standards-Version: 3.8.0
+Standards-Version: 3.8.1
 Build-Depends: openjdk-6-jdk | java-compiler, ant, debhelper (>= 7)
 Homepage: http://www.scala-lang.org/
 Vcs-Browser: http://git.debian.org/?p=pkg-scala/packages/scala.git
