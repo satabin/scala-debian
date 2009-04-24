@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: FJTaskScheduler2.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: FJTaskScheduler2.scala 17006 2009-01-30 17:02:45Z phaller $
 
 package scala.actors
 
@@ -136,9 +136,6 @@ class FJTaskScheduler2 extends Thread with IScheduler {
                   // the FJTaskRunnerGroup since there is
                   // no separate thread associated with it,
                   // and FJTaskRunner threads have daemon status.
-
-                  // terminate timer thread
-                  Actor.timer.cancel()
                   throw new QuitException
                 }
               }
@@ -174,8 +171,6 @@ class FJTaskScheduler2 extends Thread with IScheduler {
    */
   def shutdown(): Unit = synchronized {
     terminating = true
-    // terminate timer thread
-    Actor.timer.cancel()
   }
 
   def snapshot(): LinkedQueue = {

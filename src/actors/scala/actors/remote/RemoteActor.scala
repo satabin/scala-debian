@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: RemoteActor.scala 16881 2009-01-09 16:28:11Z cunei $
+// $Id: RemoteActor.scala 17018 2009-02-02 21:36:04Z phaller $
 
 
 package scala.actors.remote
@@ -38,23 +38,18 @@ package scala.actors.remote
  *  }
  *  </pre>
  *
- * @version 0.9.17
+ * @version 0.9.18
  * @author Philipp Haller
  */
 object RemoteActor {
 
   private val kernels = new scala.collection.mutable.HashMap[Actor, NetKernel]
 
-  private var cl: ClassLoader = try {
-    ClassLoader.getSystemClassLoader()
-  } catch {
-    case sec: SecurityException =>
-      Debug.info(this+": caught "+sec)
-      null
-    case ise: IllegalStateException =>
-      Debug.info(this+": caught "+ise)
-      null
-  }
+  /* If set to <code>null</code> (default), the default class loader
+   * of <code>java.io.ObjectInputStream</code> is used for deserializing
+   * objects sent as messages.
+   */
+  private var cl: ClassLoader = null
 
   def classLoader: ClassLoader = cl
   def classLoader_=(x: ClassLoader) { cl = x }

@@ -2,7 +2,7 @@
  * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: NameTransformer.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: NameTransformer.scala 17013 2009-02-02 11:59:53Z washburn $
 
 package scala.tools.nsc.util
 
@@ -59,7 +59,7 @@ object NameTransformer {
         }
         buf.append(op2code(c))
       /* Handle glyphs that are not valid Java/JVM identifiers */
-      } else if (!Character.isJavaLetterOrDigit(c)) {
+      } else if (!Character.isJavaIdentifierPart(c)) {
 	if (buf eq null) {
 	  buf = new StringBuilder()
 	  buf.append(name.substring(0, i))

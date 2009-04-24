@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: TcpService.scala 16881 2009-01-09 16:28:11Z cunei $
+// $Id: TcpService.scala 17018 2009-02-02 21:36:04Z phaller $
 
 
 package scala.actors.remote
@@ -14,7 +14,7 @@ package scala.actors.remote
 
 import java.io.{DataInputStream, DataOutputStream, IOException}
 import java.lang.{Thread, SecurityException}
-import java.net.{InetAddress, ServerSocket, Socket, UnknownHostException, URLClassLoader}
+import java.net.{InetAddress, ServerSocket, Socket, UnknownHostException}
 
 import scala.collection.mutable.HashMap
 import scala.util.Random

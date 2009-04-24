@@ -2,7 +2,7 @@
  * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Settings.scala 16881 2009-01-09 16:28:11Z cunei $
+// $Id: Settings.scala 16919 2009-01-14 14:53:47Z rytz $
 
 package scala.tools.nsc
 
@@ -98,7 +98,8 @@ class Settings(error: String => Unit) {
   val version       = BooleanSetting    ("-version", "Print product version and exit").hideToIDE
   val help          = BooleanSetting    ("-help", "Print a synopsis of standard options").hideToIDE
   val Xhelp         = BooleanSetting    ("-X", "Print a synopsis of advanced options").hideToIDE
-  
+  val argfiles      = BooleanSetting    ("@<file>", "A text file containing compiler arguments (options and source files)") // only for the help message
+
   val assemname     = StringSetting     ("-Xassem", "file", "Name of the output assembly (only relevant with -target:msil)", "").dependsOn(target, "msil").hideToIDE
   val assemrefs     = StringSetting     ("-Xassem-path", "path", "List of assemblies referenced by the program (only relevant with -target:msil)", ".").dependsOn(target, "msil").hideToIDE
   val Xchecknull    = BooleanSetting    ("-Xcheck-null", "Emit warning on selection of nullable reference")

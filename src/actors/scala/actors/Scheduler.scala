@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Scheduler.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: Scheduler.scala 17009 2009-01-30 17:32:09Z phaller $
 
 package scala.actors
 
@@ -62,7 +62,7 @@ object Scheduler extends IScheduler {
       s.start()
       s
     }
-    Actor.timer = new java.util.Timer
+    //Actor.timer = new java.util.Timer
     while (!tasks.isEmpty()) {
       sched.execute(tasks.take().asInstanceOf[FJTask])
     }
