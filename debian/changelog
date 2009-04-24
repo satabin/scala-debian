@@ -5,6 +5,7 @@ scala (2.7.3-4) unstable; urgency=low
   * Triggering doc-base.
   * Moving doc to /usr/share/doc/scala-doc/html/.
   * Bump standards version to 3.8.1.
+  * Scala now depends on scala-library ${Source:Version}
 
  -- Mehdi Dogguy <dogguy@pps.jussieu.fr>  Wed, 08 Apr 2009 20:06:36 +0200
 

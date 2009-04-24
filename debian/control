@@ -12,7 +12,7 @@ Vcs-Git: git://git.debian.org/git/pkg-scala/packages/scala.git
 
 Package: scala
 Architecture: all
-Depends: scala-library, openjdk-6-jre | java-virtual-machine, ${misc:Depends}
+Depends: scala-library (= ${source:Version}), openjdk-6-jre | java-virtual-machine, ${misc:Depends}
 Description: The Scala programming language
  Scala is a Java-compatible programming language with many
  modern language features.  It is Java-compatible in that
