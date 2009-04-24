@@ -2,7 +2,7 @@
  * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Definitions.scala 16881 2009-01-09 16:28:11Z cunei $
+// $Id: Definitions.scala 17474 2009-04-13 20:11:37Z milessabin $
 
 package scala.tools.nsc.symtab
 
@@ -44,7 +44,7 @@ trait Definitions {
     var NullClass: Symbol = _
     var NothingClass: Symbol = _
     var SingletonClass: Symbol = _
-    lazy val uncheckedStableClass = getClass("scala.uncheckedStable") // todo: move to annotation.unchecked
+    lazy val uncheckedStableClass = getClass("scala.annotation.unchecked.uncheckedStable")
     lazy val uncheckedVarianceClass = getClass("scala.annotation.unchecked.uncheckedVariance") 
 
     lazy val ClassClass: Symbol = getClass(sn.Class)

@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Seq.scala 16881 2009-01-09 16:28:11Z cunei $
+// $Id: Seq.scala 17137 2009-02-17 20:09:49Z rytz $
 
 
 package scala
@@ -470,15 +470,8 @@ trait Seq[+A] extends AnyRef with PartialFunction[Int, A] with Collection[A] {
   /** @return true if this sequence end with that sequence 
    *  @see String.endsWith 
    */
-  def endsWith[B](that: Seq[B]): Boolean = {
-    val length = this.length
-    val j = that.elements
-    var i = 0
-    var result = true
-    while (result && i < length && j.hasNext) 
-      result = apply(length - i - 1) == j.next
-    result && !j.hasNext
-  }
+  def endsWith[B](that: Seq[B]): Boolean =
+    drop(length - that.length).sameElements(that)
 
   /**
    * Searches for the argument sequence in the receiver object, returning 

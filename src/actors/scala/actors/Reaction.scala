@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Reaction.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: Reaction.scala 17381 2009-03-25 10:38:46Z phaller $
 
 
 package scala.actors
@@ -103,6 +103,9 @@ class Reaction extends Runnable {
       }
     } finally {
       Actor.tl.set(saved)
+      this.a = null
+      this.f = null
+      this.msg = null
     }
   }
 

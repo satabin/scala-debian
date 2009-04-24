@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Logged.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: Logged.scala 16980 2009-01-27 11:05:48Z washburn $
 
 
 package scala.util.logging
@@ -16,7 +16,7 @@ package scala.util.logging
  *    support for logging. For instance, the developer of a library writes
  *  </p>
  *  <pre>
- *    <b>class</b> MyClass <b>with</b> Logged { /* do stuff, call log */ }
+ *    <b>class</b> MyClass <b>extends</b> Logged { /* do stuff, call log */ }
  *  </pre>
  *  <p>
  *    The user of the library instantiates:

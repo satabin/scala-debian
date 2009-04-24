@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: JavaTokenParsers.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: JavaTokenParsers.scala 17022 2009-02-03 17:38:58Z milessabin $
 
 package scala.util.parsing.combinator
 
@@ -16,7 +16,7 @@ trait JavaTokenParsers extends RegexParsers {
   def wholeNumber: Parser[String] = 
     """-?\d+""".r
   def decimalNumber: Parser[String] = 
-    """(\d+(\.\d*)?|\d*.\d+)""".r
+    """(\d+(\.\d*)?|\d*\.\d+)""".r
   def stringLiteral: Parser[String] = 
     ("\""+"""([^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*"""+"\"").r
   def floatingPointNumber: Parser[String] = 

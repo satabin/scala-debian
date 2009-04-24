@@ -3,7 +3,7 @@
  * @author  Iulian Dragos
  */
 
-// $Id: GenJVM.scala 16881 2009-01-09 16:28:11Z cunei $
+// $Id: GenJVM.scala 17500 2009-04-14 16:13:39Z dragos $
 
 package scala.tools.nsc.backend.jvm
 
@@ -406,7 +406,9 @@ abstract class GenJVM extends SubComponent {
     }
 
     def addGenericSignature(jmember: JMember, sym: Symbol) {
-      if (!sym.hasFlag(Flags.PRIVATE | Flags.EXPANDEDNAME | Flags.SYNTHETIC) && settings.target.value == "jvm-1.5") {
+      if (settings.target.value == "jvm-1.5"
+          && !sym.hasFlag(Flags.EXPANDEDNAME | Flags.SYNTHETIC)
+          && !(sym.isMethod && sym.hasFlag(Flags.LIFTED))) {
         erasure.javaSig(sym) match {
           case Some(sig) =>
             val index = jmember.getConstantPool().addUtf8(sig).toShort

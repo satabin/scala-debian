@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: ScalaRunTime.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: ScalaRunTime.scala 16965 2009-01-21 16:12:22Z dragos $
 
 
 package scala.runtime
@@ -86,7 +86,8 @@ object ScalaRunTime {
     val arr =  x.productArity
     var i = 0
     while (i < arr) {
-      code = code * 41 + x.productElement(i).hashCode()
+      val elem = x.productElement(i)
+      code = code * 41 + (if (elem == null) 0 else elem.hashCode())
       i += 1
     }
     code

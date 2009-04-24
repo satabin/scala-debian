@@ -2,7 +2,7 @@
  * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: CompileSocket.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: CompileSocket.scala 17065 2009-02-09 15:30:56Z cunei $
 
 package scala.tools.nsc
 
@@ -50,7 +50,7 @@ class CompileSocket {
     
   protected def fatal(msg: String) = {
     error(msg)
-    exit(1)
+    throw new Exception("fsc failure")
   }
 
   protected def info(msg: String) =

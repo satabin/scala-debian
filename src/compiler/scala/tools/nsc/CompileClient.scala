@@ -2,7 +2,7 @@
  * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: CompileClient.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: CompileClient.scala 17065 2009-02-09 15:30:56Z cunei $
 
 package scala.tools.nsc
 
@@ -121,8 +121,12 @@ class StandardCompileClient {
   }
 
   def main(args: Array[String]) {
-    val status = main0(args)
-    exit(status)
+    try {
+      val status = main0(args)
+      exit(status)
+    } catch {
+      case e: Exception => exit(1)
+    }
   }
 }
 

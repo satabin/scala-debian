@@ -2,7 +2,7 @@
  * Copyright 2005-2009 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: CompilerCommand.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: CompilerCommand.scala 16919 2009-01-14 14:53:47Z rytz $
 
 package scala.tools.nsc
 
@@ -107,7 +107,15 @@ class CompilerCommand(arguments: List[String], val settings: Settings,
     var args = arguments
 
     while (!args.isEmpty && ok) {
-      if (args.head startsWith "-") {
+      if (args.head startsWith "@") {
+        try {
+          args = util.ArgumentsExpander.expandArg(args.head) ::: args.tail
+        } catch {
+          case ex: java.io.IOException =>
+            error(ex.getMessage())
+            ok = false
+        }
+      } else if (args.head startsWith "-") {
 	if (interactive) {
           error("no options can be given in interactive mode")
           ok = false
