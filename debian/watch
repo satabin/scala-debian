@@ -1,3 +1,4 @@
 version=3
+opts="dversionmangle=s/\.dfsg[\.0-9]*$//" \
 http://www.scala-lang.org/downloads \
 	/downloads/distrib/files/scala-(.*)\.final-sources\.tgz
