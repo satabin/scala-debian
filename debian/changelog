@@ -1,3 +1,9 @@
+scala (2.7.4.dfsg-2) UNRELEASED; urgency=low
+
+  * Remove Lex Spoon from uploaders (retired), closes: #527957.
+
+ -- Mehdi Dogguy <dogguy@pps.jussieu.fr>  Sat, 09 May 2009 23:51:14 +0200
+
 scala (2.7.4.dfsg-1) unstable; urgency=low
 
   * New Upstream Version
