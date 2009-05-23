@@ -2,14 +2,10 @@
 
 export DH_VERBOSE=1
 
-build: build-stamp
-build-stamp:
-	dh_testdir
+override_dh_auto_build:
 	ANT_OPTS="-Xmx1024M -Xss64M" ant -f debian/simpbuild.xml build docs dist
-	touch build-stamp
 
-clean:
-	dh clean
+override_dh_auto_clean:
 	rm -rf simpbuild
 
 %:
