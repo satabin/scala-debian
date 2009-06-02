@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: FJTaskScheduler2.scala 17006 2009-01-30 17:02:45Z phaller $
+// $Id: FJTaskScheduler2.scala 17846 2009-05-27 14:13:52Z phaller $
 
 package scala.actors
 
@@ -116,8 +116,6 @@ class FJTaskScheduler2 extends Thread with IScheduler {
           }
 
           if (!suspending) {
-
-            ActorGC.gc()
 
             // check if we need more threads
             if (coreSize < maxSize
