@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: TickedScheduler.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: TickedScheduler.scala 17846 2009-05-27 14:13:52Z phaller $
 
 package scala.actors
 
@@ -73,8 +73,6 @@ class TickedScheduler extends Thread with WorkerThreadScheduler {
             case _: InterruptedException =>
               if (terminating) throw new QuitException
           }
-
-          ActorGC.gc()
 
           if (tasks.length > 0) {
             // check if we need more threads
