@@ -1,6 +1,10 @@
 scala (2.7.5.dfsg-2) unstable; urgency=low
 
+  [ Min Huang ]
   * Do not compress script.js (Closes: #545051).
+
+  [ Mehdi Dogguy ]
+  * Use my Debian address.
 
  -- Min Huang <min.huang@alumni.usc.edu>  Sun, 06 Sep 2009 12:54:53 +0200
 
