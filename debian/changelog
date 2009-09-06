@@ -5,6 +5,7 @@ scala (2.7.5.dfsg-2) unstable; urgency=low
 
   [ Mehdi Dogguy ]
   * Use my Debian address.
+  * Build-depend on debhelper 7.0.50 since we use overrides.
 
  -- Min Huang <min.huang@alumni.usc.edu>  Sun, 06 Sep 2009 12:54:53 +0200
 
