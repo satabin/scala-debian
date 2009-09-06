@@ -8,5 +8,8 @@ override_dh_auto_build:
 override_dh_auto_clean:
 	rm -rf simpbuild
 
+override_dh_compress:
+	dh_compress -Xscript.js
+
 %:
 	dh $@
