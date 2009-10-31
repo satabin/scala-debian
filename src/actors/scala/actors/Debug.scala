@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Debug.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: Debug.scala 18830 2009-09-29 22:53:36Z phaller $
 
 package scala.actors
 
@@ -29,6 +29,7 @@ object Debug {
     if (lev > 0) System.err.println("Error: " + s)
 }
 
+@deprecated
 class Debug(tag: String) {
   private var lev = 2
 

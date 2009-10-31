@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: TcpService.scala 17018 2009-02-02 21:36:04Z phaller $
+// $Id: TcpService.scala 18846 2009-10-01 07:30:14Z phaller $
 
 
 package scala.actors.remote
@@ -24,7 +24,7 @@ import scala.util.Random
  * @version 0.9.9
  * @author Philipp Haller
  */
-object TcpService {
+private[remote] object TcpService {
   private val random = new Random
   private val ports = new HashMap[Int, TcpService]
 
@@ -67,7 +67,7 @@ object TcpService {
  * @version 0.9.10
  * @author Philipp Haller
  */
-class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
+private[remote] class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
   val serializer: JavaSerializer = new JavaSerializer(this, cl)
 
   private val internalNode = new Node(InetAddress.getLocalHost().getHostAddress(), port)
@@ -219,7 +219,7 @@ class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
 }
 
 
-class TcpServiceWorker(parent: TcpService, so: Socket) extends Thread {
+private[remote] class TcpServiceWorker(parent: TcpService, so: Socket) extends Thread {
   val in = so.getInputStream()
   val out = so.getOutputStream()
 

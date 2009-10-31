@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Service.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: Service.scala 18846 2009-10-01 07:30:14Z phaller $
 
 package scala.actors.remote
 
@@ -14,7 +14,7 @@ package scala.actors.remote
  * @version 0.9.10
  * @author Philipp Haller
  */
-trait Service {
+private[remote] trait Service {
   val kernel = new NetKernel(this)
   val serializer: Serializer
   def node: Node

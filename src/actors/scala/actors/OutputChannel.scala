@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: OutputChannel.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: OutputChannel.scala 18846 2009-10-01 07:30:14Z phaller $
 
 package scala.actors
 

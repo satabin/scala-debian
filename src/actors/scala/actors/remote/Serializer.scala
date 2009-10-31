@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Serializer.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: Serializer.scala 18830 2009-09-29 22:53:36Z phaller $
 
 
 package scala.actors.remote
@@ -16,7 +16,7 @@ import java.lang.ClassNotFoundException
 
 import java.io.{DataInputStream, DataOutputStream, EOFException, IOException}
 
-abstract class Serializer(val service: Service) {
+private[remote] abstract class Serializer(val service: Service) {
   def serialize(o: AnyRef): Array[Byte]
   def deserialize(a: Array[Byte]): AnyRef
 

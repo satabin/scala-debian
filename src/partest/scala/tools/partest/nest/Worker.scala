@@ -2,7 +2,7 @@
  * @author Philipp Haller
  */
 
-// $Id: Worker.scala 16807 2008-12-18 15:04:27Z phaller $
+// $Id: Worker.scala 18847 2009-10-01 07:38:11Z phaller $
 
 package scala.tools.partest.nest
 
