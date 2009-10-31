@@ -1,3 +1,9 @@
+scala (2.7.7.dfsg-1) unstable; urgency=low
+
+  * New upstream release (Closes: #551454).
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Sat, 31 Oct 2009 21:16:38 +0100
+
 scala (2.7.5.dfsg-2) unstable; urgency=low
 
   [ Min Huang ]
