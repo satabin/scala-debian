@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: MessageQueue.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: MessageQueue.scala 18846 2009-10-01 07:30:14Z phaller $
 
 package scala.actors
 
@@ -18,6 +18,7 @@ package scala.actors
  * @author Philipp Haller
  */
 @serializable
+@deprecated
 class MessageQueueElement {
   var msg: Any = _
   var session: OutputChannel[Any] = null
@@ -34,6 +35,7 @@ class MessageQueueElement {
  * @author Philipp Haller
  */
 @serializable
+@deprecated
 class MessageQueue {
   var first: MessageQueueElement = null
   // last == null iff list empty

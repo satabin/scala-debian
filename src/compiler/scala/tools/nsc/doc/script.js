@@ -3,7 +3,7 @@
 // Copyright 2005-2009 LAMP/EPFL
 // @author  Stephane Micheloud
 
-// $Id: script.js 17936 2009-05-31 18:30:21Z cunei $
+// $Id: script.js 19317 2009-10-28 12:51:02Z cunei $
 
 function setWindowTitle(title) {
   parent.document.title = title;
@@ -40,7 +40,7 @@ function get_api_root(key) {
   return root;
 }
 
-var scala_src_root = 'http://lampsvn.epfl.ch/trac/scala/browser/scala/tags/R_2_7_5_final/';
+var scala_src_root = 'http://lampsvn.epfl.ch/trac/scala/browser/scala/tags/R_2_7_7_final/';
 var lib_src_root = scala_src_root + 'src/library/';
 var comp_src_root = scala_src_root + 'src/compiler/';
 var actors_src_root = scala_src_root + 'src/actors/';

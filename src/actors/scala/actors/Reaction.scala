@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Reaction.scala 17381 2009-03-25 10:38:46Z phaller $
+// $Id: Reaction.scala 18846 2009-10-01 07:30:14Z phaller $
 
 
 package scala.actors
@@ -48,6 +48,7 @@ private[actors] class KillActorException extends Throwable {
  *  @version 0.9.10
  *  @author Philipp Haller
  */
+@deprecated
 class Reaction extends Runnable {
 
   private[actors] var a: Actor = _

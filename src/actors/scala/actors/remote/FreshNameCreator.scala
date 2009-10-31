@@ -6,11 +6,11 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: FreshNameCreator.scala 16894 2009-01-13 13:09:41Z cunei $
+// $Id: FreshNameCreator.scala 18830 2009-09-29 22:53:36Z phaller $
 
 package scala.actors.remote
 
-object FreshNameCreator {
+private[remote] object FreshNameCreator {
 
   protected var counter = 0
   protected val counters = new scala.collection.mutable.HashMap[String, Int]

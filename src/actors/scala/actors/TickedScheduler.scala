@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: TickedScheduler.scala 17846 2009-05-27 14:13:52Z phaller $
+// $Id: TickedScheduler.scala 18846 2009-10-01 07:30:14Z phaller $
 
 package scala.actors
 
