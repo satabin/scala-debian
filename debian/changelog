@@ -1,3 +1,9 @@
+scala (2.7.7.dfsg-3) unstable; urgency=low
+
+  * Fix scalac script (use $CLASSPATH variable), (LP: #544481)
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Tue, 23 Mar 2010 12:51:16 +0100
+
 scala (2.7.7.dfsg-2) unstable; urgency=low
 
   * Fix scaladoc script (LP: #521093)
