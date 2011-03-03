@@ -2,14 +2,16 @@
 
 export DH_VERBOSE=1
 
+BUNDLE_VERSION=$(shell sed -n "s/Bundle-Version: //p" META-INF/MANIFEST.MF)
+
 override_dh_auto_build:
-	ANT_OPTS="-Xmx1024M -Xss64M" ant -f debian/simpbuild.xml build docs dist
+	ANT_OPTS="-Xmx1024M -Xss64M" ant -Dversion.number=$(BUNDLE_VERSION) fastdist
 
 override_dh_auto_clean:
-	rm -rf simpbuild
+	rm -rf build dist
 
 override_dh_compress:
-	dh_compress -Xscript.js
+	dh_compress -X.js
 
 %:
 	dh $@
