@@ -1,5 +1,6 @@
 scala (2.8.1.dfsg-1) unstable; urgency=low
 
+  [ Mehdi Dogguy ]
   * New upstream release (LP: #717745).
   * Use upstream build system
   * Set a fixed version number (The one from META-INF/MANIFEST.MF).
@@ -10,6 +11,9 @@ scala (2.8.1.dfsg-1) unstable; urgency=low
     Build-Depends.
   * Switch to source format 3.0 (quilt).
   * Add patch 0001-Use-system-ant-contrib.jar.patch
+
+  [ Frank S. Thomas ]
+  * Update debian/copyright for the new release.
 
  -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 20:19:18 +0100
 
