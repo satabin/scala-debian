@@ -1,12 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Print.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.reflect
@@ -16,7 +15,7 @@ object Print extends Function1[Any, String] {
 
   def apply(any: Any): String = any match {
     case x: Code[_] =>
-      apply(x)
+      apply(x.tree)
     case x: Tree =>
       apply(x)
     case x: Symbol =>
@@ -26,9 +25,6 @@ object Print extends Function1[Any, String] {
     case _ =>
       "UnknownAny"
   }
-
-  def apply[A](code: Code[A]): String =
-    Print(code.tree)
 
   def apply(tree: Tree): String = tree match {
     case reflect.Ident(sym) =>
@@ -106,9 +102,8 @@ object Print extends Function1[Any, String] {
     case reflect.MethodType(formals, resultType) =>
       formals.map(Print).mkString("(", ", ", ")") + " => " + Print(resultType)
     case reflect.PolyType(typeParams, typeBounds, resultType) =>
-      (List.map2(typeParams, typeBounds)
-        ((tp, tb) => "[" + Print(tb._1) + " :> " + Print(tp) + " :> " + Print(tb._2) + "]")).
-          mkString("[", ", ", "]") + " -> " + Print(resultType)
+      val z = (typeParams, typeBounds).zip map { case (tp, tb) => "[" + Print(tb._1) + " :> " + Print(tp) + " :> " + Print(tb._2) + "]" }
+      z.mkString("[", ", ", "]") + " -> " + Print(resultType)
     case _ =>
       "???"
   }

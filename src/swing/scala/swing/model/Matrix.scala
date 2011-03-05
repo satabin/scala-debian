@@ -1,4 +1,17 @@
-package scala.swing.model
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+package scala.swing
+package model
+
+// Dummy to keep ant from recompiling on every run.
+trait Matrix { }
 
 /*trait Matrix[A] extends Function2[Int, Int, A] {
   
@@ -100,7 +113,7 @@ object Matrix {
   
   implicit def MatrixToSeqs[A](matrix: Matrix[A]): Seq[Seq[A]] = {
     val result = new Array[SubArray[A]](matrix.width)
-    for (val col <- 0 until matrix.width)
+    for (col <- 0 until matrix.width)
       result(col) = new SubArray[A](matrix.delegate, col * matrix.height, matrix.height)
     result
   }

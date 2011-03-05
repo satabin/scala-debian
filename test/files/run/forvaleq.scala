@@ -1,5 +1,4 @@
 // test "foo = expr" clauses in for comprehensions
-// $Id: forvaleq.scala 15311 2008-06-10 08:46:06Z michelou $
 
 import scala.collection.immutable.Queue
 import scala.{List=>L}
@@ -49,7 +48,7 @@ object Test {
     // make sure it works on non-Ls
     
  //   val input: Queue = Queue.Empty[int].incl(L.range(0,20))
-    val input = L.range(0, 20).elements
+    val input = L.range(0, 20).iterator
     val oddFirstTimesTwo =
       for {x <- input
           xf = firstDigit(x)

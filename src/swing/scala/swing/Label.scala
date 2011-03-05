@@ -1,3 +1,13 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import javax.swing._
@@ -9,7 +19,8 @@ import scala.swing.Swing._
  * @see javax.swing.JLabel
  */
 class Label(text0: String, icon0: Icon, align: Alignment.Value) extends Component {
-  override lazy val peer: JLabel = new JLabel(text0, toNullIcon(icon0), align.id) with SuperMixin
+  override lazy val peer: JLabel = 
+    new JLabel(text0, toNullIcon(icon0), align.id) with SuperMixin
   
   def this() = this("", EmptyIcon, Alignment.Center)
   def this(s: String) = this(s, EmptyIcon, Alignment.Center)

@@ -1,4 +1,4 @@
-/* $Id: iq.scala 16113 2008-09-16 19:38:07Z spoon $ 
+/*
  * Test file for immutable queues.
  */
 
@@ -62,7 +62,7 @@ object iq {
      * Expected: q8: Queue(2,3,4,5,6,7,8,9,10,11)    
      */
     Console.println("q8: " + q8)
-    val q9 = new Queue(2,3,4,5,6,7,8,9,10,11)
+    val q9 = Queue(2,3,4,5,6,7,8,9,10,11)
 
     /* Testing ==
      *  Expected: q8 == q9: true
@@ -73,7 +73,7 @@ object iq {
      *  Expected: Elements:  1  2  3  4  5  6  7  8  9 
      */
     Console.print("Elements: "); 
-    q6.elements.foreach(e => Console.print(" "+ e + " "))
+    q6.iterator.foreach(e => Console.print(" "+ e + " "))
     Console.println; 
 
    /* Testing mkString

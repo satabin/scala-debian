@@ -1,17 +1,17 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
-**  __\ \/ /__/ __ |/ /__/ __ |                                         **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: NotDefinedError.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala
 
-
-import Predef._
-
+/**
+ * @since 2.0
+ */
+@deprecated("Use a custom Error class instead")
 final class NotDefinedError(msg: String) extends Error("not defined: " + msg)

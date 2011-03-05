@@ -1,15 +1,16 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: FatalError.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
-package scala.xml.parsing;
+package scala.xml
+package parsing
 
-
-case class FatalError(msg:String) extends java.lang.RuntimeException(msg);
+/** !!! This is poorly named, but I guess it's in the API.
+ */
+case class FatalError(msg: String) extends java.lang.RuntimeException(msg)

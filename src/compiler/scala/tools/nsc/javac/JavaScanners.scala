@@ -1,14 +1,17 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-package scala.tools.nsc.javac
+package scala.tools.nsc
+package javac
 
 import scala.tools.nsc.util._
-import SourceFile.{LF, FF, CR, SU}
+import Chars._
 import JavaTokens._
+import scala.annotation.switch
 
+// Todo merge these better with Scanners
 trait JavaScanners {
   val global : Global
   import global._
@@ -70,7 +73,7 @@ trait JavaScanners {
     def floatVal: Double = floatVal(false)
     //def token2string(token : Int) : String = configuration.token2string(token)
     /** return recent scala doc, if any */
-    def flushDoc: String
+    def flushDoc: DocComment
     def currentPos: Position
   }
 
@@ -155,7 +158,7 @@ trait JavaScanners {
         key(i) = IDENTIFIER
       for (j <- 0 until tokenCount)
         if (tokenName(j) ne null)
-          key(tokenName(j).start) = j.asInstanceOf[Byte]
+          key(tokenName(j).start) = j.toByte
 
     }
 
@@ -253,7 +256,7 @@ trait JavaScanners {
     override var errpos: Int = NoPos
     def currentPos: Position = g2p(pos - 1)
 
-    var in: CharArrayReader = _
+    var in: JavaCharArrayReader = _
 
     def dup: JavaScanner = {
       val dup = clone().asInstanceOf[JavaScanner]
@@ -279,8 +282,8 @@ trait JavaScanners {
      */
     var docBuffer: StringBuilder = null
 
-    def flushDoc = {
-      val ret = if (docBuffer != null) docBuffer.toString else null
+    def flushDoc: DocComment = {
+      val ret = if (docBuffer != null) DocComment(docBuffer.toString, NoPosition) else null
       docBuffer = null
       ret
     }
@@ -347,7 +350,7 @@ trait JavaScanners {
             in.next
           case _ =>
             pos = in.cpos // Position.encode(in.cline, in.ccol)
-            in.ch match {
+            (in.ch: @switch) match {
               case 'A' | 'B' | 'C' | 'D' | 'E' |
                    'F' | 'G' | 'H' | 'I' | 'J' |
                    'K' | 'L' | 'M' | 'N' | 'O' |
@@ -682,27 +685,9 @@ trait JavaScanners {
 
 // Identifiers ---------------------------------------------------------------
 
-    def isIdentStart(c: Char): Boolean = (
-      ('A' <= c && c <= 'Z') ||
-      ('a' <= c && c <= 'a') ||
-      (c == '_') || (c == '$') ||
-      Character.isUnicodeIdentifierStart(c)
-    )
-
-    def isIdentPart(c: Char) = (
-      isIdentStart(c) || 
-      ('0' <= c && c <= '9') ||
-      Character.isUnicodeIdentifierPart(c)
-    )
-
-    def isSpecial(c: Char) = {
-      val chtp = Character.getType(c)
-      chtp == Character.MATH_SYMBOL || chtp == Character.OTHER_SYMBOL
-    }
-
     private def getIdentRest {
       while (true) {
-        in.ch match {
+        (in.ch: @switch) match {
           case 'A' | 'B' | 'C' | 'D' | 'E' |
                'F' | 'G' | 'H' | 'I' | 'J' |
                'K' | 'L' | 'M' | 'N' | 'O' |
@@ -751,13 +736,13 @@ trait JavaScanners {
         in.next
         if ('0' <= in.ch && in.ch <= '7') {
           val leadch: Char = in.ch
-          var oct: Int = in.digit2int(in.ch, 8)
+          var oct: Int = digit2int(in.ch, 8)
           in.next
           if ('0' <= in.ch && in.ch <= '7') {
-            oct = oct * 8 + in.digit2int(in.ch, 8)
+            oct = oct * 8 + digit2int(in.ch, 8)
             in.next
             if (leadch <= '3' && '0' <= in.ch && in.ch <= '7') {
-              oct = oct * 8 + in.digit2int(in.ch, 8)
+              oct = oct * 8 + digit2int(in.ch, 8)
               in.next
             }
           }
@@ -833,11 +818,11 @@ trait JavaScanners {
         var value: Long = 0
         val divider = if (base == 10) 1 else 2
         val limit: Long =
-          if (token == LONGLIT) Math.MAX_LONG else Math.MAX_INT
+          if (token == LONGLIT) Long.MaxValue else Int.MaxValue
         var i = 0
         val len = name.length
         while (i < len) {
-          val d = in.digit2int(name(i), base)
+          val d = digit2int(name(i), base)
           if (d < 0) {
             syntaxError("malformed integer number")
             return 0
@@ -861,7 +846,7 @@ trait JavaScanners {
     */
     def floatVal(negated: Boolean): Double = {
       val limit: Double = 
-        if (token == DOUBLELIT) Math.MAX_DOUBLE else Math.MAX_FLOAT
+        if (token == DOUBLELIT) Double.MaxValue else Float.MaxValue
       try {
         val value: Double = java.lang.Double.valueOf(name.toString()).doubleValue()
         if (value > limit)
@@ -876,7 +861,7 @@ trait JavaScanners {
     /** read a number into name and set base
     */
     protected def getNumber {
-      while (in.digit2int(in.ch, if (base < 10) 10 else base) >= 0) {
+      while (digit2int(in.ch, if (base < 10) 10 else base) >= 0) {
         putChar(in.ch)
         in.next
       }
@@ -891,7 +876,7 @@ trait JavaScanners {
             in.next
             return getFraction
           case _ =>
-            if (!isIdentStart(lookahead.ch)) {
+            if (!isIdentifierStart(lookahead.ch)) {
               putChar(in.ch)
               in.next
               return getFraction
@@ -966,13 +951,13 @@ trait JavaScanners {
   /** ...
    */   
   class JavaUnitScanner(unit: CompilationUnit) extends JavaScanner {
-    in = new CharArrayReader(unit.source.asInstanceOf[BatchSourceFile].content, !settings.nouescape.value, syntaxError)
+    in = new JavaCharArrayReader(unit.source.asInstanceOf[BatchSourceFile].content, !settings.nouescape.value, syntaxError)
     init
     def warning(pos: Int, msg: String) = unit.warning(pos, msg)
     def error  (pos: Int, msg: String) = unit.  error(pos, msg)
     def incompleteInputError(pos: Int, msg: String) = unit.incompleteInputError(pos, msg)
     def deprecationWarning(pos: Int, msg: String) = unit.deprecationWarning(pos, msg)
-    implicit def p2g(pos: Position): Int = pos.offset.getOrElse(-1)
+    implicit def p2g(pos: Position): Int = if (pos.isDefined) pos.point else -1
     implicit def g2p(pos: Int): Position = new OffsetPosition(unit.source, pos)
   }
 }

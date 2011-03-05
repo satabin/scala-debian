@@ -1,11 +1,20 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
+import event._
 import javax.swing._
 import javax.swing.table._
 import javax.swing.event._
-import java.awt.{Dimension, Color}
-import event._
-import scala.collection.mutable.Set
+import scala.collection.mutable
 
 object Table {
   object AutoResizeMode extends Enumeration {
@@ -77,6 +86,10 @@ object Table {
   }
   
   class LabelRenderer[A](convert: A => (Icon, String)) extends AbstractRenderer[A, Label](new Label) {
+    def this() {
+      this{ a => (null, a.toString) }
+    }
+    
     def configure(table: Table, isSelected: Boolean, hasFocus: Boolean, a: A, row: Int, column: Int) {
       val (icon, text) = convert(a)
       component.icon = icon
@@ -90,10 +103,13 @@ object Table {
 /**
  * Displays a matrix of items.
  * 
+ * To obtain a scrollable table or row and columns headers, 
+ * wrap the table in a scroll pane.
+ * 
  * @see javax.swing.JTable
  */
-class Table extends Component with Scrollable with Publisher {
-  override lazy val peer: JTable = new JTable with Table.JTableMixin {
+class Table extends Component with Scrollable.Wrapper {
+  override lazy val peer: JTable = new JTable with Table.JTableMixin with SuperMixin {
     def tableWrapper = Table.this
     override def getCellRenderer(r: Int, c: Int) = new TableCellRenderer {
       def getTableCellRendererComponent(table: JTable, value: AnyRef, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int) = 
@@ -104,9 +120,10 @@ class Table extends Component with Scrollable with Publisher {
   }
   import Table._
     
-  def this(rowData: Array[Array[Any]], columnNames: Seq[Any]) = {
+  // TODO: use IndexedSeq[_ <: IndexedSeq[Any]], see ticket #2005
+  def this(rowData: Array[Array[Any]], columnNames: Seq[_]) = {
     this()
-    peer.setModel(new AbstractTableModel {
+    model = new AbstractTableModel {
       override def getColumnName(column: Int) = columnNames(column).toString
       def getRowCount() = rowData.length
       def getColumnCount() = columnNames.length
@@ -116,7 +133,7 @@ class Table extends Component with Scrollable with Publisher {
         rowData(row)(col) = value
         fireTableCellUpdated(row, col)
       }
-    })
+    }
   }
   def this(rows: Int, columns: Int) = {
     this()
@@ -137,6 +154,7 @@ class Table extends Component with Scrollable with Publisher {
   def model = peer.getModel()
   def model_=(x: TableModel) = {
     peer.setModel(x)
+    model.removeTableModelListener(modelListener)
     model.addTableModelListener(modelListener)
   }
   
@@ -155,39 +173,41 @@ class Table extends Component with Scrollable with Publisher {
     
   object selection extends Publisher {
     // TODO: could be a sorted set
-    protected abstract class SelectionSet[A](a: =>Seq[A]) extends scala.collection.mutable.Set[A] { 
-      def -=(n: A) 
-      def +=(n: A) 
+    protected abstract class SelectionSet[A](a: =>Seq[A]) extends mutable.Set[A] { 
+      def -=(n: A): this.type 
+      def +=(n: A): this.type
       def contains(n: A) = a.contains(n)
-      def size = a.length
-      def elements = a.elements
+      override def size = a.length
+      def iterator = a.iterator
     }
     
     object rows extends SelectionSet(peer.getSelectedRows) {
-      def -=(n: Int) { peer.removeRowSelectionInterval(n,n) }
-      def +=(n: Int) { peer.addRowSelectionInterval(n,n) }
+      def -=(n: Int) = { peer.removeRowSelectionInterval(n,n); this }
+      def +=(n: Int) = { peer.addRowSelectionInterval(n,n); this }
       
       def leadIndex: Int = peer.getSelectionModel.getLeadSelectionIndex
       def anchorIndex: Int = peer.getSelectionModel.getAnchorSelectionIndex
     }
     
     object columns extends SelectionSet(peer.getSelectedColumns) { 
-      def -=(n: Int) { peer.removeColumnSelectionInterval(n,n) }
-      def +=(n: Int) { peer.addColumnSelectionInterval(n,n) }
+      def -=(n: Int) = { peer.removeColumnSelectionInterval(n,n); this }
+      def +=(n: Int) = { peer.addColumnSelectionInterval(n,n); this }
       
       def leadIndex: Int = peer.getColumnModel.getSelectionModel.getLeadSelectionIndex
       def anchorIndex: Int = peer.getColumnModel.getSelectionModel.getAnchorSelectionIndex
     }
 
-    def cells: Set[(Int, Int)] = 
+    def cells: mutable.Set[(Int, Int)] = 
       new SelectionSet[(Int, Int)]((for(r <- selection.rows; c <- selection.columns) yield (r,c)).toSeq) { outer =>
-        def -=(n: (Int, Int)) { 
+        def -=(n: (Int, Int)) = { 
           peer.removeRowSelectionInterval(n._1,n._1)
-          peer.removeColumnSelectionInterval(n._2,n._2) 
+          peer.removeColumnSelectionInterval(n._2,n._2)
+          this
         }
-        def +=(n: (Int, Int)) { 
+        def +=(n: (Int, Int)) = { 
           peer.addRowSelectionInterval(n._1,n._1)
-          peer.addColumnSelectionInterval(n._2,n._2) 
+          peer.addColumnSelectionInterval(n._2,n._2)
+          this
         }
         override def size = peer.getSelectedRowCount * peer.getSelectedColumnCount
       }
@@ -198,7 +218,7 @@ class Table extends Component with Scrollable with Publisher {
      * but the result is a table that does not produce useful selections.
      */
     def intervalMode: IntervalMode.Value = IntervalMode(peer.getSelectionModel.getSelectionMode)
-    def intervalMode_=(m: IntervalMode.Value) { peer.getSelectionModel.setSelectionMode(m.id) }
+    def intervalMode_=(m: IntervalMode.Value) { peer.setSelectionMode(m.id) }
     def elementMode: ElementMode.Value = 
       if(peer.getColumnSelectionAllowed && peer.getRowSelectionAllowed) ElementMode.Cell
       else if(peer.getColumnSelectionAllowed) ElementMode.Column
@@ -225,26 +245,24 @@ class Table extends Component with Scrollable with Publisher {
     })
   }
   
-  private val initialRenderer = peer.getDefaultRenderer(classOf[AnyRef])
-  
   /**
    * Supplies a renderer component for a given cell.
    */
-  protected def rendererComponent(isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component = 
+  protected def rendererComponent(isSelected: Boolean, focused: Boolean, row: Int, column: Int): Component = 
     new Component { 
       override lazy val peer = {
-        val v = Table.this.peer.getValueAt(row, column)
+        val v = apply(row, column).asInstanceOf[AnyRef]
         if (v != null)
           Table.this.peer.getDefaultRenderer(v.getClass).getTableCellRendererComponent(Table.this.peer, 
-                 v, isSelected, hasFocus, row, column).asInstanceOf[JComponent]
+                 v, isSelected, focused, row, column).asInstanceOf[JComponent]
         else Table.this.peer.getDefaultRenderer(classOf[Object]).getTableCellRendererComponent(Table.this.peer, 
-                 v, isSelected, hasFocus, row, column).asInstanceOf[JComponent]
+                 v, isSelected, focused, row, column).asInstanceOf[JComponent]
       }
     }
   
   // TODO: a public API for setting editors
   protected def editor(row: Int, column: Int) = {
-    val v = Table.this.peer.getValueAt(row, column)
+    val v = apply(row, column).asInstanceOf[AnyRef]
     if (v != null)
       Table.this.peer.getDefaultEditor(v.getClass)
     else
@@ -252,14 +270,20 @@ class Table extends Component with Scrollable with Publisher {
   }
   
   /**
-   * Get the current value of the given cell.
+   * Get the current value of the given cell. 
+   * The given cell coordinates are in view coordinates and thus not 
+   * necessarily the same as for the model.
    */
-  def apply(row: Int, column: Int): Any = model.getValueAt(row, column)
+  def apply(row: Int, column: Int): Any = model.getValueAt(row, viewToModelColumn(column))
+  
+  def viewToModelColumn(idx: Int) = peer.convertColumnIndexToModel(idx)
+  def modelToViewColumn(idx: Int) = peer.convertColumnIndexToView(idx)
+
   
   /**
    * Change the value of the given cell.
    */
-  def update(row: Int, column: Int, value: Any) { model.setValueAt(value, row, column) }
+  def update(row: Int, column: Int, value: Any) { model.setValueAt(value, row, viewToModelColumn(column)) }
 
   /**
    * Visually update the given cell.
@@ -275,7 +299,7 @@ class Table extends Component with Scrollable with Publisher {
     def tableChanged(e: TableModelEvent) = publish(
       e.getType match {
         case TableModelEvent.UPDATE =>
-          if (e.getFirstRow == 0 && e.getLastRow == Math.MAX_INT && e.getColumn == TableModelEvent.ALL_COLUMNS)
+          if (e.getFirstRow == 0 && e.getLastRow == Int.MaxValue && e.getColumn == TableModelEvent.ALL_COLUMNS)
             TableChanged(Table.this)
           else if (e.getFirstRow == TableModelEvent.HEADER_ROW)
             TableStructureChanged(Table.this)
@@ -288,5 +312,4 @@ class Table extends Component with Scrollable with Publisher {
       }
     )
   }
-  model.addTableModelListener(modelListener)
 }

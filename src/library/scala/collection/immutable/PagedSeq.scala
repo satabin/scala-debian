@@ -1,28 +1,29 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: PagedSeq.scala 14497 2008-04-04 12:09:06Z washburn $
 
 
-package scala.collection.immutable
+package scala.collection
+package immutable
 
 import java.io._
-import util.matching.Regex
+import scala.util.matching.Regex
 
-
-/** The PagedSeq object defines a lazy implementations of 
+/** The `PagedSeq` object defines a lazy implementations of 
  *  a random access sequence. 
+ *  
+ *  @since 2.7
  */  
 object PagedSeq {
-  final val UndeterminedEnd = Math.MAX_INT
+  final val UndeterminedEnd = Int.MaxValue
 
   /** Constructs a character sequence from a character iterator */
-  def fromIterator[T](source: Iterator[T]): PagedSeq[T] = 
+  def fromIterator[T: ClassManifest](source: Iterator[T]): PagedSeq[T] = 
     new PagedSeq[T]((data: Array[T], start: Int, len: Int) => {
       var i = 0
       while (i < len && source.hasNext) {
@@ -33,8 +34,8 @@ object PagedSeq {
     })
 
   /** Constructs a character sequence from a character iterable */
-  def fromIterable[T](source: Iterable[T]): PagedSeq[T] = 
-    fromIterator(source.elements)
+  def fromIterable[T: ClassManifest](source: Iterable[T]): PagedSeq[T] = 
+    fromIterator(source.iterator)
 
   /** Constructs a character sequence from a string iterator */
   def fromStrings(source: Iterator[String]): PagedSeq[Char] = {
@@ -55,7 +56,7 @@ object PagedSeq {
 
   /** Constructs a character sequence from a string iterable */
   def fromStrings(source: Iterable[String]): PagedSeq[Char] = 
-    fromStrings(source.elements)
+    fromStrings(source.iterator)
 
   /** Constructs a character sequence from a line iterator
    *  Lines do not contain trailing `\n' characters; The method inserts
@@ -77,7 +78,7 @@ object PagedSeq {
    *  a line separator `\n' between any two lines in the sequence.
    */
   def fromLines(source: Iterable[String]): PagedSeq[Char] =
-    fromLines(source.elements)
+    fromLines(source.iterator)
 
   /** Constructs a character sequence from an input reader
    */
@@ -97,7 +98,7 @@ object PagedSeq {
   /** Constructs a character sequence from a scala.io.Source value
    */
   def fromSource(source: io.Source) = 
-    fromLines(source.getLines)
+    fromLines(source.getLines())
 }
 
 
@@ -105,12 +106,23 @@ import PagedSeq._
 
 /** An implementation of lazily computed sequences, where elements are stored
  *  in ``pages'', i.e. arrays of fixed size.
- *
- * @author Martin Odersky 
+ *  
+ *  @tparam T     the type of the elements contained in this paged sequence, with a `ClassManifest` context bound.
+ *  
+ *  @author Martin Odersky 
+ *  @since  2.7
+ *  @define Coll PagedSeq
+ *  @define coll paged sequence
+ *  @define mayNotTerminateInf
+ *  @define willNotTerminateInf
  */
-class PagedSeq[T] protected (more: (Array[T], Int, Int) => Int, 
-                             first: Page[T], start: Int, end: Int) extends RandomAccessSeq[T] {
-
+class PagedSeq[T: ClassManifest] protected(
+  more: (Array[T], Int, Int) => Int, 
+  first1: Page[T],
+  start: Int,
+  end: Int)
+extends scala.collection.IndexedSeq[T]
+{
   /**  A paged sequence is constructed from a method that produces more characters when asked.
    *  The producer method is analogous to the read method in java.io.Reader.
    *  It takes three parameters: an array of characters, a start index, and an end index.
@@ -120,15 +132,15 @@ class PagedSeq[T] protected (more: (Array[T], Int, Int) => Int,
    */  
   def this(more: (Array[T], Int, Int) => Int) = this(more, new Page[T](0), 0, UndeterminedEnd)
   
-  private var current: Page[T] = first
+  private var current: Page[T] = first1
 
-  private def latest = first.latest
+  private def latest = first1.latest
 
   private def addMore() = latest.addMore(more)
 
   private def page(absindex: Int) = {
     if (absindex < current.start) 
-      current = first
+      current = first1
     while (absindex >= current.end && current.next != null)
       current = current.next
     while (absindex >= current.end && !current.isLast) {
@@ -163,11 +175,11 @@ class PagedSeq[T] protected (more: (Array[T], Int, Int) => Int,
   /** the subsequence from index `start' up to and excluding 
    *  the minimum of index `end' and the length of the current sequence.
    */
-  override def slice(_start: Int, _end: Int) = {
+  override def slice(_start: Int, _end: Int): PagedSeq[T] = {
     page(start)
     val s = start + _start
     val e = if (_end == UndeterminedEnd) _end else start + _end
-    var f = first
+    var f = first1
     while (f.end <= s && !f.isLast) f = f.next
     new PagedSeq(more, f, s, e)
   }
@@ -175,12 +187,12 @@ class PagedSeq[T] protected (more: (Array[T], Int, Int) => Int,
   /** the subsequence from index `start' up to the  
    *  length of the current sequence.
    */
-  override def slice(start: Int) = slice(start, UndeterminedEnd)
+  def slice(start: Int): PagedSeq[T] = slice(start, UndeterminedEnd)
 
   /** Convert sequence to string */
   override def toString = {
     val buf = new StringBuilder
-    for (ch <- elements) buf append ch
+    for (ch <- PagedSeq.this.iterator) buf append ch
     buf.toString
   }
 }
@@ -188,14 +200,14 @@ class PagedSeq[T] protected (more: (Array[T], Int, Int) => Int,
 
 /** Page containing up to PageSize characters of the input sequence. 
  */
-private class Page[T](val num: Int) {
+private class Page[T: ClassManifest](val num: Int) {
 
   private final val PageSize = 4096
 
   /** The next page in the sequence */
   var next  : Page[T] = null
 
-  /** A later page in the sequence, serves a cachae for pointing to last page */
+  /** A later page in the sequence, serves a cache for pointing to last page */
   var later : Page[T] = this
 
   /** The number of characters read into this page */
@@ -211,11 +223,11 @@ private class Page[T](val num: Int) {
   /** The index of the first character in this page relative to the whole sequence */ 
   final def start = num * PageSize
 
-  /** The index of the character following the last charcater in this page relative 
+  /** The index of the character following the last character in this page relative 
    *  to the whole sequence */ 
   final def end = start + filled
 
-  /** The currently last page in the sequence; might change as more charcaters are appended */
+  /** The currently last page in the sequence; might change as more characters are appended */
   final def latest: Page[T] = {
     if (later.next != null) later = later.next.latest
     later

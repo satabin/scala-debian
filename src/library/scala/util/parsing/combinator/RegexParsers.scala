@@ -1,12 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: RegexParsers.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.util.parsing.combinator
 
@@ -63,6 +62,25 @@ trait RegexParsers extends Parsers {
                   in.drop(start + matched.end - offset))
         case None =>
           Failure("string matching regex `"+r+"' expected but `"+in.first+"' found", in.drop(start - offset))
+      }
+    }
+  }
+  
+  /** `positioned' decorates a parser's result with the start position of the input it consumed. 
+   * If whitespace is being skipped, then it is skipped before the start position is recorded.
+   * 
+   * @param p a `Parser' whose result conforms to `Positional'.
+   * @return A parser that has the same behaviour as `p', but which marks its result with the 
+   *         start position of the input it consumed after whitespace has been skipped, if it
+   *         didn't already have a position.
+   */
+  override def positioned[T <: Positional](p: => Parser[T]): Parser[T] = {
+    val pp = super.positioned(p)
+    new Parser[T] {
+      def apply(in: Input) = {
+        val offset = in.offset
+        val start = handleWhiteSpace(in.source, offset)
+        pp(in.drop (start - offset))
       }
     }
   }

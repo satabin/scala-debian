@@ -1,17 +1,18 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Regex.scala 16881 2009-01-09 16:28:11Z cunei $
 
 
 package scala.util.matching
 
 import java.util.regex.{Pattern, Matcher}
+import collection.immutable.List
+import collection.{Iterator, Seq}
 
 /** This class provides methods for creating and using regular expressions.
  *  It is based on the regular expressions of the JDK since 1.4.
@@ -30,6 +31,8 @@ import java.util.regex.{Pattern, Matcher}
  *  @param regex      A string representing a regular expression
  *  @param groupNames A mapping from names to indices in capture groups
  */
+@serializable
+@SerialVersionUID(-2094783597747625537L)
 class Regex(regex: String, groupNames: String*) {
 
   import Regex._
@@ -57,7 +60,7 @@ class Regex(regex: String, groupNames: String*) {
   /** Return all matches of this regexp in given character sequence as an iterator 
    */
   def findAllIn(source: java.lang.CharSequence) = new Regex.MatchIterator(source, this, groupNames)
-
+  
   /** Return optionally first matching string of this regexp in given character sequence,
    *  None if it does not exist.
    */
@@ -102,6 +105,32 @@ class Regex(regex: String, groupNames: String*) {
     val m = pattern.matcher(target)
     m.replaceAll(replacement)
   }
+  
+  /**
+   * Replaces all matches using a replacer function.
+   * 
+   * @param target      The string to match.
+   * @param replacer    The function which maps a match to another string.
+   * @return            The target string after replacements.
+   */
+  def replaceAllIn(target: java.lang.CharSequence, replacer: Match => String): String = {
+    val it = new Regex.MatchIterator(target, this, groupNames).replacementData
+    while (it.hasNext) {
+      val matchdata = it.next
+      it.replace(replacer(matchdata))
+    }
+    it.replaced
+  }
+  
+  def replaceSomeIn(target: java.lang.CharSequence, replacer: Match => Option[String]): String = {
+    val it = new Regex.MatchIterator(target, this, groupNames).replacementData
+    while (it.hasNext) {
+      val matchdata = it.next
+      val replaceopt = replacer(matchdata)
+      if (replaceopt != None) it.replace(replaceopt.get)
+    }
+    it.replaced
+  }
 
   /** Replaces the first match by a string.
    *
@@ -114,12 +143,22 @@ class Regex(regex: String, groupNames: String*) {
     m.replaceFirst(replacement)
   }
 
+  /** Splits the provided character sequence around matches of this
+   *  regexp.
+   *
+   *  @param toSplit The character sequence to split
+   *  @return        The array of strings computed by splitting the
+   *                 input around matches of this regexp
+   */
+  def split(toSplit: java.lang.CharSequence): Array[String] =
+    pattern.split(toSplit)
+
   /** The string defining the regular expression */
   override def toString = regex
 }
 
 /** This object defines inner classes that describe
- *  regex matches. The class hirrachy is as follows.
+ *  regex matches. The class hierarchy is as follows.
  *
  *            MatchData     
  *              |      \    
@@ -194,7 +233,7 @@ object Regex {
       if (end(i) >= 0) source.subSequence(end(i), source.length)
       else null
 
-    private lazy val nameToIndex: Map[String, Int] = Map() ++ ("" :: groupNames.toList).zipWithIndex
+    private lazy val nameToIndex: Map[String, Int] = Map[String, Int]() ++ ("" :: groupNames.toList).zipWithIndex
 
     /** Returns the group with given name
      *
@@ -213,7 +252,7 @@ object Regex {
 
   }
  
-  /** A case class for a succesful match.
+  /** A case class for a successful match.
    */
   class Match(val source: java.lang.CharSequence, 
               matcher: Matcher, 
@@ -249,13 +288,18 @@ object Regex {
   object Match {
     def unapply(m: Match): Some[String] = Some(m.matched)
   }
+  
+  /** An extractor object that yields groups in the match. */
+  object Groups {
+    def unapplySeq(m: Match): Option[Seq[String]] = if (m.groupCount > 0) Some(1 to m.groupCount map m.group) else None
+  }
 
   /** A class to step through a sequence of regex matches
    */
   class MatchIterator(val source: java.lang.CharSequence, val regex: Regex, val groupNames: Seq[String]) 
   extends Iterator[String] with MatchData { self =>
 
-    private val matcher = regex.pattern.matcher(source)
+    protected val matcher = regex.pattern.matcher(source)
     private var nextSeen = false
 
     /** Is there another match? */
@@ -293,6 +337,31 @@ object Regex {
       def hasNext = self.hasNext
       def next = { self.next; new Match(source, matcher, groupNames).force }
     }
+    
+    /** Convert to an iterator that yields MatchData elements instead of Strings and has replacement support */
+    private[matching] def replacementData = new Iterator[Match] with Replacement {
+      def matcher = self.matcher
+      def hasNext = self.hasNext
+      def next = { self.next; new Match(source, matcher, groupNames).force }
+    }
+  }
+  
+  /**
+   * A trait able to build a string with replacements assuming it has a matcher.
+   * Meant to be mixed in with iterators.
+   */
+  private[matching] trait Replacement {
+    protected def matcher: Matcher
+    
+    private var sb = new java.lang.StringBuffer
+    
+    def replaced = {
+      val newsb = new java.lang.StringBuffer(sb)
+      matcher.appendTail(newsb)
+      newsb.toString
+    }
+    
+    def replace(rs: String) = matcher.appendReplacement(sb, rs)
   }
 }
 

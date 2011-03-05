@@ -1,7 +1,17 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
-import javax.swing.{AbstractButton => JAbstractButton,Icon}
 import event._
+import javax.swing.{AbstractButton => JAbstractButton,Icon}
 import scala.collection._
 import scala.collection.mutable.Buffer
 
@@ -15,13 +25,13 @@ class ButtonGroup(initialButtons: AbstractButton*) {
   val peer: javax.swing.ButtonGroup = new javax.swing.ButtonGroup
   
   val buttons: mutable.Set[AbstractButton] = new mutable.Set[AbstractButton] { 
-    def -=(b: AbstractButton) { peer.remove(b.peer) }
-    def +=(b: AbstractButton) { peer.add(b.peer) }
-    def contains(b: AbstractButton) = elements.contains(b)
-    def size = peer.getButtonCount
-    def elements: Iterator[AbstractButton] = new Iterator[AbstractButton] {
+    def -=(b: AbstractButton): this.type = { peer.remove(b.peer); this }
+    def +=(b: AbstractButton): this.type = { peer.add(b.peer); this }
+    def contains(b: AbstractButton) = this.iterator.contains(b)
+    override def size = peer.getButtonCount
+    def iterator: Iterator[AbstractButton] = new Iterator[AbstractButton] {
       val enum = peer.getElements
-      def next = Component.wrapperFor[AbstractButton](enum.nextElement.asInstanceOf[javax.swing.JComponent])
+      def next = UIElement.cachedWrapper[AbstractButton](enum.nextElement)
       def hasNext = enum.hasMoreElements
     }
   }

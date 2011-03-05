@@ -1,16 +1,14 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Scanner.scala 16857 2009-01-07 20:34:03Z cunei $
 
-
-package scala.xml.dtd
-
+package scala.xml
+package dtd
 
 /** Scanner for regexps (content models in DTD element declarations) 
  *  todo: cleanup
@@ -28,7 +26,7 @@ class Scanner extends Tokens with parsing.TokenTests {
   /** initializes the scanner on input s */
   final def initScanner(s: String) {
     value = ""
-    it = (s).elements
+    it = (s).iterator
     token = 1+END
     next
     nextToken
@@ -49,10 +47,7 @@ class Scanner extends Tokens with parsing.TokenTests {
     if (c == d) next else error("expected '"+d+"' found '"+c+"' !");
   }
 
-  final def accS(ds: Seq[Char]) { 
-    val jt = ds.elements
-    while (jt.hasNext) { acc(jt.next) }
-  }
+  final def accS(ds: Seq[Char]) { ds foreach acc }
 
   final def readToken: Int = 
     if (isSpace(c)) {

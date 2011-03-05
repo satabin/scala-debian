@@ -1,8 +1,7 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author Stephane Micheloud
  */
-//$Id: scalac.scala 16881 2009-01-09 16:28:11Z cunei $
 
 package scala.man1
 
@@ -125,8 +124,8 @@ object scalac extends Command {
         Definition(
           CmdOption("target:", Argument("target")),
           SeqPara(
-            "Specify which backend to use (" & Mono("jvm-1.5,jvm-1.4," &
-            "msil,cldc") & ").",
+            "Specify which backend to use (" & Mono("jvm-1.5," &
+            "msil") & ").",
             "The default value is " & Mono("\"jvm-1.5\"") & " (was " &
             Mono("\"jvm-1.4\"") & " up to Scala version 2.6.1).")),
         Definition(
@@ -351,7 +350,8 @@ object scalac extends Command {
     Link(Bold("fsc") & "(1)", "fsc.html") & ", " &
     Link(Bold("sbaz") & "(1)", "sbaz.html") & ", " &
     Link(Bold("scala") & "(1)", "scala.html") & ", " &
-    Link(Bold("scaladoc") & "(1)", "scaladoc.html"))
+    Link(Bold("scaladoc") & "(1)", "scaladoc.html") & ", " &
+    Link(Bold("scalap") & "(1)", "scalap.html"))
 
   def manpage = new Document {
     title = command

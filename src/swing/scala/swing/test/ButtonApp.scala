@@ -1,9 +1,12 @@
-package scala.swing.test
+package scala.swing
+package test
+
+import java.awt.Dimension
 
 import swing._
 import swing.event._
 
-object ButtonApp extends SimpleGUIApplication {
+object ButtonApp extends SimpleSwingApplication {
   def top = new MainFrame {
     title = "My Frame"
     contents = new GridPanel(2, 2) {
@@ -16,6 +19,7 @@ object ButtonApp extends SimpleGUIApplication {
         }
       }
     }
-    size = (300, 80)
+    size = new Dimension(300, 80)
   }
 }
+

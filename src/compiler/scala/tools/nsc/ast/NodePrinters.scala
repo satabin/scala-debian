@@ -1,10 +1,10 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: NodePrinters.scala 16625 2008-11-25 16:04:12Z michelou $
 
-package scala.tools.nsc.ast
+package scala.tools.nsc
+package ast
 
 import compat.Platform.EOL
 import symtab.Flags._
@@ -41,13 +41,13 @@ abstract class NodePrinters {
           if (comma) buf.append(",")
           buf.append(EOL)
         }
-        def annotationInfoToString(attr: AnnotationInfo): String = {
+        def annotationInfoToString(annot: AnnotationInfo): String = {
           val str = new StringBuilder
-          str.append(attr.atp.toString())
-          if (!attr.args.isEmpty)
-            str.append(attr.args.mkString("(", ",", ")"))
-          if (!attr.assocs.isEmpty)
-            for (((name, value), index) <- attr.assocs.zipWithIndex) {
+          str.append(annot.atp.toString())
+          if (!annot.args.isEmpty)
+            str.append(annot.args.mkString("(", ",", ")"))
+          if (!annot.assocs.isEmpty)
+            for (((name, value), index) <- annot.assocs.zipWithIndex) {
               if (index > 0)
                 str.append(", ")
               str.append(name).append(" = ").append(value)
@@ -75,12 +75,11 @@ abstract class NodePrinters {
           if (sym hasFlag MUTABLE      ) buf.append(" | MUTABLE")
           if (sym hasFlag PARAM        ) buf.append(" | PARAM")
           if (sym hasFlag PACKAGE      ) buf.append(" | PACKAGE")
-          if (sym hasFlag DEPRECATED   ) buf.append(" | DEPRECATED")
 
           if (sym hasFlag COVARIANT    ) buf.append(" | COVARIANT")
           if (sym hasFlag CAPTURED     ) buf.append(" | CAPTURED")
           if (sym hasFlag BYNAMEPARAM  ) buf.append(" | BYNAMEPARAM")
-          if (sym hasFlag CONTRAVARIANT) buf.append(" | CONTRVARIANT")
+          if (sym hasFlag CONTRAVARIANT) buf.append(" | CONTRAVARIANT")
           if (sym hasFlag LABEL        ) buf.append(" | LABEL")
           if (sym hasFlag INCONSTRUCTOR) buf.append(" | INCONSTRUCTOR")
           if (sym hasFlag ABSOVERRIDE  ) buf.append(" | ABSOVERRIDE")
@@ -92,6 +91,7 @@ abstract class NodePrinters {
 
           if (sym hasFlag CASEACCESSOR ) buf.append(" | CASEACCESSOR")
           if (sym hasFlag TRAIT        ) buf.append(" | TRAIT")
+          if (sym hasFlag DEFAULTPARAM ) buf.append(" | DEFAULTPARAM")
           if (sym hasFlag BRIDGE       ) buf.append(" | BRIDGE")
           if (sym hasFlag ACCESSOR     ) buf.append(" | ACCESSOR")
 
@@ -115,13 +115,13 @@ abstract class NodePrinters {
           if (sym hasFlag TRANS_FLAG   ) buf.append(" | TRANS_FLAG")
           if (sym hasFlag LOCKED       ) buf.append(" | LOCKED")
 
-          val attrs = ", attrs=" + (
-            if (!sym.attributes.isEmpty)
-              sym.attributes.map(annotationInfoToString).mkString("[", ",", "]")
+          val annots = ", annots=" + (
+            if (!sym.annotations.isEmpty)
+              sym.annotations.map(annotationInfoToString).mkString("[", ",", "]")
             else
               tree.asInstanceOf[MemberDef].mods.annotations)
           (if (buf.length() > 2) buf.substring(3)
-          else "0") + ", // flags=" + flagsToString(sym.flags) + attrs
+          else "0") + ", // flags=" + flagsToString(sym.flags) + annots
         }
         def nodeinfo(tree: Tree): String =
           if (infolevel == InfoLevel.Quiet) ""
@@ -157,46 +157,27 @@ abstract class NodePrinters {
           }
         def nodeinfo2(tree: Tree): String =
           (if (comma) "," else "") + nodeinfo(tree)
+        
+        def applyCommon(name: String, tree: Tree, fun: Tree, args: List[Tree]) {
+          println(name + "(" + nodeinfo(tree))
+          traverse(fun, level + 1, true)
+          if (args.isEmpty)
+            println("  Nil // no argument")
+          else {
+            val n = args.length
+            println("  List( // " + n + " arguments(s)")
+            for (i <- 0 until n)
+              traverse(args(i), level + 2, i < n-1)
+            println("  )")
+          }
+          printcln(")")
+        }
+          
         tree match {
-          case AppliedTypeTree(tpt, args) =>
-            println("AppliedTypeTree(" + nodeinfo(tree))
-            traverse(tpt, level + 1, true)
-            if (args.isEmpty)
-              println("  List() // no argument")
-            else {
-              val n = args.length
-              println("  List( // " + n + " arguments(s)")
-              for (i <- 0 until n)
-                traverse(args(i), level + 2, i < n-1)
-              println("  )")
-            }
-            printcln(")")
-          case Apply(fun, args) =>
-            println("Apply(" + nodeinfo(tree))
-            traverse(fun, level + 1, true)
-            if (args.isEmpty)
-              println("  List() // no argument")
-            else {
-              val n = args.length
-              println("  List( // " + n + " argument(s)")
-              for (i <- 0 until n)
-                traverse(args(i), level + 2, i < n-1)
-              println("  )")
-            }
-            printcln(")")
-          case ApplyDynamic(fun, args) =>
-            println("ApplyDynamic(" + nodeinfo(tree))
-            traverse(fun, level + 1, true)
-            if (args.isEmpty)
-              println("  List() // no argument")
-            else {
-              val n = args.length
-              println("  List( // " + n + " argument(s)")
-              for (i <- 0 until n)
-                traverse(args(i), level + 2, i < n-1)
-              println("  )")
-            }
-            printcln(")")
+          case AppliedTypeTree(tpt, args) => applyCommon("AppliedTypeTree", tree, tpt, args)
+          case Apply(fun, args)           => applyCommon("Apply", tree, fun, args)
+          case ApplyDynamic(fun, args)    => applyCommon("ApplyDynamic", tree, fun, args)
+
           case Block(stats, expr) =>
             println("Block(" + nodeinfo(tree))
             if (stats.isEmpty)
@@ -316,8 +297,10 @@ abstract class NodePrinters {
             traverse(tpt, level + 1, true)
             traverse(rhs, level + 1, false)
             printcln(")")
-          case PackageDef(name, stats) =>
-            println("PackageDef("+name+", ")
+          case PackageDef(pid, stats) =>
+            println("PackageDef(")
+            traverse(pid, level + 1, false)
+            println(",\n")
             for (stat <- stats)
               traverse(stat, level + 1, false)
             printcln(")")
@@ -341,8 +324,6 @@ abstract class NodePrinters {
                   }
                   printcln(")")                
                 } else printcln(p.productPrefix)
-              case _ => 
-                printcln("***" + tree.getClass)
             }
         }
       }
@@ -354,16 +335,11 @@ abstract class NodePrinters {
 
   def printUnit(unit: CompilationUnit) {
     print("// Scala source: " + unit.source + "\n")
-    if (unit.body ne null) {
-      print(nodeToString(unit.body)); println()
-    } else {
-      print("<null>")
-    }
-    println()
+    println(Option(unit.body) map (x => nodeToString(x) + "\n") getOrElse "<null>")
   }
 
   def printAll() {
     print("[[syntax trees at end of " + phase + "]]")
-    for (unit <- global.currentRun.units) printUnit(unit)
+    global.currentRun.units foreach printUnit
   }
 }

@@ -1,10 +1,28 @@
-package scala.collection.immutable;
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
 
-/**
- * @author David MacIver
+
+
+package scala.collection
+package immutable
+
+
+import scala.collection.generic.CanBuildFrom
+import scala.collection.mutable.Builder
+import scala.collection.mutable.MapBuilder
+
+
+
+/** Utility class for long maps.
+ *  @author David MacIver
  */
 private[immutable] object LongMapUtils{
-  def zero(i : Long, mask : Long) = (i & mask) == 0;    
+  def zero(i : Long, mask : Long) = (i & mask) == 0L;
   def mask(i : Long, mask : Long) = i & (complement(mask - 1) ^ mask)
   def hasMatch(key : Long, prefix : Long, m : Long) = mask(key, m) == prefix;
   def unsignedCompare(i : Long, j : Long) = (i < j) ^ (i < 0) ^ (j < 0)
@@ -39,16 +57,30 @@ private[immutable] object LongMapUtils{
 
 import LongMapUtils._
 
+/** A companion object for long maps.
+ *  @since 2.7
+ */
 object LongMap{
+  /** $mapCanBuildFromInfo */
+  implicit def canBuildFrom[A, B] = new CanBuildFrom[LongMap[A], (Long, B), LongMap[B]] {
+    def apply(from: LongMap[A]): Builder[(Long, B), LongMap[B]] = apply()
+    def apply(): Builder[(Long, B), LongMap[B]] = new MapBuilder[Long, B, LongMap[B]](empty[B])
+  }
+  
   def empty[T] : LongMap[T]  = LongMap.Nil;
   def singleton[T](key : Long, value : T) : LongMap[T] = LongMap.Tip(key, value);
   def apply[T](elems : (Long, T)*) : LongMap[T] = 
-    elems.foldLeft(empty[T])((x, y) => x.update(y._1, y._2));
+    elems.foldLeft(empty[T])((x, y) => x.updated(y._1, y._2));
 
-
-  private[immutable] case object Nil extends LongMap[Nothing]{
-    override def equals(that : Any) = this eq that.asInstanceOf[AnyRef] 
+  private[immutable] case object Nil extends LongMap[Nothing] {
+    // Important, don't remove this! See IntMap for explanation.
+    override def equals(that : Any) = that match {
+      case (that : AnyRef) if (this eq that) => true;
+      case (that : LongMap[_]) => false; // The only empty LongMaps are eq Nil
+      case that => super.equals(that);
+    }
   };
+
   private[immutable] case class Tip[+T](key : Long, value : T) extends LongMap[T]{
     def withValue[S](s : S) = 
       if (s.asInstanceOf[AnyRef] eq value.asInstanceOf[AnyRef]) this.asInstanceOf[LongMap.Tip[S]];
@@ -125,12 +157,22 @@ private[immutable] class LongMapKeyIterator[V](it : LongMap[V]) extends LongMapI
 import LongMap._;
 
 /**
- * Specialised immutable map structure for long keys, based on 
- * <a href="http://citeseer.ist.psu.edu/okasaki98fast.html">Fast Mergeable Long Maps</a>
- * by Okasaki and Gill. Essentially a trie based on binary digits of the the integers.
+ *  Specialised immutable map structure for long keys, based on 
+ *  <a href="http://citeseer.ist.psu.edu/okasaki98fast.html">Fast Mergeable Long Maps</a>
+ *  by Okasaki and Gill. Essentially a trie based on binary digits of the integers.
+ * 
+ *  Note: This class is as of 2.8 largely superseded by HashMap.
+ *  
+ *  @tparam T      type of the values associated with the long keys.
+ *  
+ *  @since 2.7
+ *  @define Coll immutable.LongMap
+ *  @define coll immutable long integer map
+ *  @define mayNotTerminateInf
+ *  @define willNotTerminateInf
  */
-sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T]{
-  def empty[S] : LongMap[S] = LongMap.Nil;
+sealed abstract class LongMap[+T] extends Map[Long, T] with MapLike[Long, T, LongMap[T]] {
+  override def empty: LongMap[T] = LongMap.Nil;
 
   override def toList = {
     val buffer = new scala.collection.mutable.ListBuffer[(Long, T)];
@@ -140,8 +182,10 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
 
   /**
    * Iterator over key, value pairs of the map in unsigned order of the keys.
+   * 
+   * @return an iterator over pairs of long keys and corresponding values.
    */
-  def elements : Iterator[(Long, T)] = this match {
+  def iterator: Iterator[(Long, T)] = this match {
     case LongMap.Nil => Iterator.empty;
     case _ => new LongMapEntryIterator(this);
   }
@@ -149,13 +193,13 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
   /**
    * Loops over the key, value pairs of the map in unsigned order of the keys. 
    */
-  override final def foreach(f : ((Long, T)) => Unit) : Unit = this match {
+  override final def foreach[U](f : ((Long, T)) =>  U) : Unit = this match {
     case LongMap.Bin(_, _, left, right) => {left.foreach(f); right.foreach(f); }
     case LongMap.Tip(key, value) => f((key, value));
     case LongMap.Nil => {};
   }
 
-  override def keys : Iterator[Long] = this match {
+  override def keysIterator : Iterator[Long] = this match {
     case LongMap.Nil => Iterator.empty;
     case _ => new LongMapKeyIterator(this);
   }
@@ -172,7 +216,7 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
     case LongMap.Nil => {}
   }
 
-  override def values : Iterator[T] = this match {
+  override def valuesIterator : Iterator[T] = this match {
     case LongMap.Nil => Iterator.empty;
     case _ => new LongMapValueIterator(this);
   }
@@ -205,13 +249,13 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
     case LongMap.Nil => LongMap.Nil;
   }
 
-  override def transform[S](f : (Long, T) => S) : LongMap[S] = this match {
+  def transform[S](f : (Long, T) => S) : LongMap[S] = this match {
     case b@LongMap.Bin(prefix, mask, left, right) => b.bin(left.transform(f), right.transform(f));
     case t@LongMap.Tip(key, value) => t.withValue(f(key, value));  
     case LongMap.Nil => LongMap.Nil;
   }
 
-  final def size : Int = this match {
+  final override def size : Int = this match {
     case LongMap.Nil => 0;
     case LongMap.Tip(_, _) => 1;
     case LongMap.Bin(_, _, left, right) => left.size + right.size;
@@ -235,26 +279,36 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
     case LongMap.Nil => error("key not found");
   } 
 
-  def update[S >: T](key : Long, value : S) : LongMap[S] = this match {
+  def + [S >: T] (kv: (Long, S)): LongMap[S] = updated(kv._1, kv._2)
+
+  override def updated[S >: T](key : Long, value : S) : LongMap[S] = this match {
     case LongMap.Bin(prefix, mask, left, right) => if (!hasMatch(key, prefix, mask)) join(key, LongMap.Tip(key, value), prefix, this);
-                                          else if (zero(key, mask)) LongMap.Bin(prefix, mask, left.update(key, value), right)
-                                          else LongMap.Bin(prefix, mask, left, right.update(key, value)); 
+                                          else if (zero(key, mask)) LongMap.Bin(prefix, mask, left.updated(key, value), right)
+                                          else LongMap.Bin(prefix, mask, left, right.updated(key, value)); 
     case LongMap.Tip(key2, value2) => if (key == key2) LongMap.Tip(key, value);
                              else join(key, LongMap.Tip(key, value), key2, this);
     case LongMap.Nil => LongMap.Tip(key, value);
   }
 
+  @deprecated("use `updated' instead")
+  override def update[S >: T](key: Long, value: S): LongMap[S] = updated(key, value)
+
   /**
    * Updates the map, using the provided function to resolve conflicts if the key is already present.
-   * Equivalent to 
-   * <pre>this.get(key) match { 
-   *         case None => this.update(key, value); 
-   *         case Some(oldvalue) => this.update(key, f(oldvalue, value) }
-   * </pre>
    * 
-   * @param key The key to update
-   * @param value The value to use if there is no conflict
-   * @param f The function used to resolve conflicts.
+   * Equivalent to 
+   * {{{
+   *   this.get(key) match { 
+   *     case None => this.update(key, value); 
+   *     case Some(oldvalue) => this.update(key, f(oldvalue, value)
+   *   }
+   * }}}
+   * 
+   * @tparam S     The supertype of values in this `LongMap`.
+   * @param key    The key to update.
+   * @param value  The value to use if there is no conflict.
+   * @param f      The function used to resolve conflicts.
+   * @return       The updated map.
    */
   def updateWith[S >: T](key : Long, value : S, f : (T, S) => S) : LongMap[S] = this match {
     case LongMap.Bin(prefix, mask, left, right) => if (!hasMatch(key, prefix, mask)) join(key, LongMap.Tip(key, value), prefix, this);
@@ -280,7 +334,9 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
    * A combined transform and filter function. Returns an LongMap such that for each (key, value) mapping
    * in this map, if f(key, value) == None the map contains no mapping for key, and if <code>f(key, value)
    * 
-   * @param f The transforming function.
+   * @tparam S    The type of the values in the resulting `LongMap`.
+   * @param f     The transforming function.
+   * @return      The modified map.
    */
   def modifyOrRemove[S](f : (Long, T) => Option[S]) : LongMap[S] = this match {
       case LongMap.Bin(prefix, mask, left, right) => {
@@ -303,8 +359,10 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
   /**
    * Forms a union map with that map, using the combining function to resolve conflicts.
    * 
-   * @param that the map to form a union with.
-   * @param f the function used to resolve conflicts between two mappings. 
+   * @tparam S      The type of values in `that`, a supertype of values in `this`.
+   * @param that    The map to form a union with.
+   * @param f       The function used to resolve conflicts between two mappings. 
+   * @return        Union of `this` and `that`, with identical key conflicts resolved using the function `f`.
    */ 
   def unionWith[S >: T](that : LongMap[S], f : (Long, S, S) => S) : LongMap[S] = (this, that) match{
     case (LongMap.Bin(p1, m1, l1, r1), that@(LongMap.Bin(p2, m2, l2, r2))) => 
@@ -328,12 +386,15 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
   }
 
   /**
-   * Forms the intersection of these two maps with a combinining function. The resulting map is
+   * Forms the intersection of these two maps with a combining function. The resulting map is
    * a map that has only keys present in both maps and has values produced from the original mappings
    * by combining them with f.
-   *
-   * @param that The map to intersect with.
-   * @param f The combining function.
+   * 
+   * @tparam S      The type of values in `that`.
+   * @tparam R      The type of values in the resulting `LongMap`.
+   * @param that    The map to intersect with.
+   * @param f       The combining function.
+   * @return        Intersection of `this` and `that`, with values for identical keys produced by function `f`.
    */
   def intersectionWith[S, R](that : LongMap[S], f : (Long, T, S) => R) : LongMap[R] = (this, that) match {
     case (LongMap.Bin(p1, m1, l1, r1), that@LongMap.Bin(p2, m2, l2, r2)) => 
@@ -362,13 +423,13 @@ sealed abstract class LongMap[+T] extends scala.collection.immutable.Map[Long, T
    * Left biased intersection. Returns the map that has all the same mappings as this but only for keys
    * which are present in the other map. 
    *
-   * @param that The map to intersect with. 
+   * @tparam R      The type of values in `that`.
+   * @param that    The map to intersect with.
+   * @return        A map with all the keys both in `this` and `that`, mapped to corresponding values from `this`.
    */
   def intersection[R](that : LongMap[R]) : LongMap[T] = this.intersectionWith(that, (key : Long, value : T, value2 : R) => value);
 
-  override def ++[S >: T](that : Iterable[(Long, S)]) = that match {
-    case (that : LongMap[_]) => this.unionWith[S](that.asInstanceOf[LongMap[S]], (key, x, y) => y);
-    case that => that.foldLeft(this : LongMap[S])({case (m, (x, y)) => m.update(x, y)});
-  }
+  def ++[S >: T](that : LongMap[S]) =
+    this.unionWith[S](that, (key, x, y) => y)
 }
 

@@ -1,15 +1,14 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Iulian Dragos
  */
 
-// $Id: DeadCodeElimination.scala 16881 2009-01-09 16:28:11Z cunei $
 
-package scala.tools.nsc.backend.opt
+package scala.tools.nsc
+package backend.opt
 
 import scala.collection._
 import scala.collection.immutable.{Map, HashMap, Set, HashSet}
-import scala.tools.nsc.backend.icode.analysis.LubError
 import scala.tools.nsc.symtab._
 
 /**
@@ -57,7 +56,7 @@ abstract class DeadCodeElimination extends SubComponent {
     var defs: Map[(BasicBlock, Int), Set[rdef.lattice.Definition]] = HashMap.empty
     
     /** Useful instructions which have not been scanned yet. */
-    val worklist: mutable.Set[(BasicBlock, Int)] = new jcl.LinkedHashSet
+    val worklist: mutable.Set[(BasicBlock, Int)] = new mutable.LinkedHashSet
     
     /** what instructions have been marked as useful? */
     val useful: mutable.Map[BasicBlock, mutable.BitSet] = new mutable.HashMap
@@ -81,9 +80,9 @@ abstract class DeadCodeElimination extends SubComponent {
         collectRDef(m)
         mark
         sweep(m)
-        accessedLocals = accessedLocals.removeDuplicates
-        if ((m.locals -- accessedLocals).length > 0) {
-          log("Removed dead locals: " + (m.locals -- accessedLocals))
+        accessedLocals = accessedLocals.distinct
+        if (m.locals diff accessedLocals nonEmpty) {
+          log("Removed dead locals: " + (m.locals diff accessedLocals))
           m.locals = accessedLocals.reverse
         }
       }
@@ -130,12 +129,12 @@ abstract class DeadCodeElimination extends SubComponent {
     }
 
     /** Mark useful instructions. Instructions in the worklist are each inspected and their
-     *  dependecies are marked useful too, and added to the worklist.
+     *  dependencies are marked useful too, and added to the worklist.
      */
     def mark {
 //      log("Starting with worklist: " + worklist)
       while (!worklist.isEmpty) {
-        val (bb, idx) = worklist.elements.next
+        val (bb, idx) = worklist.iterator.next
         worklist -= ((bb, idx))
         if (settings.debug.value)
           log("Marking instr: \tBB_" + bb + ": " + idx + " " + bb(idx))
@@ -217,7 +216,7 @@ abstract class DeadCodeElimination extends SubComponent {
     private def computeCompensations(m: IMethod): mutable.Map[(BasicBlock, Int), List[Instruction]] = {
       val compensations: mutable.Map[(BasicBlock, Int), List[Instruction]] = new mutable.HashMap
       
-      for (bb <- m.code.blocks.toList) {
+      for (bb <- m.code.blocks) {
         assert(bb.closed, "Open block in computeCompensations")
         for ((i, idx) <- bb.toList.zipWithIndex) {
           if (!useful(bb)(idx)) {
@@ -225,8 +224,20 @@ abstract class DeadCodeElimination extends SubComponent {
               log("Finding definitions of: " + i + "\n\t" + consumedType + " at depth: " + depth)
               val defs = rdef.findDefs(bb, idx, 1, depth)
               for (d <- defs) {
-                if (!compensations.isDefinedAt(d))
-                  compensations(d) = List(DROP(consumedType))
+                val (bb, idx) = d
+                bb(idx) match {
+                  case DUP(_) if idx > 0 =>
+                    bb(idx - 1) match {
+                      case nw @ NEW(_) =>
+                        val init = findInstruction(bb, nw.init)
+                        log("Moving DROP to after <init> call: " + nw.init)
+                        compensations(init) = List(DROP(consumedType))
+                      case _ =>
+                        compensations(d) = List(DROP(consumedType))
+                    }
+                  case _ =>
+                    compensations(d) = List(DROP(consumedType))
+                }
               }
             }
           }

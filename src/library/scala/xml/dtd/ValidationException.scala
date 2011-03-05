@@ -1,15 +1,15 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://www.scala-lang.org/           **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: ValidationException.scala 16857 2009-01-07 20:34:03Z cunei $
 
 
-package scala.xml.dtd
+package scala.xml
+package dtd
 
 
 case class ValidationException(e: String) extends Exception(e)
@@ -31,17 +31,13 @@ object MakeValidationException {
   def fromUndefinedAttribute(key: String) = 
     new ValidationException("attribute " + key +" not allowed here")
 
-  def fromMissingAttribute(allKeys: scala.collection.Set[String]) = {
+  def fromMissingAttribute(allKeys: Set[String]) = {
     val sb = new StringBuilder("missing value for REQUIRED attribute")
     if (allKeys.size > 1) sb.append('s');
-    val it = allKeys.elements
-    while (it.hasNext) {
-      sb.append('\'').append(it.next).append('\'') 
-    }
+    allKeys foreach (k => sb append "'%s'".format(k))
     new ValidationException(sb.toString())
   }
 
   def fromMissingAttribute(key: String, tpe: String) =
-    new ValidationException("missing value for REQUIRED attribute "+key+" of type "+tpe)
-
+    new ValidationException("missing value for REQUIRED attribute %s of type %s".format(key, tpe))
 }

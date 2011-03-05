@@ -3,9 +3,10 @@
  * @author  Martin Odersky
  */
 
-// $Id: ExceptionHandlers.scala 16377 2008-10-27 16:25:50Z dragos $
 
-package scala.tools.nsc.backend.icode;
+package scala.tools.nsc
+package backend
+package icode;
 
 import scala.collection._
 
@@ -28,7 +29,7 @@ trait ExceptionHandlers { self: ICodes =>
 
     def setStartBlock(b: BasicBlock) = {
       _startBlock = b;
-      b.exceptionHandlerHeader = true
+      b.exceptionHandlerStart = true
     }
     def startBlock = _startBlock;
 

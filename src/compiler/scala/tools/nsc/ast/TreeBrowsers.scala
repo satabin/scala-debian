@@ -1,10 +1,10 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: TreeBrowsers.scala 16894 2009-01-13 13:09:41Z cunei $
 
-package scala.tools.nsc.ast
+package scala.tools.nsc
+package ast
 
 import java.awt.{List => awtList, _}
 import java.awt.event._
@@ -48,7 +48,7 @@ abstract class TreeBrowsers {
    */
   class SwingBrowser {
 
-    def browse(t: Tree): Unit = {
+    def browse(t: Tree): Tree = {
       val tm = new ASTTreeModel(t)
 
       val frame = new BrowserFrame()
@@ -59,6 +59,7 @@ abstract class TreeBrowsers {
 
       // wait for the frame to be closed
       lock.acquire
+      t
     }
 
     def browse(units: Iterator[CompilationUnit]): Unit =
@@ -110,7 +111,7 @@ abstract class TreeBrowsers {
     def isLeaf(node: Any): Boolean = packChildren(node).length == 0
 
     def removeTreeModelListener(l: TreeModelListener): Unit =
-      listeners remove (x => x == l)
+      listeners filterNot (_ == l)
 
     /** we ignore this message for now */
     def valueForPathChanged(path: TreePath, newValue: Any) = ()
@@ -138,7 +139,7 @@ abstract class TreeBrowsers {
     var splitPane: JSplitPane = _
     var treeModel: TreeModel = _
 
-    val textArea: JTextArea = new JTextArea(20, 150)
+    val textArea: JTextArea = new JTextArea(30, 120)
     val infoPanel = new TextInfoPanel()
 
     /** Create a frame that displays the AST.
@@ -201,7 +202,7 @@ abstract class TreeBrowsers {
   /**
    * Present detailed information about the selected tree node.
    */
-  class TextInfoPanel extends JTextArea(30, 40) {
+  class TextInfoPanel extends JTextArea(20, 50) {
 
     setFont(new Font("monospaced", Font.PLAIN, 12))
 
@@ -214,11 +215,20 @@ abstract class TreeBrowsers {
         case ProgramTree(_) => ()
         case UnitTree(_)    => ()
         case _ =>
-          str.append("tree.pos: ").append(t.pos)
+          str.append("tree.id: ").append(t.id)
+          str.append("\ntree.pos: ").append(t.pos)
           str.append("\nSymbol: ").append(TreeInfo.symbolText(t))
-          str.append("\nSymbol info: \n")
-          TreeInfo.symbolTypeDoc(t).format(getWidth() / getColumnWidth(), buf)
-          str.append(buf.toString())
+          str.append("\nSymbol owner: ").append(
+            if ((t.symbol ne null) && t.symbol != NoSymbol) 
+              t.symbol.owner.toString
+            else 
+              "NoSymbol has no owner")
+          if ((t.symbol ne null) && t.symbol.isType) {
+            str.append("\ntermSymbol: " + t.symbol.tpe.termSymbol
+                     + "\ntypeSymbol: " + t.symbol.tpe.typeSymbol)
+          if (t.symbol.isTypeSkolem)
+            str.append("\nSkolem of: " + t.symbol.deSkolemize)
+          }
           str.append("\nSymbol tpe: ")
           if (t.symbol ne null) {
             str.append(t.symbol.tpe).append("\n")
@@ -226,7 +236,10 @@ abstract class TreeBrowsers {
             TypePrinter.toDocument(t.symbol.tpe).format(getWidth() / getColumnWidth(), buf)
             str.append(buf.toString())
           }
-          str.append("\nSymbol Attributes: \n").append(TreeInfo.symbolAttributes(t))
+          str.append("\n\nSymbol info: \n")
+          TreeInfo.symbolTypeDoc(t).format(getWidth() / getColumnWidth(), buf)
+          str.append(buf.toString())
+          str.append("\n\nSymbol Attributes: \n").append(TreeInfo.symbolAttributes(t))
           str.append("\ntree.tpe: ")
           if (t.tpe ne null) {
             str.append(t.tpe.toString()).append("\n")
@@ -238,7 +251,6 @@ abstract class TreeBrowsers {
       setText(str.toString())
     }
   }
-
 
   /** Computes different information about a tree node. It
    *  is used as central place to do all pattern matching against
@@ -289,9 +301,6 @@ abstract class TreeBrowsers {
 
       case Block(stats, expr) =>
         ("Block", EMPTY)
-
-      case Sequence(trees) =>
-        ("Sequence", EMPTY)
 
       case Alternative(trees) =>
         ("Alternative", EMPTY)
@@ -356,9 +365,6 @@ abstract class TreeBrowsers {
       case Annotated(annot, arg) =>
         ("Annotated", EMPTY)
         
-      case Annotation(constr, elements) =>
-        ("Annotation", EMPTY)
-        
       case SingletonTypeTree(ref) =>
         ("SingletonType", EMPTY)
 
@@ -407,7 +413,7 @@ abstract class TreeBrowsers {
         mods.annotations ::: impl :: children
       }
 
-      case PackageDef(name, stats) =>
+      case PackageDef(pid, stats) =>
         stats
 
       case ModuleDef(mods, name, impl) =>
@@ -416,20 +422,14 @@ abstract class TreeBrowsers {
       case ValDef(mods, name, tpe, rhs) =>
         mods.annotations ::: List(tpe, rhs)
 
-      case DefDef(mods, name, tparams, vparams, tpe, rhs) => {
-        var children: List[Tree] = List()
-        children = tparams ::: children
-        children = List.flatten(vparams) ::: children
-        mods.annotations ::: tpe :: rhs :: children
-      }
+      case DefDef(mods, name, tparams, vparams, tpe, rhs) =>
+        mods.annotations ::: tpe :: rhs :: vparams.flatten ::: tparams
 
       case TypeDef(mods, name, tparams, rhs) =>
         mods.annotations ::: rhs :: tparams // @M: was List(rhs, lobound)
 
-      case Import(expr, selectors) => {
-        var children: List[Tree] = List(expr)
-        children
-      }
+      case Import(expr, selectors) =>
+        List(expr)
 
       case CaseDef(pat, guard, body) =>
         List(pat, guard, body)
@@ -442,9 +442,6 @@ abstract class TreeBrowsers {
 
       case Block(stats, expr) =>
         stats ::: List(expr)
-
-      case Sequence(trees) =>
-        trees
 
       case Alternative(trees) =>
         trees
@@ -507,10 +504,7 @@ abstract class TreeBrowsers {
         Nil
 
       case Annotated(annot, arg) =>
-        annot.constr :: annot.elements ::: List(arg)
-      
-      case Annotation(constr, elements) =>
-        constr :: elements
+        annot :: List(arg)
         
       case SingletonTypeTree(ref) =>
         List(ref)
@@ -545,12 +539,10 @@ abstract class TreeBrowsers {
 
     /** Return a textual representation of this t's symbol */
     def symbolText(t: Tree): String = {
-      var prefix = ""
-
-      if (t.hasSymbol)
-        prefix = "[has] "
-      if (t.isDef)
-        prefix = "[defines] "
+      val prefix =
+        if (t.hasSymbol)  "[has] "
+        else if (t.isDef) "[defines] "
+        else ""
 
       prefix + t.symbol
     }
@@ -573,8 +565,9 @@ abstract class TreeBrowsers {
       if ((s ne null) && (s != NoSymbol)) {
         var str = flagsToString(s.flags)
         if (s.isStaticMember) str = str + " isStatic ";
-        str
-      }
+        (str + " annotations: " + s.annotations.mkString("", " ", "")
+          + (if (s.isTypeSkolem) "\ndeSkolemized annotations: " + s.deSkolemize.annotations.mkString("", " ", "") else "")) 
+      } 
       else ""
     }
   }
@@ -626,7 +619,7 @@ abstract class TreeBrowsers {
         Document.group(
           Document.nest(4, "TypeRef(" :/: 
                         toDocument(pre) :: ", " :/:
-                        sym.name.toString() :: ", " :/:
+                        sym.name.toString() + sym.idString :: ", " :/:
                         "[ " :: toDocument(args) ::"]" :: ")")
         )
 
@@ -647,14 +640,14 @@ abstract class TreeBrowsers {
         Document.group(
           Document.nest(4,"ClassInfoType(" :/:
                         toDocument(parents) :: ", " :/:
-                        clazz.name.toString() :: ")")
+                        clazz.name.toString() + clazz.idString :: ")")
         )
 
-      case MethodType(paramtypes, result) =>
+      case MethodType(params, result) =>
         Document.group(
           Document.nest(4, "MethodType(" :/:
                         Document.group("(" :/:
-                                       toDocument(paramtypes) :/:
+                                       symsToDocument(params) :/:
                                        "), ") :/:
                         toDocument(result) :: ")")
         )
@@ -668,10 +661,10 @@ abstract class TreeBrowsers {
                         toDocument(result) :: ")")
         )
         
-      case AnnotatedType(attribs, tp, _) =>
+      case AnnotatedType(annots, tp, _) =>
         Document.group(
           Document.nest(4, "AnnotatedType(" :/:
-                        attribs.mkString("[", ",", "]") :/:
+                        annots.mkString("[", ",", "]") :/:
                         "," :/: toDocument(tp) :: ")")
         )
         
@@ -691,7 +684,7 @@ abstract class TreeBrowsers {
                         toDocument(thistpe) :/: ", " :/:
                         toDocument(supertpe) ::")"))
       case _ =>
-        throw new Error("Unknown case: " + t.toString() +", "+ t.getClass)
+        Predef.error("Unknown case: " + t.toString() +", "+ t.getClass)
     }
   }
 

@@ -1,7 +1,6 @@
 //############################################################################
 // Compile Time Bugs & Test Cases
 //############################################################################
-// $Id: compile1.scala 5359 2005-12-16 15:33:49Z dubochet $
 
 import java.lang.System; // to avoid name clash with .NET's library
 

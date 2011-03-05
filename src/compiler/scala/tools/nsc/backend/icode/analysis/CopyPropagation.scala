@@ -1,11 +1,11 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: CopyPropagation.scala 16881 2009-01-09 16:28:11Z cunei $
 
-package scala.tools.nsc.backend.icode.analysis
+package scala.tools.nsc
+package backend.icode.analysis
 
 import scala.collection.mutable.{Map, HashMap}
 import scala.tools.nsc.symtab.Flags.DEFERRED
@@ -22,7 +22,7 @@ abstract class CopyPropagation {
   import icodes._
 
   /** Locations can be local variables, this, and fields. */
-  abstract sealed class Location;
+  abstract sealed class Location
   case class LocalVar(l: Local) extends Location
   case class Field(r: Record, sym: Symbol) extends Location
   case object This extends Location
@@ -57,18 +57,13 @@ abstract class CopyPropagation {
 
     class State(val bindings: Bindings, var stack: List[Value]) {
       override def equals(that: Any): Boolean = 
-        (this eq that.asInstanceOf[AnyRef]) ||
-        that.isInstanceOf[State] && {
-          val other = that.asInstanceOf[State]
-
+        (this eq that.asInstanceOf[AnyRef]) || (that match {
           /* comparison with bottom is reference equality! */
-          if ((other eq bottom) || (this eq bottom))
-            (this eq other)
-          else {
-            this.bindings == other.bindings &&
-            List.forall2(this.stack, other.stack) { (a, b) => a == b }
-          }
-        }
+          case other: State if (this ne bottom) && (other ne bottom) =>
+            (this.bindings == other.bindings) &&
+            (this.stack corresponds other.stack)(_ == _)  // @PP: corresponds
+          case _ => false
+        })
 
       /* Return an alias for the given local. It returns the last
        * local in the chain of aliased locals. Cycles are not allowed
@@ -121,15 +116,43 @@ abstract class CopyPropagation {
        * binding of that local.
        */
       def getFieldValue(r: Record, f: Symbol): Option[Value] = {
+        if(!r.bindings.isDefinedAt(f)) None else {
+        	var target: Value = r.bindings(f)
+        	target match {
+          	case Deref(LocalVar(l)) => Some(getBinding(l))
+          	case Deref(Field(r1, f1)) => getFieldValue(r1, f1) orElse Some(target)
+//          case Deref(This)    => Some(target)
+//          case Const(k) => Some(target)
+	          case _  => Some(target)
+          }
+        }
+      }
+      
+      /** The same as getFieldValue, but never returns Record/Field values. Use
+       *  this when you want to find a replacement for a field value (either a local,
+       *  or a constant/this value). 
+       */
+      def getFieldNonRecordValue(r: Record, f: Symbol): Option[Value] = {
         assert(r.bindings.isDefinedAt(f),
             "Record " + r + " does not contain a field " + f);
 
         var target: Value = r.bindings(f)
         target match {
-          case Deref(LocalVar(l)) => Some(Deref(LocalVar(getAlias(l))))
-          case Deref(This)    => Some(target)
-          case Const(k) => Some(target)
-          case _  => None
+          case Deref(LocalVar(l)) => 
+            val alias = getAlias(l)
+            val derefAlias = Deref(LocalVar(alias))
+            getBinding(alias) match {
+              case Record(_, _) => Some(derefAlias)
+              case Deref(Field(r1, f1)) => 
+                getFieldNonRecordValue(r1, f1) orElse Some(derefAlias)
+              case Boxed(_) => Some(derefAlias)
+              case v => Some(v) 
+            }
+          case Deref(Field(r1, f1)) => 
+            getFieldNonRecordValue(r1, f1) orElse None
+          case Deref(This) => Some(target)
+          case Const(k)    => Some(target)
+          case _           => None
         }
       }
 
@@ -150,31 +173,31 @@ abstract class CopyPropagation {
 
     val exceptionHandlerStack = Unknown :: Nil
 
-    def lub2(a: Elem, b: Elem): Elem = {
+    def lub2(exceptional: Boolean)(a: Elem, b: Elem): Elem = {
       if (a eq bottom)      b
       else if (b eq bottom) a
       else if (a == b) a
       else {
+        //assert(!(a.stack eq exceptionHandlerStack) && !(b.stack eq exceptionHandlerStack)) 
         val resStack = 
-          if (a.stack eq exceptionHandlerStack) a.stack
-          else if (b.stack eq exceptionHandlerStack) b.stack
+          if (exceptional) exceptionHandlerStack
           else {
-            if (a.stack.length != b.stack.length)
-              throw new LubError(a, b, "Invalid stacks in states: ");
-            List.map2(a.stack, b.stack) { (v1, v2) => 
+//            if (a.stack.length != b.stack.length)
+//              throw new LubException(a, b, "Invalid stacks in states: ");
+            (a.stack, b.stack).zipped map { (v1, v2) => 
               if (v1 == v2) v1 else Unknown 
             }
           }
       
 /*        if (a.stack.length != b.stack.length)
-          throw new LubError(a, b, "Invalid stacks in states: ");
+          throw new LubException(a, b, "Invalid stacks in states: ");
         val resStack = List.map2(a.stack, b.stack) { (v1, v2) => 
           if (v1 == v2) v1 else Unknown 
         }
         */
-        val commonPairs = a.bindings.toList intersect (b.bindings.toList)
         val resBindings = new HashMap[Location, Value]
-        for ((k, v) <- commonPairs)
+        
+        for ((k, v) <- a.bindings if b.bindings.isDefinedAt(k) && v == b.bindings(k))
           resBindings += (k -> v);
         new State(resBindings, resStack)
       }
@@ -218,9 +241,14 @@ abstract class CopyPropagation {
     }
 
     def blockTransfer(b: BasicBlock, in: lattice.Elem): lattice.Elem =
-      b.toList.foldLeft(in)(interpret)
+      b.foldLeft(in)(interpret)
     
     import opcodes._
+    
+    private def retain[A, B](map: Map[A, B])(p: (A, B) => Boolean) = {
+      for ((k, v) <- map ; if !p(k, v)) map -= k
+      map
+    }
 
     /** Abstract interpretation for one instruction. */
     def interpret(in: copyLattice.Elem, i: Instruction): copyLattice.Elem = {
@@ -253,7 +281,21 @@ abstract class CopyPropagation {
             val v1 = in.stack match {
               case (r @ Record(cls, bindings)) :: xs =>
                 Deref(Field(r, field))
-
+              
+              case Deref(LocalVar(l)) :: _ =>
+                in.getBinding(l) match {
+                  case r @ Record(cls, bindings) => Deref(Field(r, field))
+                  case _ => Unknown
+                }
+                
+              case Deref(Field(r, f)) :: _ =>
+                val fld = in.getFieldValue(r, f)
+                fld match {
+                  case Some(r @ Record(cls, bindings)) if bindings.isDefinedAt(f) =>
+                  	in.getFieldValue(r, f).getOrElse(Unknown)
+                  case _ => Unknown
+                }
+                
               case _ => Unknown
             }
             out.stack = v1 :: out.stack.drop(1)
@@ -304,14 +346,14 @@ abstract class CopyPropagation {
           out.stack = Unknown :: out.stack.drop(i.consumed)
 
         case CALL_METHOD(method, style) => style match {
-          case Dynamic =>
+          case Dynamic | InvokeDynamic =>
             out = simulateCall(in, method, false)
 
           case Static(onInstance) =>
             if (onInstance) {
               val obj = out.stack.drop(method.info.paramTypes.length).head
 //              if (method.isPrimaryConstructor) {
-              if (method.isPrimaryConstructor/* && isClosureClass(method.owner)*/) {
+              if (method.isPrimaryConstructor) {
                 obj match {
                   case Record(_, bindings) =>
                     for (v <- out.stack.take(method.info.paramTypes.length + 1)
@@ -417,12 +459,15 @@ abstract class CopyPropagation {
      */
     final def cleanReferencesTo(s: copyLattice.State, target: Location) {
       def cleanRecord(r: Record): Record = {
-        r.bindings retain { (loc, value) =>
-          value match {
+        retain(r.bindings) { (loc, value) =>
+          (value match {
             case Deref(loc1) if (loc1 == target) => false
             case Boxed(loc1) if (loc1 == target)  => false
             case _ => true
-          }
+          }) && (target match {
+            case Field(AllRecords, sym1) => !(loc == sym1)
+            case _ => true
+          })
         }
         r
       }
@@ -434,12 +479,12 @@ abstract class CopyPropagation {
         case _ => v
       }}
 
-      s.bindings retain { (loc, value) =>
+      retain(s.bindings) { (loc, value) =>
         (value match {
           case Deref(loc1) if (loc1 == target) => false
           case Boxed(loc1) if (loc1 == target) => false
-          case Record(_, _) => 
-            cleanRecord(value.asInstanceOf[Record]);
+          case rec @ Record(_, _) =>
+            cleanRecord(rec);
             true
           case _ => true
         }) && 
@@ -470,21 +515,32 @@ abstract class CopyPropagation {
     }
 
     /** Drop everything known about mutable record fields.
-     *
-     *  @param state ...
+     *  
+     *  A simple escape analysis would help here. Some of the records we 
+     *  track never leak to other methods, therefore they can not be changed.
+     *  We should not drop their bindings in this case. A closure object 
+     *  would be such an example. Some complications: 
+     * 
+     *   - outer pointers. An closure escapes as an outer pointer to another
+     *     nested closure.
      */
     final def invalidateRecords(state: copyLattice.State) {
+      def shouldRetain(sym: Symbol): Boolean = {
+        if (sym.hasFlag(symtab.Flags.MUTABLE))
+          log("dropping binding for " + sym.fullName)
+        !sym.hasFlag(symtab.Flags.MUTABLE)
+      }
       state.stack = state.stack map { v => v match {
         case Record(cls, bindings) =>
-          bindings.retain { (sym: Symbol, v: Value) => !sym.hasFlag(symtab.Flags.MUTABLE) }
+          retain(bindings) { (sym, _) => shouldRetain(sym) }
           Record(cls, bindings)
         case _ => v
       }}
 
-      state.bindings retain {(loc, value) =>
+      retain(state.bindings) { (loc, value) =>
         value match {
-          case Deref(Field(_, _)) => false
-          case Boxed(Field(_, _)) => false
+          case Deref(Field(rec, sym)) => shouldRetain(sym)
+          case Boxed(Field(rec, sym)) => shouldRetain(sym)
           case _ => true
         }
       }
@@ -518,7 +574,7 @@ abstract class CopyPropagation {
       // this relies on having the same order in paramAccessors and
       // the arguments on the stack. It should be the same!
       for ((p, i) <- paramAccessors.zipWithIndex) {
-//        assert(p.tpe == paramTypes(i), "In: " + ctor.fullNameString
+//        assert(p.tpe == paramTypes(i), "In: " + ctor.fullName
 //               + " having acc: " + (paramAccessors map (_.tpe))+ " vs. params" + paramTypes
 //               + "\n\t failed at pos " + i + " with " + p.tpe + " == " + paramTypes(i))
         if (p.tpe == paramTypes(i))
@@ -529,18 +585,6 @@ abstract class CopyPropagation {
       if (settings.debug.value) log("\t" + bindings)
       bindings
     }
-
-    /** Is <code>cls</code> a closure class?
-     *
-     *  @param cls ...
-     *  @return    ...
-     */
-    final def isClosureClass(cls: Symbol): Boolean = 
-        cls.isFinal &&
-        cls.tpe.parents.exists { t => 
-          val TypeRef(_, sym, _) = t;
-          definitions.FunctionClass exists sym.==
-        }
 
     /** Is symbol <code>m</code> a pure method?
      *

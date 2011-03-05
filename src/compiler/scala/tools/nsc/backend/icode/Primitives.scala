@@ -1,11 +1,12 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: Primitives.scala 16894 2009-01-13 13:09:41Z cunei $
 
-package scala.tools.nsc.backend.icode;
+package scala.tools.nsc
+package backend
+package icode;
 
 import java.io.PrintWriter;
 

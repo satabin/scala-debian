@@ -1,12 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Console.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala
@@ -14,9 +13,7 @@ package scala
 import java.io.{BufferedReader, InputStream, InputStreamReader, 
                 IOException, OutputStream, PrintStream, Reader}
 import java.text.MessageFormat
-
 import scala.util.DynamicVariable
-import Predef._
 
 
 /** The <code>Console</code> object implements functionality for
@@ -58,13 +55,13 @@ object Console {
   final val INVISIBLE  = "\033[8m"
 
   private val outVar = new DynamicVariable[PrintStream](java.lang.System.out)
+  private val errVar = new DynamicVariable[PrintStream](java.lang.System.err)
   private val inVar = new DynamicVariable[BufferedReader](
     new BufferedReader(new InputStreamReader(java.lang.System.in)))
 
   def out = outVar.value
+  def err = errVar.value
   def in = inVar.value
-
-  val err = java.lang.System.err
 
   /** Set the default output stream.
    *
@@ -85,7 +82,7 @@ object Console {
 
   /** Set the default output stream.
    *
-   *  @param@ out the new output stream.
+   *  @param out the new output stream.
    */
   def setOut(out: OutputStream): Unit =
     setOut(new PrintStream(out))
@@ -102,11 +99,47 @@ object Console {
     withOut(new PrintStream(out))(thunk)
 
 
+  /** Set the default error stream.
+   *
+   *  @param err the new error stream.
+   */
+  def setErr(err: PrintStream) { errVar.value = err }
+
+  /** Set the default error stream for the duration
+   *  of execution of one thunk.
+   *
+   *  @param err the new error stream.
+   *  @param thunk the code to execute with
+   *               the new error stream active
+   *  @return ...
+   */
+  def withErr[T](err: PrintStream)(thunk: =>T): T =
+    errVar.withValue(err)(thunk)
+
+  /** Set the default error stream.
+   *
+   *  @param err the new error stream.
+   */
+  def setErr(err: OutputStream): Unit =
+    setErr(new PrintStream(err))
+
+  /** Set the default error stream for the duration
+   *  of execution of one thunk.
+   *
+   *  @param err the new error stream.
+   *  @param thunk the code to execute with
+   *               the new error stream active
+   *  @return ...
+   */
+  def withErr[T](err: OutputStream)(thunk: =>T): T =
+    withErr(new PrintStream(err))(thunk)
+
+
   /** Set the default input stream.
    *
    *  @param reader specifies the new input stream.
    */
-  def setIn(reader: Reader): Unit = {
+  def setIn(reader: Reader) {
     inVar.value = new BufferedReader(reader)
   }
 
@@ -117,16 +150,17 @@ object Console {
    *  @param thunk the code to execute with
    *               the new input stream active
    */
-    def withIn[T](reader: Reader)(thunk: =>T): T =
-      inVar.withValue(new BufferedReader(reader))(thunk)
+  def withIn[T](reader: Reader)(thunk: =>T): T =
+    inVar.withValue(new BufferedReader(reader))(thunk)
 
 
   /** Set the default input stream.
    *
    *  @param in the new input stream.     
    */
-  def setIn(in: InputStream): Unit =
+  def setIn(in: InputStream) {
     setIn(new InputStreamReader(in))
+  }
 
   /** Set the default input stream for the duration
    *  of execution of one thunk.
@@ -142,8 +176,9 @@ object Console {
    *
    *  @param obj the object to print.
    */
-  def print(obj: Any): Unit =
+  def print(obj: Any) {
     out.print(if (null == obj) "null" else obj.toString())
+  }
 
   /** Flush the output stream. This function is required when partial
    *  output (i.e. output not terminated by a new line character) has
@@ -153,13 +188,13 @@ object Console {
 
   /** Print a new line character on the terminal.
    */
-  def println(): Unit = out.println()
+  def println() { out.println() }
 
   /** Print out an object followed by a new line character.
    *
    *  @param x the object to print.
    */
-  def println(x: Any): Unit = out.println(x)
+  def println(x: Any) { out.println(x) }
 
   /** <p>
    *    Prints its arguments as a formatted string, based on a string
@@ -177,16 +212,6 @@ object Console {
    */
   def printf(text: String, args: Any*) { out.print(text format (args : _*)) }
 
-  /**
-   *  @see <a href="#printf(java.lang.String,scala.Any*)"
-   *       target="contentFrame">Console.printf</a>.
-   *  @deprecated For console output, use <code>Console.printf</code>.  For <code>String</code> formatting, 
-   *              <code>RichString</code>'s <code>format</code> method.
-   */
-  @deprecated def format(text: String, args: Any*) {
-      if (text eq null) out.printf("null") else (out.print(text format (args : _*)))
-  }
-
   /** Read a full line from the terminal.  Returns <code>null</code> if the end of the 
    * input stream has been reached.
    *
@@ -202,7 +227,7 @@ object Console {
    *  @return the string read from the terminal.
    */
   def readLine(text: String, args: Any*): String = {
-    format(text, args: _*)
+    printf(text, args: _*)
     readLine()
   }
 
@@ -214,17 +239,17 @@ object Console {
    *  @throws java.io.EOFException
    */
   def readBoolean(): Boolean = {
-       val s = readLine()
-       if (s == null) 
-	 throw new java.io.EOFException("Console has reached end of input")
-       else
-	 s.toLowerCase() match {
-           case "true" => true
-	   case "t" => true
-	   case "yes" => true
-	   case "y" => true
-	   case _ => false
-	 }
+    val s = readLine()
+    if (s == null) 
+      throw new java.io.EOFException("Console has reached end of input")
+    else
+      s.toLowerCase() match {
+        case "true" => true
+        case "t" => true
+        case "yes" => true
+        case "y" => true
+        case _ => false
+      }
   }
 
   /** Read a byte value from the terminal.
@@ -395,38 +420,6 @@ object Console {
         case x => x
       }) :: res;
       i -= 1
-    }
-    res
-  }
-
-  private def textParams(s: Seq[Any]): Array[AnyRef] = {
-    val res = new Array[AnyRef](s.length)
-    var i: Int = 0
-    val iter = s.elements
-    while (iter.hasNext) {
-      res(i) = iter.next match {
-        case x: Boolean => java.lang.Boolean.valueOf(x)
-        /** Should use java.lang.Byte.valueOf(Byte), but only available
-         * in Java 1.5 and above. */
-        case x: Byte    => new java.lang.Byte(x)
-        /** Should use java.lang.Short.valueOf(Short), but only available
-         * in Java 1.5 and above. */
-        case x: Short   => new java.lang.Short(x)
-        /** Should use java.lang.Character.valueOf(Char), but only available
-         * in Java 1.5 and above. */
-        case x: Char    => new java.lang.Character(x)
-        /** Should use java.lang.Integer.valueOf(Int), but only available
-         * in Java 1.5 and above. */
-        case x: Int     => new java.lang.Integer(x)
-        /** Should use java.lang.Long.valueOf(Long), but only available
-         * in Java 1.5 and above. */
-        case x: Long    => new java.lang.Long(x)
-        case x: Float   => new java.lang.Float(x)
-        case x: Double  => new java.lang.Double(x)
-        case x: Unit    => "()"
-        case x: AnyRef  => x
-      }
-      i += 1
     }
     res
   }

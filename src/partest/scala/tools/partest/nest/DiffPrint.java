@@ -1,4 +1,3 @@
-// $Id$
 
 package scala.tools.partest.nest;
 
@@ -506,7 +505,7 @@ public class DiffPrint {
    */
   static String[] slurp(String file) throws IOException {
     BufferedReader rdr = new BufferedReader(new FileReader(file));
-    Vector s = new Vector();
+    Vector<String> s = new Vector<String>();
     for (;;) {
       String line = rdr.readLine();
       if (line == null) break;

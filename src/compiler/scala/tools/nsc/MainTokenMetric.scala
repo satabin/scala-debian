@@ -1,8 +1,7 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: MainTokenMetric.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 
@@ -14,27 +13,21 @@ import scala.tools.nsc.reporters.ConsoleReporter
 object MainTokenMetric {
 
   private var reporter: ConsoleReporter = _
-
-  private def tokenMetric(compiler: Global, fnames: List[String]) {
+  
+  def tokenMetric(compiler: Global, fnames: List[String]) {
     import compiler.CompilationUnit
+    import compiler.syntaxAnalyzer.UnitScanner
     import ast.parser.Tokens.EOF
     var totale = 0
     for (source <- fnames) {
-      var i = 0
-      /*
-      import compiler.syntaxAnalyzer.UnitScanner
       val s = new UnitScanner(new CompilationUnit(compiler.getSourceFile(source)))
+      s.nextToken
+      var i = 0
       while (s.token != EOF) {
         i += 1
         s.nextToken
-      }*/
-      var j = 0 ; while(j + Math.log(i) / Math.log(10) < 7) {
-        j += 1
-        Console.print(' ')
       }
-      Console.print(i.toString())
-      Console.print(" ")
-      Console.println(source)
+      Console.println(i.toString + " " + source.toString())
       totale += i
     }
     Console.println(totale.toString()+" total")
@@ -43,7 +36,7 @@ object MainTokenMetric {
   def process(args: Array[String]) {
     val settings = new Settings(error)
     reporter = new ConsoleReporter(settings)
-    val command = new CompilerCommand(List.fromArray(args), settings, error, false)
+    val command = new CompilerCommand(args.toList, settings)
     try {
       val compiler = new Global(command.settings, reporter)
       tokenMetric(compiler, command.files)

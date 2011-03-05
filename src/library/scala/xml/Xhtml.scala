@@ -1,60 +1,69 @@
-// $Id: Xhtml.scala 14416 2008-03-19 01:17:25Z mihaylov $
 
 package scala.xml
 
 import parsing.XhtmlEntities
+import Utility.{ sbToString, isAtomAndNotText }
 
 /* (c) David Pollak  2007 WorldWide Conferencing, LLC */
 
-object Xhtml {
-
-  def toXhtml(n: Node, stripComment: Boolean, convertAmp: Boolean): String = {
-    val sb = new StringBuilder()
-    toXhtml(n, TopScope, sb, stripComment, convertAmp)
-    sb.toString()
-  }
-
-  /** 
-   * Appends a tree to the given stringbuffer within given namespace scope.
-   *
-   * @param n            the node
-   * @param pscope       the parent scope
-   * @param sb           stringbuffer to append to
-   * @param stripComment if true, strip comments
+object Xhtml
+{
+  /**
+   * Convenience function: same as toXhtml(node, false, false)
+   * 
+   * @param node      the node
    */
-  def toXhtml(x: Node, pscope: NamespaceBinding, sb: StringBuilder, stripComment: Boolean, convertAmp: Boolean): Unit = {
+  def toXhtml(node: Node): String = sbToString(sb => toXhtml(x = node, sb = sb))
+  
+  /**
+   * Convenience function: amounts to calling toXhtml(node) on each
+   * node in the sequence.
+   * 
+   * @param nodeSeq   the node sequence
+   */  
+  def toXhtml(nodeSeq: NodeSeq): String = sbToString(sb => sequenceToXML(nodeSeq: Seq[Node], sb = sb))    
+   
+  /** Elements which we believe are safe to minimize if minimizeTags is true.
+   *  See http://www.w3.org/TR/xhtml1/guidelines.html#C_3 
+   */
+  private val minimizableElements =
+    List("base", "meta", "link", "hr", "br", "param", "img", "area", "input", "col")
+ 
+  def toXhtml(
+    x: Node, 
+    pscope: NamespaceBinding = TopScope,
+    sb: StringBuilder = new StringBuilder,
+    stripComments: Boolean = false,
+    decodeEntities: Boolean = false,
+    preserveWhitespace: Boolean = false,
+    minimizeTags: Boolean = true): Unit =
+  {    
+    def decode(er: EntityRef) = XhtmlEntities.entMap.get(er.entityName) match {
+      case Some(chr) if chr.toInt >= 128  => sb.append(chr)
+      case _                              => er.buildString(sb)
+    }
+    def shortForm = 
+      minimizeTags &&
+      (x.child == null || x.child.length == 0) && 
+      (minimizableElements contains x.label)
+    
     x match {
-
-      case c: Comment if !stripComment =>
-        c.toString(sb)
-
-      case er: EntityRef if convertAmp =>
-        XhtmlEntities.entMap.get(er.entityName) match {
-          case Some(chr) if chr.toInt >= 128 => sb.append(chr)
-          case _ => er.toString(sb)
-        }
-      
-      case x: SpecialNode =>
-        x.toString(sb)
-
-      case g: Group =>
-        for (c <- g.nodes) toXhtml(c, x.scope, sb, stripComment, convertAmp)
+      case c: Comment                       => if (!stripComments) c buildString sb
+      case er: EntityRef if decodeEntities  => decode(er)
+      case x: SpecialNode                   => x buildString sb
+      case g: Group                         =>
+        g.nodes foreach { toXhtml(_, x.scope, sb, stripComments, decodeEntities, preserveWhitespace, minimizeTags) }
 
       case _  =>
-        if (((x.child eq null) || (x.child.length == 0)) && x.label != "div" && x.label != "script" && x.label != "textarea") {
-          sb.append('<')
-          x.nameToString(sb)
-          if (x.attributes ne null) x.attributes.toString(sb)
-          x.scope.toString(sb, pscope)
-          sb.append(" />")
-        } else {
-          // print tag with namespace declarations
-          sb.append('<')
-          x.nameToString(sb)
-          if (x.attributes ne null) x.attributes.toString(sb)
-          x.scope.toString(sb, pscope)
+        sb.append('<')
+        x.nameToString(sb)
+        if (x.attributes ne null) x.attributes.buildString(sb)
+        x.scope.buildString(sb, pscope)
+        
+        if (shortForm) sb.append(" />")
+        else {
           sb.append('>')
-          sequenceToXML(x.child, x.scope, sb, stripComment, convertAmp)
+          sequenceToXML(x.child, x.scope, sb, stripComments, decodeEntities, preserveWhitespace, minimizeTags)
           sb.append("</")
           x.nameToString(sb)
           sb.append('>')
@@ -63,27 +72,25 @@ object Xhtml {
   }
 
   /**
-   * @param children     ...
-   * @param pscope       ...
-   * @param sb           ...
-   * @param stripComment ...
+   * Amounts to calling toXhtml(node, ...) with the given parameters on each node.
    */
-  def sequenceToXML(children: Seq[Node], pscope: NamespaceBinding,
-                    sb: StringBuilder, stripComment: Boolean, convertAmp: Boolean): Unit = {
+  def sequenceToXML(
+    children: Seq[Node],
+    pscope: NamespaceBinding = TopScope,
+    sb: StringBuilder = new StringBuilder,
+    stripComments: Boolean = false,
+    decodeEntities: Boolean = false,
+    preserveWhitespace: Boolean = false,
+    minimizeTags: Boolean = true): Unit =
+  {
     if (children.isEmpty)
       return
-    else if (children forall { y => y.isInstanceOf[Atom[_]] && !y.isInstanceOf[Text] }) { // add space
-      val it = children.elements
-      val f = it.next
-      toXhtml(f, pscope, sb, stripComment, convertAmp)
-      while (it.hasNext) {
-        val x = it.next
-        sb.append(' ')
-        toXhtml(x, pscope, sb, stripComment, convertAmp)
-      }
-    } else {
-      for (c <- children) toXhtml(c, pscope, sb, stripComment, convertAmp)
+      
+    val doSpaces = children forall isAtomAndNotText // interleave spaces
+    for (c <- children.take(children.length - 1)) {
+      toXhtml(c, pscope, sb, stripComments, decodeEntities, preserveWhitespace, minimizeTags)
+      if (doSpaces) sb append ' '
     }
+    toXhtml(children.last, pscope, sb, stripComments, decodeEntities, preserveWhitespace, minimizeTags)
   }
 }
-

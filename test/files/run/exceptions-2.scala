@@ -1,7 +1,5 @@
 /*
  * Try exception handling and finally blocks.
- *
- * $Id: exceptions-2.scala 15975 2008-08-31 11:40:19Z cunei $
  */
 
 trait Tree extends Exception;
@@ -269,6 +267,23 @@ object Test {
     try { 1 } catch { case e: java.io.IOException => () }
   }
 
+  /** Test that empty finally clauses containing while are correctly emitted.
+   */
+  class Issue {
+    var b = 0
+    try {
+      //    println("abc")
+    } finally {
+      while (b == -1) {b = 0}
+    }
+  }
+
+  /* Tests that class Issue passes verification. */
+  def whileInFinally = {
+    new Issue
+  }
+
+
 
   def main(args: Array[String]): Unit = {
     Console.println("nested1: ");
@@ -328,5 +343,7 @@ object Test {
 
     Console.println("Return with finally clause that cleans the stack")
     returnWithFinallyClean
+
+    whileInFinally
   }
 }

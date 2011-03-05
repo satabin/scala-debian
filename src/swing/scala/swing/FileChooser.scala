@@ -1,3 +1,13 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import java.io.File
@@ -37,9 +47,10 @@ class FileChooser(dir: File) {
   
   def this() = this(null)
   
-  def showOpenDialog(over: Component): Result.Value = Result(peer.showOpenDialog(over.peer))
-  def showSaveDialog(over: Component): Result.Value = Result(peer.showSaveDialog(over.peer))
-  def showDialog(over: Component, approveText: String): Result.Value = Result(peer.showDialog(over.peer, approveText))
+  import Swing._
+  def showOpenDialog(over: Component): Result.Value = Result(peer.showOpenDialog(nullPeer(over)))
+  def showSaveDialog(over: Component): Result.Value = Result(peer.showSaveDialog(nullPeer(over)))
+  def showDialog(over: Component, approveText: String): Result.Value = Result(peer.showDialog(nullPeer(over), approveText))
   
   def controlButtonsAreShown: Boolean = peer.getControlButtonsAreShown
   def controlButtonsAreShown_=(b: Boolean) { peer.setControlButtonsAreShown(b) }
@@ -47,7 +58,7 @@ class FileChooser(dir: File) {
   def title: String = peer.getDialogTitle
   def title_=(t: String) { peer.setDialogTitle(t) }
   
-  def accessory: Component = Component.wrapperFor(peer.getAccessory)
+  def accessory: Component = UIElement.cachedWrapper[Component](peer.getAccessory)
   def accessory_=(c: Component) { peer.setAccessory(c.peer) }
   
   def fileHidingEnabled: Boolean = peer.isFileHidingEnabled
@@ -63,7 +74,7 @@ class FileChooser(dir: File) {
   def selectedFiles_=(files: File*) { peer.setSelectedFiles(files.toArray) }
   
   def multiSelectionEnabled: Boolean = peer.isMultiSelectionEnabled  
-  def multiSelectionEnable_=(b: Boolean) { peer.setMultiSelectionEnabled(b) }
+  def multiSelectionEnabled_=(b: Boolean) { peer.setMultiSelectionEnabled(b) }
   
   def iconFor(f: File) = peer.getIcon(f)
   def descriptionFor(f: File) = peer.getDescription(f)
@@ -72,4 +83,31 @@ class FileChooser(dir: File) {
   def traversable(f: File) = peer.isTraversable(f)
   
   def acceptAllFileFilter = peer.getAcceptAllFileFilter
+  
+  /*peer.addPropertyChangeListener(new java.beans.PropertyChangeListener {
+    def propertyChange(e: java.beans.PropertyChangeEvent) {
+      import JFileChooser._
+      e.getPropertyName match {
+        case APPROVE_BUTTON_TEXT_CHANGED_PROPERTY =>
+        case ACCESSORY_CHANGED_PROPERTY =>
+        case APPROVE_BUTTON_MNEMONIC_CHANGED_PROPERTY =>
+        case APPROVE_BUTTON_TEXT_CHANGED_PROPERTY =>
+        case APPROVE_BUTTON_TOOL_TIP_TEXT_CHANGED_PROPERTY =>
+        case CHOOSABLE_FILE_FILTER_CHANGED_PROPERTY =>
+        case CONTROL_BUTTONS_ARE_SHOWN_CHANGED_PROPERTY =>
+        case DIALOG_TITLE_CHANGED_PROPERTY =>
+        case DIALOG_TYPE_CHANGED_PROPERTY =>
+        case DIRECTORY_CHANGED_PROPERTY =>
+        case FILE_FILTER_CHANGED_PROPERTY =>
+        case FILE_HIDING_CHANGED_PROPERTY =>
+        case FILE_SELECTION_MODE_CHANGED_PROPERTY =>
+        case FILE_SYSTEM_VIEW_CHANGED_PROPERTY =>
+        case FILE_VIEW_CHANGED_PROPERTY =>
+        case MULTI_SELECTION_ENABLED_CHANGED_PROPERTY =>
+        case SELECTED_FILE_CHANGED_PROPERTY =>
+        case SELECTED_FILES_CHANGED_PROPERTY =>
+        case _ => 
+      }
+    }
+  })*/
 }

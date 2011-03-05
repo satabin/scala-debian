@@ -1,34 +1,39 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import java.awt.event._
 import javax.swing.event._
-import java.awt.{Color, Dimension, Point}
 import javax.swing.border._
-import javax.swing.{JComponent, Icon, BorderFactory}
+import javax.swing.{JComponent, Icon, BorderFactory, SwingUtilities}
 
 /**
  * Helpers for this package.
  */
 object Swing {
-  protected[swing] def ifNull[A](o: Object, a: A): A = if(o eq null) a else o.asInstanceOf[A]
-  protected[swing] def toOption[A](o: Object): Option[A] = if(o eq null) None else Some(o.asInstanceOf[A])
-  protected[swing] def toNull[A>:Null<:AnyRef](a: Option[A]): A = if(a == None) null else a.get
   protected[swing] def toNoIcon(i: Icon): Icon = if(i == null) EmptyIcon else i
   protected[swing] def toNullIcon(i: Icon): Icon = if(i == EmptyIcon) null else i
-  
+  protected[swing] def nullPeer(c: Component) = if (c != null) c.peer else null
+
   implicit def pair2Dimension(p: (Int, Int)): Dimension = new Dimension(p._1, p._2)
   implicit def pair2Point(p: (Int, Int)): Point = new Point(p._1, p._2)
+  implicit def pair2Point(p: (Int, Int, Int, Int)): Rectangle = new Rectangle(p._1, p._2, p._3, p._4)
   
-  /**
-   * Allows one to use blocks as runnables.
-   */
-  implicit def block2Runnable(block: =>Unit): Runnable = new Runnable {
-    override def run = block
+  @inline final def Runnable(@inline block: =>Unit) = new Runnable {
+    def run = block
   }
-  def ChangeListener(f: ChangeEvent => Unit) = new ChangeListener {
+  final def ChangeListener(f: ChangeEvent => Unit) = new ChangeListener {
     def stateChanged(e: ChangeEvent) { f(e) }
   }
-  def ActionListener(f: ActionEvent => Unit) = new ActionListener {
+  final def ActionListener(f: ActionEvent => Unit) = new ActionListener {
     def actionPerformed(e: ActionEvent) { f(e) }
   }
   
@@ -119,4 +124,16 @@ object Swing {
       
   def TitledBorder(border: Border, title: String) = 
     BorderFactory.createTitledBorder(border, title) 
+  
+  /**
+   * Schedule the given code to be executed on the Swing event dispatching 
+   * thread (EDT). Returns immediately.
+   */
+  @inline final def onEDT(op: =>Unit) = SwingUtilities invokeLater Runnable(op)
+
+  /**
+   * Schedule the given code to be executed on the Swing event dispatching 
+   * thread (EDT). Blocks until after the code has been run.
+   */
+  @inline final def onEDTWait(op: =>Unit) = SwingUtilities invokeAndWait Runnable(op)
 }

@@ -1,14 +1,14 @@
  /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Iulian Dragos
  */
 
-// $Id: ClosureElimination.scala 16894 2009-01-13 13:09:41Z cunei $
 
-package scala.tools.nsc.backend.opt;
+package scala.tools.nsc
+package backend.opt;
 
 import scala.collection.mutable.{Map, HashMap};
-import scala.tools.nsc.backend.icode.analysis.LubError;
+import scala.tools.nsc.backend.icode.analysis.LubException;
 import scala.tools.nsc.symtab._;
 
 /**
@@ -36,7 +36,7 @@ abstract class ClosureElimination extends SubComponent {
   }
 
   /** 
-   * Remove references to the environemnt through fields of a closure object. 
+   * Remove references to the environment through fields of a closure object. 
    * This has to be run after an 'apply' method has been inlined, but it still 
    * references the closure object.
    *
@@ -64,7 +64,10 @@ abstract class ClosureElimination extends SubComponent {
         case (LOAD_LOCAL(x), STORE_LOCAL(y)) =>
         	if (x eq y) Some(Nil) else None
 
-        case (LOAD_LOCAL(_), DROP(_)) =>
+//        case (STORE_LOCAL(x), LOAD_LOCAL(y)) if (x == y) =>
+//          Some(List(DUP(x.kind), STORE_LOCAL(x)))
+          
+        case (LOAD_LOCAL(_), DROP(_)) | (DUP(_), DROP(_)) =>
           Some(Nil)
 
         case (BOX(t1), UNBOX(t2)) if (t1 == t2) =>
@@ -101,16 +104,12 @@ abstract class ClosureElimination extends SubComponent {
         var info = cpp.in(bb)
         log("Cpp info at entry to block " + bb + ": " + info)
 
-        for (i <- bb.toList) {
+        for (i <- bb) {
           i match {
             case LOAD_LOCAL(l) if (info.bindings.isDefinedAt(LocalVar(l))) =>
               val t = info.getBinding(l)
               t match {
-                case Deref(LocalVar(v)) => 
-                  bb.replaceInstruction(i, valueToInstruction(t));
-                  log("replaced " + i + " with " + t)
-
-                case Deref(This) =>
+                case Deref(LocalVar(_)) | Deref(This) | Const(_) =>
                   bb.replaceInstruction(i, valueToInstruction(t));
                   log("replaced " + i + " with " + t)
 
@@ -120,31 +119,36 @@ abstract class ClosureElimination extends SubComponent {
 
               }
 
-            case LOAD_FIELD(f, false) if accessible(f, m.symbol) =>
+            case LOAD_FIELD(f, false) /* if accessible(f, m.symbol) */ =>
+              def replaceFieldAccess(r: Record) {
+                val Record(cls, bindings) = r
+                info.getFieldNonRecordValue(r, f) match {
+                	case Some(v) =>
+                		bb.replaceInstruction(i, 
+                				DROP(REFERENCE(cls)) :: valueToInstruction(v) :: Nil);
+                		log("Replaced " + i + " with " + info.getFieldNonRecordValue(r, f));
+                	case None => ();
+                }
+              }
+              
               info.stack(0) match {
-                case r @ Record(cls, bindings) if bindings.isDefinedAt(f) =>
-                  info.getFieldValue(r, f) match {
-                    case Some(v) =>
-                      bb.replaceInstruction(i, 
-                          DROP(REFERENCE(cls)) :: valueToInstruction(v) :: Nil);
-                      log("Replaced " + i + " with " + info.getBinding(r, f));
-                    case None => ();
-                  }
+                case r @ Record(_, bindings) if bindings.isDefinedAt(f) =>
+                  replaceFieldAccess(r)
 
                 case Deref(LocalVar(l)) =>
                   info.getBinding(l) match {
-                    case r @ Record(cls, bindings) if bindings.isDefinedAt(f) =>
-                      info.getFieldValue(r, f) match {
-                        case Some(v) =>
-                          bb.replaceInstruction(i, 
-                              DROP(REFERENCE(cls)) :: valueToInstruction(v) :: Nil);
-                          log("Replaced " + i + " with " + info.getBinding(r, f));
-                        case None => ();
-                      }
-                    case _ => ();
+                    case r @ Record(_, bindings) if bindings.isDefinedAt(f) =>
+                      replaceFieldAccess(r)
+                    case _ => 
+                  }
+                case Deref(Field(r1, f1)) =>
+                  info.getFieldValue(r1, f1) match {
+                    case Some(r @ Record(_, bindings)) if bindings.isDefinedAt(f) =>
+                      replaceFieldAccess(r)
+                    case _ => 
                   }
 
-                case _ => ();
+                case _ => 
               }
               
             case UNBOX(_) =>
@@ -172,7 +176,7 @@ abstract class ClosureElimination extends SubComponent {
         }
       }
     }} catch {
-      case e: LubError => 
+      case e: LubException => 
         Console.println("In method: " + m)
         Console.println(e)
         e.printStackTrace
@@ -186,14 +190,13 @@ abstract class ClosureElimination extends SubComponent {
         CONSTANT(k)
       case Deref(This) =>
         THIS(definitions.ObjectClass)
+      case Boxed(LocalVar(v)) =>
+        LOAD_LOCAL(v)
     }
     
     /** is field 'f' accessible from method 'm'? */
     def accessible(f: Symbol, m: Symbol): Boolean = 
-      f.isPublic || (f.hasFlag(Flags.PROTECTED) && (enclPackage(f) == enclPackage(m)))
-
-    private def enclPackage(sym: Symbol): Symbol = 
-      if ((sym == NoSymbol) || sym.isPackageClass) sym else enclPackage(sym.owner)
+      f.isPublic || (f.hasFlag(Flags.PROTECTED) && (f.enclosingPackageClass == m.enclosingPackageClass))
 
   } /* class ClosureElim */
 

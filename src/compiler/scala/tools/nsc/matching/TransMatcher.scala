@@ -1,104 +1,91 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * Copyright 2007 Google Inc. All Rights Reserved.
  * Author: bqe@google.com (Burak Emir)
  */
-// $Id: TransMatcher.scala 16894 2009-01-13 13:09:41Z cunei $
 
-package scala.tools.nsc.matching
+package scala.tools.nsc
+package matching
+
+import symtab.SymbolTable
+import transform.ExplicitOuter
+import java.io.{ StringWriter, PrintWriter }
+import scala.reflect.NameTransformer.decode
+import PartialFunction._
 
 /** Translation of pattern matching
  *
  *  @author Burak Emir
  */
-trait TransMatcher { self: transform.ExplicitOuter with PatternNodes with ParallelMatching with CodeFactory => 
+trait TransMatcher extends ast.TreeDSL {
+  self: ExplicitOuter with ParallelMatching  => 
 
   import global.{ typer => _, _ }
-  import analyzer.Typer;
+  import analyzer.Typer
   import definitions._
-  import symtab.Flags
+  import CODE._
+  import Debug.{ TRACE, tracing }
 
-  var cunit: CompilationUnit = _  // memory leak?
-  var resultType: Type = _
+  // cunit is set to the current unit in ExplicitOuter's transformUnit,
+  // and nulled out afterward to avoid leaking.
+  var cunit: CompilationUnit = _
+  
+  def newName(pos: Position, s: String) = cunit.fresh.newName(pos, s)
 
-  // cache these
-  final val settings_debug       = settings.debug.value
-  final val settings_squeeze     = settings.Xsqueeze.value == "on"
-
-  // check special case Seq(p1,...,pk,_*) 
-  protected def isRightIgnoring(p: ArrayValue): Boolean = {
-    def isDefaultStar(tree: Tree): Boolean = tree match {
-      case Bind(_, q)                 => isDefaultStar(q)
-      case Star(Ident(nme.WILDCARD))  => true
-      case _                          => false
-    }
-
-    !p.elems.isEmpty && isDefaultStar(p.elems.last)
-  }
-
-  /** handles all translation of pattern matching
+  final val settings_squeeze = settings.Xsqueeze.value == "on"
+  
+  /** Handles all translation of pattern matching.
    */
-  def handlePattern(selector: Tree, cases: List[CaseDef], doCheckExhaustive: Boolean, owner: Symbol, handleOuter: Tree => Tree)(implicit typer : Typer): Tree = {
-    DBG("****")
-    DBG("**** initalize, selector = "+selector+" selector.tpe = "+selector.tpe)
-    DBG("****    doCheckExhaustive == "+doCheckExhaustive)
+  def handlePattern(
+    selector: Tree,         // tree being matched upon (called scrutinee after this)
+    cases: List[CaseDef],   // list of cases in the match
+    isChecked: Boolean,     // whether exhaustiveness checking is enabled (disabled with @unchecked)
+    context: MatrixContext): Tree =
+  {
+    import context._
     
-    implicit val theOwner = owner
-    implicit val rep = new RepFactory(handleOuter)
-    val flags = if (doCheckExhaustive) Nil else List(Flags.TRANS_FLAG)
-    
-    def caseIsOk(c: CaseDef) = c match {
-      case CaseDef(_: Apply, _, _)            => true
-      case CaseDef(Ident(nme.WILDCARD), _, _) => true
-      case _                                  => false
-    }
-    def doApply(fn: Tree) = (fn.symbol eq selector.tpe.decls.lookup(nme.CONSTRUCTOR)) && (cases forall caseIsOk)
-    
-    def processApply(app: Apply): (List[Symbol], List[Tree], Tree) = {
-      val Apply(fn, args) = app
-      val (tmps, vds) = List.unzip(
-        for ((ti, i) <- args.zipWithIndex) yield {
-          // These type parameter vars were not being set as synthetic.
-          // Temporarily noted on the off chance it was intentional.
-          val v = newVar(ti.pos, cunit.fresh.newName(ti.pos, "tp"), selector.tpe.typeArgs(i), flags)
-          (v, typedValDef(v, ti))
-        }
-      )
-      (tmps, vds, ThrowMatchError(selector.pos, copy.Apply(app, fn, tmps map mkIdent)))
-    }
-      
-    // sets temporaries, variable declarations, and the fail tree
-    val (tmps, vds, theFailTree) = selector match {
-      case app @ Apply(fn, _) if isTupleType(selector.tpe) && doApply(fn) => processApply(app)
-      case _ => 
-        val root: Symbol      = newVar(selector.pos, selector.tpe, flags)
-        val vdef: Tree        = typer.typed(ValDef(root, selector))
-        val failTree: Tree    = ThrowMatchError(selector.pos, mkIdent(root))
-        (List(root), List(vdef), failTree)
-    }
-    
-    implicit val fail: Tree = theFailTree
-    val irep                = initRep(tmps, cases, rep)
-    val mch                 = typer.typed(repToTree(irep))
-    var dfatree             = typer.typed(Block(vds, mch))
+    def matchError(obj: Tree) = atPos(selector.pos)(MATCHERROR(obj))
+    def caseIsOk(c: CaseDef)  = cond(c.pat) { case _: Apply | Ident(nme.WILDCARD) => true }
+    def rootTypes             = selector.tpe.typeArgs
 
-    // cannot use squeezedBlock because of side-effects, see t275     
-    for ((cs, bx) <- cases.zipWithIndex)
-      if (!rep.isReached(bx)) cunit.error(cs.body.pos, "unreachable code")
+    // this appears to be an attempt at optimizing when all case defs are constructor
+    // patterns, but I don't think it's correct.
+    def doApply(fn: Tree): Boolean =
+      (fn.symbol eq (selector.tpe.decls lookup nme.CONSTRUCTOR)) &&
+      (cases forall caseIsOk)
       
-    dfatree = rep.cleanup(dfatree)
-    resetTrav.traverse(dfatree)
-    dfatree
-  }
-                    
-  object resetTrav extends Traverser {
-    override def traverse(x: Tree): Unit = x match {
-      case (vd: ValDef) => if (vd.symbol hasFlag Flags.SYNTHETIC) {
-        vd.symbol resetFlag Flags.TRANS_FLAG
-        vd.symbol resetFlag Flags.MUTABLE
-      }
-      case _ =>
-        super.traverse(x)
+    // For x match { ... we start with a single root
+    def singleMatch(): MatrixInit = {
+      val v = copyVar(selector, isChecked)
+      context.MatrixInit(List(v), cases, matchError(v.ident))
     }
+    
+    // For (x, y, z) match { ... we start with multiple roots, called tpXX.
+    def tupleMatch(app: Apply): MatrixInit = {
+      val Apply(fn, args) = app
+      val vs = args zip rootTypes map { case (arg, tpe) => copyVar(arg, isChecked, tpe, "tp") }      
+      def merror = matchError(treeCopy.Apply(app, fn, vs map (_.ident)))
+      
+      context.MatrixInit(vs, cases, merror)
+    }
+
+    // sets up top level variables and algorithm input
+    val matrixInit = tracing("matrixInit", selector match {
+      case app @ Apply(fn, _) if isTupleType(selector.tpe) && doApply(fn) => tupleMatch(app)
+      case _                                                              => singleMatch()
+    })
+    
+    val matrix  = new MatchMatrix(context) { lazy val data = matrixInit }
+    val rep     = matrix.expansion                            // expands casedefs and assigns name
+    val mch     = typer typed rep.toTree                      // executes algorithm, converts tree to DFA
+    val dfatree = typer typed Block(matrixInit.valDefs, mch)  // packages into a code block
+
+    // redundancy check
+    matrix.targets filter (_.isNotReached) foreach (cs => cunit.error(cs.body.pos, "unreachable code"))
+    // optimize performs squeezing and resets any remaining TRANS_FLAGs
+    val res = matrix optimize dfatree
+    TRACE("handlePattern(%s, ...) = %s", selector, res)
+    res
   }
 }
+

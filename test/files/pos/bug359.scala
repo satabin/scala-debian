@@ -1,5 +1,3 @@
-// $Id: bug359.scala 5359 2005-12-16 15:33:49Z dubochet $
-
 object Bug359 {
   class C;
   def f1(xs: List[C]): C = {

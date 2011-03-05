@@ -1,10 +1,10 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Variances.scala 16894 2009-01-13 13:09:41Z cunei $
 
-package scala.tools.nsc.typechecker
+package scala.tools.nsc
+package typechecker
 
 import symtab.Flags._
 
@@ -64,17 +64,15 @@ trait Variances {
     v
   }
 
-  /** Compute variance of type parameter `tparam' in all type annotations `attribs'. */
-  def varianceInAttribs(attribs: List[AnnotationInfo])(tparam: Symbol): Int = {
-    (VARIANCES /: attribs) ((v, attrib) => v & varianceInAttrib(attrib)(tparam))
+  /** Compute variance of type parameter `tparam' in all type annotations `annots'. */
+  def varianceInAttribs(annots: List[AnnotationInfo])(tparam: Symbol): Int = {
+    (VARIANCES /: annots) ((v, annot) => v & varianceInAttrib(annot)(tparam))
   }
 
-  /** Compute variance of type parameter `tparam' in type annotation `attrib'. */
-  def varianceInAttrib(attrib: AnnotationInfo)(tparam: Symbol): Int = {
-    varianceInType(attrib.atp)(tparam)
+  /** Compute variance of type parameter `tparam' in type annotation `annot'. */
+  def varianceInAttrib(annot: AnnotationInfo)(tparam: Symbol): Int = {
+    varianceInType(annot.atp)(tparam)
   }
-
-
 
   /** Compute variance of type parameter <code>tparam</code> in type <code>tp</code>. */
   def varianceInType(tp: Type)(tparam: Symbol): Int = tp match {
@@ -89,13 +87,13 @@ trait Variances {
       flip(varianceInType(lo)(tparam)) & varianceInType(hi)(tparam)
     case RefinedType(parents, defs) =>
       varianceInTypes(parents)(tparam) & varianceInSyms(defs.toList)(tparam)
-    case MethodType(formals, restpe) =>
-      flip(varianceInTypes(formals)(tparam)) & varianceInType(restpe)(tparam)
+    case MethodType(params, restpe) =>
+      flip(varianceInSyms(params)(tparam)) & varianceInType(restpe)(tparam)
     case PolyType(tparams, restpe) =>
       flip(varianceInSyms(tparams)(tparam)) & varianceInType(restpe)(tparam)
     case ExistentialType(tparams, restpe) =>
       varianceInSyms(tparams)(tparam) & varianceInType(restpe)(tparam)
-    case AnnotatedType(attribs, tp, _) =>
-      varianceInAttribs(attribs)(tparam) & varianceInType(tp)(tparam)
+    case AnnotatedType(annots, tp, _) =>
+      varianceInAttribs(annots)(tparam) & varianceInType(tp)(tparam)
   }
 }

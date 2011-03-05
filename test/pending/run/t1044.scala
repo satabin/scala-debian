@@ -1,4 +1,5 @@
+// looks OK
 object Main extends Application{
  val ducks = Array[AnyRef]("Huey", "Dewey", "Louie")
- ducks.elements/*.asInstanceOf[Iterator[String]]*/
+ ducks.iterator/*.asInstanceOf[Iterator[String]]*/
 }

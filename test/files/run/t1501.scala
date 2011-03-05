@@ -28,8 +28,9 @@ object Test {
   </code>.text
   
   def main(args: Array[String]) = {
-    
-    val tool = new Interpreter(new Settings())
+    val settings = new Settings()
+    settings.classpath.value = System.getProperty("java.class.path")
+    val tool = new Interpreter(settings)
     val global = tool.compiler
 
     import global._
@@ -40,7 +41,7 @@ object Test {
       /** Check annotations to decide whether tpe1 <:< tpe2 */
       def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
 
-        tpe1.attributes.forall(a1 => tpe2.attributes.forall(a2 => a1.atp <:< a2.atp))
+        tpe1.annotations.forall(a1 => tpe2.annotations.forall(a2 => a1.atp <:< a2.atp))
 
       }
     }

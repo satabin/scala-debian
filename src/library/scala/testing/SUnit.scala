@@ -1,17 +1,17 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: SUnit.scala 16881 2009-01-09 16:28:11Z cunei $
 
 
 package scala.testing
 
 import scala.collection.mutable.ArrayBuffer
+import xml.{ Node, NodeSeq }
 
 /**
  * <p>
@@ -44,13 +44,10 @@ import scala.collection.mutable.ArrayBuffer
  *   a <code>main</code> method, for convenience.
  * </p>
  *
- * @deprecated SUnit will be removed in 2.8.0. There are several free and
- * sophisticated testing frameworks for Scala available, examples are
- * "ScalaTest", "ScalaCheck" or "Specs".
- *
  * @author Burak Emir
  */
-@deprecated
+@deprecated("SUnit will be removed in 2.8.0. There are several free and sophisticated testing\n"+
+            "frameworks for Scala available, examples are \"ScalaTest\", \"ScalaCheck\" or \"Specs\".")
 object SUnit {
 
   /** <p>
@@ -128,7 +125,7 @@ object SUnit {
       buf.length
 
     def failures() =
-      buf.elements map { x => new TestFailure(x) }
+      buf.iterator map { x => new TestFailure(x) }
   }
 
   /** The class <code>TestSuite</code> runs a composite of test cases.
@@ -153,12 +150,9 @@ object SUnit {
 
   /** an AssertFailed is thrown for a failed assertion */
   case class AssertFailed(msg: String, stackTrace: Boolean) extends RuntimeException {
-    private val msg0 = if (stackTrace) {
-      import java.io._
-      val wrt = new StringWriter
-      printStackTrace(new PrintWriter(wrt))
-      wrt.toString
-    } else msg
+    private val msg0 =
+      if (stackTrace) super.getStackTrace().map(_.toString + "\n").mkString
+      else msg
     override def toString() =
       if (msg0 eq null) "failed assertion: " + msg else msg0
   }
@@ -241,6 +235,25 @@ object SUnit {
     /** succeeds if actual == true */
     def assertTrue(actual: Boolean) {
       assertTrue("(no message)", actual)
+    }
+
+    /** Temporary patchwork trying to nurse xml forward. */
+    def assertEqualsXML(msg: String, expected: NodeSeq, actual: NodeSeq) {
+      if (!expected.xml_==(actual))
+        fail(msg, expected, actual)
+    }
+    def assertEqualsXML(msg: String, expected: Seq[Node], actual: Seq[Node]) {
+      assertEqualsXML(msg, expected: NodeSeq, actual: NodeSeq)
+    }
+    
+    def assertEqualsXML(expected: NodeSeq, actual: NodeSeq) {
+      assertEqualsXML("(no message)", expected, actual)
+    }
+
+    def assertSameElementsXML(actual: Seq[Node], expected: Seq[Node]) {
+      val res = (actual: NodeSeq) xml_sameElements expected
+
+      assert(res, "\nassertSameElementsXML:\n  actual = %s\n  expected = %s".format(actual, expected))
     }
 
     /** throws <code>AssertFailed</code> with given message <code>msg</code>.

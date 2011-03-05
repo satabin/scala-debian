@@ -1,10 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
+
 
 package scala.actors
 
@@ -13,9 +14,8 @@ package scala.actors
  *
  *  Providing an implementation for the
  *  <code>execute(f: => Unit)</code> method is sufficient to
- *  obtain a concrete <code>IScheduler</code> class.
+ *  obtain a concrete <code>IScheduler</code> implementation.
  *
- *  @version 0.9.18
  *  @author Philipp Haller
  */
 trait SchedulerAdapter extends IScheduler {
@@ -27,23 +27,41 @@ trait SchedulerAdapter extends IScheduler {
   def execute(task: Runnable): Unit =
     execute { task.run() }
 
-  /** Notifies the scheduler about activity of the
-   *  executing actor.
-   *
-   *  @param  a  the active actor
-   */
-  def tick(a: Actor): Unit =
-    Scheduler tick a
-
   /** Shuts down the scheduler.
    */
   def shutdown(): Unit =
     Scheduler.shutdown()
 
-  def onLockup(handler: () => Unit) {}
+  /** When the scheduler is active, it can execute tasks.
+   */ 
+  def isActive: Boolean =
+    Scheduler.isActive
 
-  def onLockup(millis: Int)(handler: () => Unit) {}
+  /** Registers a newly created actor with this scheduler.
+   *
+   *  @param  a  the actor to be registered
+   */
+  def newActor(a: TrackedReactor) =
+    Scheduler.newActor(a)
 
-  def printActorDump {}
+  /** Unregisters an actor from this scheduler, because it
+   *  has terminated.
+   * 
+   *  @param  a  the actor to be unregistered
+   */
+  def terminated(a: TrackedReactor) =
+    Scheduler.terminated(a)
 
+  /** Registers a closure to be executed when the specified
+   *  actor terminates.
+   * 
+   *  @param  a  the actor
+   *  @param  f  the closure to be registered
+   */
+  def onTerminate(a: TrackedReactor)(f: => Unit) =
+    Scheduler.onTerminate(a)(f)
+
+  def managedBlock(blocker: scala.concurrent.ManagedBlocker) {
+    blocker.block()
+  }
 }

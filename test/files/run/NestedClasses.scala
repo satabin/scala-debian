@@ -1,7 +1,6 @@
 //############################################################################
 // Test nested classes
 //############################################################################
-// $Id: NestedClasses.scala 5359 2005-12-16 15:33:49Z dubochet $
 
 // The following set of classes tests nasty references to "outer"
 // values.

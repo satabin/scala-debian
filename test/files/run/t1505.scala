@@ -11,15 +11,9 @@ object R extends Enumeration {
 }
 
 object Test extends Application {
-  assert(Some(P(0)) == P.valueOf("A"))
-  assert(Some(P.C) == P.valueOf("C"))
-  assert(None == P.valueOf("Q"))
+  assert(P(0) == P.withName("A"))
+  assert(P.C == P.withName("C"))
 
-  assert(Some(Q(0)) == Q.valueOf("A"))
-  assert(Some(Q.C) == Q.valueOf("C"))
-  assert(None == Q.valueOf("Q"))
-
-  assert(None == R.valueOf("A"))
-  assert(None == R.valueOf("C"))
-  assert(None == R.valueOf("Q"))
+  assert(Q(0) == Q.withName("A"))
+  assert(Q.C == Q.withName("C"))
 }

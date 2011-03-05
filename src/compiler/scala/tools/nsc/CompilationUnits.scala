@@ -1,14 +1,12 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: CompilationUnits.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 
-import scala.tools.nsc.util.{FreshNameCreator,OffsetPosition,Position,SourceFile}
-import scala.tools.nsc.io.AbstractFile
-import scala.collection.mutable.{HashSet, HashMap}
+import util.{ FreshNameCreator,Position,NoPosition,SourceFile }
+import scala.collection.mutable.{ LinkedHashSet, HashSet, HashMap, ListBuffer }
 
 trait CompilationUnits { self: Global =>
 
@@ -16,16 +14,36 @@ trait CompilationUnits { self: Global =>
     * It typically corresponds to a single file of source code.  It includes
     * error-reporting hooks.  */
   class CompilationUnit(val source: SourceFile) extends CompilationUnitTrait {
+
     /** the fresh name creator */
     var fresh : FreshNameCreator = new FreshNameCreator.Default
 
     /** the content of the compilation unit in tree form */
     var body: Tree = EmptyTree
+    
+    /** representation for a source code comment, includes 
+     * '//' or '/*' '*/' in the value and the position
+     */
+    case class Comment(text: String, pos: Position)
+        
+    /** all comments found in this compilation unit */
+    val comments = new ListBuffer[Comment]
 
+//    def parseSettings() = {
+//      val argsmarker = "SCALAC_ARGS"
+//      if(comments nonEmpty) {
+//        val pragmas = comments find (_.text.startsWith("//#")) // only parse first one
+//        pragmas foreach { p =>
+//          val i = p.text.indexOf(argsmarker)
+//          if(i > 0)
+//        }
+//      }
+//    }
     /** Note: depends now contains toplevel classes.
      *  To get their sourcefiles, you need to dereference with .sourcefile
      */
     val depends = new HashSet[Symbol]
+
     /** so we can relink 
      */
     val defined = new HashSet[Symbol]
@@ -34,15 +52,22 @@ trait CompilationUnits { self: Global =>
      */
     val synthetics = new HashMap[Symbol, Tree]
 
-    /** used to track changes in a signature */
-    var pickleHash : Long = 0
+    /** things to check at end of compilation unit */
+    val toCheck = new ListBuffer[() => Unit]
 
     def position(pos: Int) = source.position(pos)
+
+    /** The position of a targeted type check
+     *  If this is different from NoPosition, the type checking
+     *  will stop once a tree that contains this position range
+     *  is fully attributed.
+     */
+    def targetPos: Position = NoPosition
 
     /** The icode representation of classes in this compilation unit.
      *  It is empty up to phase 'icode'.
      */
-    val icode: HashSet[icodes.IClass] = new HashSet
+    val icode: LinkedHashSet[icodes.IClass] = new LinkedHashSet
 
     def error(pos: Position, msg: String) =
       reporter.error(pos, msg)
@@ -61,12 +86,15 @@ trait CompilationUnits { self: Global =>
     def incompleteInputError(pos: Position, msg:String) =
       reporter.incompleteInputError(pos, msg) 
 
+    def comment(pos: Position, msg: String) =
+      reporter.comment(pos, msg)
+      
     /** Is this about a .java source file? */
     lazy val isJava = source.file.name.endsWith(".java")
     
     override def toString() = source.toString()
 
-    def clear() = {
+    def clear() {
       fresh = null
       body = null
       depends.clear
