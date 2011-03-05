@@ -9,8 +9,9 @@ scala (2.8.1.dfsg-1) unstable; urgency=low
   * Add libmaven-ant-tasks-java, ant-contrib and ant-optional in
     Build-Depends.
   * Switch to source format 3.0 (quilt).
+  * Add patch 0001-Use-system-ant-contrib.jar.patch
 
- -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 20:13:30 +0100
+ -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 20:19:18 +0100
 
 scala (2.7.7.dfsg-4) unstable; urgency=low
 
