@@ -1,5 +1,3 @@
-// $Id: constructors.scala 5359 2005-12-16 15:33:49Z dubochet $
-
 // Test constructors, including multiple ones.
 
 class A(x: Int, y: Int) {

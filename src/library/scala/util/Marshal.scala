@@ -1,12 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2008-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2008-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: $
 
 
 package scala.util
@@ -19,9 +18,9 @@ package scala.util
  */
 object Marshal {
   import java.io._
-  import scala.reflect.Manifest
+  import scala.reflect.ClassManifest
 
-  def dump[A](o: A)(implicit m: Manifest[A]): Array[Byte] = {
+  def dump[A](o: A)(implicit m: ClassManifest[A]): Array[Byte] = {
     val ba = new ByteArrayOutputStream(512)
     val out = new ObjectOutputStream(ba)
     out.writeObject(m)
@@ -30,15 +29,22 @@ object Marshal {
     ba.toByteArray()
   }
 
+  @throws(classOf[IOException])
   @throws(classOf[ClassCastException])
-  def load[A](buffer: Array[Byte])(implicit expected: Manifest[A]): A = {
+  @throws(classOf[ClassNotFoundException])
+  def load[A](buffer: Array[Byte])(implicit expected: ClassManifest[A]): A = {
     val in = new ObjectInputStream(new ByteArrayInputStream(buffer))
-    val found = in.readObject.asInstanceOf[Manifest[_]]
-    if (! (found <:< expected))
+    val found = in.readObject.asInstanceOf[ClassManifest[_]]
+    if (found <:< expected) {
+      val o = in.readObject.asInstanceOf[A]
+      in.close()
+      o
+    } else {
+      in.close()
       throw new ClassCastException("type mismatch;"+
         "\n found   : "+found+
         "\n required: "+expected)
-    in.readObject.asInstanceOf[A]
+    }
   }
 
 }

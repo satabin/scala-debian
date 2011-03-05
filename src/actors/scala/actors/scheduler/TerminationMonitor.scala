@@ -1,25 +1,26 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: TerminationMonitor.scala 18781 2009-09-24 18:28:17Z phaller $
 
-package scala.actors.scheduler
+package scala.actors
+package scheduler
 
 import scala.collection.mutable.HashMap
 
-private[actors] trait TerminationMonitor {
+private[scheduler] trait TerminationMonitor {
+  _: IScheduler =>
 
   protected var activeActors = 0
-  protected val terminationHandlers = new HashMap[Actor, () => Unit]
+  protected val terminationHandlers = new HashMap[TrackedReactor, () => Unit]
   private var started = false
 
   /** newActor is invoked whenever a new actor is started. */
-  def newActor(a: Actor) = synchronized {
+  def newActor(a: TrackedReactor) = synchronized {
     activeActors += 1
     if (!started)
       started = true
@@ -31,7 +32,7 @@ private[actors] trait TerminationMonitor {
    *  @param  a  the actor
    *  @param  f  the closure to be registered
    */
-  def onTerminate(a: Actor)(f: => Unit): Unit = synchronized {
+  def onTerminate(a: TrackedReactor)(f: => Unit): Unit = synchronized {
     terminationHandlers += (a -> (() => f))
   }
 
@@ -39,7 +40,7 @@ private[actors] trait TerminationMonitor {
    *
    *  @param  a  the actor that has terminated
    */
-  def terminated(a: Actor) = {
+  def terminated(a: TrackedReactor) = {
     // obtain termination handler (if any)
     val todo = synchronized {
       terminationHandlers.get(a) match {
@@ -60,10 +61,13 @@ private[actors] trait TerminationMonitor {
   }
 
   /** Checks whether all actors have terminated. */
-  @deprecated
-  def allTerminated: Boolean = synchronized {
+  private[actors] def allActorsTerminated: Boolean = synchronized {
     started && activeActors <= 0
   }
+  
+  /** Deprecated non-actor-private version */
+  @deprecated("this method is going to be removed in a future release")
+  def allTerminated: Boolean = allActorsTerminated
 
   /** Checks for actors that have become garbage. */
   protected def gc() {}

@@ -1,19 +1,44 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import javax.swing.{KeyStroke, Icon}
 import java.awt.event.ActionListener
 
 object Action {
+  /**
+   * Special action that has an empty title and all default properties and does nothing.
+   * Use this as a "null action", i.e., to tell components that they do not have any 
+   * associated action. A component may then obtain its properties from its direct members 
+   * instead of from its action.
+   * In Java Swing, one would use `null` instead of a designated action.
+   */
   case object NoAction extends Action("") { def apply() {} }
   
   object Trigger {
-    abstract trait Wrapper extends Component with Action.Trigger { 
-      self: Component {
-        def peer: javax.swing.JComponent { 
-          def addActionListener(a: ActionListener) 
-          def removeActionListener(a: ActionListener)
-        }
-      } =>
+    trait Wrapper extends Action.Trigger { 
+      def peer: javax.swing.JComponent { 
+        def addActionListener(a: ActionListener) 
+        def removeActionListener(a: ActionListener)
+        def setAction(a: javax.swing.Action)
+        def getAction(): javax.swing.Action
+      }
+      
+      // TODO: we need an action cache
+      private var _action: Action = Action.NoAction
+      def action: Action = _action
+      def action_=(a: Action) { _action = a; peer.setAction(a.peer) }
+      
+      //1.6: def hideActionText: Boolean = peer.getHideActionText
+      //def hideActionText_=(b: Boolean) = peer.setHideActionText(b)
     }
   }
     
@@ -28,8 +53,11 @@ object Action {
     //def hideActionText_=(b: Boolean)
   }
   
-  def apply(title: String)(block: =>Unit) = new Action(title) { 
-    def apply() { block }
+  /**
+   * Convenience method to create an action with a given title and body to run.
+   */
+  def apply(title: String)(body: =>Unit) = new Action(title) { 
+    def apply() { body }
   }
 }
 
@@ -107,7 +135,7 @@ abstract class Action(title0: String) {
   def accelerator: Option[KeyStroke] = 
     toOption(peer.getValue(javax.swing.Action.ACCELERATOR_KEY))
   def accelerator_=(k: Option[KeyStroke]) { 
-    peer.putValue(javax.swing.Action.ACCELERATOR_KEY, toNull(k)) 
+    peer.putValue(javax.swing.Action.ACCELERATOR_KEY, k orNull)
   } 
   
   /**
@@ -119,7 +147,7 @@ abstract class Action(title0: String) {
   /*/**
    * Only honored if not <code>None</code>. For various buttons.
    */
-   1.6: def selected: Option[Boolean] = toOption(peer.getValue(javax.swing.Action.SELECTED_KEY))
+   1.6: def selected: Option[Boolean] = Option(peer.getValue(javax.swing.Action.SELECTED_KEY))
    def selected_=(b: Option[Boolean]) { 
    peer.putValue(javax.swing.Action.SELECTED_KEY, 
                  if (b == None) null else new java.lang.Boolean(b.get)) 

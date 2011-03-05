@@ -1,9 +1,19 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
+import event._
 import javax.swing._
 import javax.swing.text._
 import javax.swing.event._
-import event._
 
 object TextComponent {
   trait HasColumns extends TextComponent { 
@@ -37,6 +47,10 @@ class TextComponent extends Component with Publisher {
     def selectionVisible_=(b: Boolean) { peer.getCaret.setSelectionVisible(b) }
     def blinkRate: Int = peer.getCaret.getBlinkRate
     def blinkRate_=(n: Int) { peer.getCaret.setBlinkRate(n) }
+    def color: Color = peer.getCaretColor
+    def color_=(c: Color) = peer.setCaretColor(c)
+    def position: Int = peer.getCaretPosition
+    def position_=(p: Int) = peer.setCaretPosition(p)
     
     peer.addCaretListener {
       new CaretListener {
@@ -51,13 +65,14 @@ class TextComponent extends Component with Publisher {
   def editable_=(x: Boolean) = peer.setEditable(x)
   def cut() { peer.cut() }
   def copy() { peer.copy() }
+  def paste() { peer.paste() }
   def selected: String = peer.getSelectedText
   
   def selectAll() { peer.selectAll() }
   
   peer.getDocument.addDocumentListener(new DocumentListener {
-    def changedUpdate(e:DocumentEvent) { publish(ValueChanged(TextComponent.this)) }
-    def insertUpdate(e:DocumentEvent) { publish(ValueChanged(TextComponent.this)) }
-    def removeUpdate(e:DocumentEvent) { publish(ValueChanged(TextComponent.this)) }
+    def changedUpdate(e:DocumentEvent) { publish(new ValueChanged(TextComponent.this)) }
+    def insertUpdate(e:DocumentEvent) { publish(new ValueChanged(TextComponent.this)) }
+    def removeUpdate(e:DocumentEvent) { publish(new ValueChanged(TextComponent.this)) }
   })
 }

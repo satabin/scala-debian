@@ -90,7 +90,7 @@ object LisSeqArr extends TestCase("LisSeqArr") with Assert {
   def runTest {
     assertEquals((List(1,2,3): Any) match { case   List(x,y,_*) => (x,y)}, (1,2))
     assertEquals((List(1,2,3): Any) match { case    Seq(x,y,_*) => (x,y)}, (1,2))
-    assertEquals((Array(1,2,3): Any) match { case   Seq(x,y,_*) => (x,y)}, (1,2))
+    //assertEquals((Array(1,2,3): Any) match { case   Seq(x,y,_*) => (x,y)}, (1,2))
     //assertEquals((Array(1,2,3): Any) match { case Array(x,y,_*) => {x,y}}, {1,2})
 
     // just compile, feature request #1196
@@ -107,11 +107,11 @@ object StreamFoo extends TestCase("unapply for Streams") with Assert {
 
   def sum(stream: Stream[Int]): Int =
     stream match {
-      case Stream.empty => 0
+      case Stream.Empty => 0
       case Stream.cons(hd, tl) => hd + sum(tl)
     }
   override def runTest {
-    val str: Stream[int] = Stream.fromIterator(List(1,2,3).elements)
+    val str: Stream[Int] = Stream.fromIterator(List(1,2,3).iterator)
     assertEquals(sum(str), 6)
   }
 }

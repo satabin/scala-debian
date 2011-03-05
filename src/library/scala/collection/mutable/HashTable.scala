@@ -1,35 +1,39 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://www.scala-lang.org/           **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: HashTable.scala 16881 2009-01-09 16:28:11Z cunei $
 
 
-package scala.collection.mutable
+package scala.collection
+package mutable
 
 /** This class can be used to construct data structures that are based
- *  on hashtables. Class <code>HashTable[A]</code> implements a hashtable
- *  that maps keys of type <code>A</code> to values of the fully abstract
- *  member type <code>Entry</code>. Classes that make use of <code>HashTable</code>
- *  have to provide an implementation for <code>Entry</code> 
+ *  on hashtables. Class `HashTable[A]` implements a hashtable
+ *  that maps keys of type `A` to values of the fully abstract
+ *  member type `Entry`. Classes that make use of `HashTable`
+ *  have to provide an implementation for `Entry`.
  *
  *  There are mainly two parameters that affect the performance of a hashtable:
  *  the <i>initial size</i> and the <i>load factor</i>. The <i>size</i>
  *  refers to the number of <i>buckets</i> in the hashtable, and the <i>load
  *  factor</i> is a measure of how full the hashtable is allowed to get before
  *  its size is automatically doubled. Both parameters may be changed by
- *  overriding the corresponding values in class <code>HashTable</code>.
+ *  overriding the corresponding values in class `HashTable`.
  *
  *  @author  Matthias Zenger
  *  @author  Martin Odersky
  *  @version 2.0, 31/12/2006
+ *  @since   1
+ *  
+ *  @tparam A     type of the elements contained in this hash table.
  */
-trait HashTable[A] extends AnyRef {
-
+trait HashTable[A] {
+  import HashTable._
+  
   protected type Entry >: Null <: HashEntry[A, Entry]
 
   /** The load factor for the hash table (in 0.001 step).
@@ -43,25 +47,70 @@ trait HashTable[A] extends AnyRef {
 
   /** The initial threshold
    */
-  protected def initialThreshold: Int = newThreshold(initialSize)
-
+  protected def initialThreshold: Int = newThreshold(initialCapacity)
+  
+  @transient private[collection] var _loadFactor = loadFactor
+  
   /** The actual hash table.
    */
-  protected var table: Array[HashEntry[A, Entry]] = 
-    if (initialSize == 0) null else new Array(initialSize)
-
+  @transient protected var table: Array[HashEntry[A, Entry]] = new Array(initialCapacity)
+  
   /** The number of mappings contained in this hash table.
    */
-  protected var tableSize: Int = 0
+  @transient protected var tableSize: Int = 0
 
   /** The next size value at which to resize (capacity * load factor).
    */
-  protected var threshold: Int = initialThreshold
-
-  /** Returns the size of this hash table.
+  @transient protected var threshold: Int = initialThreshold
+  
+  private def initialCapacity = capacity(initialSize)
+  
+  /**
+   * Initializes the collection from the input stream. `f` will be called for each key/value pair
+   * read from the input stream in the order determined by the stream. This is useful for
+   * structures where iteration order is important (e.g. LinkedHashMap).
    */
-  def size = tableSize
-
+  private[collection] def init[B](in: java.io.ObjectInputStream, f: (A, B) => Entry) {
+    in.defaultReadObject
+    
+    _loadFactor = in.readInt
+    assert(_loadFactor > 0)
+    
+    val size = in.readInt
+    assert(size >= 0)
+    
+    table = new Array(capacity(size * loadFactorDenum / _loadFactor))
+    threshold = newThreshold(table.size)
+    
+    var index = 0
+    while (index < size) {
+      addEntry(f(in.readObject.asInstanceOf[A], in.readObject.asInstanceOf[B]))
+      index += 1
+    }
+  }
+  
+  /**
+   * Serializes the collection to the output stream by saving the load factor, collection
+   * size, collection keys and collection values. `value` is responsible for providing a value
+   * from an entry.
+   * 
+   * `foreach` determines the order in which the key/value pairs are saved to the stream. To
+   * deserialize, `init` should be used.
+   */
+  private[collection] def serializeTo[B](out: java.io.ObjectOutputStream, value: Entry => B) {
+    out.defaultWriteObject
+    out.writeInt(loadFactor)
+    out.writeInt(tableSize)
+    foreachEntry { entry =>
+      out.writeObject(entry.key)
+      out.writeObject(value(entry))
+    }
+  }
+  
+  private def capacity(expectedSize: Int) = if (expectedSize == 0) 1 else powerOfTwo(expectedSize)
+  
+  /** Find entry with given key in table, null if not found.
+   */
   protected def findEntry(key: A): Entry = {
     val h = index(elemHashCode(key))
     var e = table(h).asInstanceOf[Entry]
@@ -69,6 +118,9 @@ trait HashTable[A] extends AnyRef {
     e
   }
 
+  /** Add entry to table
+   *  pre: no entry with same key exists
+   */
   protected def addEntry(e: Entry) {
     val h = index(elemHashCode(e.key))
     e.next = table(h).asInstanceOf[Entry]
@@ -78,14 +130,16 @@ trait HashTable[A] extends AnyRef {
       resize(2 * table.length)
   }
 
-  protected def removeEntry(key: A) : Option[Entry] = {
+  /** Remove entry from table if present.
+   */
+  protected def removeEntry(key: A) : Entry = {
     val h = index(elemHashCode(key))
     var e = table(h).asInstanceOf[Entry]
     if (e != null) {
       if (elemEquals(e.key, key)) {
         table(h) = e.next
         tableSize = tableSize - 1
-        return Some(e)
+        return e
       } else {
         var e1 = e.next
         while (e1 != null && !elemEquals(e1.key, key)) {
@@ -95,14 +149,16 @@ trait HashTable[A] extends AnyRef {
         if (e1 != null) {
           e.next = e1.next
           tableSize = tableSize - 1
-          return Some(e1)
+          return e1
         }
       }
     }
-    None
+    null
   }
 
-  protected def entries: Iterator[Entry] = new Iterator[Entry] {
+  /** An iterator returning all entries.
+   */
+  protected def entriesIterator: Iterator[Entry] = new Iterator[Entry] {
     val iterTable = table
     var idx = table.length - 1
     var es = iterTable(idx).asInstanceOf[Entry]
@@ -121,17 +177,38 @@ trait HashTable[A] extends AnyRef {
       }
     }
   }
+  
+  /*
+   * We should implement this as a primitive operation over the underlying array, but it can
+   * cause a behaviour change in edge cases where:
+   * - Someone modifies a map during iteration
+   * - The insertion point is close to the iteration point.
+   * 
+   * The reason this happens is that the iterator prefetches the following element before
+   * returning from next (to simplify the implementation of hasNext) while the natural
+   * implementation of foreach does not.
+   * 
+   * It should be mentioned that modifying a map during iteration leads to unpredictable
+   * results with either implementation.
+   */
+  protected final def foreachEntry[C](f: Entry => C) { entriesIterator.foreach(f) }
 
-  def clear() {
+  /** An iterator returning all entries */
+  @deprecated("use entriesIterator instead")
+  protected def entries: Iterator[Entry] = entriesIterator
+
+  /** Remove all entries from table
+   */
+  protected def clearTable() {
     var i = table.length - 1
     while (i >= 0) { table(i) = null; i = i - 1 }
     tableSize = 0
   }
 
   private def newThreshold(size: Int) =
-    ((size.toLong * loadFactor)/loadFactorDenum).toInt
+    ((size.toLong * _loadFactor)/loadFactorDenum).toInt
 
-  private def resize(newSize: Int) = {
+  private def resize(newSize: Int) {
     val oldTable = table
     table = new Array(newSize)
     var i = oldTable.length - 1
@@ -151,7 +228,7 @@ trait HashTable[A] extends AnyRef {
 
   protected def elemEquals(key1: A, key2: A): Boolean = (key1 == key2)
 
-  protected def elemHashCode(key: A) = key.hashCode()
+  protected def elemHashCode(key: A) = if (key == null) 0 else key.##
 
   protected final def improve(hcode: Int) = {
     var h: Int = hcode + ~(hcode << 9)
@@ -163,10 +240,19 @@ trait HashTable[A] extends AnyRef {
   protected final def index(hcode: Int) = improve(hcode) & (table.length - 1)
 }
 
-trait HashEntry[A, E] {
-  val key: A
-  var next: E = _
+private[collection] object HashTable {
+  
+  /**
+   * Returns a power of two >= `target`.
+   */
+  private[collection] def powerOfTwo(target: Int): Int = {
+    /* See http://bits.stephan-brumme.com/roundUpToNextPowerOfTwo.html */
+    var c = target - 1;
+    c |= c >>>  1;
+    c |= c >>>  2;
+    c |= c >>>  4;
+    c |= c >>>  8;
+    c |= c >>> 16;
+    c + 1;
+  }
 }
-
-
-

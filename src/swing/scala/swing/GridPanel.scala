@@ -1,3 +1,13 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 object GridPanel {
@@ -10,7 +20,8 @@ object GridPanel {
  * @see java.awt.GridLayout
  */
 class GridPanel(rows0: Int, cols0: Int) extends Panel with SequentialContainer.Wrapper {
-  override lazy val peer = new javax.swing.JPanel(new java.awt.GridLayout(rows0, cols0))
+  override lazy val peer = 
+    new javax.swing.JPanel(new java.awt.GridLayout(rows0, cols0)) with SuperMixin
   
   /*type Constraints = (Int, Int)
     

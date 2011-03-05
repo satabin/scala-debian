@@ -1,14 +1,15 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Parallel Testing               **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: PrintMgr.scala 16881 2009-01-09 16:28:11Z cunei $
+// $Id$
 
-package scala.tools.partest.utils
+package scala.tools.partest
+package utils
 
 /**
  * @author Thomas Hofer

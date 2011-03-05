@@ -1,23 +1,30 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
-import javax.swing._
 import event.Event
+import javax.swing._
 
-class GUIApplication {
-  //def defaultLookAndFeelDecorated: Boolean = true
+/**
+ * Convenience class with utility methods for GUI applications.
+ */
+@deprecated("Use SwingApplication instead") class GUIApplication {
 
-  def init() = {
-    //UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
-    //JFrame.setDefaultLookAndFeelDecorated(defaultLookAndFeelDecorated)
-  }
+  /**
+   * Called before the GUI is created. Override to customize.
+   */
+  def init() {}
 
   /**
    * Initializes the framework and runs the given program.
    */
-  def run(prog: => Unit): Unit =
-    SwingUtilities.invokeLater {
-      new Runnable() { 
-        def run() = { init(); prog }
-      }
-    }
+  def run(prog: => Unit) = Swing.onEDT { init(); prog }
 }

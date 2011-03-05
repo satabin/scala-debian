@@ -1,5 +1,3 @@
-// $Id: misc.scala 15114 2008-05-20 14:25:02Z michelou $
-
 object Test {
 
   def fac(n: Int): Int = if (n < 2) 1 else fac(n - 1) * n;

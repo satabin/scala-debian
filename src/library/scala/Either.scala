@@ -1,16 +1,27 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala
 
-/**
- * <p>
- * The <code>Either</code> type represents a value of one of two possible types (a disjoint union).
- * The data constructors; <code>Left</code> and <code>Right</code> represent the two possible 
- * values. The <code>Either</code> type is often used as an alternative to 
- * <code>scala.Option</code> where <code>Left</code> represents failure (by convention) and
- * <code>Right</code> is akin to <code>Some</code>.
- * </p>
+/** <p>
+ *   The <code>Either</code> type represents a value of one of two possible
+ *   types (a disjoint union). The data constructors <code>Left</code> and
+ *   <code>Right</code> represent the two possible values.
+ *   The <code>Either</code> type is often used as an alternative to 
+ *   <code>scala.Option</code> where <code>Left</code> represents failure
+ *   (by convention) and <code>Right</code> is akin to <code>Some</code>.
+ *  </p>
  *
- * @author <a href="mailto:research@workingmouse.com">Tony Morris</a>, Workingmouse
- * @version 1.0, 11/10/2008
+ *  @author <a href="mailto:research@workingmouse.com">Tony Morris</a>, Workingmouse
+ *  @version 1.0, 11/10/2008
+ *  @since 2.7
  */
 sealed abstract class Either[+A, +B] {
   /**
@@ -38,33 +49,66 @@ sealed abstract class Either[+A, +B] {
     case Left(a) => Right(a)
     case Right(b) => Left(b)
   }
-   
+  
+  /**
+   * Joins an <code>Either</code> through <code>Right</code>.
+   */
+  def joinRight[A1 >: A, B1 >: B, C](implicit ev: B1 <:< Either[A1, C]): Either[A1, C] = this match {
+    case Left(a)  => Left(a)
+    case Right(b) => b
+  }
+  
+  /**
+   * Joins an <code>Either</code> through <code>Left</code>.
+   */
+  def joinLeft[A1 >: A, B1 >: B, C](implicit ev: A1 <:< Either[C, B1]): Either[C, B1] = this match {
+    case Left(a)  => a
+    case Right(b) => Right(b)
+  }
+
   /**
    * Returns <code>true</code> if this is a <code>Left</code>, <code>false</code> otherwise.
    */
-  def isLeft = false  // Default here, overriden in Left
+  def isLeft: Boolean
   
   /**
    * Returns <code>true</code> if this is a <code>Right</code>, <code>false</code> otherwise.
    */
-  def isRight = false // Default here, overriden in Right.
+  def isRight: Boolean
 }
+
 /**
  * The left side of the disjoint union, as opposed to the <code>Right</code> side.
  *
  * @author <a href="mailto:research@workingmouse.com">Tony Morris</a>, Workingmouse
  * @version 1.0, 11/10/2008
  */
-final case class Left[+A, +B](a: A) extends Either[A, B] { override def isLeft = true }
+final case class Left[+A, +B](a: A) extends Either[A, B] { 
+  def isLeft = true
+  def isRight = false
+}
+
 /**
  * The right side of the disjoint union, as opposed to the <code>Left</code> side.
  *
  * @author <a href="mailto:research@workingmouse.com">Tony Morris</a>, Workingmouse
  * @version 1.0, 11/10/2008 
  */ 
-final case class Right[+A, +B](b: B) extends Either[A, B] { override def isRight = true }
+final case class Right[+A, +B](b: B) extends Either[A, B] {
+  def isLeft = false
+  def isRight = true
+}
 
 object Either {
+  class MergeableEither[A](x: Either[A, A]) {
+    def merge: A = x match {
+      case Left(a)  => a
+      case Right(a) => a
+    }
+  }
+  
+  implicit def either2mergeable[A](x: Either[A, A]): MergeableEither[A] = new MergeableEither(x)
+
   /**
    * Projects an <code>Either</code> into a <code>Left</code>.
    *
@@ -88,7 +132,7 @@ object Either {
      *
      * @param e The side-effect to execute.
      */
-    def foreach(f: A => Unit) = e match {
+    def foreach[U](f: A => U) = e match {
       case Left(a) => f(a)
       case Right(_) => {}
     }
@@ -152,7 +196,7 @@ object Either {
      * <code>Seq</code> if this is a <code>Right</code>.
      */
     def toSeq = e match {
-      case Left(a) => Seq.singleton(a)
+      case Left(a) => Seq(a)
       case Right(_) => Seq.empty
     }
 
@@ -189,7 +233,7 @@ object Either {
      *
      * @param e The side-effect to execute.
      */
-    def foreach(f: B => Unit) = e match {
+    def foreach[U](f: B => U) = e match {
       case Left(_) => {}
       case Right(b) => f(b)
     }
@@ -239,27 +283,25 @@ object Either {
       case Right(b) => Right(f(b))
     }
 
-    /**
-     * Returns <code>None</code> if this is a <code>Left</code> or if the given predicate
-     * <code>p</code> does not hold for the right value, otherwise, returns a <code>Right</code>.
+    /** Returns <code>None</code> if this is a <code>Left</code> or if the
+     *  given predicate <code>p</code> does not hold for the right value,
+     *  otherwise, returns a <code>Right</code>.
      */
     def filter[X](p: B => Boolean): Option[Either[X, B]] = e match {
       case Left(_) => None
       case Right(b) => if(p(b)) Some(Right(b)) else None
     }
 
-    /**
-     * Returns a <code>Seq</code> containing the <code>Right</code> value if it exists or an empty
-     * <code>Seq</code> if this is a <code>Left</code>.
+    /** Returns a <code>Seq</code> containing the <code>Right</code> value if
+     *  it exists or an empty <code>Seq</code> if this is a <code>Left</code>.
      */
     def toSeq = e match {
       case Left(_) => Seq.empty
-      case Right(b) => Seq.singleton(b)
+      case Right(b) => Seq(b)
     }
 
-    /**
-     * Returns a <code>Some</code> containing the <code>Right</code> value if it exists or a
-     * <code>None</code> if this is a <code>Left</code>.
+    /** Returns a <code>Some</code> containing the <code>Right</code> value
+     *  if it exists or a <code>None</code> if this is a <code>Left</code>.
      */
     def toOption = e match {
       case Left(_) => None
@@ -267,31 +309,27 @@ object Either {
     }
   }
 
-  /**
-   * Joins an <code>Either</code> through <code>Left</code>.
-   */
+  @deprecated("use `x.joinLeft'")
   def joinLeft[A, B](es: Either[Either[A, B], B]) =
     es.left.flatMap(x => x)
 
-  /**
-   * Joins an <code>Either</code> through <code>Right</code>.
-   */
+  @deprecated("use `x.joinRight'")
   def joinRight[A, B](es: Either[A, Either[A, B]]) =
     es.right.flatMap(x => x)
-
+    
   /**
    * Takes an <code>Either</code> to its contained value within <code>Left</code> or 
    * <code>Right</code>.
    */
+  @deprecated("use `x.merge'")
   def merge[T](e: Either[T, T]) = e match {
     case Left(t) => t
     case Right(t) => t
   }
    
-  /**
-   * If the condition satisfies, return the given A in <code>Left</code>, otherwise, return the 
-   * given B in <code>Right</code>.
+  /** If the condition satisfies, return the given A in <code>Left</code>,
+   *  otherwise, return the given B in <code>Right</code>.
    */
-  def cond[A, B](test: Boolean, right: => B, left: => A) = 
-    if(test) Right(right) else Left(left)
+  def cond[A, B](test: Boolean, right: => B, left: => A): Either[A, B] = 
+    if (test) Right(right) else Left(left)
 }

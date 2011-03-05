@@ -1,7 +1,21 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
-import javax.swing._
 import event._
+import javax.swing._
+
+object Button {
+  def apply(text0: String)(op: => Unit) = new Button(Action(text0)(op))
+}
 
 /**
  * A button that can be clicked, usually to perform some action.

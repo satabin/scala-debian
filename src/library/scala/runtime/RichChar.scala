@@ -1,19 +1,17 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: RichChar.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.runtime
 
-
 import java.lang.Character
-import Predef.NoSuchElementException
+import collection.immutable.NumericRange
 
 /** <p>
  *    For example, in the following code
@@ -45,31 +43,53 @@ final class RichChar(x: Char) extends Proxy with Ordered[Char] {
   def isDigit: Boolean = Character.isDigit(x)
   def isLetter: Boolean = Character.isLetter(x)
   def isLetterOrDigit: Boolean = Character.isLetterOrDigit(x)
-  def isLowerCase: Boolean = Character.isLowerCase(x)
-  def isUpperCase: Boolean = Character.isUpperCase(x)
   def isWhitespace: Boolean = Character.isWhitespace(x)
-
-  def toLowerCase: Char = Character.toLowerCase(x)
-  def toUpperCase: Char = Character.toUpperCase(x)
+  def isSpaceChar: Boolean = Character.isSpaceChar(x)
+  def isHighSurrogate: Boolean = Character.isHighSurrogate(x)
+  def isLowSurrogate: Boolean = Character.isLowSurrogate(x)
+  def isSurrogate: Boolean = isHighSurrogate || isLowSurrogate
+  def isUnicodeIdentifierStart: Boolean = Character.isUnicodeIdentifierStart(x)
+  def isUnicodeIdentifierPart: Boolean = Character.isUnicodeIdentifierPart(x)
+  def isIdentifierIgnorable: Boolean = Character.isIdentifierIgnorable(x)
+  def isMirrored: Boolean = Character.isMirrored(x)
   
-  /** Create a <code>RandomAccessSeq.Projection[Char]</code> over the characters from 'x' to 'y' - 1
-   */
-  def until(limit: Char): RandomAccessSeq.Projection[Char] =
-    if (limit <= x) RandomAccessSeq.empty.projection
-    else
-      new RandomAccessSeq.Projection[Char] {
-        def length = limit - x
-        def apply(i: Int): Char = {
-          Predef.require(i >= 0 && i < length)
-          (x + i).toChar
-        }
-        override def stringPrefix = "RandomAccessSeq.Projection"
-      }
+  def isLower: Boolean = Character.isLowerCase(x)
+  def isUpper: Boolean = Character.isUpperCase(x)
+  def isTitleCase: Boolean = Character.isTitleCase(x)
+  
+  def toLower: Char = Character.toLowerCase(x)
+  def toUpper: Char = Character.toUpperCase(x)
+  def toTitleCase: Char = Character.toTitleCase(x)
+  
+  def getType: Int = Character.getType(x)
+  def getNumericValue: Int = Character.getNumericValue(x)
+  def getDirectionality: Byte = Character.getDirectionality(x)
+  def reverseBytes: Char = Character.reverseBytes(x)
+  
+  // Java 5 Character methods not added:
+  //
+  // public static boolean isDefined(char ch)
+  // public static boolean isJavaIdentifierStart(char ch)
+  // public static boolean isJavaIdentifierPart(char ch)
 
-  //def until(y: Char): Iterator[Char] = to(y)
-
-  /** Create a <code>RandomAccessSeq.Projection[Char]</code> over the characters from 'x' to 'y'
+  @deprecated("Use ch.toLower instead")
+  def toLowerCase: Char = toLower
+  @deprecated("Use ch.toUpper instead")
+  def toUpperCase: Char = toUpper
+  
+  @deprecated("Use ch.isLower instead")
+  def isLowerCase: Boolean = isLower
+  @deprecated("Use ch.isUpper instead")
+  def isUpperCase: Boolean = isUpper
+  
+  /** Create a <code>[Char]</code> over the characters from 'x' to 'limit' - 1
    */
-  def to(y: Char): RandomAccessSeq.Projection[Char] = until((y + 1).toChar)
+  def until(limit: Char): NumericRange[Char] = 
+    new NumericRange.Exclusive(x, limit, 1.toChar)
+
+  /** Create a <code>IndexedSeqView[Char]</code> over the characters from 'x' to 'limit'
+   */
+  def to(limit: Char): NumericRange[Char] = 
+    new NumericRange.Inclusive(x, limit, 1.toChar)
 
 }

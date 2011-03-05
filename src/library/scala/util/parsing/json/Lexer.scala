@@ -1,12 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Lexer.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.util.parsing.json
@@ -83,7 +82,7 @@ class Lexer extends StdLexical with ImplicitConversions {
 
   private def unicodeBlock = hexDigit ~ hexDigit ~ hexDigit ~ hexDigit ^^ {
     case a ~ b ~ c ~ d =>
-      new String(io.UTF8Codec.encode(Integer.parseInt(List(a, b, c, d) mkString "", 16)), "UTF-8")
+      new String(Array(Integer.parseInt(List(a, b, c, d) mkString "", 16)), 0, 1)
   }
 
   //private def lift[T](f: String => T)(xs: List[Any]): T = f(xs mkString "")

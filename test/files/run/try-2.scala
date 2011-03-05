@@ -1,7 +1,6 @@
 /*
  * Test different variants of the try-catch block.
  *
- * $Id: try-2.scala 14389 2008-03-16 03:01:18Z mcdirmid $
  */
 
 

@@ -1,13 +1,13 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Names.scala 16894 2009-01-13 13:09:41Z cunei $
 
-package scala.tools.nsc.symtab
+package scala.tools.nsc
+package symtab
 
-import scala.tools.nsc.util.NameTransformer
-import scala.tools.util.UTF8Codec
+import scala.reflect.NameTransformer
+import scala.io.Codec
 import java.security.MessageDigest
 
 /** The class <code>Names</code> ...
@@ -15,7 +15,7 @@ import java.security.MessageDigest
  *  @author  Martin Odersky
  *  @version 1.0, 05/02/2005
  */
-class Names {
+trait Names extends reflect.generic.Names { 
 
 // Operations -------------------------------------------------------------
 
@@ -74,7 +74,7 @@ class Names {
     while (i < len) {
       if (nc + i == chrs.length) {
         val newchrs = new Array[Char](chrs.length * 2)
-        Array.copy(chrs, 0, newchrs, 0, chrs.length)
+        compat.Platform.arraycopy(chrs, 0, newchrs, 0, chrs.length)
         chrs = newchrs
       }
       chrs(nc + i) = cs(offset + i)
@@ -86,24 +86,18 @@ class Names {
 
   private lazy val md5 = MessageDigest.getInstance("MD5")
 
-  private def toMD5(s: String, prefixSuffixLen: Int) = {
-//  println("COMPACTIFY "+s)
-    val cs: Array[Char] = s.toCharArray
-    val bytes = new Array[Byte](cs.length * 4)
-    val len = UTF8Codec.encode(cs, 0, bytes, 0, cs.length)
-    md5.update(bytes, 0, len)
-    val hash = md5.digest()
-    val sb = new StringBuilder
-    sb.append(cs, 0, prefixSuffixLen)
-    sb.append("$$$$")
-    for (i <- 0 until hash.length) {
-      val b = hash(i)
-      sb.append(((b >> 4) & 0xF).toHexString)
-      sb.append((b & 0xF).toHexString)
-    }
-    sb.append("$$$$")
-    sb.append(cs, len - prefixSuffixLen, prefixSuffixLen)
-    sb.toString
+  /** "COMPACTIFY" */
+  private def toMD5(s: String, edge: Int) = {
+    val prefix = s take edge
+    val suffix = s takeRight edge
+    val marker = "$$$$"
+    
+    val cs = s.toArray
+    val bytes = Codec fromUTF8 cs
+    md5 update bytes
+    val md5chars = md5.digest() map (b => (b & 0xFF).toHexString) mkString
+    
+    prefix + marker + md5chars + marker + suffix
   }
 
   def compactify(s: String): String =
@@ -141,11 +135,8 @@ class Names {
    *  @param len    ...
    *  @return       the created term name
    */
-  def newTermName(bs: Array[Byte], offset: Int, len: Int): Name = {
-    val cs = new Array[Char](bs.length)
-    val nchrs = UTF8Codec.decode(bs, offset, cs, 0, len)
-    newTermName(cs, 0, nchrs)
-  }
+  def newTermName(bs: Array[Byte], offset: Int, len: Int): Name =
+    newTermName(Codec toUTF8 bs.slice(offset, offset + len) mkString)
 
   /** Create a type name from the characters in <code>cs[offset..offset+len-1]</code>.
    *
@@ -172,6 +163,8 @@ class Names {
   def newTypeName(bs: Array[Byte], offset: Int, len: Int): Name =
     newTermName(bs, offset, len).toTypeName
 
+  def mkTermName(name: Name) = name.toTermName
+  def mkTypeName(name: Name) = name.toTypeName
 
   def nameChars: Array[Char] = chrs
 
@@ -208,7 +201,7 @@ class Names {
      *  @param offset ...
      */
     final def copyChars(cs: Array[Char], offset: Int) =
-      Array.copy(chrs, index, cs, offset, len)
+      compat.Platform.arraycopy(chrs, index, cs, offset, len)
 
     /** return the ascii representation of this name
      */
@@ -227,8 +220,11 @@ class Names {
      *  Array must have enough remaining space for all bytes 
      *  (i.e. maximally 3*length bytes).
      */
-    final def copyUTF8(bs: Array[Byte], offset: Int): Int =
-      UTF8Codec.encode(chrs, index, bs, offset, len)
+    final def copyUTF8(bs: Array[Byte], offset: Int): Int = {
+      val bytes = Codec fromUTF8 chrs.slice(index, index + len)
+      compat.Platform.arraycopy(bytes, 0, bs, offset, bytes.length)
+      offset + bytes.length
+    }
 
     /** return the hash value of this name
      */
@@ -348,6 +344,13 @@ class Names {
       i > suffix.length
     }
 
+    final def containsName(subname: Name): Boolean = {
+      var start = 0
+      val last = len - subname.length
+      while (start <= last && !startsWith(subname, start)) start += 1
+      start <= last
+    }
+
     /** Return the subname with characters from start to end-1.
      *
      *  @param from ...
@@ -389,6 +392,8 @@ class Names {
     def decode: String = (
       NameTransformer.decode(toString()) +
       (if (nameDebug && isTypeName) "!" else ""))//debug
+    
+    def isOperatorName: Boolean = decode != toString
   }
 
   private class TermName(index: Int, len: Int, hash: Int) extends Name(index, len) {

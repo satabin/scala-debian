@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Scala Distribution
 Bundle-SymbolicName: scala.tools.nsc;singleton:=true
-Bundle-Version: 2.7.7.final
+Bundle-Version: 2.8.1.final
 Eclipse-LazyStart: true
 Bundle-ClassPath: 
  .,
@@ -12,13 +12,34 @@ Bundle-ClassPath:
  lib/msil.jar
 Export-Package: 
  scala.tools.nsc,
- scala.tools.nsc.util,
- scala.tools.nsc.io,
- scala.tools.nsc.typechecker,
- scala.tools.nsc.symtab,
  scala.tools.nsc.ast,
  scala.tools.nsc.ast.parser,
- scala.tools.nsc.reporters
+ scala.tools.nsc.backend,
+ scala.tools.nsc.backend.icode,
+ scala.tools.nsc.backend.icode.analysis,
+ scala.tools.nsc.backend.jvm,
+ scala.tools.nsc.backend.opt,
+ scala.tools.nsc.dependencies,
+ scala.tools.nsc.doc,
+ scala.tools.nsc.interactive,
+ scala.tools.nsc.interpreter,
+ scala.tools.nsc.io,
+ scala.tools.nsc.javac,
+ scala.tools.nsc.matching,
+ scala.tools.nsc.plugins,
+ scala.tools.nsc.reporters,
+ scala.tools.nsc.settings,
+ scala.tools.nsc.symtab,
+ scala.tools.nsc.symtab.classfile,
+ scala.tools.nsc.transform,
+ scala.tools.nsc.typechecker,
+ scala.tools.nsc.util,
+ scala.tools.util,
+ ch.epfl.lamp.compiler.msil,
+ ch.epfl.lamp.compiler.msil.emit,
+ ch.epfl.lamp.compiler.msil.util,
+ ch.epfl.lamp.fjbg,
+ ch.epfl.lamp.util
 Require-Bundle: 
  org.apache.ant,
  scala.library

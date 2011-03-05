@@ -1,7 +1,6 @@
 //############################################################################
 // Lisp interpreter
 //############################################################################
-// $Id: lisp.scala 15114 2008-05-20 14:25:02Z michelou $
 
 //############################################################################
 // Lisp Scanner
@@ -333,7 +332,7 @@ object LispAny extends Lisp {
     val result = eval1(x, env);
     if (trace) {
       indent -= 1;
-      for (val x <- range(1, indent)) Console.print(" ");
+      for (x <- range(1, indent)) Console.print(" ");
       Console.println("<=== " + result);
     }
     curexp = prevexp;

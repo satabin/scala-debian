@@ -1,8 +1,7 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author Stephane Micheloud
  */
-//$Id: scala.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.man1
 
@@ -249,7 +248,8 @@ object scala extends Command {
     Link(Bold("fsc") & "(1)", "fsc.html") & ", " &
     Link(Bold("sbaz") & "(1)", "sbaz.html") & ", " &
     Link(Bold("scalac") & "(1)", "scalac.html") & ", " &
-    Link(Bold("scaladoc") & "(1)", "scaladoc.html"))
+    Link(Bold("scaladoc") & "(1)", "scaladoc.html") & ", " &
+    Link(Bold("scalap") & "(1)", "scalap.html"))
 
   def manpage = new Document {
     title = command

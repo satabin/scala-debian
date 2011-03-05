@@ -1,8 +1,7 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: Phase.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 
@@ -25,7 +24,7 @@ abstract class Phase(val prev: Phase) {
   def flagMask: Long = fmask
 
   private var nx: Phase = this
-  if (prev ne null) prev.nx = this
+  if ((prev ne null) && (prev ne NoPhase)) prev.nx = this
 
   def next: Phase = nx
 
@@ -34,8 +33,10 @@ abstract class Phase(val prev: Phase) {
   // Will running with -Ycheck:name work? 
   def checkable: Boolean = true
   def devirtualized: Boolean = false
+  def specialized: Boolean = false
   def erasedTypes: Boolean = false
   def flatClasses: Boolean = false
+  def keepsTypeParams = true
   def run: Unit
 
   override def toString() = name

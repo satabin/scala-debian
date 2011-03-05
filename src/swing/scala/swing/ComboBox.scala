@@ -1,9 +1,18 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import event._
 import javax.swing.{JList, JComponent, JComboBox, JTextField, ComboBoxModel, AbstractListModel, ListCellRenderer}
 import java.awt.event.ActionListener
-
 
 object ComboBox {
   /**
@@ -110,12 +119,18 @@ object ComboBox {
   implicit def intEditor(c: ComboBox[Int]): Editor[Int] = new BuiltInEditor(c)(s => s.toInt, s => s.toString)
   implicit def floatEditor(c: ComboBox[Float]): Editor[Float] = new BuiltInEditor(c)(s => s.toFloat, s => s.toString)
   implicit def doubleEditor(c: ComboBox[Double]): Editor[Double] = new BuiltInEditor(c)(s => s.toDouble, s => s.toString)
-   
+  
   def newConstantModel[A](items: Seq[A]): ComboBoxModel = {
     new AbstractListModel with ComboBoxModel {
       private var selected = items(0)
       def getSelectedItem: AnyRef = selected.asInstanceOf[AnyRef]
-      def setSelectedItem(a: Any) { selected = a.asInstanceOf[A] } 
+      def setSelectedItem(a: Any) { 
+        if ((selected != null && selected != a) ||
+            selected == null && a != null) {
+          selected = a.asInstanceOf[A]
+          fireContentsChanged(this, -1, -1)
+        }
+      } 
       def getElementAt(n: Int) = items(n).asInstanceOf[AnyRef]
       def getSize = items.size
     }
@@ -188,8 +203,8 @@ class ComboBox[A](items: Seq[A]) extends Component with Publisher {
     peer.setEditor(editor(this).comboBoxPeer)
   }
   
-  def prototypeDisplayValue: Option[A] = Swing.toOption(peer.getPrototypeDisplayValue)
+  def prototypeDisplayValue: Option[A] = toOption[A](peer.getPrototypeDisplayValue)
   def prototypeDisplayValue_=(v: Option[A]) { 
-    peer.setPrototypeDisplayValue(Swing.toNull(v.map(_.asInstanceOf[AnyRef]))) 
+    peer.setPrototypeDisplayValue(v map toAnyRef orNull)
   }
 }

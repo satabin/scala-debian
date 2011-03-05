@@ -1,11 +1,12 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: Printers.scala 16881 2009-01-09 16:28:11Z cunei $
 
-package scala.tools.nsc.backend.icode
+package scala.tools.nsc
+package backend
+package icode
 
 import java.io.PrintWriter
 
@@ -116,16 +117,17 @@ trait Printers { self: ICodes =>
     def printBlock(bb: BasicBlock) {
       print(bb.label)
       if (bb.loopHeader) print("[loop header]")
-      print(": "); indent; println
-      bb.toList foreach printInstruction
+      print(": ");
+      if (settings.debug.value) print("pred: " + bb.predecessors + " succs: " + bb.successors + " flags: " + bb.flagsString)
+      indent; println
+      bb foreach printInstruction
       undent; println
     }
 
     def printInstruction(i: Instruction) {
 //      if (settings.Xdce.value)
 //        print(if (i.useful) "   " else " * ");
-      if (settings.debug.value)
-        print(i.pos.line.map(_.toString).getOrElse("No line"))
+      if (i.pos.isDefined) print(i.pos.line.toString + "\t") else print("undef\t")
       println(i.toString())
     }
   }

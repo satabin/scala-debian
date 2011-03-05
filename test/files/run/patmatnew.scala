@@ -273,10 +273,14 @@ object Test extends TestConsoleMain {
     //def doMatch3(xs:List[char]) = xs match {
     //  case List(_*, z, w) => w::Nil
     //}
-    def doMatch4(xs:Seq[Char]) = xs match {
-      case Seq(x, y, _*) => x::y::Nil
-      case Seq(x, y, z, w) => List(z,w) // redundant!
-    }
+    // 
+    // Since the second case should have been unreachable all along,
+    // let's just comment this one out.
+    //
+    // def doMatch4(xs:Seq[Char]) = xs match {
+    //   case Seq(x, y, _*) => x::y::Nil
+    //   case Seq(x, y, z, w) => List(z,w) // redundant!
+    // }
     def doMatch5(xs:Seq[Char]) = xs match {
       case Seq(x, y, 'c', w @ _*) => x::y::Nil
       case Seq(x, y, z @ _*)    => z
@@ -289,8 +293,8 @@ object Test extends TestConsoleMain {
     override def runTest() {
       assertEquals(List('a','b'), doMatch1(List('a','b','c','d')))
       assertEquals(List('c','d'), doMatch2(List('a','b','c','d')))
-      //assertEquals(doMatch3(List('a','b','c','d')), List('d'))
-      assertEquals(List('a','b'), doMatch4(List('a','b','c','d')))
+      // assertEquals(doMatch3(List('a','b','c','d')), List('d'))
+      // assertEquals(List('a','b'), doMatch4(List('a','b','c','d')))
       assertEquals(List('a','b'), doMatch5(List('a','b','c','d')))
       assertEquals(List('c','d'), doMatch6(List('a','b','c','d')))
     }
@@ -311,11 +315,11 @@ object Test extends TestConsoleMain {
   object TestStream extends TestCase("unapply for Streams") {
     def sum(stream: Stream[Int]): Int =
       stream match {
-        case Stream.empty => 0
+        case Stream.Empty => 0
         case Stream.cons(hd, tl) => hd + sum(tl)
       }
     
-    val str: Stream[int] = Stream.fromIterator(List(1,2,3).elements)
+    val str: Stream[Int] = List(1,2,3).iterator.toStream
 
     def runTest() = assertEquals(sum(str), 6)
   }
@@ -500,8 +504,8 @@ object Test extends TestConsoleMain {
 
   object Bug1261 {
     sealed trait Elem
-    case class Foo extends Elem
-    case class Bar extends Elem
+    case class Foo() extends Elem
+    case class Bar() extends Elem
     trait Row extends Elem
     object Row {
       def unapply(r: Row) = true
@@ -698,10 +702,10 @@ object Test extends TestConsoleMain {
   object Bug995 extends TestCase("aladdin #995") {
     def foo(v: Any): String = v match {
       case s: Seq[_] => "Seq" // see hack in object Seq.unapplySeq
-      //case a: AnyRef if runtime.ScalaRunTime.isArray(a) => "Array"
+      case a: AnyRef if runtime.ScalaRunTime.isArray(a) => "Array"
       case _ => v.toString
     }
-    override def runTest { assertEquals("Seq", foo(Array(0))) } 
+    override def runTest { assertEquals("Array", foo(Array(0))) } 
   }
 
   // bug#1093 (contribution #460)
@@ -921,8 +925,8 @@ override def runTest() {
 
   object Ticket710 {  // compile-only
     def method {
-      sealed case class Parent
-      case object Child extends Parent
+      sealed class Parent()
+      case object Child extends Parent()
       val x: Parent = Child
       x match {
         case Child => ()

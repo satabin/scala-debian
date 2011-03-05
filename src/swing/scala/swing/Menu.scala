@@ -1,7 +1,21 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import scala.collection.mutable._
 import javax.swing._
+
+object MenuBar {
+  case object NoMenuBar extends MenuBar
+}
 
 /**
  * A menu bar. Each window can contain at most one. Contains a number of menus.
@@ -9,12 +23,12 @@ import javax.swing._
  * @see javax.swing.JMenuBar
  */
 class MenuBar extends Component with SequentialContainer.Wrapper {
-  override lazy val peer: JMenuBar = new JMenuBar
+  override lazy val peer: JMenuBar = new JMenuBar with SuperMixin
   
   def menus: Seq[Menu] = contents.filter(_.isInstanceOf[Menu]).map(_.asInstanceOf[Menu])
   
   // Not implemented by Swing
-  //def helpMenu: Menu = Component.wrapperFor(peer.getHelpMenu)
+  //def helpMenu: Menu = UIElement.cachedWrapper(peer.getHelpMenu)
   //def helpMenu_=(m: Menu) { peer.setHelpMenu(m.peer) }
 }
 

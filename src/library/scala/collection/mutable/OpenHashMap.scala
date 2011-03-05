@@ -1,26 +1,36 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: OpenHashMap.scala 16881 2009-01-09 16:28:11Z cunei $
 
 
-package scala.collection.mutable;
+package scala.collection
+package mutable
 
-object OpenHashMap{
+
+/** 
+ *  @define Coll OpenHashMap
+ *  @define coll open hash map
+ *  
+ *  @since 2.7
+ */
+object OpenHashMap {
   def apply[K, V](elems : (K, V)*) = {
     val dict = new OpenHashMap[K, V];
     elems.foreach({case (x, y) => dict(x) = y});
     dict;
   }
 
-  private[mutable] class Entry[Key, Value](val key : Key, 
-                                           val hash : Int,
-                                           var value : Option[Value])
+  def empty[K, V] = new OpenHashMap[K, V];
+
+  final private class OpenEntry[Key, Value](val key: Key,
+                                            val hash: Int,
+                                            var value: Option[Value])
+                extends HashEntry[Key, OpenEntry[Key, Value]]
 
   private[mutable] def highestOneBit(j : Int) = { // This should really go somewhere central as we're now code sharing by cut and paste. :(
     var i = j;
@@ -35,44 +45,62 @@ object OpenHashMap{
   private[mutable] def nextPowerOfTwo(i : Int) = highestOneBit(i) << 1; 
 }
 
-import OpenHashMap.Entry;
-
-/**
- * A mutable hash map based on an open hashing scheme. The precise scheme is undefined,
- * but it should make a reasonable effort to ensure that an insert with consecutive hash
- * codes is not unneccessarily penalised. In particular, mappings of consecutive integer
- * keys should work without significant performance loss.
- *
- * @author David MacIver
+/** A mutable hash map based on an open hashing scheme. The precise scheme is undefined,
+ *  but it should make a reasonable effort to ensure that an insert with consecutive hash
+ *  codes is not unneccessarily penalised. In particular, mappings of consecutive integer
+ *  keys should work without significant performance loss.
+ *  
+ *  @tparam Key          type of the keys in this map.
+ *  @tparam Value        type of the values in this map.
+ *  @param initialSize   the initial size of the internal hash table.
+ *  
+ *  @author David MacIver
+ *  @since  2.7
+ *  
+ *  @define Coll OpenHashMap
+ *  @define coll open hash map
+ *  @define mayNotTerminateInf
+ *  @define willNotTerminateInf
  */
-class OpenHashMap[Key, Value](initialSize : Int) extends scala.collection.mutable.Map[Key, Value]{
+class OpenHashMap[Key, Value](initialSize : Int)
+extends Map[Key, Value]
+   with MapLike[Key, Value, OpenHashMap[Key, Value]] {
+
+  import OpenHashMap.OpenEntry
+  type Entry = OpenEntry[Key, Value]
+
+  /**
+   * A default constructor creates a hashmap with initial size 8.
+   */
   def this() = this(8);
+
+  override def empty: OpenHashMap[Key, Value] = OpenHashMap.empty[Key, Value]
 
   private[this] val actualInitialSize = OpenHashMap.nextPowerOfTwo(initialSize);
 
   private var mask = actualInitialSize - 1;;
-  private var table : Array[Entry[Key, Value]] = new Array[Entry[Key, Value]](actualInitialSize);
+  private var table : Array[Entry] = new Array[Entry](actualInitialSize);
   private var _size = 0;
   private var deleted = 0; 
  
   // Used for tracking inserts so that iterators can determine in concurrent modification has occurred.
   private[this] var modCount = 0;
 
-  def size = _size;
+  override def size = _size;
   private[this] def size_=(s : Int) = _size = s;
-
+  
+  /** Returns a mangled hash code of the provided key. */
   protected def hashOf(key : Key) = {
-    var h = key.hashCode;
+    var h = key.##
     h ^= ((h >>> 20) ^ (h >>> 12));
     h ^ (h >>> 7) ^ (h >>> 4);
-    h
   }
 
   private[this] def growTable = {
     val oldSize = mask + 1;
     val newSize = 4 * oldSize;
     val oldTable = table;
-    table = new Array[Entry[Key, Value]](newSize);
+    table = new Array[Entry](newSize);
     mask = newSize - 1;     
     oldTable.foreach( entry =>
       if (entry != null && entry.value != None) addEntry(entry));
@@ -96,35 +124,45 @@ class OpenHashMap[Key, Value](initialSize : Int) extends scala.collection.mutabl
     index;
   }
 
-  private[this] def addEntry(entry : Entry[Key, Value]) = 
+  private[this] def addEntry(entry : Entry) = 
     if (entry != null) table(findIndex(entry.key, entry.hash)) = entry;
 
-  def update(key : Key, value : Value){
-    update(key, hashOf(key), value);
+  override def update(key : Key, value : Value) {
+    put(key, hashOf(key), value);
   }
 
-  private def update(key : Key, hash : Int, value : Value) {
+  def += (kv: (Key, Value)): this.type = { put(kv._1, kv._2); this }
+  def -= (key: Key): this.type = { remove(key); this }
+
+  override def put(key : Key, value : Value): Option[Value] = 
+    put(key, hashOf(key), value)
+
+  private def put(key : Key, hash : Int, value : Value): Option[Value] = {
     if (2 * (size + deleted) > mask) growTable;
     val index = findIndex(key, hash);
     val entry = table(index);
     if (entry == null) {
-      table(index) = new Entry(key, hash, Some(value));
+      table(index) = new OpenEntry(key, hash, Some(value));
       modCount += 1;
       size += 1;
-    }
-    else {
+      None
+    } else {
+      val res = entry.value
       if (entry.value == None) { size += 1; modCount += 1 }
       entry.value = Some(value);
+      res
     }
-  } 
+  }
 
-  def -=(key : Key) = {
+  override def remove(key : Key): Option[Value] = {
     val index = findIndex(key);
     if (table(index) != null && table(index).value != None){      
+      val res = table(index).value
       table(index).value = None;
       size -= 1;
       deleted += 1;
-    }
+      res
+    } else None
   }
 
   def get(key : Key) : Option[Value] = {
@@ -148,11 +186,12 @@ class OpenHashMap[Key, Value](initialSize : Int) extends scala.collection.mutabl
     None;
   }
  
-  /**
-   * An iterator over the elements of this map. Use of this iterator follows the same
-   * contract for concurrent modification as the foreach method.
+  /** An iterator over the elements of this map. Use of this iterator follows the same
+   *  contract for concurrent modification as the foreach method.
+   *  
+   *  @return   the iterator
    */ 
-  def elements = new Iterator[(Key, Value)]{
+  def iterator = new Iterator[(Key, Value)]{
     var index = 0;
     val initialModCount = modCount;
 
@@ -171,26 +210,27 @@ class OpenHashMap[Key, Value](initialSize : Int) extends scala.collection.mutabl
     }
   }
 
-  override def clone : OpenHashMap[Key, Value] = {
+  override def clone = {
     val it = new OpenHashMap[Key, Value]
-    foreachUndeletedEntry(entry => it.update(entry.key, entry.hash, entry.value.get));
+    foreachUndeletedEntry(entry => it.put(entry.key, entry.hash, entry.value.get));
     it
   }
 
   /**
-   * Loop over the key, value mappings of this map.
-   *
-   * The behaviour of modifying the map during an iteration is as follows: 
-   *
-   * <ul>
-   *  <li>Deleting a mapping is always permitted.</li>
-   *  <li>Changing the value of mapping which is already present is permitted.</li>
-   *  <li>Anything else is not permitted. It will usually, but not always, throw an exception.</li>
-   * </ul>
-   *
-   * @param  f The function to apply to each key, value mapping.
+   *  Loop over the key, value mappings of this map.
+   *  
+   *  The behaviour of modifying the map during an iteration is as follows: 
+   *  
+   *   <ul>
+   *    <li>Deleting a mapping is always permitted.</li>
+   *    <li>Changing the value of mapping which is already present is permitted.</li>
+   *    <li>Anything else is not permitted. It will usually, but not always, throw an exception.</li>
+   *   </ul>
+   * 
+   *  @tparam U  The return type of the specified function `f`, return result of which is ignored.
+   *  @param f   The function to apply to each key, value mapping.
    */ 
-  override def foreach(f : ((Key, Value)) => Unit){
+  override def foreach[U](f : ((Key, Value)) => U) {
     val startModCount = modCount;
     foreachUndeletedEntry(entry => {
       if (modCount != startModCount) error("Concurrent Modification")
@@ -198,15 +238,19 @@ class OpenHashMap[Key, Value](initialSize : Int) extends scala.collection.mutabl
     );  
   }
 
-  private[this] def foreachUndeletedEntry(f : Entry[Key, Value] => Unit){
+  private[this] def foreachUndeletedEntry(f : Entry => Unit){
     table.foreach(entry => if (entry != null && entry.value != None) f(entry));
   }
-
-  override def transform(f : (Key, Value) => Value) =
+  
+  override def transform(f : (Key, Value) => Value) = {
     foreachUndeletedEntry(entry => entry.value = Some(f(entry.key, entry.value.get)));
+    this
+  }
 
-  override def retain(f : (Key, Value) => Boolean) =
+  override def retain(f : (Key, Value) => Boolean) = {
     foreachUndeletedEntry(entry => if (!f(entry.key, entry.value.get)) {entry.value = None; size -= 1; deleted += 1} );
+    this
+  }
 
   override def stringPrefix = "OpenHashMap"
 }

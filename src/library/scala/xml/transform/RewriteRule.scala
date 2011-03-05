@@ -1,15 +1,15 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: RewriteRule.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
-package scala.xml.transform
+package scala.xml
+package transform
 
 /** a RewriteRule, when applied to a term, yields either
  *  the resulting of rewriting or the term itself it the rule

@@ -1,8 +1,7 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: SubComponent.scala 16894 2009-01-13 13:09:41Z cunei $
 
 package scala.tools.nsc
 
@@ -17,6 +16,22 @@ abstract class SubComponent {
 
   /** The name of the phase */
   val phaseName: String
+
+  /** List of phase names, this phase should run after  */
+  val runsAfter: List[String]
+
+  /** List of phase names, this phase should run before  */
+  val runsBefore: List[String] = Nil
+
+  /** Phase name this phase will attach itself to, not allowing any phase to come between it
+   * and the phase name declared  */
+  val runsRightAfter: Option[String]
+
+  /** Internal flag to tell external from internal phases */
+  val internal: Boolean = true
+
+  /** SubComponent are added to a HashSet and two phases are the same if they have the same name  */
+  override def hashCode() = phaseName.hashCode()
 
   /** New flags defined by the phase which are not valid before */
   def phaseNewFlags: Long = 0
@@ -40,7 +55,7 @@ abstract class SubComponent {
   }
 
   /** The phase defined by this subcomponent. Can be called only after phase is installed by newPhase. */
-//  lazy val ownPhase: Phase = global.currentRun.phaseNamed(phaseName)
+  //  lazy val ownPhase: Phase = global.currentRun.phaseNamed(phaseName)
 
   /** A standard phase template */
   abstract class StdPhase(prev: Phase) extends global.GlobalPhase(prev) {

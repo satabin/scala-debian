@@ -1,5 +1,3 @@
-// $Id: scoping3.scala 15104 2008-05-20 10:32:59Z michelou $
-
 object CI {
   trait TreeDisplay {
     type TreeNode <: ITreeNode

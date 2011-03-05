@@ -1,44 +1,41 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: RemoteActor.scala 18846 2009-10-01 07:30:14Z phaller $
 
 
-package scala.actors.remote
+package scala.actors
+package remote
 
 
-/** <p>
- *    This object provides methods for creating, registering, and
- *    selecting remotely accessible actors.
- *  </p>
- *  <p>
- *    A remote actor is typically created like this:
- *  </p><pre>
+/**
+ *  This object provides methods for creating, registering, and
+ *  selecting remotely accessible actors.
+ *
+ *  A remote actor is typically created like this:
+ *  {{{
  *  actor {
  *    alive(9010)
  *    register('myName, self)
  *
  *    // behavior
  *  }
- *  </pre>
- *  <p>
- *    It can be accessed by an actor running on a (possibly)
- *    different node by selecting it in the following way:
- *  </p><pre>
+ *  }}}
+ *  It can be accessed by an actor running on a (possibly)
+ *  different node by selecting it in the following way:
+ *  {{{
  *  actor {
  *    // ...
- *    <b>val</b> c = select(Node("127.0.0.1", 9010), 'myName)
+ *    val c = select(Node("127.0.0.1", 9010), 'myName)
  *    c ! msg
  *    // ...
  *  }
- *  </pre>
+ *  }}}
  *
- * @version 0.9.18
  * @author Philipp Haller
  */
 object RemoteActor {
@@ -59,22 +56,22 @@ object RemoteActor {
    * <code>port</code>.
    */
   def alive(port: Int): Unit = synchronized {
-    createKernelOnPort(port)
+    createNetKernelOnPort(port)
   }
 
-  private[remote] def createKernelOnPort(port: Int): NetKernel = {
+  private def createNetKernelOnPort(port: Int): NetKernel = {
     val serv = TcpService(port, cl)
     val kern = serv.kernel
     val s = Actor.self
     kernels += Pair(s, kern)
 
-    ActorGC.onTerminate(s) {
+    s.onTerminate {
       Debug.info("alive actor "+s+" terminated")
       // remove mapping for `s`
       kernels -= s
       // terminate `kern` when it does
       // not appear as value any more
-      if (!kernels.values.contains(kern)) {
+      if (!kernels.valuesIterator.contains(kern)) {
         Debug.info("terminating "+kern)
         // terminate NetKernel
         kern.terminate()
@@ -83,6 +80,10 @@ object RemoteActor {
 
     kern
   }
+
+  @deprecated("this member is going to be removed in a future release")
+  def createKernelOnPort(port: Int): NetKernel =
+    createNetKernelOnPort(port)
 
   /**
    * Registers <code>a</code> under <code>name</code> on this
@@ -104,7 +105,7 @@ object RemoteActor {
     case None =>
       // establish remotely accessible
       // return path (sender)
-      createKernelOnPort(TcpService.generatePort)
+      createNetKernelOnPort(TcpService.generatePort)
     case Some(k) =>
       k
   }
@@ -117,8 +118,12 @@ object RemoteActor {
     selfKernel.getOrCreateProxy(node, sym)
   }
 
-  private[remote] def someKernel: NetKernel =
-    kernels.values.next
+  private[remote] def someNetKernel: NetKernel =
+    kernels.valuesIterator.next
+
+  @deprecated("this member is going to be removed in a future release")
+  def someKernel: NetKernel =
+    someNetKernel
 }
 
 

@@ -1,10 +1,10 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author Martin Odersky
  */
-// $Id: TypingTransformers.scala 16881 2009-01-09 16:28:11Z cunei $
 
-package scala.tools.nsc.transform
+package scala.tools.nsc
+package transform
 
 import scala.collection.mutable.{Map, HashMap}
 
@@ -17,18 +17,23 @@ trait TypingTransformers {
   import global._
 
   abstract class TypingTransformer(unit: CompilationUnit) extends Transformer {
-    var localTyper: analyzer.Typer = analyzer.newTyper(
-      analyzer.rootContext(unit, EmptyTree, true))
+    var localTyper: analyzer.Typer =
+      if (phase.erasedTypes)
+        erasure.newTyper(erasure.rootContext(unit, EmptyTree, true)).asInstanceOf[analyzer.Typer]
+      else
+        analyzer.newTyper(analyzer.rootContext(unit, EmptyTree, true))
     protected var curTree: Tree = _
+    protected def typedPos(pos: Position)(tree: Tree) = localTyper typed { atPos(pos)(tree) }
 
     /** a typer for each enclosing class */
-    var typers: Map[Symbol, analyzer.Typer] = new HashMap
+    val typers: Map[Symbol, analyzer.Typer] = new HashMap
     
     override def atOwner[A](owner: Symbol)(trans: => A): A = atOwner(curTree, owner)(trans)
 
     def atOwner[A](tree: Tree, owner: Symbol)(trans: => A): A = {
       val savedLocalTyper = localTyper
-      localTyper = localTyper.atOwner(tree, owner)
+//      println("transformer atOwner: " + owner + " isPackage? " + owner.isPackage)
+      localTyper = localTyper.atOwner(tree, if (owner.isModule) owner.moduleClass else owner)
       typers += Pair(owner, localTyper)
       val result = super.atOwner(owner)(trans)
       localTyper = savedLocalTyper
@@ -42,6 +47,8 @@ trait TypingTransformers {
         case Template(_, _, _) =>
           // enter template into context chain
           atOwner(currentOwner) { super.transform(tree) }
+        case PackageDef(_, _) =>
+          atOwner(tree.symbol) { super.transform(tree) }
         case _ =>
           super.transform(tree)
       }

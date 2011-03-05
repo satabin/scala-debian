@@ -1,12 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: LongRef.java 16881 2009-01-09 16:28:11Z cunei $
 
 
 package scala.runtime;
@@ -17,5 +16,5 @@ public class LongRef implements java.io.Serializable {
 
     public long elem;
     public LongRef(long elem) { this.elem = elem; }
-    public String toString() { return Long.toString(elem); }
+    public String toString() { return java.lang.Long.toString(elem); }
 }

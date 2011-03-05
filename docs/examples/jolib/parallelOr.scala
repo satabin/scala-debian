@@ -4,7 +4,6 @@
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
-** $Id: parallelOr.scala 5359 2005-12-16 15:33:49Z dubochet $
 \*                                                                  */
 
 package examples.jolib;

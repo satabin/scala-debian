@@ -1,28 +1,26 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: NetKernel.scala 18846 2009-10-01 07:30:14Z phaller $
 
-package scala.actors.remote
+package scala.actors
+package remote
 
 import scala.collection.mutable.{HashMap, HashSet}
 
-private[remote] case class NamedSend(senderLoc: Locator, receiverLoc: Locator, data: Array[Byte], session: Symbol)
+case class NamedSend(senderLoc: Locator, receiverLoc: Locator, data: Array[Byte], session: Symbol)
 
-private[remote] case class RemoteApply0(senderLoc: Locator, receiverLoc: Locator, rfun: Function2[AbstractActor, Proxy, Unit])
+case class RemoteApply0(senderLoc: Locator, receiverLoc: Locator, rfun: Function2[AbstractActor, Proxy, Unit])
+case class LocalApply0(rfun: Function2[AbstractActor, Proxy, Unit], a: AbstractActor)
 
-private[remote] case class LocalApply0(rfun: Function2[AbstractActor, Proxy, Unit], a: AbstractActor)
+case class  SendTo(a: OutputChannel[Any], msg: Any, session: Symbol)
+case object Terminate
 
-private[remote] case class SendTo(a: OutputChannel[Any], msg: Any, session: Symbol)
-
-private[remote] case object Terminate
-
-private[remote] case class Locator(node: Node, name: Symbol)
+case class Locator(node: Node, name: Symbol)
 
 /**
  * @version 0.9.17
@@ -141,7 +139,7 @@ private[remote] class NetKernel(service: Service) {
 
   def terminate() {
     // tell all proxies to terminate
-    proxies.values foreach { p => p.send(Terminate, null) }
+    proxies.values foreach { _.send(Terminate, null) }
 
     // tell service to terminate
     service.terminate()

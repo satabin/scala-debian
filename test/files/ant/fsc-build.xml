@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- $Id: fsc-build.xml 10669 2007-04-12 13:41:27Z michelou $ -->
 
 <project name="fsc" default="run" basedir=".">
 

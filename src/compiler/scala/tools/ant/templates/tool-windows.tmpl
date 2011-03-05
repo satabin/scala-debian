@@ -1,7 +1,7 @@
 @@echo off
 
 rem ##########################################################################
-rem # Copyright 2002-2009, LAMP/EPFL
+rem # Copyright 2002-2010, LAMP/EPFL
 rem #
 rem # This is free software; see the distribution for copying conditions.
 rem # There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
@@ -47,7 +47,7 @@ if "%_TOOL_CLASSPATH%"=="" (
   )
 )
 
-set _PROPS=-Dscala.home="%_SCALA_HOME%" -Denv.classpath="%CLASSPATH%" -Denv.emacs="%EMACS%" @properties@
+set _PROPS=-Dscala.home="%_SCALA_HOME%" -Denv.emacs="%EMACS%" @properties@
 
 rem echo "%_JAVACMD%" %_JAVA_OPTS% %_PROPS% -cp "%_TOOL_CLASSPATH%" @class@ @toolflags@ %_ARGS%
 "%_JAVACMD%" %_JAVA_OPTS% %_PROPS% -cp "%_TOOL_CLASSPATH%" @class@ @toolflags@ %_ARGS%

@@ -1,9 +1,18 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import event._
 import scala.collection.mutable.Buffer
 import javax.swing.{JTabbedPane, JComponent}
-import java.awt.{Color, Rectangle}
 
 
 object TabbedPane {
@@ -26,10 +35,14 @@ object TabbedPane {
     protected[TabbedPane] var parent: TabbedPane = parent0
     
     protected var _title = title0
-    def title: String = _title//parent.peer.getTitleAt(index)
-    def title_=(t: String) { _title = title0; if (parent != null) parent.peer.setTitleAt(index, t) }
+    def title: String = _title
+    def title_=(t: String) { 
+      // beware to keep this order since, index depends on the _old_ title
+      if (parent != null) parent.peer.setTitleAt(index, t)
+      _title = t 
+    }
     protected var _content = content0
-    def content: Component = _content//Component.wrapperFor(peer.getComponentAt(index).asInstanceOf[JComponent])
+    def content: Component = _content//UIElement.cachedWrapper(peer.getComponentAt(index).asInstanceOf[JComponent])
     def content_=(c: Component) { _content = c; if (parent != null) parent.peer.setComponentAt(index, c.peer) }
     protected var _tip = tip0
     def tip: String = _tip//peer.getToolTipTextAt(index)
@@ -63,7 +76,7 @@ object TabbedPane {
  * @see javax.swing.JTabbedPane
  */
 class TabbedPane extends Component with Publisher {
-  override lazy val peer: JTabbedPane = new JTabbedPane
+  override lazy val peer: JTabbedPane = new JTabbedPane with SuperMixin
   import TabbedPane._
   
   object pages extends BufferWrapper[Page] {
@@ -82,11 +95,11 @@ class TabbedPane extends Component with Publisher {
       peer.insertTab(t.title, null, t.content.peer, t.tip, n) 
     }
 
-    def +=(t: Page) { t.parent = TabbedPane.this; peer.addTab(t.title, null, t.content.peer, t.tip) }
+    def +=(t: Page): this.type = { t.parent = TabbedPane.this; peer.addTab(t.title, null, t.content.peer, t.tip); this }
     def length = peer.getTabCount
     def apply(n: Int) = new Page(TabbedPane.this, peer.getTitleAt(n),
-                                Component.wrapperFor(peer.getComponentAt(n).asInstanceOf[javax.swing.JComponent]), 
-                                peer.getToolTipTextAt(n))
+      UIElement.cachedWrapper[Component](peer.getComponentAt(n).asInstanceOf[javax.swing.JComponent]), 
+      peer.getToolTipTextAt(n))
   }
   
   def tabLayoutPolicy: Layout.Value = Layout(peer.getTabLayoutPolicy)

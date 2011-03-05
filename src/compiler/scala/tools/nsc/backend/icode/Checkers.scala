@@ -1,11 +1,12 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: Checkers.scala 16881 2009-01-09 16:28:11Z cunei $
 
-package scala.tools.nsc.backend.icode
+package scala.tools.nsc
+package backend
+package icode
 
 import scala.collection.mutable.{Buffer, ListBuffer, Map, HashMap}
 import scala.tools.nsc.symtab._
@@ -82,17 +83,17 @@ abstract class Checkers {
       for (f1 <- cls.fields; f2 <- cls.fields if f1 ne f2)
         if (f1.symbol.name == f2.symbol.name)
           Checkers.this.global.error("Repetitive field name: " +
-                                     f1.symbol.fullNameString);
+                                     f1.symbol.fullName);
 
       for (m1 <- cls.methods; m2 <- cls.methods if m1 ne m2)
         if (m1.symbol.name == m2.symbol.name &&
             m1.symbol.tpe =:= m2.symbol.tpe)
           Checkers.this.global.error("Repetitive method: " +
-                                     m1.symbol.fullNameString);
+                                     m1.symbol.fullName);
       clasz.methods.foreach(check)
     }
 
-    /** Apply the give funtion to each pair of the cartesian product of
+    /** Apply the give function to each pair of the cartesian product of
      * l1 x l2.
      */
     def pairwise[a](l1: List[a], l2: List[a])(f: (a, a) => Unit) =
@@ -112,12 +113,12 @@ abstract class Checkers {
 
       def append(elems: List[BasicBlock]) = elems foreach appendBlock;
       def appendBlock(bl: BasicBlock) =
-        if ( !worklist.exists(bl.==) )
-          worklist + bl;
+        if (!(worklist contains bl))
+          worklist += bl
 
       in.clear;  out.clear;
       code = c;
-      worklist + c.startBlock;
+      worklist += c.startBlock
       for (bl <- c.blocks) {
         in  += (bl -> emptyStack)
         out += (bl -> emptyStack)
@@ -149,8 +150,8 @@ abstract class Checkers {
         else if (s2 eq emptyStack) s1 
         else {
           if (s1.length != s2.length)
-            throw new CheckerError("Incompatible stacks: " + s1 + " and " + s2 + " in " + method + " at entry to block: " + bl);
-          new TypeStack(List.map2(s1.types, s2.types) (lub))
+            throw new CheckerException("Incompatible stacks: " + s1 + " and " + s2 + " in " + method + " at entry to block: " + bl);
+          new TypeStack((s1.types, s2.types).zipped map lub)
         }
       }
 
@@ -239,15 +240,15 @@ abstract class Checkers {
           receiver match {
             case REFERENCE(sym) =>
               checkBool(sym.info.member(method.name) != NoSymbol,
-                        "Method " + method + " does not exist in " + sym.fullNameString);
+                        "Method " + method + " does not exist in " + sym.fullName);
               if (method hasFlag Flags.PRIVATE)
                 checkBool(method.owner == clasz.symbol,
-                          "Cannot call private method of " + method.owner.fullNameString 
-                          + " from " + clasz.symbol.fullNameString);
+                          "Cannot call private method of " + method.owner.fullName 
+                          + " from " + clasz.symbol.fullName);
               else if (method hasFlag Flags.PROTECTED)
                 checkBool(clasz.symbol isSubClass method.owner,
-                          "Cannot call protected method of " + method.owner.fullNameString
-                          + " from " + clasz.symbol.fullNameString);
+                          "Cannot call protected method of " + method.owner.fullName
+                          + " from " + clasz.symbol.fullName);
 
             case ARRAY(_) =>
               checkBool(receiver.toType.member(method.name) != NoSymbol,
@@ -422,7 +423,7 @@ abstract class Checkers {
 
          case CALL_METHOD(method, style) =>
            style match {
-             case Dynamic =>
+             case Dynamic | InvokeDynamic =>
                checkStack(1 + method.info.paramTypes.length)
                checkMethodArgs(method)
                checkMethod(stack.pop, method)

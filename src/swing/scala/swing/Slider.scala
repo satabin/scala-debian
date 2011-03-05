@@ -1,5 +1,16 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
+import javax.swing.{JSlider, JLabel}
 import event._
 
 /**
@@ -11,8 +22,8 @@ import event._
  * 
  * @see javax.swing.JSlider
  */
-class Slider extends Component with Orientable with Publisher {
-  override lazy val peer: javax.swing.JSlider = new javax.swing.JSlider
+class Slider extends Component with Orientable.Wrapper with Publisher {
+  override lazy val peer: JSlider = new JSlider with SuperMixin
   
   def min: Int = peer.getMinimum
   def min_=(v: Int) { peer.setMinimum(v) }
@@ -40,19 +51,21 @@ class Slider extends Component with Orientable with Publisher {
   
   def adjusting = peer.getValueIsAdjusting
   
-  def labels: scala.collection.Map[Int, Label] = 
-    new scala.collection.jcl.MapWrapper[Int, Label] { 
-      def underlying = peer.getLabelTable.asInstanceOf[java.util.Hashtable[Int, Label]] 
-    }
+  def labels: scala.collection.Map[Int, Label] = {
+    val labelTable = peer.getLabelTable.asInstanceOf[java.util.Hashtable[Int, JLabel]]
+    new scala.collection.JavaConversions.JMapWrapper(labelTable)
+      .mapValues(v => UIElement.cachedWrapper[Label](v))
+  }
   def labels_=(l: scala.collection.Map[Int, Label]) {
+    // TODO: do some lazy wrapping
     val table = new java.util.Hashtable[Any, Any]
-    for ((k,v) <- l) table.put(k, v)
+    for ((k,v) <- l) table.put(k, v.peer)
     peer.setLabelTable(table)
   }
   
   peer.addChangeListener(new javax.swing.event.ChangeListener {
     def stateChanged(e: javax.swing.event.ChangeEvent) { 
-      publish(ValueChanged(Slider.this)) 
+      publish(new ValueChanged(Slider.this)) 
     }
   })
 }

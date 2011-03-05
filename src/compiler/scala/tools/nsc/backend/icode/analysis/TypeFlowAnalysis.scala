@@ -1,11 +1,11 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
 
-// $Id: TypeFlowAnalysis.scala 16881 2009-01-09 16:28:11Z cunei $
 
-package scala.tools.nsc.backend.icode.analysis
+package scala.tools.nsc
+package backend.icode.analysis
 
 import scala.collection.{mutable, immutable}
 
@@ -28,7 +28,7 @@ abstract class TypeFlowAnalysis {
     def top    = Object
     def bottom = All
 
-    def lub2(a: Elem, b: Elem) =
+    def lub2(exceptional: Boolean)(a: Elem, b: Elem) =
       if (a eq bottom) b
       else if (b eq bottom) a
       else icodes.lub(a, b)
@@ -45,15 +45,14 @@ abstract class TypeFlowAnalysis {
     override val bottom = new TypeStack
     val exceptionHandlerStack: TypeStack = new TypeStack(List(REFERENCE(definitions.AnyRefClass)))
 
-    def lub2(s1: TypeStack, s2: TypeStack) = {
+    def lub2(exceptional: Boolean)(s1: TypeStack, s2: TypeStack) = {
       if (s1 eq bottom) s2
       else if (s2 eq bottom) s1
-      else if (s1 eq exceptionHandlerStack) s1
-      else if (s2 eq exceptionHandlerStack) s2
+      else if ((s1 eq exceptionHandlerStack) || (s2 eq exceptionHandlerStack)) Predef.error("merging with exhan stack") 
       else {
-        if (s1.length != s2.length)
-          throw new CheckerError("Incompatible stacks: " + s1 + " and " + s2);
-        new TypeStack(List.map2(s1.types, s2.types) (icodes.lub))
+//        if (s1.length != s2.length)
+//          throw new CheckerException("Incompatible stacks: " + s1 + " and " + s2);
+        new TypeStack((s1.types, s2.types).zipped map icodes.lub)
       }
     }
   }
@@ -80,24 +79,30 @@ abstract class TypeFlowAnalysis {
 
     override val top    = new Elem(new VarBinding, typeStackLattice.top)
     override val bottom = new Elem(new VarBinding, typeStackLattice.bottom)
-    
-    def lub2(a: Elem, b: Elem) = {
+
+//    var lubs = 0
+
+    def lub2(exceptional: Boolean)(a: Elem, b: Elem) = {
       val IState(env1, s1) = a
       val IState(env2, s2) = b
 
+//      lubs += 1
+
       val resultingLocals = new VarBinding
 
-      for (binding1 <- env1.elements) {
+      for (binding1 <- env1.iterator) {
         val tp2 = env2(binding1._1)
-        resultingLocals += (binding1._1 -> typeLattice.lub2(binding1._2, tp2))
+        resultingLocals += ((binding1._1, typeLattice.lub2(exceptional)(binding1._2, tp2)))
       }
 
-      for (binding2 <- env2.elements if resultingLocals(binding2._1) eq typeLattice.bottom) {
+      for (binding2 <- env2.iterator if resultingLocals(binding2._1) eq typeLattice.bottom) {
         val tp1 = env1(binding2._1)
-        resultingLocals += (binding2._1 -> typeLattice.lub2(binding2._2, tp1))
+        resultingLocals += ((binding2._1, typeLattice.lub2(exceptional)(binding2._2, tp1)))
       }
 
-      IState(resultingLocals, typeStackLattice.lub2(a.stack, b.stack))
+      IState(resultingLocals,
+        if (exceptional) typeStackLattice.exceptionHandlerStack
+        else typeStackLattice.lub2(exceptional)(a.stack, b.stack))
     }
   }
 
@@ -116,7 +121,7 @@ abstract class TypeFlowAnalysis {
     /** Initialize the in/out maps for the analysis of the given method. */
     def init(m: icodes.IMethod) {
       this.method = m
-
+      //typeFlowLattice.lubs = 0
       init {
         worklist += m.code.startBlock
         worklist ++= (m.exh map (_.startBlock))
@@ -124,6 +129,12 @@ abstract class TypeFlowAnalysis {
           in(b)  = typeFlowLattice.bottom
           out(b) = typeFlowLattice.bottom
         }
+
+        // start block has var bindings for each of its parameters
+        val entryBindings = new VarBinding
+        m.params.foreach(p => entryBindings += ((p, p.kind)))
+        in(m.code.startBlock) = lattice.IState(entryBindings, typeStackLattice.bottom)
+
         m.exh foreach { e =>
           in(e.startBlock) = lattice.IState(in(e.startBlock).vars, typeStackLattice.exceptionHandlerStack)
         }
@@ -160,14 +171,17 @@ abstract class TypeFlowAnalysis {
 
     def run = {
       timer.start
+//      icodes.lubs0 = 0
       forwardAnalysis(blockTransfer)
-      timer.stop
+      val t = timer.stop
       if (settings.debug.value) {
         linearizer.linearize(method).foreach(b => if (b != method.code.startBlock)
           assert(visited.contains(b), 
             "Block " + b + " in " + this.method + " has input equal to bottom -- not visited? .." + visited));
       }
-      //println("iterations: " + iterations + " for " + method.code.blocks.size)
+//      log("" + method.symbol.fullName + " ["  + method.code.blocks.size + " blocks] "
+//              + "\n\t" + iterations + " iterations: " + t + " ms."
+//              + "\n\tlubs: " + typeFlowLattice.lubs + " out of which " + icodes.lubs0 + " typer lubs")
     }
 
     def blockTransfer(b: BasicBlock, in: lattice.Elem): lattice.Elem = {
@@ -363,7 +377,7 @@ abstract class TypeFlowAnalysis {
         new TransferFunction(consumed, gens)
       }
       
-      for (val b <- blocks) {
+      for (b <- blocks) {
         flowFun = flowFun + (b -> transfer(b))
       }
     }
@@ -374,10 +388,10 @@ abstract class TypeFlowAnalysis {
       val bindings = out.vars
       val stack = out.stack
 
-//      if (settings.debug.value) {
-//        Console.println("Stack: " + stack);
-//        Console.println(i);
-//      } 
+      if (settings.debug.value) {
+        Console.println("[before] Stack: " + stack);
+        Console.println(i);
+      }
       i match {
 
         case THIS(clasz) =>
@@ -387,9 +401,13 @@ abstract class TypeFlowAnalysis {
           stack push toTypeKind(const.tpe)
 
         case LOAD_ARRAY_ITEM(kind) =>
-          val Pair(idxKind, ARRAY(elem)) = stack.pop2
-          assert(idxKind == INT || idxKind == CHAR || idxKind == SHORT || idxKind == BYTE)
-          stack.push(elem)
+          stack.pop2 match {
+            case (idxKind, ARRAY(elem)) =>
+              assert(idxKind == INT || idxKind == CHAR || idxKind == SHORT || idxKind == BYTE)
+              stack.push(elem)
+            case (_, _) =>
+              stack.push(kind)
+          }
 
         case LOAD_LOCAL(local) =>
           val t = bindings(local)
@@ -470,7 +488,7 @@ abstract class TypeFlowAnalysis {
           }
 
         case CALL_METHOD(method, style) => style match {
-          case Dynamic =>
+          case Dynamic | InvokeDynamic =>
             stack.pop(1 + method.info.paramTypes.length)
             stack.push(toTypeKind(method.info.resultType))
 
@@ -619,7 +637,7 @@ abstract class TypeFlowAnalysis {
         val stack = out.stack
         
         out.stack.pop(consumed)
-        for (val g <- gens) g match {
+        for (g <- gens) g match {
           case Bind(l, t) =>
             out.vars += (l -> t.getKind(in))
           case Push(t) =>

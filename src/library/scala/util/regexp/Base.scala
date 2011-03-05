@@ -1,12 +1,11 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2009, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-// $Id: Base.scala 16894 2009-01-13 13:09:41Z cunei $
 
 
 package scala.util.regexp
@@ -16,46 +15,43 @@ package scala.util.regexp
  *  @author  Burak Emir
  *  @version 1.0
  */
-abstract class Base {
-
+abstract class Base
+{
   type _regexpT <: RegExp
 
   abstract class RegExp {
     val isNullable: Boolean
   }
-
-  /** Alt( R,R,R* ) */
-  case class Alt(rs: _regexpT*)  extends RegExp {
-
-    // check rs \in R,R,R*
-    // @todo: flattening
-    if ({ val it = rs.elements; !it.hasNext || {it.next; !it.hasNext }})
-      throw new SyntaxError("need at least 2 branches in Alt");
-
-    final val isNullable = {
-      val it = rs.elements
-      while (it.hasNext && it.next.isNullable) {}
-      !it.hasNext
-    }
+  
+  object Alt {
+    /** Alt( R,R,R* ) */
+    def apply(rs: _regexpT*) = 
+      if (rs.size < 2) throw new SyntaxError("need at least 2 branches in Alt")
+      else new Alt(rs: _*)
+    // Can't enforce that statically without changing the interface
+    // def apply(r1: _regexpT, r2: _regexpT, rs: _regexpT*) = new Alt(Seq(r1, r2) ++ rs: _*)
+    def unapplySeq(x: Alt) = Some(x.rs)
   }
 
-  case class Sequ(rs: _regexpT*) extends RegExp {
-    // @todo: flattening
-    // check rs \in R,R* 
-    if ({ val it = rs.elements; !it.hasNext }) 
-      throw new SyntaxError("need at least 1 item in Sequ")
-
-    final val isNullable = {
-      val it = rs.elements
-      while (it.hasNext && it.next.isNullable) {}
-      !it.hasNext
-    }
+  class Alt private (val rs: _regexpT*) extends RegExp {
+    final val isNullable = rs exists (_.isNullable)
+  }
+  
+  object Sequ {
+    /** Sequ( R,R* ) */
+    def apply(rs: _regexpT*) = if (rs.isEmpty) Eps else new Sequ(rs: _*)
+    def unapplySeq(x: Sequ) = Some(x.rs)  
+  }
+  
+  class Sequ private (val rs: _regexpT*) extends RegExp {
+    final val isNullable = rs forall (_.isNullable)
   }
 
   case class Star(r: _regexpT) extends RegExp {
     final lazy val isNullable = true
   }
 
+  // The empty Sequ.
   case object Eps extends RegExp {
     final lazy val isNullable = true
     override def toString() = "Eps"
@@ -66,11 +62,4 @@ abstract class Base {
     final val isNullable = r1.isNullable
     def r = r1
   }
-
-  final def mkSequ(rs: _regexpT *): RegExp =
-    if (!rs.elements.hasNext)
-      Eps
-    else
-      Sequ(rs:_*)
-
 }

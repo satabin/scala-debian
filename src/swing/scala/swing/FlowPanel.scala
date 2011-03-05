@@ -1,6 +1,17 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import java.awt.FlowLayout
+import javax.swing.JPanel
 
 object FlowPanel {
   object Alignment extends Enumeration {
@@ -18,11 +29,16 @@ object FlowPanel {
  * 
  * @see java.awt.FlowLayout
  */
-class FlowPanel(alignment: FlowPanel.Alignment.Value) extends Panel with SequentialContainer.Wrapper {
-  override lazy val peer: javax.swing.JPanel = new javax.swing.JPanel(new java.awt.FlowLayout(alignment.id))
-  def this() = this(FlowPanel.Alignment.Center)
+class FlowPanel(alignment: FlowPanel.Alignment.Value)(contents0: Component*) extends Panel with SequentialContainer.Wrapper {
+  override lazy val peer: JPanel = 
+    new JPanel(new java.awt.FlowLayout(alignment.id)) with SuperMixin
+  def this(contents0: Component*) = this(FlowPanel.Alignment.Center)(contents0: _*)
+  def this() = this(FlowPanel.Alignment.Center)()
+  
+  contents ++= contents0
+  
   private def layoutManager = peer.getLayout.asInstanceOf[java.awt.FlowLayout]
-    
+  
   def vGap: Int = layoutManager.getVgap
   def vGap_=(n: Int) { layoutManager.setVgap(n) }
   def hGap: Int = layoutManager.getHgap

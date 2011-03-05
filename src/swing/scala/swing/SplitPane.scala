@@ -1,3 +1,13 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2010, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
+
+
 package scala.swing
 
 import event._
@@ -10,8 +20,9 @@ import Swing._
  * 
  * @see javax.swing.JSplitPane
  */
-class SplitPane(o: Orientation.Value, left: Component, right: Component) extends Component with Container with Orientable {
-  override lazy val peer: javax.swing.JSplitPane = new javax.swing.JSplitPane(o.id, left.peer, right.peer)
+class SplitPane(o: Orientation.Value, left: Component, right: Component) extends Component with Container with Orientable.Wrapper {
+  override lazy val peer: javax.swing.JSplitPane = 
+    new javax.swing.JSplitPane(o.id, left.peer, right.peer) with SuperMixin
   def this(o: Orientation.Value) = this(o, new Component {}, new Component {})
   def this() = this(Orientation.Horizontal)
   
@@ -21,9 +32,11 @@ class SplitPane(o: Orientation.Value, left: Component, right: Component) extends
     peer.setRightComponent(right.peer)
   }
   
-  def topComponent: Component = Component.wrapperFor(peer.getTopComponent.asInstanceOf[javax.swing.JComponent])
+  def topComponent: Component = 
+    UIElement.cachedWrapper[Component](peer.getTopComponent.asInstanceOf[javax.swing.JComponent])
   def topComponent_=(c: Component) { peer.setTopComponent(c.peer) }
-  def bottomComponent: Component = Component.wrapperFor(peer.getBottomComponent.asInstanceOf[javax.swing.JComponent])
+  def bottomComponent: Component = 
+    UIElement.cachedWrapper[Component](peer.getBottomComponent.asInstanceOf[javax.swing.JComponent])
   def bottomComponent_=(c: Component) { peer.setBottomComponent(c.peer) }
   
   def leftComponent: Component = topComponent

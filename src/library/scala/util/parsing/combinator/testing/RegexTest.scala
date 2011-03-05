@@ -1,4 +1,3 @@
-// $Id: RegexTest.scala 14415 2008-03-19 00:53:09Z mihaylov $
 
 package scala.util.parsing.combinator.testing
 

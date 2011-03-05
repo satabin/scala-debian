@@ -1,5 +1,3 @@
-// $Id: bug361.scala 15311 2008-06-10 08:46:06Z michelou $
-
 class Bug361Global extends Bug361Trees
 
 abstract class Bug361Trees { self: Bug361Global =>

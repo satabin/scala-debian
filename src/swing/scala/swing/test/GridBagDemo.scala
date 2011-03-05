@@ -1,12 +1,13 @@
-package scala.swing.test
+package scala.swing
+package test
 
 import swing._
 import swing.event._
 import GridBagPanel._
 import java.awt.Insets
 
-object GridBagDemo extends SimpleGUIApplication {
-  val ui = new GridBagPanel {
+object GridBagDemo extends SimpleSwingApplication {
+  lazy val ui = new GridBagPanel {
     val c = new Constraints
     val shouldFill = true
     if (shouldFill) {

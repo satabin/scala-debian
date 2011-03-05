@@ -1,118 +1,150 @@
 /* NSC -- new Scala compiler
- * Copyright 2007-2009 LAMP/EPFL
+ * Copyright 2007-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-// $Id: AnnotationInfos.scala 16881 2009-01-09 16:28:11Z cunei $
 
-package scala.tools.nsc.symtab
+package scala.tools.nsc
+package symtab
 
 import scala.tools.nsc.transform.Reifiers
 import util._
 
 /** AnnotationInfo and its helpers */
-trait AnnotationInfos {
-  self: SymbolTable =>
+trait AnnotationInfos extends reflect.generic.AnnotationInfos { self: SymbolTable =>
 
-  /** Convert a tree to a Constant, if possible */
-  private def tree2cons(tree: Tree): Option[Constant] =
-    tree match {
-      case Literal(v) => Some(v)
+  /** Arguments to classfile annotations (which are written to
+   *  bytecode as java annotations) are either:
+   *  <ul>
+   *   <li>constants</li>
+   *   <li>arrays of constants</li>
+   *   <li>or nested classfile annotations</li>
+   *  </ul>
+   */
+  abstract class ClassfileAnnotArg
 
-      case Apply(
-        TypeApply(
-          meth@Select(_,_),
-	  List(elemType)),
-	members)
-      if (definitions.ArrayModule_apply.alternatives contains meth.symbol) =>
-	trees2consArray(members, tree.tpe)
-			    
-
-      case Apply(meth, members) 
-      if (definitions.ArrayModule_apply.alternatives contains meth.symbol) =>
- 	trees2consArray(members, tree.tpe)
-
-      case Typed(t, _) => tree2cons(t)
-        
-      case tree =>
-        //println("could not convert: " + tree);
-        None
-    }
-  
-  private def trees2consArray(trees: Seq[Tree], arrayType:Type)
-  : Option[Constant] =
-  {
-    val mems = trees.map(tree2cons)
-
-    if (mems.exists(_.isEmpty))
-      None
-    else
-      Some(new ArrayConstant(
-	mems.map(_.get).toArray,
-	arrayType))
+  /** Represents a compile-time Constant (Boolean, Byte, Short,
+   *  Char, Int, Long, Float, Double, String, java.lang.Class or
+   *  an instance of a Java enumeration value).
+   */
+  case class LiteralAnnotArg(const: Constant)
+  extends ClassfileAnnotArg {
+    override def toString = const.escapedStringValue
   }
 
+  object LiteralAnnotArg extends LiteralAnnotArgExtractor
 
-  /** An argument to an annotation.  It includes a parse tree,
-   *  and it includes a compile-time constant for the tree if possible.
-   */
-  class AnnotationArgument(val intTree: Tree) {
-    def this(cons: Constant) = this(
-      Literal(cons).setType(cons.tpe))
-
-
-    @deprecated
-    lazy val tree = {
-      object reifiers extends {
-	val symbols: AnnotationInfos.this.type = AnnotationInfos.this
-      } with Reifiers
-
-      reifiers.reify(intTree) 
-    }
-
-    val constant: Option[Constant] = tree2cons(intTree)
-
-    def isConstant = !constant.isEmpty
-
-    override def toString: String =
-      constant match { 
-        case Some(cons) => cons.escapedStringValue
-        case None => intTree.toString
-      }
+  /** Represents an array of classfile annotation arguments */
+  case class ArrayAnnotArg(args: Array[ClassfileAnnotArg])
+  extends ClassfileAnnotArg {
+    override def toString = args.mkString("[", ", ", "]")
   }
 
-  /** Typed information about an annotation.  It can be attached to
-   *  either a symbol or an annotated type.
-   */
-  case class AnnotationInfo(
-    atp: Type,
-    args: List[AnnotationArgument], 
-    assocs: List[(Name, AnnotationArgument)])
-  {
-    override def toString: String =
-      atp +
-      (if (args.isEmpty) "" 
-       else args.mkString("(", ", ", ")")) +
-      (if (assocs.isEmpty) "" 
-       else (assocs map { case (x, y) => x+" = "+y } mkString ("{", ", ", "}")))
+  object ArrayAnnotArg extends ArrayAnnotArgExtractor
 
-    /** Check whether all arguments and assocations are constants */
-    def isConstant =
-      ((args forall (_.isConstant)) &&
-       (assocs map (_._2) forall (_.isConstant)))
+  /** A specific annotation argument that encodes an array of bytes as an array of `Long`. The type of the argument
+    * declared in the annotation must be `String`. This specialised class is used to encode scala signatures for
+    * reasons of efficiency, both in term of class-file size and in term of compiler performance. */
+  case class ScalaSigBytes(bytes: Array[Byte]) extends ClassfileAnnotArg {
+    override def toString = (bytes map { byte => (byte & 0xff).toHexString }).mkString("[ ", " ", " ]")
+    lazy val encodedBytes =
+      reflect.generic.ByteCodecs.encode(bytes)
+    def isLong: Boolean = (encodedBytes.length > 65535)
+    def sigAnnot: Type =
+      if (this.isLong)
+        definitions.ScalaLongSignatureAnnotation.tpe
+      else
+        definitions.ScalaSignatureAnnotation.tpe
+  }
+
+  /** Represents a nested classfile annotation */
+  case class NestedAnnotArg(annInfo: AnnotationInfo)
+  extends ClassfileAnnotArg {
+    // The nested annotation should not have any Scala annotation arguments
+    assert(annInfo.args.isEmpty, annInfo.args)
+    override def toString = annInfo.toString
+  }
+
+  object NestedAnnotArg extends NestedAnnotArgExtractor
+
+  class AnnotationInfoBase
+
+  /** <p>
+   *    Typed information about an annotation. It can be attached to
+   *    either a symbol or an annotated type.
+   *  </p>
+   *  <p>
+   *    Annotations are written to the classfile as java annotations
+   *    if <code>atp</code> conforms to <code>ClassfileAnnotation</code>
+   *    (the classfile parser adds this interface to any Java annotation
+   *    class).
+   *  </p>
+   *  <p>
+   *    Annotations are pickled (written to scala symtab attribute
+   *    in the classfile) if <code>atp</code> inherits form
+   *    <code>StaticAnnotation</code>.
+   *  </p>
+   *  <p>
+   *    <code>args</code> stores arguments to Scala annotations,
+   *    represented as  typed trees. Note that these trees are not
+   *    transformed by any phases following the type-checker.
+   *  </p>
+   *  <p>
+   *    <code>assocs</code> stores arguments to classfile annotations
+   *    as name-value pairs.
+   *  </p>
+   */
+  case class AnnotationInfo(atp: Type, args: List[Tree],
+                            assocs: List[(Name, ClassfileAnnotArg)])
+  extends AnnotationInfoBase {
+
+    // Classfile annot: args empty. Scala annot: assocs empty.
+    assert(args.isEmpty || assocs.isEmpty)
+
+    private var rawpos: Position = NoPosition
+    def pos = rawpos
+    def setPos(pos: Position): this.type = {
+      rawpos = pos
+      this
+    }
+
+    override def toString: String = atp +
+      (if (!args.isEmpty) args.mkString("(", ", ", ")") else "") +
+      (if (!assocs.isEmpty) (assocs map { case (x, y) => x+" = "+y } mkString ("(", ", ", ")")) else "")
 
     /** Check whether the type or any of the arguments are erroneous */
-    def isErroneous = atp.isErroneous || args.exists(_.intTree.isErroneous)
+    def isErroneous = atp.isErroneous || args.exists(_.isErroneous)
 
     /** Check whether any of the arguments mention a symbol */
     def refsSymbol(sym: Symbol) =
-      args.exists(_.intTree.exists(_.symbol == sym))
+      args.exists(_.exists(_.symbol == sym))
 
     /** Change all ident's with Symbol "from" to instead use symbol "to" */
     def substIdentSyms(from: Symbol, to: Symbol) = {
       val subs = new TreeSymSubstituter(List(from), List(to))
-      AnnotationInfo(atp,
-		     args.map(arg => new AnnotationArgument(subs(arg.intTree))),
-		     assocs)
+      AnnotationInfo(atp, args.map(subs(_)), assocs).setPos(pos)
     }
+
+    // !!! when annotation arguments are not literal strings, but any sort of
+    // assembly of strings, there is a fair chance they will turn up here not as
+    // Literal(const) but some arbitrary AST.
+    def stringArg(index: Int): Option[String] = if(args.size > index) Some(args(index) match {
+      case Literal(const) => const.stringValue
+      case x              => x.toString // should not be necessary, but better than silently ignoring an issue
+    }) else None
+
+    def intArg(index: Int): Option[Int] = if(args.size > index) Some(args(index)) collect {
+      case Literal(Constant(x: Int)) => x
+    } else None
   }
+
+  object AnnotationInfo extends AnnotationInfoExtractor
+
+  lazy val classfileAnnotArgManifest: ClassManifest[ClassfileAnnotArg] =
+    reflect.ClassManifest.classType(classOf[ClassfileAnnotArg])
+
+  /** Symbol annotations parsed in Namer (typeCompleter of
+   *  definitions) have to be lazy (#1782)
+   */
+  case class LazyAnnotationInfo(annot: () => AnnotationInfo)
+  extends AnnotationInfoBase
 }

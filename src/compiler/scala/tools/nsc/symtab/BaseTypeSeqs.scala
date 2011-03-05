@@ -1,11 +1,14 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2009 LAMP/EPFL
+ * Copyright 2005-2010 LAMP/EPFL
  * @author  Martin Odersky
  */
-package scala.tools.nsc.symtab
+package scala.tools.nsc
+package symtab
 
-import scala.collection.mutable.ListBuffer
-import Math.max
+// todo implement in terms of BitSet
+import scala.collection.mutable.{ListBuffer, BitSet}
+import math.max
+import util.Statistics._
 
 /** A base type sequence (BaseTypeSeq) is an ordered sequence spanning all the base types
  *  of a type. It characterized by the following two laws:
@@ -27,54 +30,68 @@ trait BaseTypeSeqs {
   import definitions._
 
   class BaseTypeSeq(parents: List[Type], elems: Array[Type]) {
+  self =>
+    incCounter(baseTypeSeqCount)
+    incCounter(baseTypeSeqLenTotal, elems.length)
 
     /** The number of types in the sequence */
     def length: Int = elems.length
 
+    // #3676 shows why we can't store NoType in elems to mark cycles
+    // (while NoType is in there to indicate a cycle in this BTS, during the execution of
+    //  the mergePrefixAndArgs below, the elems get copied without the pending map,
+    //  so that NoType's are seen instead of the original type --> spurious compile error)
+    val pending = new BitSet(length)
+
     /** The type at i'th position in this sequence; lazy types are returned evaluated. */
-    def apply(i: Int): Type = elems(i) match {
-      case NoType =>
-        elems(i) = AnyClass.tpe
-        throw CyclicInheritance 
-      case rtp @ RefinedType(variants, decls) =>
-        // can't assert decls.isEmpty; see t0764
-        //if (!decls.isEmpty) assert(false, "computing closure of "+this+":"+this.isInstanceOf[RefinedType]+"/"+closureCache(j))
-        //Console.println("compute closure of "+this+" => glb("+variants+")")
-        elems(i) = NoType
-        try {
-          mergePrefixAndArgs(variants, -1, lubDepth(variants)) match {
-            case Some(tp0) => 
-              elems(i) = tp0
-              tp0
-            case None => 
-              typeError(
-                "no common type instance of base types "+(variants mkString ", and ")+" exists.")
-          }
-        } catch {
-          case CyclicInheritance =>
-            typeError(
-              "computing the common type instance of base types "+(variants mkString ", and ")+" leads to a cycle.")
-        } 
-      case tp =>
-        tp
-    }
+    def apply(i: Int): Type =
+      if(pending contains i) {
+        pending.clear()
+        throw CyclicInheritance
+      } else
+        elems(i) match {
+          case rtp @ RefinedType(variants, decls) =>
+            // can't assert decls.isEmpty; see t0764
+            //if (!decls.isEmpty) assert(false, "computing closure of "+this+":"+this.isInstanceOf[RefinedType]+"/"+closureCache(j))
+            //Console.println("compute closure of "+this+" => glb("+variants+")")
+            pending += i
+            try {
+              mergePrefixAndArgs(variants, -1, lubDepth(variants)) match {
+                case Some(tp0) =>
+                  pending(i) = false
+                  elems(i) = tp0
+                  tp0
+                case None =>
+                  typeError(
+                    "no common type instance of base types "+(variants mkString ", and ")+" exists.")
+              }
+            } catch {
+              case CyclicInheritance =>
+                typeError(
+                  "computing the common type instance of base types "+(variants mkString ", and ")+" leads to a cycle.")
+            }
+          case tp =>
+            tp
+        }
 
     def rawElem(i: Int) = elems(i)
 
     /** The type symbol of the type at i'th position in this sequence;
      *  no evaluation needed.
      */
-    def typeSymbol(i: Int): Symbol = elems(i) match {
-      case RefinedType(v :: vs, _) => v.typeSymbol
-      case tp => tp.typeSymbol
+    def typeSymbol(i: Int): Symbol = {
+      elems(i) match {
+        case RefinedType(v :: vs, _) => v.typeSymbol
+        case tp => tp.typeSymbol
+      }
     }
 
     /** Return all evaluated types in this sequence as a list */
     def toList: List[Type] = elems.toList
 
-    private def copy(head: Type, offset: Int): BaseTypeSeq = {
+    protected def copy(head: Type, offset: Int): BaseTypeSeq = {
       val arr = new Array[Type](elems.length + offset)
-      Array.copy(elems, 0, arr, offset, elems.length)
+      compat.Platform.arraycopy(elems, 0, arr, offset, elems.length)
       arr(0) = head
       new BaseTypeSeq(parents, arr)
     }
@@ -99,39 +116,31 @@ trait BaseTypeSeqs {
       new BaseTypeSeq(parents, arr)
     }
 
-    def exists(p: Type => Boolean): Boolean = elems exists p
-//      (0 until length) exists (i => p(this(i)))
-
-    def normalize(parents: List[Type]) {}
-/*
-      var j = 0
-      while (j < elems.length) {
-        elems(j) match {
-          case RefinedType(variants, decls) =>
-            // can't assert decls.isEmpty; see t0764
-            //if (!decls.isEmpty) assert(false, "computing closure of "+this+":"+this.isInstanceOf[RefinedType]+"/"+closureCache(j))
-            //Console.println("compute closure of "+this+" => glb("+variants+")")
-            elems(j) = mergePrefixAndArgs(variants, -1, maxBaseTypeSeqDepth(variants) + LubGlbMargin) match {
-              case Some(tp0) => tp0
-              case None => throw new TypeError(
-                "the type intersection "+(parents mkString " with ")+" is malformed"+
-                "\n --- because ---"+
-                "\n no common type instance of base types "+(variants mkString ", and ")+" exists.")
-            }
-          case _ =>
-        }
-        j += 1
-      }
+    def lateMap(f: Type => Type): BaseTypeSeq = new BaseTypeSeq(parents map f, elems) {
+      override def apply(i: Int) = f(self.apply(i))
+      override def rawElem(i: Int) = f(self.rawElem(i))
+      override def typeSymbol(i: Int) = self.typeSymbol(i)
+      override def toList = self.toList map f
+      override protected def copy(head: Type, offset: Int) = (self map f).copy(head, offset)
+      override def map(g: Type => Type) = lateMap(g)
+      override def lateMap(g: Type => Type) = self.lateMap(x => g(f(x)))
+      override def exists(p: Type => Boolean) = elems exists (x => p(f(x)))
+      override protected def maxDepthOfElems: Int = elems map (x => maxDpth(f(x))) max
+      override def toString = elems.mkString("MBTS(", ",", ")")
     }
-*/
-    lazy val maxDepth: Int = {
+
+    def exists(p: Type => Boolean): Boolean = elems exists p
+
+    lazy val maxDepth: Int = maxDepthOfElems
+
+    protected def maxDepthOfElems = {
       var d = 0
-      for (i <- 0 until length) d = Math.max(d, maxDpth(elems(i)))
+      for (i <- 0 until length) d = max(d, maxDpth(elems(i)))
       d
     }
 
     /** The maximum depth of type `tp' */ 
-    private def maxDpth(tp: Type): Int = tp match {
+    protected def maxDpth(tp: Type): Int = tp match {
       case TypeRef(pre, sym, args) => 
         max(maxDpth(pre), maxDpth(args) + 1)
       case RefinedType(parents, decls) =>
@@ -172,7 +181,7 @@ trait BaseTypeSeqs {
   def baseTypeSingletonSeq(tp: Type): BaseTypeSeq = new BaseTypeSeq(List(), Array(tp))
 
   /** Create the base type sequence of a compound type wuth given tp.parents */
-  def compoundBaseTypeSeq(tp: Type/*tsym: Symbol, parents: List[Type]*/): BaseTypeSeq = {
+  def compoundBaseTypeSeq(tp: Type): BaseTypeSeq = {
     val tsym = tp.typeSymbol
     val parents = tp.parents
 //    Console.println("computing baseTypeSeq of " + tsym.tpe + " " + parents)//DEBUG

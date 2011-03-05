@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- $Id: scalac-build.xml 10669 2007-04-12 13:41:27Z michelou $ -->
 
 <project name="scalac" default="run" basedir=".">
 

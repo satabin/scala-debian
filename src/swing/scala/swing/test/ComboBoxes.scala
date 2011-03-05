@@ -1,4 +1,5 @@
-package scala.swing.test
+package scala.swing
+package test
 
 import swing._
 import event._
@@ -12,9 +13,9 @@ import javax.swing.{Icon, ImageIcon}
  * 
  * TODO: clean up layout
  */
-object ComboBoxes extends SimpleGUIApplication {
+object ComboBoxes extends SimpleSwingApplication {
   import ComboBox._
-  val ui = new FlowPanel {
+  lazy val ui = new FlowPanel {
    	contents += new ComboBox(List(1,2,3,4))
         
     val patterns = List("dd MMMMM yyyy",
@@ -64,7 +65,7 @@ object ComboBoxes extends SimpleGUIApplication {
 
     val iconBox = new ComboBox(icons) {
       renderer = new ListView.AbstractRenderer[Icon, Label](new Label) {
-        def configure(list: ListView[_], isSelected: Boolean, hasFocus: Boolean, icon: Icon, index: Int) {
+        def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, icon: Icon, index: Int) {
   	      component.icon = icon
           component.xAlignment = Alignment.Center
           if(isSelected) {
