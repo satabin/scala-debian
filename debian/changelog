@@ -8,8 +8,9 @@ scala (2.8.1.dfsg-1) unstable; urgency=low
   * Added a dependency on libjline-java for Scala.
   * Add libmaven-ant-tasks-java, ant-contrib and ant-optional in
     Build-Depends.
+  * Switch to source format 3.0 (quilt).
 
- -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 19:37:50 +0100
+ -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 20:13:30 +0100
 
 scala (2.7.7.dfsg-4) unstable; urgency=low
 
