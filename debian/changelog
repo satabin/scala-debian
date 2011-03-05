@@ -5,8 +5,9 @@ scala (2.8.1.dfsg-1) unstable; urgency=low
   * Set a fixed version number (The one from META-INF/MANIFEST.MF).
   * Remove README{,.Debian}: they used to contain useless and outdated
     informations.
+  * Added a dependency on libjline-java for Scala.
 
- -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 19:33:29 +0100
+ -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 19:36:42 +0100
 
 scala (2.7.7.dfsg-4) unstable; urgency=low
 
