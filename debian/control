@@ -2,17 +2,25 @@ Source: scala
 Section: devel
 Priority: optional
 Maintainer: Debian Scala Maintainers <pkg-scala-maint@lists.alioth.debian.org>
-Uploaders: Mehdi Dogguy <mehdi@debian.org>, Min Huang <min.huang@alumni.usc.edu>
+Uploaders:
+ Mehdi Dogguy <mehdi@debian.org>,
+ Min Huang <min.huang@alumni.usc.edu>
 DM-Upload-Allowed: yes
 Standards-Version: 3.8.1
-Build-Depends: openjdk-6-jdk | java-compiler, ant, debhelper (>= 7.0.50)
+Build-Depends:
+ openjdk-6-jdk | java-compiler,
+ ant,
+ debhelper (>= 7.0.50)
 Homepage: http://www.scala-lang.org/
 Vcs-Browser: http://git.debian.org/?p=pkg-scala/packages/scala.git
 Vcs-Git: git://git.debian.org/git/pkg-scala/packages/scala.git
 
 Package: scala
 Architecture: all
-Depends: scala-library (= ${source:Version}), openjdk-6-jre | java6-runtime, ${misc:Depends}
+Depends:
+ scala-library (= ${source:Version}),
+ openjdk-6-jre | java6-runtime,
+ ${misc:Depends}
 Description: The Scala programming language
  Scala is a Java-compatible programming language with many
  modern language features.  It is Java-compatible in that
@@ -29,13 +37,16 @@ Description: The Scala programming language
 
 Package: scala-library
 Architecture: all
-Depends: openjdk-6-jre | java6-runtime, ${misc:Depends}
+Depends:
+ openjdk-6-jre | java6-runtime,
+ ${misc:Depends}
 Description: The Scala standard library
  This run-time library is needed to run Scala programs.
 
 Package: scala-doc
 Architecture: all
-Depends: ${misc:Depends}
+Depends:
+ ${misc:Depends}
 Section: doc
 Description: The Scala API documentation
  This is the API documentation for Scala.
