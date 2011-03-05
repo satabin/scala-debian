@@ -1,3 +1,9 @@
+scala (2.8.1.dfsg-1) unstable; urgency=low
+
+  * New upstream release (LP: #717745).
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 19:23:06 +0100
+
 scala (2.7.7.dfsg-4) unstable; urgency=low
 
   * Fix scaladoc script to use $CLASSPATH variable
