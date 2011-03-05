@@ -6,7 +6,7 @@ Uploaders:
  Mehdi Dogguy <mehdi@debian.org>,
  Min Huang <min.huang@alumni.usc.edu>
 DM-Upload-Allowed: yes
-Standards-Version: 3.8.1
+Standards-Version: 3.9.1
 Build-Depends:
  openjdk-6-jdk | java-compiler,
  ant,

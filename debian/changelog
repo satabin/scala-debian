@@ -11,11 +11,12 @@ scala (2.8.1.dfsg-1) unstable; urgency=low
     Build-Depends.
   * Switch to source format 3.0 (quilt).
   * Add patch 0001-Use-system-ant-contrib.jar.patch
+  * Bump standards version to 3.9.1
 
   [ Frank S. Thomas ]
   * Update debian/copyright for the new release.
 
- -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 20:34:59 +0100
+ -- Mehdi Dogguy <mehdi@debian.org>  Sat, 05 Mar 2011 20:41:44 +0100
 
 scala (2.7.7.dfsg-4) unstable; urgency=low
 
