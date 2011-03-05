@@ -2,7 +2,7 @@ scala (2.8.1.dfsg-1) unstable; urgency=low
 
   [ Mehdi Dogguy ]
   * New upstream release (Closes: #589110, #603529) (LP: #717745).
-  * Use upstream build system
+  * Use upstream build system (and re-write packaging).
   * Set a fixed version number (The one from META-INF/MANIFEST.MF).
   * Remove README{,.Debian}: they used to contain useless and outdated
     informations.
