@@ -11,7 +11,7 @@ scala (2.8.1.dfsg-1) unstable; urgency=low
   * Use upstream build system (and re-write packaging).
   * Set a fixed version number (The one from META-INF/MANIFEST.MF).
   * Remove README{,.Debian}: they used to contain useless and outdated
-    informations.
+    information.
   * Added a dependency on libjline-java for Scala.
   * Add libmaven-ant-tasks-java, ant-contrib and ant-optional in
     Build-Depends.
