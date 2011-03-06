@@ -78,6 +78,8 @@ License: BSD-3-clause
 Files: src/compiler/scala/tools/nsc/doc/html/resource/lib/jquery-ui.js
 Copyright: © 2010 AUTHORS.txt (http://jqueryui.com/about)
 License: Expat or GPL
+ On Debian systems, the complete text of the GNU General
+ Public License can be found in `/usr/share/common-licenses/GPL'.
 
 Files: src/compiler/scala/tools/nsc/doc/html/resource/lib/jquery.js
 Copyright: © 2010 John Resig
