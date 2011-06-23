@@ -1,8 +1,15 @@
 scala (2.9.0.1.dfsg-1) unstable; urgency=low
 
+  [ Mehdi Dogguy ]
   * New upstream release (Closes: #631429) (LP: #782013).
 
- -- Mehdi Dogguy <mehdi@debian.org>  Thu, 23 Jun 2011 22:28:40 +0200
+  [ Frank S. Thomas ]
+  * Updated debian/copyright for Scala 2.9.0.1.
+  * Lintian recommends to refer to /u/s/common-licenses/GPL.
+  * Fix spelling error in changelog.
+  * Remove copyright information about docs/android-examples.
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Thu, 23 Jun 2011 22:46:56 +0200
 
 scala (2.8.1.dfsg-1) unstable; urgency=low
 
