@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 package scala.tools.nsc
@@ -149,6 +149,8 @@ trait BaseTypeSeqs {
         max(maxDpth(lo), maxDpth(hi))
       case MethodType(paramtypes, result) =>
         maxDpth(result)
+      case NullaryMethodType(result) =>
+        maxDpth(result)
       case PolyType(tparams, result) =>
         max(maxDpth(result), maxDpth(tparams map (_.info)) + 1)
       case ExistentialType(tparams, result) =>
@@ -188,8 +190,8 @@ trait BaseTypeSeqs {
     val buf = new ListBuffer[Type]
     buf += tsym.tpe
     var btsSize = 1
-    val nparents = parents.length
-    if (nparents != 0) {
+    if (parents.nonEmpty) {
+      val nparents = parents.length
       val pbtss = new Array[BaseTypeSeq](nparents)
       val index = new Array[Int](nparents)
       var i = 0

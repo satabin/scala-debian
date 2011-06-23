@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -7,7 +7,7 @@
 package scala.tools.nsc
 package io
 
-import java.io.{ File => JFile, FileInputStream, FileOutputStream, IOException }
+import java.io.{ FileInputStream, FileOutputStream, IOException }
 import PartialFunction._
 
 object PlainFile {
@@ -76,10 +76,10 @@ class PlainFile(val givenPath: Path) extends AbstractFile {
   }
 
   /** Does this abstract file denote an existing file? */
-  def create: Unit = if (!exists) givenPath.createFile()
+  def create(): Unit = if (!exists) givenPath.createFile()
 
   /** Delete the underlying file or directory (recursively). */
-  def delete: Unit =
+  def delete(): Unit =
     if (givenPath.isFile) givenPath.delete()
     else if (givenPath.isDirectory) givenPath.toDirectory.deleteRecursively()
 

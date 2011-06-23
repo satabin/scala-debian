@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -16,13 +16,9 @@ import util.HashSet
  *  @version 1.0
  */
 abstract class TreeInfo {
-
   val trees: SymbolTable
   import trees._
   import definitions.ThrowableClass
-
-  def isTerm(tree: Tree): Boolean = tree.isTerm
-  def isType(tree: Tree): Boolean = tree.isType
 
   def isOwnerDefinition(tree: Tree): Boolean = tree match {
     case PackageDef(_, _)
@@ -48,8 +44,8 @@ abstract class TreeInfo {
     case EmptyTree                     => true
     case Import(_, _)                  => true
     case TypeDef(_, _, _, _)           => true
-    case DefDef(mods, _, _, _, _, __)  => mods.hasFlag(DEFERRED)
-    case ValDef(mods, _, _, _)         => mods.hasFlag(DEFERRED)
+    case DefDef(mods, _, _, _, _, __)  => mods.isDeferred
+    case ValDef(mods, _, _, _)         => mods.isDeferred
     case DocDef(_, definition)         => isInterfaceMember(definition)
     case _ => false
   }
@@ -64,7 +60,7 @@ abstract class TreeInfo {
        | DefDef(_, _, _, _, _, _) =>
       true
     case ValDef(mods, _, _, rhs) =>
-      !mods.hasFlag(MUTABLE) && isPureExpr(rhs)
+      !mods.isMutable && isPureExpr(rhs)
     case DocDef(_, definition) =>
       isPureDef(definition)
     case _ =>
@@ -91,7 +87,7 @@ abstract class TreeInfo {
        * However, before typing, applications of nullary functional values are also
        * Apply(function, Nil) trees. To prevent them from being treated as pure,
        * we check that the callee is a method. */
-      fn.symbol.isMethod && isPureExpr(fn)
+      fn.symbol.isMethod && !fn.symbol.isLazy && isPureExpr(fn)
     case Typed(expr, _) =>
       isPureExpr(expr)
     case Block(stats, expr) =>
@@ -101,9 +97,9 @@ abstract class TreeInfo {
   }
 
   def mayBeVarGetter(sym: Symbol) = sym.info match {
-    case PolyType(List(), _) => sym.owner.isClass && !sym.isStable
-    case mt: MethodType => mt.isImplicit && sym.owner.isClass && !sym.isStable
-    case _ => false
+    case NullaryMethodType(_)  => sym.owner.isClass && !sym.isStable
+    case mt @ MethodType(_, _) => mt.isImplicit && sym.owner.isClass && !sym.isStable
+    case _                     => false
   }
 
   def isVariableOrGetter(tree: Tree) = {
@@ -135,26 +131,21 @@ abstract class TreeInfo {
     case _ => false
   }
 
-  def isSelfOrSuperConstrCall(tree: Tree): Boolean = methPart(tree) match {
-    case Ident(nme.CONSTRUCTOR) 
-       | Select(This(_), nme.CONSTRUCTOR) 
-       | Select(Super(_, _), nme.CONSTRUCTOR) => true
-    case _ => false
-  }
+  def isSelfOrSuperConstrCall(tree: Tree) =
+    isSelfConstrCall(tree) || isSuperConstrCall(tree)
 
   /** Is tree a variable pattern */
   def isVarPattern(pat: Tree): Boolean = pat match {
-    case Ident(name) => isVariableName(name) && !pat.isInstanceOf[BackQuotedIdent]
-    case _ => false
+    case _: BackQuotedIdent => false
+    case x: Ident           => isVariableName(x.name)
+    case _                  => false
   }
 
   /** The first constructor definitions in `stats' */
-  def firstConstructor(stats: List[Tree]): Tree = stats match {
-    case List() => EmptyTree
-    case (constr @ DefDef(_, name, _, _, _, _)) :: _ 
-    if (name == nme.CONSTRUCTOR || name == nme.MIXIN_CONSTRUCTOR) => constr
-    case _ :: stats1 => firstConstructor(stats1)
-  }
+  def firstConstructor(stats: List[Tree]): Tree = stats find {
+    case x: DefDef  => nme.isConstructorName(x.name)
+    case _          => false
+  } getOrElse EmptyTree
   
   /** The arguments to the first constructor in `stats'. */
   def firstConstructorArgs(stats: List[Tree]): List[Tree] = firstConstructor(stats) match {
@@ -164,7 +155,7 @@ abstract class TreeInfo {
 
   /** The value definitions marked PRESUPER in this statement sequence */
   def preSuperFields(stats: List[Tree]): List[ValDef] = 
-    for (vdef @ ValDef(mods, _, _, _) <- stats if mods hasFlag PRESUPER) yield vdef
+    stats collect { case vd: ValDef if isEarlyValDef(vd) => vd }
 
   def isEarlyDef(tree: Tree) = tree match {
     case TypeDef(mods, _, _, _) => mods hasFlag PRESUPER
@@ -182,35 +173,35 @@ abstract class TreeInfo {
     case _ => false
   }
 
-  /** Is type a of the form T* ? */
+  /** Is tpt of the form T* ? */
   def isRepeatedParamType(tpt: Tree) = tpt match {
-    case AppliedTypeTree(Select(_, rp), _) => 
-      rp == nme.REPEATED_PARAM_CLASS_NAME.toTypeName ||
-      rp == nme.JAVA_REPEATED_PARAM_CLASS_NAME.toTypeName
-    case TypeTree() => definitions.isRepeatedParamType(tpt.tpe)
-    case _ => false
+    case TypeTree()                                                          => definitions.isRepeatedParamType(tpt.tpe)
+    case AppliedTypeTree(Select(_, tpnme.REPEATED_PARAM_CLASS_NAME), _)      => true
+    case AppliedTypeTree(Select(_, tpnme.JAVA_REPEATED_PARAM_CLASS_NAME), _) => true
+    case _                                                                   => false
+  }
+  /** The parameter ValDefs from a def of the form T*. */
+  def repeatedParams(tree: Tree): List[ValDef] = tree match {
+    case DefDef(_, _, _, vparamss, _, _)  => vparamss.flatten filter (vd => isRepeatedParamType(vd.tpt))
+    case _                                => Nil
   }
 
   /** Is tpt a by-name parameter type? */
   def isByNameParamType(tpt: Tree) = tpt match {
-    case AppliedTypeTree(Select(_, n), _) => n == nme.BYNAME_PARAM_CLASS_NAME.toTypeName
-    case TypeTree() => tpt.tpe.typeSymbol == definitions.ByNameParamClass
-    case _ => false
+    case TypeTree()                                                 => definitions.isByNameParamType(tpt.tpe)
+    case AppliedTypeTree(Select(_, tpnme.BYNAME_PARAM_CLASS_NAME), _) => true
+    case _                                                          => false
   }
 
   /** Is name a left-associative operator? */
-  def isLeftAssoc(operator: Name): Boolean =
-    operator.length > 0 && operator(operator.length - 1) != ':'
+  def isLeftAssoc(operator: Name) = operator.nonEmpty && (operator.endChar != ':')
 
-  private val reserved = new HashSet[Name]("reserved", 64)
-  reserved addEntry nme.false_
-  reserved addEntry nme.true_
-  reserved addEntry nme.null_
+  private val reserved = Set[Name](nme.false_, nme.true_, nme.null_)
 
   /** Is name a variable name? */
   def isVariableName(name: Name): Boolean = {
     val first = name(0)
-    (('a' <= first && first <= 'z') || first == '_') && !(reserved contains name)
+    ((first.isLower && first.isLetter) || first == '_') && !reserved(name)
   }
 
   /** Is tree a this node which belongs to `enclClass'? */
@@ -221,26 +212,33 @@ abstract class TreeInfo {
 
   /** can this type be a type pattern */
   def mayBeTypePat(tree: Tree): Boolean = tree match {
-    case CompoundTypeTree(Template(tps, _, List())) => tps exists mayBeTypePat
-    case Annotated(_, tp) => mayBeTypePat(tp)
-    case AppliedTypeTree(constr, args) => 
-      mayBeTypePat(constr) || args.exists(_.isInstanceOf[Bind])
-    case SelectFromTypeTree(tp, _) => mayBeTypePat(tp)
-    case _ => false
+    case CompoundTypeTree(Template(tps, _, Nil)) => tps exists mayBeTypePat
+    case Annotated(_, tp)                        => mayBeTypePat(tp)
+    case AppliedTypeTree(constr, args)           => mayBeTypePat(constr) || args.exists(_.isInstanceOf[Bind])
+    case SelectFromTypeTree(tp, _)               => mayBeTypePat(tp)
+    case _                                       => false
   }
 
   /** Is this argument node of the form <expr> : _* ?
    */
   def isWildcardStarArg(tree: Tree): Boolean = tree match {
-    case Typed(expr, Ident(name)) => name == nme.WILDCARD_STAR.toTypeName
-    case _ => false
+    case Typed(_, Ident(tpnme.WILDCARD_STAR)) => true
+    case _                                  => false
+  }
+  def isWildcardStarArgList(trees: List[Tree]) =
+    trees.nonEmpty && isWildcardStarArg(trees.last)
+  
+  /** Is the argument a (possibly bound) _ arg?
+   */
+  def isWildcardArg(tree: Tree): Boolean = unbind(tree) match {
+    case Ident(nme.WILDCARD) => true
+    case _                   => false
   }
 
   /** Is this pattern node a catch-all (wildcard or variable) pattern? */
   def isDefaultCase(cdef: CaseDef) = cdef match {
-    case CaseDef(Ident(nme.WILDCARD), EmptyTree, _) => true
-    case CaseDef(Bind(_, Ident(nme.WILDCARD)), EmptyTree, _) => true
-    case _ => false
+    case CaseDef(pat, EmptyTree, _) => isWildcardArg(pat)
+    case _                          => false
   }
   
   /** Does this CaseDef catch Throwable? */
@@ -285,12 +283,10 @@ abstract class TreeInfo {
 */
 
   /** Is this pattern node a sequence-valued pattern? */
-  def isSequenceValued(tree: Tree): Boolean = tree match {
-    case Bind(_, body) => isSequenceValued(body)
-    case ArrayValue(_, _) => true
-    case Star(_) => true
-    case Alternative(ts) => ts exists isSequenceValued
-    case _ => false
+  def isSequenceValued(tree: Tree): Boolean = unbind(tree) match {
+    case Alternative(ts)            => ts exists isSequenceValued
+    case ArrayValue(_, _) | Star(_) => true
+    case _                          => false
   }
   
   /** The underlying pattern ignoring any bindings */

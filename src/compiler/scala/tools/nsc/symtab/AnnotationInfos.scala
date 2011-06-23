@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2007-2010 LAMP/EPFL
+ * Copyright 2007-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -106,6 +106,8 @@ trait AnnotationInfos extends reflect.generic.AnnotationInfos { self: SymbolTabl
       rawpos = pos
       this
     }
+
+    lazy val isTrivial: Boolean = atp.isTrivial && !(args exists (_.exists(_.isInstanceOf[This]))) // see annotationArgRewriter
 
     override def toString: String = atp +
       (if (!args.isEmpty) args.mkString("(", ", ", ")") else "") +

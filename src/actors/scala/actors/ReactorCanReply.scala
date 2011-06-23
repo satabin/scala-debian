@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2010, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,15 +10,15 @@
 package scala.actors
 
 /**
- * The ReactorCanReply trait provides message send operations that
+ * Provides message send operations that
  * may result in a response from the receiver.
  *
  * @author Philipp Haller
  */
 private[actors] trait ReactorCanReply extends CanReply[Any, Any] {
   _: ReplyReactor =>
-
-  override type Future[+P] = scala.actors.Future[P]
+  
+  type Future[+P] = scala.actors.Future[P]
 
   def !?(msg: Any): Any =
     (this !! msg)()

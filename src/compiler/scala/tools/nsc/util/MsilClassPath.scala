@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2006-2010 LAMP/EPFL
+ * Copyright 2006-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -112,7 +112,7 @@ class AssemblyClassPath(types: Array[MSILType], namespace: String, val context: 
     else namespace drop (i + 1)
   }
   def asURLs = List(new java.net.URL(name))
-  def asClasspathString = error("Unknown")  // I don't know what if anything makes sense here?
+  def asClasspathString = sys.error("Unknown")  // I don't know what if anything makes sense here?
 
   private lazy val first: Int = {
     var m = 0

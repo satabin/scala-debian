@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -7,7 +7,7 @@
 package scala.tools.nsc
 package io
 
-import java.io.{ FileInputStream, InputStream, IOException, File => JFile }
+import java.io.{ FileInputStream, InputStream, IOException }
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.channels.{FileChannel, ReadableByteChannel, Channels}
 import java.nio.charset.{CharsetDecoder, CoderResult}

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -110,7 +110,7 @@ class JavaCharArrayReader(buf: IndexedSeq[Char], start: Int, /* startline: int, 
     ch
   }
 
-  def rewind {
+  def rewind() {
     if (oldBp == -1) throw new IllegalArgumentException
     bp = oldBp
     ch = oldCh

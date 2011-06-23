@@ -1,5 +1,5 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -15,6 +15,7 @@ abstract class SymbolTable extends reflect.generic.Universe
                               with Symbols
                               with Types
                               with Scopes
+                              with Caches
                               with Definitions
                               with reflect.generic.Constants
                               with BaseTypeSeqs
@@ -26,10 +27,11 @@ abstract class SymbolTable extends reflect.generic.Universe
                               with TreePrinters
                               with Positions
                               with DocComments
+                              with TypeDebugging
 {
   def settings: Settings
   def rootLoader: LazyType
-  def log(msg: AnyRef)
+  def log(msg: => AnyRef)
   def abort(msg: String) = throw new Error(msg)
   def abort() = throw new Error()
 
@@ -38,16 +40,7 @@ abstract class SymbolTable extends reflect.generic.Universe
 
   /** Are we compiling for .NET ? */
   def forMSIL: Boolean
-
-  protected def trackTypeIDE(sym : Symbol) : Boolean = true
-  def compare(sym : Symbol, name : Name) = sym.name == name
-  def verifyAndPrioritize[T](g : Symbol => Symbol)(pt : Type)(f : => T) = f
-  def trackSetInfo[T <: Symbol](sym : T)(info : Type) : T = {
-    sym.setInfo(info); sym
-  }
-  def notifyImport(what : Name, container : Type, from : Name, to : Name) : Unit = {}
-  def sanitize(tree : Tree) : Tree = tree
-
+  
   /** A period is an ordinal number for a phase in a run.
    *  Phases in later runs have higher periods than phases in earlier runs.
    *  Later phases have higher periods than earlier phases in the same run.
@@ -97,19 +90,19 @@ abstract class SymbolTable extends reflect.generic.Universe
 
   /** Perform given operation at given phase */
   final def atPhase[T](ph: Phase)(op: => T): T = {
+    // Eugene: insert same thread assertion here
     val current = phase
-    try {
-      phase = ph
-      op
-    } finally {
-      phase = current
-    }
+    phase = ph
+    try op
+    finally phase = current
   }
+  final def afterPhase[T](ph: Phase)(op: => T): T =
+    atPhase(ph.next)(op)
   
   /** Break into repl debugger if assertion is true */
   // def breakIf(assertion: => Boolean, args: Any*): Unit =
   //   if (assertion)
-  //     Interpreter.break(args.toList)
+  //     ILoop.break(args.toList)
 
   /** The set of all installed infotransformers */
   var infoTransformers = new InfoTransformer {

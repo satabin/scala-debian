@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2006-2010 LAMP/EPFL
+ * Copyright 2006-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -7,14 +7,11 @@
 package scala.tools.nsc
 package util
 
-import java.io.{ File => JFile }
 import java.net.URL
-
-import scala.collection.mutable.{ListBuffer, ArrayBuffer, HashSet => MutHashSet}
-import io.{ File, Directory, Path, AbstractFile }
+import scala.collection.mutable.ListBuffer
+import io.{ File, Directory, Path, Jar, AbstractFile, ClassAndJarInfo }
 import scala.tools.util.StringOps.splitWhere
-import Path.isJarOrZip
-import scala.tools.util.PathResolver
+import Jar.isJarOrZip
 import File.pathSeparator
 
 /** <p>
@@ -25,6 +22,14 @@ import File.pathSeparator
  *  @author Stepan Koltsov
  */
 object ClassPath {
+  def scalaLibrary  = locate[ScalaObject]
+  def scalaCompiler = locate[Global]
+  
+  def info[T: ClassManifest]      = new ClassAndJarInfo[T]
+  def locate[T: ClassManifest]    = info[T] rootClasspath
+  def locateJar[T: ClassManifest] = info[T].rootPossibles find (x => isJarOrZip(x)) map (x => File(x))
+  def locateDir[T: ClassManifest] = info[T].rootPossibles find (_.isDirectory) map (_.toDirectory)
+  
   /** Expand single path entry */
   private def expandS(pattern: String): List[String] = {
     val wildSuffix = File.separator + "*"
@@ -81,8 +86,12 @@ object ClassPath {
   /** Split the classpath and map them into Paths */
   def toPaths(cp: String): List[Path] = split(cp) map (x => Path(x).toAbsolute)
   
+  /** Make all classpath components absolute. */
+  def makeAbsolute(cp: String): String = fromPaths(toPaths(cp): _*)
+  
   /** Join the paths as a classpath */
   def fromPaths(paths: Path*): String = join(paths map (_.path): _*)
+  def fromURLs(urls: URL*): String = fromPaths(urls map (x => Path(x.getPath)) : _*)
 
   /** Split the classpath and map them into URLs */
   def toURLs(cp: String): List[URL] = toPaths(cp) map (_.toURL)
@@ -290,14 +299,15 @@ class SourcePath[T](dir: AbstractFile, val context: ClassPathContext[T]) extends
   def asClasspathString = dir.path
   val sourcepaths: List[AbstractFile] = List(dir)
 
-  lazy val classes: List[ClassRep] = dir collect {
-    case f if !f.isDirectory && validSourceFile(f.name) => ClassRep(None, Some(f))
+  lazy val classes: List[ClassRep] = dir flatMap { f =>
+    if (f.isDirectory || !validSourceFile(f.name)) Nil
+    else List(ClassRep(None, Some(f)))
   } toList
   
-  lazy val packages: List[SourcePath[T]] = dir collect {
-    case f if f.isDirectory && validPackage(f.name) => new SourcePath[T](f, context)
+  lazy val packages: List[SourcePath[T]] = dir flatMap { f =>
+    if (f.isDirectory && validPackage(f.name)) List(new SourcePath[T](f, context))
+    else Nil
   } toList
-
 
   override def toString() = "sourcepath: "+ dir.toString()
 }
@@ -312,12 +322,14 @@ class DirectoryClassPath(val dir: AbstractFile, val context: ClassPathContext[Ab
   def asClasspathString = dir.path
   val sourcepaths: List[AbstractFile] = Nil
   
-  lazy val classes: List[ClassRep] = dir collect {
-    case f if !f.isDirectory && validClassFile(f.name) => ClassRep(Some(f), None)
+  lazy val classes: List[ClassRep] = dir flatMap { f =>
+    if (f.isDirectory || !validClassFile(f.name)) Nil
+    else List(ClassRep(Some(f), None))
   } toList
   
-  lazy val packages: List[DirectoryClassPath] = dir collect {
-    case f if f.isDirectory && validPackage(f.name) => new DirectoryClassPath(f, context)
+  lazy val packages: List[DirectoryClassPath] = dir flatMap { f =>
+    if (f.isDirectory && validPackage(f.name)) List(new DirectoryClassPath(f, context))
+    else Nil
   } toList
   
   override def toString() = "directory classpath: "+ dir
@@ -402,11 +414,11 @@ extends ClassPath[T] {
       })
   }
 
-  def show {
+  def show() {
     println("ClassPath %s has %d entries and results in:\n".format(name, entries.size))
     asClasspathString split ':' foreach (x => println("  " + x))
   }
-  def showDuplicates =
+  def showDuplicates() =
     ClassPath findDuplicates this foreach {
       case (name, xs) => println(xs.mkString(name + ":\n  ", "\n  ", "\n"))
     }

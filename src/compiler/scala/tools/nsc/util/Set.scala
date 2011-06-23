@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -14,9 +14,13 @@ abstract class Set[T <: AnyRef] {
 
   def addEntry(x: T): Unit
 
-  def iterator: Iterator[T]	
+  def iterator: Iterator[T]
   
-  @deprecated("use `iterator' instead") def elements = iterator
+  def foreach[U](f: T => U): Unit = iterator foreach f
+  
+  def apply(x: T): Boolean = contains(x)
+  
+  @deprecated("use `iterator' instead", "2.9.0") def elements = iterator
 
   def contains(x: T): Boolean =
     findEntry(x) ne null

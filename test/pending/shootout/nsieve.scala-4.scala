@@ -6,11 +6,11 @@
 
 object nsieve { 
 
-   def nsieve(m: int, isPrime: Array[boolean]) = {
-      for (val i <- List.range(2, m)) isPrime(i) = true
+   def nsieve(m: Int, isPrime: Array[Boolean]) = {
+      for (i <- List.range(2, m)) isPrime(i) = true
       var count = 0
 
-      for (val i <- List.range(2, m)){
+      for (i <- List.range(2, m)){
          if (isPrime(i)){
             var k = i+i
             while (k < m){ isPrime(k) = false; k = k+i }
@@ -24,11 +24,11 @@ object nsieve {
    def main(args: Array[String]) = {
       val n = Integer.parseInt(args(0))
       val m = (1<<n)*10000
-      val flags = new Array[boolean](m+1)
+      val flags = new Array[Boolean](m+1)
 
-      def printPrimes(m: int) = {
+      def printPrimes(m: Int) = {
 
-         def pad(i: int, width: int) = {
+         def pad(i: Int, width: Int) = {
             val s = i.toString
             List.range(0, width - s.length)
                .map((i) => " ") .foldLeft("")((a,b) => a+b) + s 
