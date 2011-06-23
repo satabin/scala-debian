@@ -24,12 +24,19 @@ abstract class InterruptReq {
     notify()
   }
 
-  /** To be called from interrupting client to get result fo interrupt */
+  /** To be called from interrupting client to get result for interrupt */
   def getResult(): R = synchronized {
-    while (result.isEmpty) wait()
+    while (result.isEmpty) {
+      try {
+        wait()
+      } catch { case _ : InterruptedException => () }
+    }
+
     result.get match {
       case Left(res) => res
-      case Right(t) => throw t
+      case Right(t) => throw new FailedInterrupt(t)
     }
   }
 }
+
+class FailedInterrupt(cause: Throwable) extends Exception("Compiler exception during call to 'ask'", cause)

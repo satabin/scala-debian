@@ -1,3 +1,7 @@
+/* NSC -- new Scala compiler
+ * Copyright 2009-2011 Scala Solutions and LAMP/EPFL
+ * @author Martin Odersky
+ */
 package scala.tools.nsc
 package interactive
 
@@ -62,7 +66,7 @@ class Response[T] {
    *  When timeout ends, will return last stored provisional result,
    *  or else None if no provisional result was stored.
    */
-  def get(timeout: Long): Option[Either[T, Throwable]] = {
+  def get(timeout: Long): Option[Either[T, Throwable]] = synchronized {
     val start = System.currentTimeMillis
     var current = start
     while (!complete && start + timeout > current) {
@@ -95,3 +99,7 @@ class Response[T] {
     cancelled = false
   }
 }
+
+
+
+

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -98,9 +98,11 @@ abstract class CharArrayReader { self =>
       lineStartOffset = charOffset
     }
   }
-
+  
   /** A new reader that takes off at the current character position */
-  def lookaheadReader = new CharArrayReader {
+  def lookaheadReader = new CharArrayLookaheadReader
+
+  class CharArrayLookaheadReader extends CharArrayReader {
     val buf = self.buf
     charOffset = self.charOffset
     ch = self.ch

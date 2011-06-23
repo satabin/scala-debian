@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -8,8 +8,7 @@ package scala.tools.nsc
 package backend
 
 import scala.tools.nsc.backend.icode._
-
-import scala.collection.mutable.{Map, HashMap}
+import scala.collection.{ mutable, immutable }
 
 /**
  * Scala primitive operations are represented as methods in Any and
@@ -91,8 +90,6 @@ abstract class ScalaPrimitives {
   // Any operations
   final val IS = 80                            // x.is[y]
   final val AS = 81                            // x.as[y]
-  final val ISERASED = 85                      // x.is$erased[y]
-  final val ASERASED = 86                      // x.as$erased[y]
   final val HASH = 87                          // x.##
 
   // AnyRef operations
@@ -203,13 +200,11 @@ abstract class ScalaPrimitives {
   final val D2F = 265                          // RunTime.d2f(x)
   final val D2D = 266                          // RunTime.d2d(x)
 
-
-  private var primitives: Map[Symbol, Int] = _
+  private val primitives: mutable.Map[Symbol, Int] = new mutable.HashMap()
 
   /** Initialize the primitive map */
-  def init {
-    primitives = new HashMap()
-
+  def init() {
+    primitives.clear()
     // scala.Any
     addPrimitive(Any_==, EQ)
     addPrimitive(Any_!=, NE)
@@ -581,16 +576,10 @@ abstract class ScalaPrimitives {
     val code = getPrimitive(fun)
 
     def elementType = atPhase(currentRun.typerPhase) {
-      val arrayParent = tpe :: tpe.parents find {
-        case TypeRef(_, sym, _elem :: Nil)
-             if (sym == ArrayClass) => true
-        case _ => false
+      val arrayParent = tpe :: tpe.parents collectFirst {
+        case TypeRef(_, ArrayClass, elem :: Nil) => elem
       }
-      if (arrayParent.isEmpty) {
-        println(fun.fullName + " : " + tpe :: tpe.baseTypeSeq.toList)
-      }
-      val TypeRef(_, _, elem :: Nil) = arrayParent.get
-      elem
+      arrayParent getOrElse sys.error(fun.fullName + " : " + (tpe :: tpe.baseTypeSeq.toList).mkString(", "))
     }
 
     code match {

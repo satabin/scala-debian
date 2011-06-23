@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2006-2010 LAMP/EPFL
+ * Copyright 2006-2011 LAMP/EPFL
  * @author  Paul Phillips
  */
 
@@ -19,11 +19,6 @@ import PartialFunction.condOpt
 
 object PathResolver {
   def firstNonEmpty(xs: String*)            = xs find (_ != "") getOrElse ""
-  
-  private def fileOpt(f: Path): Option[String]      = f ifFile (_.path)
-  private def dirOpt(d: Path): Option[String]       = d ifDirectory (_.path)
-  private def expandToPath(p: Path)                 = join(ClassPath.expandPath(p.path, true): _*)
-  private def expandToContents(p: Path)             = join(ClassPath.expandDir(p.path): _*)
 
   /** Map all classpath elements to absolute paths and reconstruct the classpath.
     */
@@ -43,10 +38,6 @@ object PathResolver {
       import scala.collection.JavaConversions._
       System.getProperties find (_._1 endsWith ".boot.class.path") map (_._2) getOrElse ""
     }
-    private def searchForScalaHome = {
-      for (url <- ScalaClassLoader originOfClass classOf[ScalaObject] ; if url.getProtocol == "file") yield
-        File(url.getFile).parent.path
-    } getOrElse ""
 
     /** Environment variables which java pays attention to so it
      *  seems we do as well.
@@ -241,6 +232,7 @@ class PathResolver(settings: Settings, context: JavaContext) {
     if (settings.Ylogcp.value) {
       Console.println("Classpath built from " + settings.toConciseString)
       Console.println("Defaults: " + PathResolver.Defaults)
+      Console.println("Calculated: " + Calculated)
       
       val xs = (Calculated.basis drop 2).flatten.distinct
       println("After java boot/extdirs classpath has %d entries:" format xs.size)

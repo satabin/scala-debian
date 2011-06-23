@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
 
@@ -68,6 +68,12 @@ object Tokens {
     def traverse = Path(arg) ifDirectory (_.deepList()) getOrElse Iterator(File(arg))
     
     Path onlyFiles traverse filter (_ hasExtension "scala") toList
+  }
+  
+  def fromScalaString(code: String): List[Any] = {
+    val f = File.makeTemp("tokens")
+    f writeAll code
+    fromScalaSource(f)
   }
   
   /** Tokenizes a single scala file.

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -7,7 +7,7 @@
 package scala.tools.nsc
 package io
 
-import java.io.{ File => JFile, FileOutputStream, IOException, InputStream, OutputStream, BufferedOutputStream }
+import java.io.{ FileOutputStream, IOException, InputStream, OutputStream, BufferedOutputStream }
 import java.net.URL
 import PartialFunction._
 
@@ -17,8 +17,7 @@ import scala.collection.mutable.ArrayBuffer
  * @author Philippe Altherr
  * @version 1.0, 23/03/2004
  */
-object AbstractFile
-{
+object AbstractFile {
   /** Returns "getFile(new File(path))". */
   def getFile(path: String): AbstractFile = getFile(Path(path))
   def getFile(path: Path): AbstractFile = getFile(path.toFile)
@@ -54,8 +53,10 @@ object AbstractFile
    * @param file ...
    * @return     ...
    */
-  def getURL(url: URL): AbstractFile =
-    Option(url) collect { case url: URL if Path.isJarOrZip(url.getPath) => ZipArchive fromURL url } orNull
+  def getURL(url: URL): AbstractFile = {
+    if (url == null || !Path.isJarOrZip(url.getPath)) null
+    else ZipArchive fromURL url
+  }
 }
 
 /**
@@ -113,10 +114,10 @@ abstract class AbstractFile extends AnyRef with Iterable[AbstractFile] {
   def isClassContainer = isDirectory || (sfile exists (Path isJarOrZip _))
 
   /** Create a file on disk, if one does not exist already. */
-  def create: Unit
+  def create(): Unit
 
   /** Delete the underlying file or directory (recursively). */
-  def delete: Unit
+  def delete(): Unit
 
   /** Is this abstract file a directory? */
   def isDirectory: Boolean
@@ -136,20 +137,17 @@ abstract class AbstractFile extends AnyRef with Iterable[AbstractFile] {
   /** size of this file if it is a concrete file. */
   def sizeOption: Option[Int] = None
 
-  /** returns contents of file (if applicable) in a byte array.
+  /** Returns contents of file (if applicable) in a Char array.
    *  warning: use <code>Global.getSourceFile()</code> to use the proper
-   *  encoding when converting to the char array .
-   *
-   *  @throws java.io.IOException
-   */
-  final def toCharArray = new String(toByteArray).toCharArray
-
-  /** returns contents of file (if applicable) in a byte array.
-   *
-   *  @throws java.io.IOException
+   *  encoding when converting to the char array.
    */
   @throws(classOf[IOException])
-  final def toByteArray: Array[Byte] = {
+  def toCharArray = new String(toByteArray).toCharArray
+
+  /** Returns contents of file (if applicable) in a byte array.
+   */
+  @throws(classOf[IOException])
+  def toByteArray: Array[Byte] = {
     val in = input
     var rest = sizeOption.get
     val arr = new Array[Byte](rest)
@@ -170,10 +168,6 @@ abstract class AbstractFile extends AnyRef with Iterable[AbstractFile] {
    *  name. If there is no such file, returns <code>null</code>. The argument
    *  <code>directory</code> tells whether to look for a directory or
    *  a regular file.
-   *
-   *  @param name      ...
-   *  @param directory ...
-   *  @return          ...
    */
   def lookupName(name: String, directory: Boolean): AbstractFile
 

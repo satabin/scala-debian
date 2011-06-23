@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -105,7 +105,6 @@ object Tokens extends Tokens {
   final val RETURN = 57
   final val MATCH = 58
   final val FORSOME = 59
-  final val REQUIRES = 60
   final val LAZY = 61
 
   def isKeyword(code : Int) =

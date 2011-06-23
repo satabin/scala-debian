@@ -1,12 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2010, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
-
 
 package scala.collection
 package generic
@@ -23,7 +21,7 @@ import mutable.Builder
  *  @define coll  collection
  *  @define Coll  CC
  */
-abstract class GenericCompanion[+CC[X] <: Traversable[X]] { 
+abstract class GenericCompanion[+CC[X] <: GenTraversable[X]] { 
   /** The underlying collection type with unknown element type */
   type Coll = CC[_]  
 
@@ -36,15 +34,18 @@ abstract class GenericCompanion[+CC[X] <: Traversable[X]] {
    *  @tparam A      the type of the ${coll}'s elements
    */
   def empty[A]: CC[A] = newBuilder[A].result
- 
+
   /** Creates a $coll with the specified elements.
    *  @tparam A      the type of the ${coll}'s elements
    *  @param elems  the elements of the created $coll
    *  @return a new $coll with elements `elems`
    */
   def apply[A](elems: A*): CC[A] = {
-    val b = newBuilder[A]
-    b ++= elems
-    b.result
-  }	
+    if (elems.isEmpty) empty[A]
+    else {
+      val b = newBuilder[A]
+      b ++= elems
+      b.result
+    }
+  }
 }

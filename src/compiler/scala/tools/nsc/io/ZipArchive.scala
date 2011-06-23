@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -9,19 +9,18 @@ package io
 
 import java.net.URL
 import java.util.Enumeration
-import java.io.{ File => JFile, IOException, InputStream, BufferedInputStream, ByteArrayInputStream }
+import java.io.{ IOException, InputStream, BufferedInputStream, ByteArrayInputStream }
 import java.util.zip.{ ZipEntry, ZipFile, ZipInputStream }
 import PartialFunction._
 
 import scala.collection.mutable.{ Map, HashMap }
-import scala.collection.JavaConversions.asIterator
+import annotation.tailrec
 
 /**
  * @author  Philippe Altherr
  * @version 1.0, 23/03/2004
  */
-object ZipArchive
-{
+object ZipArchive {
   def fromPath(path: Path): ZipArchive = fromFile(path.toFile)
 
   /**
@@ -47,30 +46,45 @@ object ZipArchive
    */
   def fromURL(url: URL): AbstractFile = new URLZipArchive(url)
   
-  private[io] class ZipEntryTraversableClass(in: InputStream) extends Traversable[ZipEntry] {
-    val zis = new ZipInputStream(in)
+  private[io] trait ZipTrav extends Traversable[ZipEntry] {
+    def zis: () => ZipInputStream
+  }
+
+  private[io] class ZipEntryTraversableClass(in: InputStream) extends ZipTrav {
+    val zis = () => new ZipInputStream(in)
 
     def foreach[U](f: ZipEntry => U) = {
-      def loop(x: ZipEntry): Unit = if (x != null) {
-        f(x)
-        zis.closeEntry()
-        loop(zis.getNextEntry())
+      var in: ZipInputStream = null
+      @tailrec def loop(): Unit = {
+        if (in.available == 0)
+          return
+
+        val entry = in.getNextEntry()
+        if (entry != null) {
+          f(entry)
+          in.closeEntry()
+          loop()
+        }
       }
-      loop(zis.getNextEntry())
+      
+      try {
+        in = zis()
+        loop()
+      }
+      finally in.close()
     }
   }
 }
+import ZipArchive.ZipTrav
 
 /** This abstraction aims to factor out the common code between
  *  ZipArchive (backed by a zip file) and URLZipArchive (backed
  *  by an InputStream.)
  */
-private[io] trait ZipContainer extends AbstractFile
-{
+private[io] trait ZipContainer extends AbstractFile {
   /** Abstract types */
   type SourceType             // InputStream or AbstractFile
   type CreationType           // InputStream or ZipFile
-  type ZipTrav = Traversable[ZipEntry] { def zis: ZipInputStream }
   
   /** Abstract values */
   protected val creationSource: CreationType
@@ -185,8 +199,7 @@ private[io] trait ZipContainer extends AbstractFile
  * @author  Philippe Altherr
  * @version 1.0, 23/03/2004
  */
-final class ZipArchive(file: File, val archive: ZipFile) extends PlainFile(file) with ZipContainer
-{
+final class ZipArchive(file: File, val archive: ZipFile) extends PlainFile(file) with ZipContainer {
   self =>
   
   type SourceType = AbstractFile
@@ -196,7 +209,7 @@ final class ZipArchive(file: File, val archive: ZipFile) extends PlainFile(file)
   protected lazy val root             = new ZipRootCreator(_.parent)()
   protected def DirEntryConstructor   = new DirEntry(_, _, _)
   protected def FileEntryConstructor  = new FileEntry(_, _, _, _)
-  protected def ZipTravConstructor    = zipTraversableFromZipFile _
+  protected def ZipTravConstructor    = new ZipFileIterable(_)
 
   abstract class Entry(
     override val container: AbstractFile,
@@ -234,11 +247,14 @@ final class ZipArchive(file: File, val archive: ZipFile) extends PlainFile(file)
     override def input = archive getInputStream entry
   }
   
-  private def zipTraversableFromZipFile(z: ZipFile): ZipTrav =
-    new Iterable[ZipEntry] {
-      def zis: ZipInputStream = null    // not valid for this type
-      def iterator = asIterator(z.entries())
+  class ZipFileIterable(z: ZipFile) extends Iterable[ZipEntry] with ZipTrav {
+    def zis: () => ZipInputStream = null    // not valid for this type
+    def iterator = new Iterator[ZipEntry] {
+      val enum    = z.entries()
+      def hasNext = enum.hasMoreElements
+      def next    = enum.nextElement
     }
+  }
 }
 
 /**
@@ -248,13 +264,12 @@ final class ZipArchive(file: File, val archive: ZipFile) extends PlainFile(file)
  * @author  Stephane Micheloud
  * @version 1.0, 29/05/2007
  */
-final class URLZipArchive(url: URL) extends AbstractFile with ZipContainer
-{
+final class URLZipArchive(url: URL) extends AbstractFile with ZipContainer {
   type SourceType   = InputStream
   type CreationType = InputStream
   
   protected lazy val creationSource = input
-  protected lazy val root = new ZipRootCreator(x => byteInputStream(x.traverser.zis))()
+  protected lazy val root = new ZipRootCreator(x => byteInputStream(x.traverser.zis()))()
   
   protected def DirEntryConstructor   = (_, name, path) => new DirEntry(name, path)
   protected def FileEntryConstructor  = new FileEntry(_, _, _, _)
@@ -270,8 +285,8 @@ final class URLZipArchive(url: URL) extends AbstractFile with ZipContainer
   
   /** Methods we don't support but have to implement because of the design */
   def file: JFile = null
-  def create: Unit = unsupported
-  def delete: Unit = unsupported
+  def create(): Unit = unsupported
+  def delete(): Unit = unsupported
   def output = unsupported
   def container = unsupported
 

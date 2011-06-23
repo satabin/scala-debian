@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -7,7 +7,7 @@
 package scala.tools.nsc
 package io
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream, File => JFile }
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream }
 import PartialFunction._
 
 /** This class implements an in-memory file.
@@ -31,8 +31,8 @@ class VirtualFile(val name: String, _path: String) extends AbstractFile
    */
   def this(name: String) = this(name, name)
   
-  override def hashCode = name.##
-  override def equals(that: Any) = cond(that) { case x: VirtualFile => x.name == name }
+  override def hashCode = path.##
+  override def equals(that: Any) = cond(that) { case x: VirtualFile => x.path == path }
   
   //########################################################################
   // Private data
@@ -67,7 +67,9 @@ class VirtualFile(val name: String, _path: String) extends AbstractFile
   def isDirectory: Boolean = false
 
   /** Returns the time that this abstract file was last modified. */
-  def lastModified: Long = Long.MinValue
+  private var _lastModified: Long = 0
+  def lastModified: Long = _lastModified
+  def lastModified_=(x: Long) = _lastModified = x
 
   /** Returns all abstract subfiles of this abstract directory. */
   def iterator: Iterator[AbstractFile] = {
@@ -76,10 +78,10 @@ class VirtualFile(val name: String, _path: String) extends AbstractFile
   }	
 
   /** Does this abstract file denote an existing file? */
-  def create { unsupported }
+  def create() { unsupported }
 
   /** Delete the underlying file or directory (recursively). */
-  def delete { unsupported }
+  def delete() { unsupported }
 
   /**
    * Returns the abstract file in this abstract directory with the

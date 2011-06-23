@@ -1,5 +1,6 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
+ * @author Paul Phillips
  */
 
 package scala.tools.nsc
@@ -7,7 +8,7 @@ package io
 
 import java.io.{ 
   FileInputStream, FileOutputStream, BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter, 
-  BufferedInputStream, BufferedOutputStream, RandomAccessFile, File => JFile }
+  BufferedInputStream, BufferedOutputStream, RandomAccessFile }
 import java.net.{ URI, URL }
 import scala.util.Random.alphanumeric
 
@@ -26,22 +27,13 @@ import scala.util.Random.alphanumeric
  *  @since   2.8
  */
 
-object Path
-{
-  private val ZipMagicNumber = List[Byte](80, 75, 3, 4)
-  
-  /** If examineFile is true, it will look at the first four bytes of the file
-   *  and see if the magic number indicates it may be a jar or zip.
-   */
-  private def magicNumberIsZip(f: Path) = f.isFile && (f.toFile.bytes().take(4).toList == ZipMagicNumber)
-  def isJarOrZip(f: Path): Boolean = isJarOrZip(f, false)
-  def isJarOrZip(f: Path, examineFile: Boolean): Boolean =
-    f.hasExtension("zip", "jar") || (examineFile && magicNumberIsZip(f))
+object Path {  
+  def isJarOrZip(f: Path, examineFile: Boolean = true) = Jar.isJarOrZip(f, examineFile)
 
   // not certain these won't be problematic, but looks good so far
   implicit def string2path(s: String): Path = apply(s)
   implicit def jfile2path(jfile: JFile): Path = apply(jfile)
-    
+  
   // java 7 style, we don't use it yet
   // object AccessMode extends Enumeration("AccessMode") {
   //   val EXECUTE, READ, WRITE = Value
@@ -181,7 +173,7 @@ class Path private[io] (val jfile: JFile) {
   // returns the Path with the extension.
   def addExtension(ext: String): Path = Path(path + "." + ext)
   // changes the existing extension out for a new one
-  def changeExtension(ext: String): Path = Path((path stripSuffix extension) + ext)
+  def changeExtension(ext: String): Path = Path(path stripSuffix extension) addExtension ext
   
   // conditionally execute
   def ifFile[T](f: File => T): Option[T] = if (isFile) Some(f(toFile)) else None
@@ -231,6 +223,19 @@ class Path private[io] (val jfile: JFile) {
   // deletions
   def delete() = jfile.delete()
   def deleteIfExists() = if (jfile.exists()) delete() else false
+
+  /** Deletes the path recursively. Returns false on failure.
+   *  Use with caution!
+   */
+  def deleteRecursively(): Boolean = deleteRecursively(jfile)
+  private def deleteRecursively(f: JFile): Boolean = {
+    if (f.isDirectory) f.listFiles match { 
+      case null =>
+      case xs   => xs foreach deleteRecursively
+    }
+    f.delete()
+  }
+
   def truncate() =
     isFile && {
       val raf = new RandomAccessFile(jfile, "rw")

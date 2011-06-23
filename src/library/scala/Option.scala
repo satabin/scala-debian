@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2010, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -21,7 +21,7 @@ object Option {
    */
   def apply[A](x: A): Option[A] = if (x == null) None else Some(x)
 
-  /** An Option factory which returns $none in a manner consistent with
+  /** An Option factory which returns `None` in a manner consistent with
    *  the collections hierarchy.
    */
   def empty[A] : Option[A] = None
@@ -69,6 +69,11 @@ object Option {
  *  }
  *  }}}
  *
+ *  @note Many of the methods in here are duplicative with those
+ *  in the Traversable hierarchy, but they are duplicated for a reason:
+ *  the implicit conversion tends to leave one with an Iterable in
+ *  situations where one could have retained an Option.
+ *
  *  @author  Martin Odersky
  *  @author  Matthias Zenger
  *  @version 1.1, 16/01/2007
@@ -78,7 +83,7 @@ object Option {
  *  @define p `p`
  *  @define f `f`
  */
-sealed abstract class Option[+A] extends Product {
+sealed abstract class Option[+A] extends Product with Serializable {
   self =>
 
   /** Returns true if the option is $none, false otherwise.
@@ -148,6 +153,14 @@ sealed abstract class Option[+A] extends Product {
    */
   def filter(p: A => Boolean): Option[A] = 
     if (isEmpty || p(this.get)) this else None
+  
+  /** Returns this $option if it is nonempty '''and''' applying the predicate $p to
+   * this $option's value returns false. Otherwise, return $none.
+   *
+   *  @param  p   the predicate used for testing.
+   */
+  def filterNot(p: A => Boolean): Option[A] =
+    if (isEmpty || !p(this.get)) this else None
 
   /** Necessary to keep $option from being implicitly converted to
    *  [[scala.collection.Iterable]] in `for` comprehensions.
@@ -209,7 +222,7 @@ sealed abstract class Option[+A] extends Product {
    * if it is nonempty, or an empty iterator if the option is empty.
    */
   def iterator: Iterator[A] = 
-    if (isEmpty) Iterator.empty else Iterator.single(this.get)
+    if (isEmpty) collection.Iterator.empty else collection.Iterator.single(this.get)
 
   /** Returns a singleton list containing the $option's value
    * if it is nonempty, or the empty list if the $option is empty.

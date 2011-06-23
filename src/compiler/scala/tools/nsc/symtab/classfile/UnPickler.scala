@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -7,13 +7,8 @@ package scala.tools.nsc
 package symtab
 package classfile
 
-import java.io.IOException
-import java.lang.{Float, Double}
-
 import Flags._
 import scala.reflect.generic.PickleFormat._
-import collection.mutable.{HashMap, ListBuffer}
-import annotation.switch
 
 /** @author Martin Odersky
  *  @version 1.0
@@ -55,7 +50,7 @@ abstract class UnPickler extends reflect.generic.UnPickler {
       private val definedAtRunId = currentRunId
       private val p = phase
       override def complete(sym: Symbol) : Unit = {
-        val tp = at(i, readType)
+        val tp = at(i, () => readType(sym.isTerm)) // after NMT_TRANSITION, revert `() => readType(sym.isTerm)` to `readType`
         if (p != phase) atPhase(p) (sym setInfo tp) 
         else sym setInfo tp
         if (currentRunId != definedAtRunId) sym.setInfo(adaptToNewRunMap(tp))
@@ -70,7 +65,7 @@ abstract class UnPickler extends reflect.generic.UnPickler {
       override def complete(sym: Symbol) {
         super.complete(sym)
         var alias = at(j, readSymbol)
-        if (alias hasFlag OVERLOADED) {
+        if (alias.isOverloaded) {
           atPhase(currentRun.picklerPhase) {
             alias = alias suchThat (alt => sym.tpe =:= sym.owner.thisType.memberType(alt))
           }

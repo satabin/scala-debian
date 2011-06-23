@@ -1,15 +1,15 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2010 LAMP/EPFL
+ * Copyright 2005-2011 LAMP/EPFL
+ * @author Paul Phillips
  */
 
 package scala.tools.nsc
 package io
 
 import java.net.{ URI, URL }
-import java.io.{ BufferedInputStream, InputStream, PrintStream, File => JFile }
-import java.io.{ BufferedReader, InputStreamReader }
+import java.io.{ BufferedInputStream, InputStream, PrintStream }
+import java.io.{ BufferedReader, InputStreamReader, Closeable => JCloseable }
 import scala.io.{ Codec, BufferedSource, Source }
-
 import collection.mutable.ArrayBuffer
 import Path.fail
 
@@ -19,8 +19,7 @@ import Path.fail
  *  @since  2.8
  */
 
-object Streamable
-{
+object Streamable {
   /** Traits which can be viewed as a sequence of bytes.  Source types
    *  which know their length should override def length: Long for more
    *  efficient method implementations.
@@ -29,7 +28,7 @@ object Streamable
     def inputStream(): InputStream
     def length: Long = -1
     
-    def bufferedInput() = new BufferedInputStream(inputStream())
+    def bufferedInput() = new BufferedInputStream(inputStream())    
     def bytes(): Iterator[Byte] = bytesAsInts() map (_.toByte)
     def bytesAsInts(): Iterator[Int] = {
       val in = bufferedInput()
@@ -106,4 +105,18 @@ object Streamable
     def slurp(): String = slurp(creationCodec)
     def slurp(codec: Codec) = chars(codec).mkString
   }
+  
+  /** Call a function on something Closeable, finally closing it. */
+  def closing[T <: JCloseable, U](stream: T)(f: T => U): U =
+    try f(stream)
+    finally stream.close()
+  
+  def bytes(is: => InputStream): Array[Byte] =
+    new Bytes { def inputStream() = is } toByteArray
+  
+  def slurp(is: => InputStream)(implicit codec: Codec): String =
+    new Chars { def inputStream() = is } slurp codec
+
+  def slurp(url: URL)(implicit codec: Codec): String =
+    slurp(url.openStream())
 }

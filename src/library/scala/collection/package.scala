@@ -5,7 +5,7 @@ package scala
  *
  * == Guide ==
  *
- * A detailed guide for the collections library is avaialble 
+ * A detailed guide for the collections library is available 
  * at [[http://www.scala-lang.org/docu/files/collections-api]].
  *
  * == Using Collections ==
@@ -68,12 +68,40 @@ package scala
  *
  */
 package object collection {
-  import scala.collection.generic.CanBuildFrom // can't refer to CanBuild here
-
-  /** Provides a CanBuildFrom instance that builds a specific target collection (`To') irrespective of the original collection (`From').
+  import scala.collection.generic.CanBuildFrom
+  
+  /** Provides a CanBuildFrom instance that builds a specific target collection (`To')
+   *  irrespective of the original collection (`From').
    */
-  def breakOut[From, T, To](implicit b : CanBuildFrom[Nothing, T, To]) =
-    new CanBuildFrom[From, T, To] { // TODO: could we just return b instead?
-      def apply(from: From) = b.apply() ; def apply() = b.apply()
+  def breakOut[From, T, To](implicit b: CanBuildFrom[Nothing, T, To]): CanBuildFrom[From, T, To] =
+    // can't just return b because the argument to apply could be cast to From in b
+    new CanBuildFrom[From, T, To] {
+      def apply(from: From) = b.apply()
+      def apply()           = b.apply()
     }
+}
+
+package collection {
+  /** Collection internal utility functions.
+   */
+  private[collection] object DebugUtils {
+    def unsupported(msg: String)     = throw new UnsupportedOperationException(msg)
+    def noSuchElement(msg: String)   = throw new NoSuchElementException(msg)
+    def indexOutOfBounds(index: Int) = throw new IndexOutOfBoundsException(index.toString)
+    def illegalArgument(msg: String) = throw new IllegalArgumentException(msg)
+  
+    def buildString(closure: (Any => Unit) => Unit): String = {
+      var output = ""
+      closure(output += _ + "\n")
+    
+      output
+    }
+  
+    def arrayString[T](array: Array[T], from: Int, until: Int): String = {
+      array.slice(from, until) map {
+        case null => "n/a"
+        case x    => "" + x
+      } mkString " | "
+    }
+  }
 }
