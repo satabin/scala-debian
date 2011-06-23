@@ -1,5 +1,5 @@
 From: Mehdi Dogguy <mehdi@debian.org>
-Date: Sat, 5 Mar 2011 20:16:47 +0100
+Date: Thu, 23 Jun 2011 23:12:28 +0200
 Subject: [PATCH] Use system ant-contrib.jar
 
 ---
@@ -7,16 +7,16 @@ Subject: [PATCH] Use system ant-contrib.jar
  1 files changed, 1 insertions(+), 1 deletions(-)
 
 diff --git a/build.xml b/build.xml
-index 59cd959..97e6c0d 100644
+index b121824..51986d6 100644
 --- a/build.xml
 +++ b/build.xml
-@@ -206,7 +206,7 @@ INITIALISATION
+@@ -211,7 +211,7 @@ INITIALISATION
      <property name="scalac.args.all" value="${scalac.args} ${scalac.args.optimise}"/>
- 	<property name="scalac.args.quick" value="${scalac.args.all} ${scalac.args.quickonly}"/>
-   <!-- Setting-up Ant contrib tasks -->
+ 	  <property name="scalac.args.quick" value="${scalac.args.all} ${scalac.args.quickonly}"/>
+     <!-- Setting-up Ant contrib tasks -->
 -    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${lib.dir}/ant/ant-contrib.jar"/>
 +    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="/usr/share/java/ant-contrib.jar"/>
-   <!-- This is the start time for the distribution -->
+     <!-- This is the start time for the distribution -->
      <tstamp prefix="time">
        <format property="human" pattern="d MMMM yyyy, HH:mm:ss"/>
 -- 
