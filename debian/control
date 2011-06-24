@@ -23,7 +23,6 @@ Architecture: all
 Depends:
  scala-library (= ${source:Version}),
  openjdk-6-jre | java6-runtime,
- libjline-java,
  ${misc:Depends}
 Description: The Scala programming language
  Scala is a Java-compatible programming language with many

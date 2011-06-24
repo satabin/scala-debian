@@ -1,3 +1,4 @@
 debian/command-scripts/* usr/bin/
 dists/latest/lib/scala-compiler.jar	usr/share/java/
 dists/latest/lib/scalap.jar		usr/share/java/
+lib/jline.jar				usr/share/java/scala/
