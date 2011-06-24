@@ -49,6 +49,8 @@ Description: The Scala standard library
 Package: scala-doc
 Architecture: all
 Depends:
+ libjs-jquery,
+ libjs-jquery-ui,
  ${misc:Depends}
 Section: doc
 Description: The Scala API documentation
