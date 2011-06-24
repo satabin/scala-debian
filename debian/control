@@ -24,7 +24,7 @@ Depends:
  scala-library (= ${source:Version}),
  openjdk-6-jre | java6-runtime,
  ${misc:Depends}
-Description: The Scala programming language
+Description: Scala programming language
  Scala is a Java-compatible programming language with many
  modern language features.  It is Java-compatible in that
  Scala and Java classes can directly reference each other and
@@ -43,7 +43,7 @@ Architecture: all
 Depends:
  openjdk-6-jre | java6-runtime,
  ${misc:Depends}
-Description: The Scala standard library
+Description: Scala standard library
  This run-time library is needed to run Scala programs.
 
 Package: scala-doc
@@ -53,5 +53,5 @@ Depends:
  libjs-jquery-ui,
  ${misc:Depends}
 Section: doc
-Description: The Scala API documentation
+Description: Scala API documentation
  This is the API documentation for Scala.

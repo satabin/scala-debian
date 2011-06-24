@@ -5,6 +5,7 @@ scala (2.9.0.1.dfsg-1) unstable; urgency=low
   * Refresh patch.
   * Use Scala's provided JLine 2, instead of libjline-java.
   * Make scala-doc depends on libjs-jquery{,ui}.
+  * Fix package description to make lintian happy.
 
   [ Frank S. Thomas ]
   * Updated debian/copyright for Scala 2.9.0.1.
@@ -12,7 +13,7 @@ scala (2.9.0.1.dfsg-1) unstable; urgency=low
   * Fix spelling error in changelog.
   * Remove copyright information about docs/android-examples.
 
- -- Mehdi Dogguy <mehdi@debian.org>  Fri, 24 Jun 2011 14:28:54 +0200
+ -- Mehdi Dogguy <mehdi@debian.org>  Fri, 24 Jun 2011 14:31:05 +0200
 
 scala (2.8.1.dfsg-1) unstable; urgency=low
 
