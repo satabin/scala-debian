@@ -4,7 +4,8 @@ Priority: optional
 Maintainer: Debian Scala Maintainers <pkg-scala-maint@lists.alioth.debian.org>
 Uploaders:
  Mehdi Dogguy <mehdi@debian.org>,
- Min Huang <min.huang@alumni.usc.edu>
+ Min Huang <min.huang@alumni.usc.edu>,
+ Frank S. Thomas <fst@debian.org>
 DM-Upload-Allowed: yes
 Standards-Version: 3.9.1
 Build-Depends:
