@@ -32,6 +32,22 @@ object ScalaRunTime {
 
   def isValueClass(clazz: Class[_]) = clazz.isPrimitive() 
 
+  /** Return the class object representing an unboxed value type,
+   *  e.g. classOf[int], not classOf[java.lang.Integer].  The compiler
+   *  rewrites expressions like 5.getClass to come here.
+   */
+  def anyValClass[T <: AnyVal](value: T): Class[T] = (value match {
+    case x: Byte    => java.lang.Byte.TYPE 
+    case x: Short   => java.lang.Short.TYPE 
+    case x: Char    => java.lang.Character.TYPE
+    case x: Int     => java.lang.Integer.TYPE
+    case x: Long    => java.lang.Long.TYPE
+    case x: Float   => java.lang.Float.TYPE
+    case x: Double  => java.lang.Double.TYPE
+    case x: Boolean => java.lang.Boolean.TYPE
+    case x: Unit    => java.lang.Void.TYPE
+  }).asInstanceOf[Class[T]]
+
   /** Retrieve generic array element */
   def array_apply(xs: AnyRef, idx: Int): Any = xs match {
     case x: Array[AnyRef]  => x(idx).asInstanceOf[Any]
@@ -161,18 +177,26 @@ object ScalaRunTime {
   def _hashCode(x: Product): Int = {
     import scala.util.MurmurHash._
     val arr =  x.productArity
-    var h = startHash(arr)
-    var c = startMagicA
-    var k = startMagicB
-    var i = 0
-    while (i < arr) {
-      val elem = x.productElement(i)
-      h = extendHash(h, elem.##, c, k)
-      c = nextMagicA(c)
-      k = nextMagicB(k)
-      i += 1
+    // Case objects have the hashCode inlined directly into the
+    // synthetic hashCode method, but this method should still give
+    // a correct result if passed a case object.
+    if (arr == 0) {
+      x.productPrefix.hashCode
     }
-    finalizeHash(h)
+    else {
+      var h = startHash(arr)
+      var c = startMagicA
+      var k = startMagicB
+      var i = 0
+      while (i < arr) {
+        val elem = x.productElement(i)
+        h = extendHash(h, elem.##, c, k)
+        c = nextMagicA(c)
+        k = nextMagicB(k)
+        i += 1
+      }
+      finalizeHash(h)
+    }
   }
 
   /** Fast path equality method for inlining; used when -optimise is set.
