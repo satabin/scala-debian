@@ -7,8 +7,13 @@ scala (2.9.1.dfsg-1) UNRELEASED; urgency=low
 
   [ Mehdi Dogguy ]
   * New upstream release (Closes: #639960).
+  * Use upstream's copy of jquery library. Scala-doc uses jQuery 1.4
+    and is not compatible with 1.6 (yet), which got uploaded recently.
+    (Closes: #636870).
+    - Remove links created to system jquery{,ui}.js files
+    - Remove dependencies of scala-doc on libjs-jquery{,ui}.
 
- -- Mehdi Dogguy <mehdi@debian.org>  Thu, 01 Sep 2011 11:43:02 +0200
+ -- Mehdi Dogguy <mehdi@debian.org>  Thu, 01 Sep 2011 13:33:03 +0200
 
 scala (2.9.0.1.dfsg-1) unstable; urgency=low
 

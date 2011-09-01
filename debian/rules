@@ -8,7 +8,7 @@ override_dh_auto_build:
 	ANT_OPTS="-Xmx1024M -Xss64M" ant -Dversion.number=$(BUNDLE_VERSION) fastdist
 
 	# Use jQuery from libjs-jquery{,ui}
-	find -name "jquery.js" -or -name "jquery-ui.js" -delete
+	#find -name "jquery.js" -or -name "jquery-ui.js" -delete
 
 override_dh_auto_clean:
 	rm -rf build dist
