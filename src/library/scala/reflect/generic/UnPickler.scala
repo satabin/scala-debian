@@ -18,6 +18,7 @@ import annotation.switch
 /** @author Martin Odersky
  *  @version 1.0
  */
+@deprecated("scala.reflect.generic will be removed", "2.9.1")
 abstract class UnPickler { 
 
   val global: Universe
@@ -65,7 +66,8 @@ abstract class UnPickler {
 
     //println("unpickled " + classRoot + ":" + classRoot.rawInfo + ", " + moduleRoot + ":" + moduleRoot.rawInfo);//debug
 
-    def run() {
+    // Unused: left in 2.9.1 to satisfy mima.
+    private def run$unused() {
       // read children last, fix for #3951
       val queue = new collection.mutable.ListBuffer[() => Unit]()
       def delay(i: Int, action: => Unit) {
@@ -83,6 +85,39 @@ abstract class UnPickler {
 
       for (action <- queue)
         action()
+    }
+
+    // Laboriously unrolled for performance.
+    def run() {
+      var i = 0
+      while (i < index.length) {
+        if (entries(i) == null && isSymbolEntry(i)) {
+          val savedIndex = readIndex
+          readIndex = index(i)
+          entries(i) = readSymbol()
+          readIndex = savedIndex
+        }
+        i += 1
+      }
+      // read children last, fix for #3951
+      i = 0
+      while (i < index.length) {
+        if (entries(i) == null) {
+          if (isSymbolAnnotationEntry(i)) {
+            val savedIndex = readIndex
+            readIndex = index(i)
+            readSymbolAnnotation()
+            readIndex = savedIndex
+          }
+          else if (isChildrenEntry(i)) {
+            val savedIndex = readIndex
+            readIndex = index(i)
+            readChildren()
+            readIndex = savedIndex
+          }
+        }
+        i += 1
+      }
     }
 
     private def checkVersion() {
@@ -361,7 +396,10 @@ abstract class UnPickler {
             NullaryMethodType(restpe)
         case EXISTENTIALtpe =>
           val restpe = readTypeRef()
-          ExistentialType(until(end, readSymbolRef), restpe)
+          val tparams = until(end, readSymbolRef)
+          // binary compatibility: in 2.9.x, Symbol doesn't have setFlag
+          tparams foreach (x => x.asInstanceOf[{ def setFlag(mask: Long): this.type }] setFlag EXISTENTIAL)
+          ExistentialType(tparams, restpe)
         case ANNOTATEDtpe =>
           var typeRef = readNat()
           val selfsym = if (isSymbolRef(typeRef)) {

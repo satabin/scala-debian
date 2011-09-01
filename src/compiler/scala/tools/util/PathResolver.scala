@@ -7,10 +7,10 @@ package scala.tools
 package util
 
 import java.net.{ URL, MalformedURLException }
-import scala.util.Properties._
+import scala.tools.reflect.WrappedProperties.AccessControl
 import nsc.{ Settings, GenericRunnerSettings }
 import nsc.util.{ ClassPath, JavaClassPath, ScalaClassLoader }
-import nsc.io.{ File, Directory, Path }
+import nsc.io.{ File, Directory, Path, AbstractFile }
 import ClassPath.{ JavaContext, DefaultJavaContext, join, split }
 import PartialFunction.condOpt
 
@@ -18,6 +18,10 @@ import PartialFunction.condOpt
 // https://lampsvn.epfl.ch/trac/scala/wiki/Classpath
 
 object PathResolver {
+  // Imports property/environment functions which suppress
+  // security exceptions.
+  import AccessControl._
+
   def firstNonEmpty(xs: String*)            = xs find (_ != "") getOrElse ""
 
   /** Map all classpath elements to absolute paths and reconstruct the classpath.
@@ -34,10 +38,9 @@ object PathResolver {
   /** Values found solely by inspecting environment or property variables.
    */
   object Environment {
-    private def searchForBootClasspath = {
-      import scala.collection.JavaConversions._
-      System.getProperties find (_._1 endsWith ".boot.class.path") map (_._2) getOrElse ""
-    }
+    private def searchForBootClasspath = (
+      systemProperties find (_._1 endsWith ".boot.class.path") map (_._2) getOrElse ""
+    )
 
     /** Environment variables which java pays attention to so it
      *  seems we do as well.
@@ -105,10 +108,18 @@ object PathResolver {
       else if (scalaLibAsDir.isDirectory) scalaLibAsDir.path
       else ""
     
-    def scalaBootClassPath  = scalaLibDirFound match {
-      case Some(dir) if scalaHomeExists => join(ClassPath expandDir dir.path: _*)
-      case _                            => ""
-    }
+    // XXX It must be time for someone to figure out what all these things
+    // are intended to do.  This is disabled here because it was causing all
+    // the scala jars to end up on the classpath twice: one on the boot
+    // classpath as set up by the runner (or regular classpath under -nobootcp)
+    // and then again here.
+    def scalaBootClassPath  = ""
+    // scalaLibDirFound match {
+    //   case Some(dir) if scalaHomeExists =>
+    //     val paths = ClassPath expandDir dir.path
+    //     join(paths: _*)
+    //   case _                            => ""
+    // }
 
     def scalaExtDirs = Environment.scalaExtDirs
 
@@ -193,7 +204,7 @@ class PathResolver(settings: Settings, context: JavaContext) {
     import context._
 
     // Assemble the elements!
-    def basis = List(
+    def basis = List[Traversable[ClassPath[AbstractFile]]](
       classesInPath(javaBootClassPath),             // 1. The Java bootstrap class path.
       contentsOfDirsInPath(javaExtDirs),            // 2. The Java extension class path.
       classesInExpandedPath(javaUserClassPath),     // 3. The Java application class path.
@@ -228,7 +239,7 @@ class PathResolver(settings: Settings, context: JavaContext) {
   def containers = Calculated.containers
 
   lazy val result = {
-    val cp = new JavaClassPath(containers, context)
+    val cp = new JavaClassPath(containers.toIndexedSeq, context)
     if (settings.Ylogcp.value) {
       Console.println("Classpath built from " + settings.toConciseString)
       Console.println("Defaults: " + PathResolver.Defaults)
