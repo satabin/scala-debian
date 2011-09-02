@@ -4,6 +4,8 @@ scala (2.9.1.dfsg-1) UNRELEASED; urgency=low
   * Let scala suggest scala-doc (Closes: #632820).
   * Bump standards version to 3.9.2.
   * Added myself to Uploaders.
+  * debian/command-scripts/*: Take the environement variable JAVA_HOME
+    into account if it is set.
 
   [ Mehdi Dogguy ]
   * New upstream release (Closes: #639960).
