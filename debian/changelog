@@ -1,11 +1,15 @@
-scala (2.9.1.dfsg-1) UNRELEASED; urgency=low
+scala (2.9.1.dfsg-1) unstable; urgency=low
 
   [ Frank S. Thomas ]
   * Let scala suggest scala-doc (Closes: #632820).
   * Bump standards version to 3.9.2.
-  * Added myself to Uploaders.
-  * debian/command-scripts/*: Take the environment variable JAVA_HOME
-    into account if it is set.
+  * Add myself to Uploaders.
+  * Use upstream's command scripts instead of the custom scripts in
+    debian/command-scripts/.
+    - These properly restore the terminal settings (Closes: #631771).
+    - Added debian/patches/0002-Adapt-tool-unix.tmpl.patch to adapt
+      the template that is used for the scripts to the layout of these
+      packages.
 
   [ Mehdi Dogguy ]
   * New upstream release (Closes: #639960).
@@ -15,7 +19,7 @@ scala (2.9.1.dfsg-1) UNRELEASED; urgency=low
     - Remove links created to system jquery{,ui}.js files
     - Remove dependencies of scala-doc on libjs-jquery{,ui}.
 
- -- Mehdi Dogguy <mehdi@debian.org>  Thu, 01 Sep 2011 13:33:03 +0200
+ -- Frank S. Thomas <fst@debian.org>  Wed, 07 Sep 2011 22:41:07 +0200
 
 scala (2.9.0.1.dfsg-1) unstable; urgency=low
 
