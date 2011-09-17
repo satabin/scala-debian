@@ -1,4 +1,4 @@
-Format: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=166
+Format: http://anonscm.debian.org/viewvc/dep/web/deps/dep5.mdwn?view=markup&pathrev=174
 Upstream-Name: Scala
 Source: http://www.scala-lang.org/
 
@@ -41,11 +41,13 @@ License: BSD-3-clause
  SUCH DAMAGE.
 
 Files: src/actors/scala/actors/Linked*.java
+Copyright: released into the public domain by Doug Lea
 License: public-domain
   Originally written by Doug Lea and released into the public domain.
   This may be used for any purposes whatsoever without acknowledgment.
 
 Files: src/actors/scala/actors/threadpool/*
+Copyright: released into the public domain by Dawid Kurzyniec et al.
 License: public-domain
  These files contain the following statements:
  .
@@ -95,6 +97,7 @@ Copyright: © 2005-2011 LAMP/EPFL, Lausanne
 License: BSD-3-clause
 
 Files: src/forkjoin/*
+Copyright: released into the public domain by Doug Lea et al.
 License: public-domain
  Written by Doug Lea with assistance from members of JCP JSR-166
  Expert Group and released to the public domain, as explained at
@@ -104,6 +107,8 @@ Files: src/jline/*
 Copyright: © 2002-2007 Marc Prud'hommeaux <mwp1@cornell.edu>
            © 2009-2010 the original author or authors
 License: BSD-3-clause or Apache-2.0
+ On Debian systems, the complete text of the Apache License
+ Version 2.0 can be found in `/usr/share/common-licenses/Apache-2.0'.
 
 Files: src/library/scala/util/Sorting.scala
 Copyright: © 2006-2009 Ross Judson
