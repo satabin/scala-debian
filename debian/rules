@@ -17,4 +17,4 @@ override_dh_compress:
 	dh_compress -X.js -X.scala
 
 %:
-	dh $@
+	dh $@ --with javahelper --with jh_maven_repo_helper

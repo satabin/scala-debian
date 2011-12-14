@@ -3,6 +3,4 @@ dists/latest/bin/scala              usr/bin/
 dists/latest/bin/scalac             usr/bin/
 dists/latest/bin/scaladoc           usr/bin/
 dists/latest/bin/scalap             usr/bin/
-dists/latest/lib/scala-compiler.jar usr/share/java/
-dists/latest/lib/scalap.jar         usr/share/java/
 lib/jline.jar                       usr/share/java/scala/
