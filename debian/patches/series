@@ -1,2 +1,2 @@
 0001-Use-system-ant-contrib.jar.patch
-0002-Adapt-tool-unix.tmpl.patch
+0002-Adapt-SCALA_HOME-and-TOOL_CLASSPATH-to-the-package-l.patch

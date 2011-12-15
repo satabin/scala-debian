@@ -1,13 +1,13 @@
 From: Mehdi Dogguy <mehdi@debian.org>
 Date: Thu, 23 Jun 2011 23:12:28 +0200
-Subject: [PATCH] Use system ant-contrib.jar
+Subject: Use system ant-contrib.jar
 
 ---
  build.xml |    2 +-
  1 files changed, 1 insertions(+), 1 deletions(-)
 
 diff --git a/build.xml b/build.xml
-index b121824..51986d6 100644
+index 2281613..b488a58 100644
 --- a/build.xml
 +++ b/build.xml
 @@ -211,7 +211,7 @@ INITIALISATION
