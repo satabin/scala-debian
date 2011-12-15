@@ -11,9 +11,6 @@ override_dh_auto_build:
 	# Build Scala
 	ANT_OPTS="-Xmx1024M -Xss64M" ant -Dversion.number=$(BUNDLE_VERSION) fastdist
 
-	# Use jQuery from libjs-jquery{,ui}
-	#find -name "jquery.js" -or -name "jquery-ui.js" -delete
-
 	for file in scala scala-library; do \
 		sed "s/@VERSION@/$(BUNDLE_VERSION)/" debian/$${file}.pom.xml.in > debian/$${file}.pom.xml; \
 	done
