@@ -4,5 +4,5 @@
     <groupId>org.scala-lang</groupId>
     <artifactId>scala-library</artifactId>
     <packaging>jar</packaging>
-    <version>2.9.1</version>
+    <version>@VERSION@</version>
 </project>

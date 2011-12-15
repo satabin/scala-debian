@@ -11,6 +11,10 @@ override_dh_auto_build:
 	# Use jQuery from libjs-jquery{,ui}
 	#find -name "jquery.js" -or -name "jquery-ui.js" -delete
 
+	for file in scala scala-library; do \
+		sed "s/@VERSION@/$(BUNDLE_VERSION)/" debian/$${file}.pom.xml.in > debian/$${file}.pom.xml; \
+	done
+
 override_dh_auto_clean:
 	rm -rf build dist
 
