@@ -6,6 +6,9 @@ include $(CURDIR)/build.number
 BUNDLE_VERSION="$(version.major).$(version.minor).$(version.patch)"
 
 override_dh_auto_build:
+	# Build Jline
+	ant -f debian/build-jline.xml -propertyfile debian/ant-jline.properties
+	# Build Scala
 	ANT_OPTS="-Xmx1024M -Xss64M" ant -Dversion.number=$(BUNDLE_VERSION) fastdist
 
 	# Use jQuery from libjs-jquery{,ui}
