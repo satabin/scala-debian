@@ -14,6 +14,8 @@ Build-Depends:
  ant-contrib,
  ant-optional,
  libmaven-ant-tasks-java,
+ junit4,
+ libjansi-java,
  debhelper (>= 7.0.50),
  javahelper,
  maven-repo-helper (>= 1.6~)
@@ -26,6 +28,7 @@ Architecture: all
 Depends:
  scala-library (= ${source:Version}),
  openjdk-6-jre | java6-runtime,
+ libjansi-java,
  ${misc:Depends}
 Suggests: scala-doc (>= ${source:Version})
 Description: Scala programming language
