@@ -15,7 +15,8 @@ Build-Depends:
  ant-optional,
  libmaven-ant-tasks-java,
  debhelper (>= 7.0.50),
- javahelper, maven-repo-helper
+ javahelper,
+ maven-repo-helper
 Homepage: http://www.scala-lang.org/
 Vcs-Browser: http://git.debian.org/?p=pkg-scala/packages/scala.git
 Vcs-Git: git://git.debian.org/git/pkg-scala/packages/scala.git
