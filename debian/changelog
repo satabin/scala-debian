@@ -4,7 +4,17 @@ scala (2.9.1.dfsg-2) UNRELEASED; urgency=low
   * debian/copyright: Added missing Copyright fields and a License
     paragraph.
 
- -- Frank S. Thomas <fst@debian.org>  Sat, 17 Sep 2011 17:02:39 +0200
+  [ Mehdi Dogguy ]
+  * Build and install jline.jar, instead of relying on upstream's
+    provided jline.jar (Closes: #652072).
+    - Add junit4 and libjansi-java to Build-Depends.
+    - Add libjansi-java to Scala's Depends field.
+  * Provide Maven artifacts for scala-{library,compiler}, Thanks to
+    Thomas Koch for the patch. (Closes: #652024).
+  * Install scalacheck.jar and scala-partest.jar.
+  * Add 0001-Use-system-ant-contrib.jar.patch
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Thu, 15 Dec 2011 21:58:04 +0100
 
 scala (2.9.1.dfsg-1) unstable; urgency=low
 
