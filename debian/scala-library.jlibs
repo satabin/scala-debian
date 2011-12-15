@@ -2,3 +2,5 @@ dists/latest/lib/scala-library.jar
 dists/latest/lib/scala-dbc.jar
 dists/latest/lib/scala-swing.jar
 dists/latest/lib/scala-partest.jar
+dists/latest/lib/scalacheck.jar
+dists/latest/lib/scala-partest.jar
