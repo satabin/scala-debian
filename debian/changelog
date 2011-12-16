@@ -12,6 +12,7 @@ scala (2.9.1.dfsg-2) UNRELEASED; urgency=low
   * Provide Maven artifacts for scala-{library,compiler}, Thanks to
     Thomas Koch for the patch. (Closes: #652024).
   * Install scalacheck.jar and scala-partest.jar.
+    - Mention it in scala-library's long description.
   * Add 0001-Use-system-ant-contrib.jar.patch
 
  -- Mehdi Dogguy <mehdi@debian.org>  Thu, 15 Dec 2011 21:58:04 +0100

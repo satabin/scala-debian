@@ -51,7 +51,8 @@ Depends:
  openjdk-6-jre | java6-runtime,
  ${misc:Depends}
 Description: Scala standard library
- This run-time library is needed to run Scala programs.
+ This run-time library is needed to run Scala programs. It also
+ provides scalacheck and scala-partest.
 
 Package: scala-doc
 Architecture: all
