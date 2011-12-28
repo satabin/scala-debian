@@ -1,4 +1,4 @@
-scala (2.9.1.dfsg-2) UNRELEASED; urgency=low
+scala (2.9.1.dfsg-2) unstable; urgency=low
 
   [ Frank S. Thomas ]
   * debian/copyright: Added missing Copyright fields and a License
@@ -15,7 +15,7 @@ scala (2.9.1.dfsg-2) UNRELEASED; urgency=low
     - Mention it in scala-library's long description.
   * Add 0001-Use-system-ant-contrib.jar.patch
 
- -- Mehdi Dogguy <mehdi@debian.org>  Thu, 15 Dec 2011 21:58:04 +0100
+ -- Mehdi Dogguy <mehdi@debian.org>  Wed, 28 Dec 2011 12:53:49 +0100
 
 scala (2.9.1.dfsg-1) unstable; urgency=low
 
