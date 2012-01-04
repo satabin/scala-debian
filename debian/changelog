@@ -1,8 +1,9 @@
 scala (2.9.1.dfsg-3) unstable; urgency=low
 
   * Do not link to scala-library.jar in scala package (Closes: #654549).
+  * Add jansi.jar to Scala's TOOL_CLASSPATH.
 
- -- Mehdi Dogguy <mehdi@debian.org>  Wed, 04 Jan 2012 11:10:22 +0100
+ -- Mehdi Dogguy <mehdi@debian.org>  Wed, 04 Jan 2012 11:46:39 +0100
 
 scala (2.9.1.dfsg-2) unstable; urgency=low
 
