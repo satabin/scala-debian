@@ -20,6 +20,9 @@ override_dh_auto_clean:
 
 override_dh_compress:
 	dh_compress -X.js -X.scala
+	# dh_compress is executed after mh_installpoms and mh_linkjars
+	# ugly hack to fix #654549
+	find debian/scala \( -type f -or -type l \) -name "scala-library*.jar" -delete
 
 %:
 	dh $@ --with javahelper --with jh_maven_repo_helper
