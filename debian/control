@@ -7,7 +7,7 @@ Uploaders:
  Min Huang <min.huang@alumni.usc.edu>,
  Frank S. Thomas <fst@debian.org>
 DM-Upload-Allowed: yes
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Build-Depends:
  openjdk-6-jdk | java-compiler,
  ant,
