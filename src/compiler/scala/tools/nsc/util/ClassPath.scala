@@ -24,24 +24,24 @@ import File.pathSeparator
 object ClassPath {
   def scalaLibrary  = locate[ScalaObject]
   def scalaCompiler = locate[Global]
-  
+
   def info[T: ClassManifest]      = new ClassAndJarInfo[T]
   def locate[T: ClassManifest]    = info[T] rootClasspath
   def locateJar[T: ClassManifest] = info[T].rootPossibles find (x => isJarOrZip(x)) map (x => File(x))
   def locateDir[T: ClassManifest] = info[T].rootPossibles find (_.isDirectory) map (_.toDirectory)
-  
+
   /** Expand single path entry */
   private def expandS(pattern: String): List[String] = {
     val wildSuffix = File.separator + "*"
-    
+
     /** Get all subdirectories, jars, zips out of a directory. */
     def lsDir(dir: Directory, filt: String => Boolean = _ => true) =
       dir.list filter (x => filt(x.name) && (x.isDirectory || isJarOrZip(x))) map (_.path) toList
 
-    def basedir(s: String) = 
+    def basedir(s: String) =
       if (s contains File.separator) s.substring(0, s.lastIndexOf(File.separator))
       else "."
-    
+
     if (pattern == "*") lsDir(Directory("."))
     else if (pattern endsWith wildSuffix) lsDir(Directory(pattern dropRight 2))
     else if (pattern contains '*') {
@@ -58,14 +58,14 @@ object ClassPath {
   // def findDuplicates(cp: ClassPath[_]) = {
   //   def toFullName(x: (String, _, cp.AnyClassRep)) = x._1 + "." + x._3.name
   //   def toOriginString(x: ClassPath[_]) = x.origin getOrElse x.name
-  //   
+  //
   //   /** Flatten everything into tuples, recombine grouped by name, filter down to 2+ entries. */
   //   val flattened = (
   //     for ((pkgName, pkg) <- cp.allPackagesWithNames ; clazz <- pkg.classes) yield
   //       (pkgName, pkg, clazz)
   //   )
   //   val multipleAppearingEntries = flattened groupBy toFullName filter (_._2.size > 1)
-  // 
+  //
   //   /** Extract results. */
   //   for (name <- flattened map toFullName distinct ; dups <- multipleAppearingEntries get name) yield
   //     (name, dups map { case (_, cp, _) => toOriginString(cp) })
@@ -73,22 +73,22 @@ object ClassPath {
 
   /** Split classpath using platform-dependent path separator */
   def split(path: String): List[String] = (path split pathSeparator).toList filterNot (_ == "") distinct
-  
+
   /** Join classpath using platform-dependent path separator */
   def join(paths: String*): String  = paths filterNot (_ == "") mkString pathSeparator
-  
+
   /** Split the classpath, apply a transformation function, and reassemble it. */
   def map(cp: String, f: String => String): String = join(split(cp) map f: _*)
-  
+
   /** Split the classpath, filter according to predicate, and reassemble. */
   def filter(cp: String, p: String => Boolean): String = join(split(cp) filter p: _*)
-  
+
   /** Split the classpath and map them into Paths */
   def toPaths(cp: String): List[Path] = split(cp) map (x => Path(x).toAbsolute)
-  
+
   /** Make all classpath components absolute. */
   def makeAbsolute(cp: String): String = fromPaths(toPaths(cp): _*)
-  
+
   /** Join the paths as a classpath */
   def fromPaths(paths: Path*): String = join(paths map (_.path): _*)
   def fromURLs(urls: URL*): String = fromPaths(urls map (x => Path(x.getPath)) : _*)
@@ -100,7 +100,7 @@ object ClassPath {
   def expandPath(path: String, expandStar: Boolean = true): List[String] =
     if (expandStar) split(path) flatMap expandS
     else split(path)
-  
+
   /** Expand dir out to contents, a la extdir */
   def expandDir(extdir: String): List[String] = {
     AbstractFile getDirectory extdir match {
@@ -108,15 +108,15 @@ object ClassPath {
       case dir  => dir filter (_.isClassContainer) map (x => new java.io.File(dir.file, x.name) getPath) toList
     }
   }
-  
+
   /** A useful name filter. */
   def isTraitImplementation(name: String) = name endsWith "$class.class"
-    
+
   import java.net.MalformedURLException
   def specToURL(spec: String): Option[URL] =
     try Some(new URL(spec))
     catch { case _: MalformedURLException => None }
-  
+
   /** A class modeling aspects of a ClassPath which should be
    *  propagated to any classpaths it creates.
    */
@@ -129,17 +129,17 @@ object ClassPath {
     /** From the representation to its identifier.
      */
     def toBinaryName(rep: T): String
-    
+
     /** Create a new classpath based on the abstract file.
      */
     def newClassPath(file: AbstractFile): ClassPath[T]
-    
+
     /** Creators for sub classpaths which preserve this context.
      */
     def sourcesInPath(path: String): List[ClassPath[T]] =
       for (file <- expandPath(path, false) ; dir <- Option(AbstractFile getDirectory file)) yield
         new SourcePath[T](dir, this)
-    
+
     def contentsOfDirsInPath(path: String): List[ClassPath[T]] =
       for (dir <- expandPath(path, false) ; name <- expandDir(dir) ; entry <- Option(AbstractFile getDirectory name)) yield
         newClassPath(entry)
@@ -147,7 +147,7 @@ object ClassPath {
     def classesAtAllURLS(path: String): List[ClassPath[T]] =
       (path split " ").toList flatMap classesAtURL
 
-    def classesAtURL(spec: String) =     
+    def classesAtURL(spec: String) =
       for (url <- specToURL(spec).toList ; location <- Option(AbstractFile getURL url)) yield
         newClassPath(location)
 
@@ -161,7 +161,7 @@ object ClassPath {
       for (file <- expandPath(path, expand) ; dir <- Option(AbstractFile getDirectory file)) yield
         newClassPath(dir)
   }
-  
+
   class JavaContext extends ClassPathContext[AbstractFile] {
     def toBinaryName(rep: AbstractFile) = {
       val name = rep.name
@@ -170,15 +170,15 @@ object ClassPath {
     }
     def newClassPath(dir: AbstractFile) = new DirectoryClassPath(dir, this)
   }
-  
+
   object DefaultJavaContext extends JavaContext {
     override def isValidName(name: String) = !isTraitImplementation(name)
   }
-  
+
   @inline private def endsClass(s: String) = s.length > 6 && s.substring(s.length - 6) == ".class"
   @inline private def endsScala(s: String) = s.length > 6 && s.substring(s.length - 6) == ".scala"
   @inline private def endsJava(s: String)  = s.length > 5 && s.substring(s.length - 5) == ".java"
-  
+
   /** From the source file to its identifier.
    */
   def toSourceName(f: AbstractFile): String = {
@@ -201,17 +201,17 @@ abstract class ClassPath[T] {
    * The short name of the package (without prefix)
    */
   def name: String
-  
+
   /**
    * A String representing the origin of this classpath element, if known.
    * For example, the path of the directory or jar.
    */
   def origin: Option[String] = None
-  
+
   /** A list of URLs representing this classpath.
    */
   def asURLs: List[URL]
-  
+
   /** The whole classpath in the form of one String.
    */
   def asClasspathString: String
@@ -225,7 +225,7 @@ abstract class ClassPath[T] {
   def classes: IndexedSeq[AnyClassRep]
   def packages: IndexedSeq[ClassPath[T]]
   def sourcepaths: IndexedSeq[AbstractFile]
-  
+
   /** Information which entails walking the tree.  This is probably only
    *  necessary for tracking down problems - it's normally not used.
    */
@@ -242,7 +242,7 @@ abstract class ClassPath[T] {
   //   val subs =
   //     for ((prefix, p) <- root ; (k, v) <- p.allPackagesWithNames) yield
   //       (prefix + "." + k, v)
-  //   
+  //
   //   root ::: subs
   // }
 
@@ -258,7 +258,7 @@ abstract class ClassPath[T] {
         toSourceName(source.get)
     }
   }
-  
+
   /** Filters for assessing validity of various entities.
    */
   def validClassFile(name: String)  = endsClass(name) && context.isValidName(name)
@@ -298,13 +298,13 @@ abstract class ClassPath[T] {
 /**
  * A Classpath containing source files
  */
-class SourcePath[T](dir: AbstractFile, val context: ClassPathContext[T]) extends ClassPath[T] {  
+class SourcePath[T](dir: AbstractFile, val context: ClassPathContext[T]) extends ClassPath[T] {
   def name = dir.name
   override def origin = dir.underlyingSource map (_.path)
   def asURLs = if (dir.file == null) Nil else List(dir.toURL)
   def asClasspathString = dir.path
   val sourcepaths: IndexedSeq[AbstractFile] = IndexedSeq(dir)
-  
+
   private def traverse() = {
     val classBuf   = immutable.Vector.newBuilder[ClassRep]
     val packageBuf = immutable.Vector.newBuilder[SourcePath[T]]
@@ -330,7 +330,7 @@ class DirectoryClassPath(val dir: AbstractFile, val context: ClassPathContext[Ab
   def asURLs = if (dir.file == null) Nil else List(dir.toURL)
   def asClasspathString = dir.path
   val sourcepaths: IndexedSeq[AbstractFile] = IndexedSeq()
-  
+
   // calculates (packages, classes) in one traversal.
   private def traverse() = {
     val classBuf   = immutable.Vector.newBuilder[ClassRep]
@@ -343,7 +343,7 @@ class DirectoryClassPath(val dir: AbstractFile, val context: ClassPathContext[Ab
     }
     (packageBuf.result, classBuf.result)
   }
-  
+
   lazy val (packages, classes) = traverse()
   override def toString() = "directory classpath: "+ origin.getOrElse("?")
 }
@@ -357,7 +357,7 @@ class MergedClassPath[T](
 extends ClassPath[T] {
   def this(entries: TraversableOnce[ClassPath[T]], context: ClassPathContext[T]) =
     this(entries.toIndexedSeq, context)
-  
+
   def name = entries.head.name
   def asURLs = entries flatMap (_.asURLs) toList
   lazy val sourcepaths: IndexedSeq[AbstractFile] = entries flatMap (_.sourcepaths)
@@ -375,7 +375,7 @@ extends ClassPath[T] {
       if (indices contains name) {
         val idx      = indices(name)
         val existing = cls(idx)
-        
+
         if (existing.binary.isEmpty && c.binary.isDefined)
           cls(idx) = existing.copy(binary = c.binary)
         if (existing.source.isEmpty && c.source.isDefined)
@@ -398,7 +398,7 @@ extends ClassPath[T] {
     for (e <- entries; p <- e.packages) {
       val name = p.name
       if (indices contains name) {
-        val idx  = indices(name)        
+        val idx  = indices(name)
         pkg(idx) = addPackage(pkg(idx), p)
       }
       else {
@@ -417,21 +417,21 @@ extends ClassPath[T] {
     }
     new MergedClassPath[T](newEntries, context)
   }
-  // 
+  //
   // override def allPackages: List[ClassPath[T]] = entries flatMap (_.allPackages)
   // override def allPackageNames = entries flatMap (_.allPackageNames)
   // override def allPackagesWithNames = entries flatMap (_.allPackagesWithNames)
-  // 
-  // def duplicatedClasses = {    
+  //
+  // def duplicatedClasses = {
   //   def toFullName(x: (String, _, AnyClassRep)) = x._1 + "." + x._3.name
-  //   
+  //
   //   /** Flatten everything into tuples, recombine grouped by name, filter down to 2+ entries. */
   //   val flattened = (
   //     for ((pkgName, pkg) <- allPackagesWithNames ; clazz <- pkg.classes) yield
   //       (pkgName, pkg, clazz)
   //   )
   //   val multipleAppearingEntries = flattened groupBy toFullName filter (_._2.size > 1)
-  // 
+  //
   //   /** Using original name list as reference point, return duplicated entries as
   //    *    (name, list of origins)
   //    *  in the order they occur on the path.
@@ -442,7 +442,7 @@ extends ClassPath[T] {
   //       case (_, cp, _)                         => cp.asURLs.mkString
   //     })
   // }
-  // 
+  //
   def show() {
     println("ClassPath %s has %d entries and results in:\n".format(name, entries.size))
     asClasspathString split ':' foreach (x => println("  " + x))
@@ -451,7 +451,7 @@ extends ClassPath[T] {
   //   ClassPath findDuplicates this foreach {
   //     case (name, xs) => println(xs.mkString(name + ":\n  ", "\n  ", "\n"))
   //   }
-  // 
+  //
   override def toString() = "merged classpath "+ entries.mkString("(", "\n", ")")
 }
 

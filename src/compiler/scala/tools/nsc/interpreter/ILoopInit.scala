@@ -26,7 +26,7 @@ trait ILoopInit {
     echo(welcomeMsg)
     replinfo("[info] started at " + new java.util.Date)
   }
-  
+
   protected def asyncMessage(msg: String) {
     if (isReplInfo || isReplPower)
       echoAndRefresh(msg)
@@ -73,18 +73,18 @@ trait ILoopInit {
   // a condition used to ensure serial access to the compiler.
   @volatile private var initIsComplete = false
   private def elapsed() = "%.3f".format((System.nanoTime - initStart).toDouble / 1000000000L)
-  
+
   // the method to be called when the interpreter is initialized.
   // Very important this method does nothing synchronous (i.e. do
   // not try to use the interpreter) because until it returns, the
   // repl's lazy val `global` is still locked.
   protected def initializedCallback() = withLock(initCompilerCondition.signal())
-  
+
   // Spins off a thread which awaits a single message once the interpreter
   // has been initialized.
   protected def createAsyncListener() = {
     io.spawn {
-      withLock(initCompilerCondition.await())   
+      withLock(initCompilerCondition.await())
       asyncMessage("[info] compiler init time: " + elapsed() + " s.")
       postInitialization()
     }
@@ -101,7 +101,7 @@ trait ILoopInit {
     // do this last to avoid annoying uninterruptible startups
     Some(installSigIntHandler _)
   ).flatten
-  // called once after init condition is signalled 
+  // called once after init condition is signalled
   protected def postInitialization() {
     postInitThunks foreach (f => addThunk(f()))
     runThunks()
@@ -126,6 +126,6 @@ trait ILoopInit {
       val thunk = pendingThunks.head
       pendingThunks = pendingThunks.tail
       thunk()
-    }      
+    }
   }
 }

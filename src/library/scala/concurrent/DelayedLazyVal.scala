@@ -34,13 +34,13 @@ class DelayedLazyVal[T](f: () => T, body: => Unit) {
    *  @return true if the computation is complete.
    */
   def isDone = _isDone
-  
+
   /** The current result of f(), or the final result if complete.
    *
    *  @return the current value
    */
   def apply(): T = if (isDone) complete else f()
-  
+
   future {
     body
     _isDone = true

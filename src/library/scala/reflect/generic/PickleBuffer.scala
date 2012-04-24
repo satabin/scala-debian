@@ -136,13 +136,13 @@ package generic
     readIndex = 0
     readNat() ; readNat()     // discarding version
     val result = new Array[(Int, Array[Byte])](readNat())
-    
+
     result.indices foreach { index =>
       val tag = readNat()
       val len = readNat()
       val bytes = data.slice(readIndex, len + readIndex)
       readIndex += len
-      
+
       result(index) = tag -> bytes
     }
 
@@ -169,7 +169,7 @@ package generic
 
   /** Pickle = majorVersion_Nat minorVersion_Nat nbEntries_Nat {Entry}
    *  Entry  = type_Nat length_Nat [actual entries]
-   * 
+   *
    *  Assumes that the ..Version_Nat are already consumed.
    *
    *  @return an array mapping entry numbers to locations in

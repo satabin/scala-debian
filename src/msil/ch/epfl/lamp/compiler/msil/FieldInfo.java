@@ -5,7 +5,7 @@
 
 package ch.epfl.lamp.compiler.msil;
 
-import ch.epfl.lamp.compiler.msil.util.PECustomMod; 
+import ch.epfl.lamp.compiler.msil.util.PECustomMod;
 
 /**
  * Discovers the attributes of a field and provides access to field metadata.
@@ -84,11 +84,11 @@ public class FieldInfo extends MemberInfo implements HasCustomModifiers {
     public final boolean IsNotSerialized() {
  	return (Attributes & FieldAttributes.NotSerialized) != 0;
     }
-    
+
     private boolean knownVolatile  = false;
-    private boolean cachedVolatile = false; 
+    private boolean cachedVolatile = false;
     public final boolean IsVolatile() {
-        if(knownVolatile) return cachedVolatile; 
+        if(knownVolatile) return cachedVolatile;
         knownVolatile  = true;
         if(cmods == null) {
             cachedVolatile = false;
@@ -103,11 +103,11 @@ public class FieldInfo extends MemberInfo implements HasCustomModifiers {
         cachedVolatile = false;
         return cachedVolatile;
     }
-    
+
     public final Type[] GetOptionalCustomModifiers () {
         return CustomModifier.helperCustomMods(false, cmods);
     }
-            
+
     public final Type[] GetRequiredCustomModifiers() {
         return CustomModifier.helperCustomMods(true, cmods);
     }

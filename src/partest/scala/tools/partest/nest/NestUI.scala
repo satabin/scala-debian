@@ -42,7 +42,7 @@ object NestUI {
   def outline(msg: String, wr: PrintWriter) = synchronized {
     wr.print(_outline + msg + _default)
   }
-  
+
   def success(msg: String) = print(_success  + msg + _default)
   def success(msg: String, wr: PrintWriter) = synchronized {
     wr.print(_success + msg + _default)

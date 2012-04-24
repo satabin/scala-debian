@@ -32,7 +32,7 @@ import mutable.Builder
  */
 abstract class GenSetFactory[CC[X] <: GenSet[X] with GenSetLike[X, CC[X]]]
   extends GenericCompanion[CC] {
-    
+
   def newBuilder[A]: Builder[A, CC[A]]
 
   /** $setCanBuildFromInfo

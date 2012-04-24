@@ -21,9 +21,9 @@ import mutable.Builder
  *  @define coll  collection
  *  @define Coll  CC
  */
-abstract class GenericCompanion[+CC[X] <: GenTraversable[X]] { 
+abstract class GenericCompanion[+CC[X] <: GenTraversable[X]] {
   /** The underlying collection type with unknown element type */
-  type Coll = CC[_]  
+  type Coll = CC[_]
 
   /** The default builder for `$Coll` objects.
    *  @tparam A      the type of the ${coll}'s elements

@@ -23,20 +23,20 @@ object Attribute {
   /** Convenience functions which choose Un/Prefixedness appropriately */
   def apply(key: String, value: Seq[Node], next: MetaData): Attribute =
     new UnprefixedAttribute(key, value, next)
-    
+
   def apply(pre: String, key: String, value: String, next: MetaData): Attribute =
     if (pre == null || pre == "") new UnprefixedAttribute(key, value, next)
     else new PrefixedAttribute(pre, key, value, next)
-    
+
   def apply(pre: String, key: String, value: Seq[Node], next: MetaData): Attribute =
     if (pre == null || pre == "") new UnprefixedAttribute(key, value, next)
     else new PrefixedAttribute(pre, key, value, next)
-    
+
   def apply(pre: Option[String], key: String, value: Seq[Node], next: MetaData): Attribute =
     pre match {
       case None     => new UnprefixedAttribute(key, value, next)
       case Some(p)  => new PrefixedAttribute(p, key, value, next)
-    }  
+    }
 }
 
 abstract trait Attribute extends MetaData {
@@ -44,7 +44,7 @@ abstract trait Attribute extends MetaData {
   val key: String
   val value: Seq[Node]
   val next: MetaData
-  
+
   def apply(key: String): Seq[Node]
   def apply(namespace: String, scope: NamespaceBinding, key: String): Seq[Node]
   def copy(next: MetaData): Attribute
@@ -52,7 +52,7 @@ abstract trait Attribute extends MetaData {
   def remove(key: String) =
     if (!isPrefixed && this.key == key) next
     else copy(next remove key)
-  
+
   def remove(namespace: String, scope: NamespaceBinding, key: String) =
     if (isPrefixed && this.key == key && (scope getURI pre) == namespace) next
     else next.remove(namespace, scope, key)
@@ -60,10 +60,21 @@ abstract trait Attribute extends MetaData {
   def isPrefixed: Boolean = pre != null
   def getNamespace(owner: Node): String
   def wellformed(scope: NamespaceBinding): Boolean = {
-    val arg = if (isPrefixed) scope getURI pre else null    
+    val arg = if (isPrefixed) scope getURI pre else null
     (next(arg, scope, key) == null) && (next wellformed scope)
   }
-  
+
+  /** Returns an iterator on attributes */
+  override def iterator: Iterator[MetaData] = {
+    if (value == null) next.iterator
+    else Iterator.single(this) ++ next.iterator
+  }
+
+  override def size: Int = {
+    if (value == null) next.size
+    else 1 + next.size
+  }
+
   /** Appends string representation of only this attribute to stringbuffer.
    */
   def toString1(sb: StringBuilder) {
@@ -71,10 +82,10 @@ abstract trait Attribute extends MetaData {
       return
     if (isPrefixed)
       sb append pre append ':'
-    
+
     sb append key append '='
     val sb2 = new StringBuilder()
-    Utility.sequenceToXML(value, TopScope, sb2, true)    
+    Utility.sequenceToXML(value, TopScope, sb2, true)
     Utility.appendQuoted(sb2.toString(), sb)
   }
 }

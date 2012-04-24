@@ -16,14 +16,14 @@ import generic._
  */
 trait TraversableMethods[+A, +This <: TraversableLike[A, This]] extends TraversableOnceMethods[A] {
   self: Traversable[A] =>
-  
+
   // maps/iteration
   def flatMap[B, That](f: A => GenTraversableOnce[B])(implicit bf: CanBuildFrom[This, B, That]): That
   def map[B, That](f: A => B)(implicit bf: CanBuildFrom[This, B, That]): That
   def collect[B, That](pf: PartialFunction[A, B])(implicit bf: CanBuildFrom[This, B, That]): That
   def scanLeft[B, That](z: B)(op: (B, A) => B)(implicit bf: CanBuildFrom[This, B, That]): That
   def scanRight[B, That](z: B)(op: (A, B) => B)(implicit bf: CanBuildFrom[This, B, That]): That
-  
+
   // new collections
   def ++:[B >: A, That](that: TraversableOnce[B])(implicit bf: CanBuildFrom[This, B, That]): That
   def ++[B >: A, That](that: GenTraversableOnce[B])(implicit bf: CanBuildFrom[This, B, That]): That
@@ -33,7 +33,7 @@ trait TraversableMethods[+A, +This <: TraversableLike[A, This]] extends Traversa
   def headOption: Option[A]
   def last: A
   def lastOption: Option[A]
-  
+
   // subcollections
   def drop(n: Int): Traversable[A]
   def dropWhile(p: A => Boolean): Traversable[A]
@@ -47,7 +47,7 @@ trait TraversableMethods[+A, +This <: TraversableLike[A, This]] extends Traversa
   def take(n: Int): Traversable[A]
   def takeWhile(p: A => Boolean): Traversable[A]
   def withFilter(p: A => Boolean): FilterMonadic[A, Traversable[A]]
-  
+
   // subdivisions
   def groupBy[K](f: A => K): Map[K, Traversable[A]]
   def partition(p: A => Boolean): (Traversable[A], Traversable[A])

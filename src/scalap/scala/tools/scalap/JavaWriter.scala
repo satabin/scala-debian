@@ -93,7 +93,7 @@ class JavaWriter(classfile: Classfile, writer: Writer) extends CodeWriter(writer
 
   def getName(n: Int): String = {
     import cf.pool._
-    
+
     cf.pool(n) match {
       case UTF8(str) => str
       case StringConst(m) => getName(m)

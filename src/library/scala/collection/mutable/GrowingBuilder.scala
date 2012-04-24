@@ -17,7 +17,7 @@ import generic._
  *  @author Paul Phillips
  *  @version 2.8
  *  @since 2.8
- *  
+ *
  *  @define Coll GrowingBuilder
  *  @define coll growing builder
  */

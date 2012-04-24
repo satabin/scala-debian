@@ -12,7 +12,7 @@ package combinator
 package syntactical
 
 import token._
-import lexical.StdLexical 
+import lexical.StdLexical
 
 /** This component provides primitive parsers for the standard tokens defined in `StdTokens'.
 *
@@ -23,7 +23,7 @@ class StandardTokenParsers extends StdTokenParsers {
   val lexical = new StdLexical
 
   //an implicit keyword function that gives a warning when a given word is not in the reserved/delimiters list
-  override implicit def keyword(chars : String): Parser[String] = 
+  override implicit def keyword(chars : String): Parser[String] =
     if(lexical.reserved.contains(chars) || lexical.delimiters.contains(chars)) super.keyword(chars)
     else failure("You are trying to parse \""+chars+"\", but it is neither contained in the delimiters list, nor in the reserved keyword list of your lexical object")
 

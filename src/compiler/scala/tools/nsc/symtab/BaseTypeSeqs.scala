@@ -20,12 +20,12 @@ import util.Statistics._
  *      bt <: bt1
  *
  *  (3) The type symbols of different elements are different.
- *  
- *  Elements in the sequence are ordered by Symbol.isLess. 
+ *
+ *  Elements in the sequence are ordered by Symbol.isLess.
  *  @note base type sequences were called closures up to 2.7.1. The name has been changed
  *  to avoid confusion with function closures.
  */
-trait BaseTypeSeqs { 
+trait BaseTypeSeqs {
   this: SymbolTable =>
   import definitions._
 
@@ -98,12 +98,12 @@ trait BaseTypeSeqs {
 
     /** Compute new base type sequence with `tp' prepended to this sequence */
     def prepend(tp: Type): BaseTypeSeq = copy(tp, 1)
-      
+
     /** Compute new base type sequence with `tp' replacing the head of this sequence */
     def updateHead(tp: Type): BaseTypeSeq = copy(tp, 0)
 
     /** Compute new base type sequence where every element is mapped
-     *  with function `f'. Lazy types are mapped but not evaluated */ 
+     *  with function `f'. Lazy types are mapped but not evaluated */
     def map(f: Type => Type): BaseTypeSeq = {
 	  // inlined `elems map f' for performance
       val len = length
@@ -139,9 +139,9 @@ trait BaseTypeSeqs {
       d
     }
 
-    /** The maximum depth of type `tp' */ 
+    /** The maximum depth of type `tp' */
     protected def maxDpth(tp: Type): Int = tp match {
-      case TypeRef(pre, sym, args) => 
+      case TypeRef(pre, sym, args) =>
         max(maxDpth(pre), maxDpth(args) + 1)
       case RefinedType(parents, decls) =>
         max(maxDpth(parents), maxDpth(decls.toList.map(_.info)) + 1)
@@ -159,7 +159,7 @@ trait BaseTypeSeqs {
         1
     }
 
-    /** The maximum depth of all types `tps' */ 
+    /** The maximum depth of all types `tps' */
     private def maxDpth(tps: Seq[Type]): Int = {
       var d = 0
       for (tp <- tps) d = max(d, maxDpth(tp))
@@ -174,8 +174,8 @@ trait BaseTypeSeqs {
         "\n --- because ---\n"+msg)
   }
 
-  /** A merker object for a base type sequence that's no yet computed. 
-   *  used to catch inheritance cycles 
+  /** A merker object for a base type sequence that's no yet computed.
+   *  used to catch inheritance cycles
    */
   val undetBaseTypeSeq: BaseTypeSeq = new BaseTypeSeq(List(), Array())
 
@@ -196,8 +196,8 @@ trait BaseTypeSeqs {
       val index = new Array[Int](nparents)
       var i = 0
       for (p <- parents) {
-        pbtss(i) = 
-          if (p.baseTypeSeq eq undetBaseTypeSeq) AnyClass.info.baseTypeSeq 
+        pbtss(i) =
+          if (p.baseTypeSeq eq undetBaseTypeSeq) AnyClass.info.baseTypeSeq
           else p.baseTypeSeq
         index(i) = 0
         i += 1
@@ -228,7 +228,7 @@ trait BaseTypeSeqs {
           if (nextTypeSymbol(i) == minSym) {
             nextRawElem(i) match {
               case RefinedType(variants, decls) =>
-                for (tp <- variants) 
+                for (tp <- variants)
                   if (!(minTypes exists (tp =:=))) minTypes = tp :: minTypes
               case tp =>
                 if (!(minTypes exists (tp =:=))) minTypes = tp :: minTypes

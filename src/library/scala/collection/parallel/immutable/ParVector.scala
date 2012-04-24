@@ -25,16 +25,16 @@ import immutable.VectorIterator
 
 
 /** Immutable parallel vectors, based on vectors.
- *  
+ *
  *  $paralleliterableinfo
- *  
+ *
  *  $sideeffects
- *  
+ *
  *  @tparam T    the element type of the vector
- *  
+ *
  *  @author Aleksandar Prokopec
  *  @since 2.9
- *  
+ *
  *  @define Coll immutable.ParVector
  *  @define coll immutable parallel vector
  */
@@ -45,23 +45,23 @@ extends ParSeq[T]
    with Serializable
 {
   override def companion = ParVector
-  
+
   def this() = this(Vector())
-  
+
   type SCPI = SignalContextPassingIterator[ParVectorIterator]
-  
+
   def apply(idx: Int) = vector.apply(idx)
-  
+
   def length = vector.length
-  
+
   def splitter: SeqSplitter[T] = {
     val pit = new ParVectorIterator(vector.startIndex, vector.endIndex) with SCPI
     vector.initIterator(pit)
     pit
   }
-  
+
   override def seq: Vector[T] = vector
-  
+
   class ParVectorIterator(_start: Int, _end: Int) extends VectorIterator[T](_start, _end) with ParIterator {
   self: SCPI =>
     def remaining: Int = remainingElementCount
@@ -81,7 +81,7 @@ extends ParSeq[T]
       splitted.map(v => new ParVector(v).splitter.asInstanceOf[ParVectorIterator])
     }
   }
-  
+
 }
 
 
@@ -93,9 +93,9 @@ extends ParSeq[T]
 object ParVector extends ParFactory[ParVector] {
   implicit def canBuildFrom[T]: CanCombineFrom[Coll, T, ParVector[T]] =
     new GenericCanCombineFrom[T]
-  
+
   def newBuilder[T]: Combiner[T, ParVector[T]] = newCombiner[T]
-  
+
   def newCombiner[T]: Combiner[T, ParVector[T]] = new LazyParVectorCombiner[T] // was: with EPC[T, ParVector[T]]
 }
 
@@ -105,21 +105,21 @@ private[immutable] class LazyParVectorCombiner[T] extends Combiner[T, ParVector[
 //self: EnvironmentPassingCombiner[T, ParVector[T]] =>
   var sz = 0
   val vectors = new ArrayBuffer[VectorBuilder[T]] += new VectorBuilder[T]
-  
+
   def size: Int = sz
-  
+
   def +=(elem: T): this.type = {
     vectors.last += elem
     sz += 1
     this
   }
-  
+
   def clear = {
     vectors.clear
     vectors += new VectorBuilder[T]
     sz = 0
   }
-  
+
   def result: ParVector[T] = {
     val rvb = new VectorBuilder[T]
     for (vb <- vectors) {
@@ -127,14 +127,14 @@ private[immutable] class LazyParVectorCombiner[T] extends Combiner[T, ParVector[
     }
     new ParVector(rvb.result)
   }
-  
+
   def combine[U <: T, NewTo >: ParVector[T]](other: Combiner[U, NewTo]) = if (other eq this) this else {
     val that = other.asInstanceOf[LazyParVectorCombiner[T]]
     sz += that.sz
     vectors ++= that.vectors
     this
   }
-  
+
 }
 
 

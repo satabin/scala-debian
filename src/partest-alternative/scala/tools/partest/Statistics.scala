@@ -8,7 +8,7 @@ package partest
 
 import scala.collection.mutable.HashMap
 
-trait Statistics {  
+trait Statistics {
   /** Only collected when --stats is given. */
   lazy val testStatistics = new HashMap[String, Long]
 
@@ -19,7 +19,7 @@ trait Statistics {
     val start = System.currentTimeMillis
     val result = body
     val end = System.currentTimeMillis
-    
+
     f(end - start)
     result
   }
@@ -28,12 +28,12 @@ trait Statistics {
   def timed2[T](body: => T): (Long, T) = {
     var milliSeconds = 0L
     val result = timed(x => milliSeconds = x)(body)
-    
+
     (milliSeconds, result)
   }
-  
+
   def resultsToStatistics(results: Iterable[(_, Int)]): (Int, Int) =
-    (results partition (_._2 == 0)) match { 
+    (results partition (_._2 == 0)) match {
       case (winners, losers) => (winners.size, losers.size)
     }
 

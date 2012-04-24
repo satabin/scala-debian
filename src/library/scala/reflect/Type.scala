@@ -55,12 +55,12 @@ case class PolyType(typeParams: List[Symbol], typeBounds: List[(Type, Type)], re
 
   case reflect.NoPrefix =>
   case reflect.NoType =>
-  case reflect.NamedType(fullname) => 
-  case reflect.PrefixedType(pre, sym) => 
-  case reflect.SingleType(pre, sym) => 
-  case reflect.ThisType(clazz) => 
-  case reflect.AppliedType(tpe, args) => 
-  case reflect.TypeBounds(lo, hi) => 
+  case reflect.NamedType(fullname) =>
+  case reflect.PrefixedType(pre, sym) =>
+  case reflect.SingleType(pre, sym) =>
+  case reflect.ThisType(clazz) =>
+  case reflect.AppliedType(tpe, args) =>
+  case reflect.TypeBounds(lo, hi) =>
   case reflect.MethodType(formals, restpe) =>
   case reflect.NullaryMethodType(restpe) =>
   case reflect.PolyType(typeParams, typeBounds, resultType) =>

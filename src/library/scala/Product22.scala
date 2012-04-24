@@ -10,7 +10,7 @@
 package scala
 
 object Product22 {
-  def unapply[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22](x: Product22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22]): Option[Product22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22]] = 
+  def unapply[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22](x: Product22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22]): Option[Product22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22]] =
     Some(x)
 }
 
@@ -23,17 +23,17 @@ trait Product22[+T1, +T2, +T3, +T4, +T5, +T6, +T7, +T8, +T9, +T10, +T11, +T12, +
    */
   override def productArity = 22
 
-  
+
   /** Returns the n-th projection of this product if 0 < n <= productArity,
    *  otherwise throws an `IndexOutOfBoundsException`.
    *
-   *  @param n number of the projection to be returned 
+   *  @param n number of the projection to be returned
    *  @return  same as `._(n+1)`, for example `productElement(1)` is the same as `._1`.
    *  @throws  IndexOutOfBoundsException
-   */  
+   */
 
   @throws(classOf[IndexOutOfBoundsException])
-  override def productElement(n: Int) = n match { 
+  override def productElement(n: Int) = n match {
     case 0 => _1
     case 1 => _2
     case 2 => _3
@@ -57,7 +57,7 @@ trait Product22[+T1, +T2, +T3, +T4, +T5, +T6, +T7, +T8, +T9, +T10, +T11, +T12, +
     case 20 => _21
     case 21 => _22
     case _ => throw new IndexOutOfBoundsException(n.toString())
- }  
+ }
 
   /** A projection of element 1 of this Product.
    *  @return   A projection of element 1.

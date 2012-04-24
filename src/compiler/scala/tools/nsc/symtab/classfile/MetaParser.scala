@@ -63,7 +63,7 @@ abstract class MetaParser{
   }
 
   protected def parseTypeParam(): Symbol = {
-    val vflag = 
+    val vflag =
       if (token == "+") { nextToken(); Flags.COVARIANT }
       else if (token == "-") { nextToken(); Flags.CONTRAVARIANT }
       else 0;

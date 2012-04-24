@@ -27,7 +27,7 @@ object Decode {
     case PolyType(typeRef, _)   => getAliasSymbol(typeRef)
     case _                      => NoSymbol
   }
-  
+
   /** Return the classfile bytes representing the scala sig classfile attribute.
    *  This has been obsoleted by the switch to annotations.
    */
@@ -36,24 +36,24 @@ object Decode {
     val bytes = classLoader.classBytes(name)
     val reader = new ByteArrayReader(bytes)
     val cf = new Classfile(reader)
-    cf.scalaSigAttribute map (_.data) 
+    cf.scalaSigAttribute map (_.data)
   }
-  
+
   /** Return the bytes representing the annotation
    */
   def scalaSigAnnotationBytes(name: String): Option[Array[Byte]] = scalaSigAnnotationBytes(name, getSystemLoader())
-  def scalaSigAnnotationBytes(name: String, classLoader: ScalaClassLoader): Option[Array[Byte]] = {  
+  def scalaSigAnnotationBytes(name: String, classLoader: ScalaClassLoader): Option[Array[Byte]] = {
     val bytes     = classLoader.classBytes(name)
     val byteCode  = ByteCode(bytes)
     val classFile = ClassFileParser.parse(byteCode)
     import classFile._
-        
+
     classFile annotation SCALA_SIG_ANNOTATION map { case Annotation(_, els) =>
       val bytesElem = els find (x => constant(x.elementNameIndex) == BYTES_VALUE) get
       val _bytes    = bytesElem.elementValue match { case ConstValueIndex(x) => constantWrapped(x) }
       val bytes     = _bytes.asInstanceOf[StringBytesPair].bytes
       val length    = ByteCodecs.decode(bytes)
-      
+
       bytes take length
     }
   }
@@ -65,7 +65,7 @@ object Decode {
       case -1   => (path, "")
       case x    => (path take x, path drop (x + 1))
     }
-    
+
     for {
       clazz <- getSystemLoader.tryToLoadClass[AnyRef](outer)
       ssig <- ScalaSigParser.parse(clazz)
@@ -80,11 +80,11 @@ object Decode {
             val xs = x.children filter (child => child.isCaseAccessor && (child.name endsWith " "))
             xs.toList map (_.name dropRight 1)
         }
-      
+
       (ssig.symbols collect f).flatten toList
     }
   }
-  
+
   /** Returns a map of Alias -> Type for the given package.
    */
   private[scala] def typeAliases(pkg: String) = {
@@ -97,5 +97,5 @@ object Decode {
       Map(typeAliases map (x => (x.name, getAliasSymbol(x.infoType).path)): _*)
     }
   }
-}  
+}
 

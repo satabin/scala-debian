@@ -16,35 +16,35 @@ package pull
  */
 trait XMLEvent
 
-/** 
+/**
  * An Element's start tag was encountered.
  * @param pre prefix, if any, on the element.  This is the `xs` in `<xs:string>foo</xs:string>`.
  * @param label the name of the element, not including the prefix
  * @param attrs any attributes on the element
  */
-case class EvElemStart(pre: String, label: String, attrs: MetaData, scope: NamespaceBinding) extends XMLEvent 
+case class EvElemStart(pre: String, label: String, attrs: MetaData, scope: NamespaceBinding) extends XMLEvent
 
-/** 
+/**
  * An Element's end tag was encountered.
  * @param pre prefix, if any, on the element.  This is the `xs` in `<xs:string>foo</xs:string>`.
  * @param label the name of the element, not including the prefix
  */
-case class EvElemEnd(pre: String, label: String) extends XMLEvent 
+case class EvElemEnd(pre: String, label: String) extends XMLEvent
 
-/** 
+/**
  * A text node was encountered.
  * @param text the text that was found
  */
 case class EvText(text: String) extends XMLEvent
 
 /** An entity reference was encountered.
- * @param the name of the entity, e.g. `gt` when encountering the entity `&gt;` 
+ * @param the name of the entity, e.g. `gt` when encountering the entity `&gt;`
  */
 case class EvEntityRef(entity: String) extends XMLEvent
 
-/** 
+/**
  * A processing instruction was encountered.
- * @param target the "PITarget" of the processing instruction.  For the instruction `<?foo bar="baz"?>`, the target would 
+ * @param target the "PITarget" of the processing instruction.  For the instruction `<?foo bar="baz"?>`, the target would
  * be `foo`
  * @param text the remainder of the instruction.  For the instruction `<?foo bar="baz"?>`, the text would
  * be `bar="baz"`
@@ -52,8 +52,8 @@ case class EvEntityRef(entity: String) extends XMLEvent
  */
 case class EvProcInstr(target: String, text: String) extends XMLEvent
 
-/** 
- * A comment was encountered 
+/**
+ * A comment was encountered
  * @param text the text of the comment
  */
 case class EvComment(text: String) extends XMLEvent

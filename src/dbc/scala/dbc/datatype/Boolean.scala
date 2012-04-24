@@ -14,18 +14,18 @@ package datatype;
 
 /** The SQL type for a truth value. */
 @deprecated(DbcIsDeprecated, "2.9.0") class Boolean extends DataType {
-  
+
   def isEquivalent (datatype:DataType) = datatype match {
     case dt:Boolean => true
     case _ => false
   }
-  
+
   def isSubtypeOf (datatype:DataType) = isEquivalent(datatype);
-  
+
   type NativeType = scala.Boolean;
   val nativeTypeId = DataType.BOOLEAN;
-  
+
   /** A SQL-99 compliant string representation of the type. */
   override def sqlString: java.lang.String = "BOOLEAN";
-  
+
 }

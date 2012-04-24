@@ -15,7 +15,7 @@ class JUnitReport {
   //   dir.mkdir()
   //   val report = testReport(set.kind, results, succs, fails)
   //   XML.save("%s/%s.xml".format(d.toAbsolute.path, set.kind), report)
-  // }  
+  // }
 
   // def oneResult(res: (TestEntity, Int)) =
   //   <testcase name={res._1.path}>{
@@ -23,9 +23,9 @@ class JUnitReport {
   //      case 0 => scala.xml.NodeSeq.Empty
   //       case 1 => <failure message="Test failed"/>
   //       case 2 => <failure message="Test timed out"/>
-  //    } 
+  //    }
   //  }</testcase>
-  // 
+  //
   // def testReport(kind: String, results: Iterable[(TestEntity, Int)], succs: Int, fails: Int) = {
   //   <testsuite name={kind} tests={(succs + fails).toString} failures={fails.toString}>
   //    <properties/>

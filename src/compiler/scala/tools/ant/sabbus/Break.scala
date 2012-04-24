@@ -12,16 +12,16 @@ package scala.tools.ant.sabbus
 import org.apache.tools.ant.Task
 
 class Break extends Task {
-  
+
   def setId(input: String) {
     id = Some(input)
   }
-  
+
   private var id: Option[String] = None
-  
+
   override def execute() {
     if (id.isEmpty) sys.error("Attribute 'id' is not set")
     Compilers.break(id.get)
   }
-  
+
 }

@@ -124,7 +124,7 @@ public abstract class MethodBase extends MemberInfo {
             }
             if(pT.IsByRef() && !pT.GetElementType().CanBeTakenAddressOf()) {
                 /* TODO Cases where GenMSIL (so far) con't emit good bytecode:
-                   the type being taken address of IsArray(),  IsGeneric(), or IsTMVarUsage. 
+                   the type being taken address of IsArray(),  IsGeneric(), or IsTMVarUsage.
                    For example, System.Enum declares
                      public static bool TryParse<TEnum>(string value, out TEnum result) where TEnum : struct, new();
                 */

@@ -15,7 +15,7 @@ import io.Logging
 
 /** The high level view of the partest infrastructure.
  */
-abstract class Universe 
+abstract class Universe
       extends Entities
       with BuildContributors
       with Logging
@@ -27,7 +27,7 @@ abstract class Universe
       with PartestSpec
       with Config
       with Alarms
-      with Actions 
+      with Actions
       with Categories {
 
   /** The abstract values from which all else is derived. */
@@ -35,7 +35,7 @@ abstract class Universe
   def testBuildDir: Directory
   def allCategories: List[TestCategory]
   def selectedCategories: List[TestCategory]
-  
+
   /** Some plausibly abstract types. */
   type TestBuild    <: BuildContributor   // e.g. quick, pack
   type TestCategory <: AbsTestCategory    // e.g. pos, neg, run
@@ -47,8 +47,8 @@ abstract class Universe
    */
   implicit def f1ToTestStep(f: TestEntity => Boolean): TestStep =
     new TestStep { def apply(test: TestEntity) = f(test) }
-  
-  abstract class TestStep extends (TestEntity => Boolean) {    
+
+  abstract class TestStep extends (TestEntity => Boolean) {
     def apply(test: TestEntity): Boolean
   }
 
@@ -56,36 +56,36 @@ abstract class Universe
    */
   trait AbsTestCategory extends BuildContributor {
     type TestSettings
-    
+
     def kind: String
     def testSequence: TestSequence
     def denotesTest(location: Path): Boolean
-    
+
     def createTest(location: Path): TestEntity
     def createSettings(entity: TestEntity): TestSettings
     def enumerate: List[TestEntity]
   }
-  
-  /** A single test.  It may involve multiple files, but only a 
+
+  /** A single test.  It may involve multiple files, but only a
    *  single path is used to designate it.
    */
-  trait AbsTestEntity extends BuildContributor {  
+  trait AbsTestEntity extends BuildContributor {
     def category: TestCategory
     def location: Path
     def onException(x: Throwable): Unit
     def testClasspath: String
-    
+
     /** Most tests will use the sequence defined by the category,
      *  but the test can override and define a custom sequence.
      */
     def testSequence: TestSequence
-    
+
     /** True if this test recognizes the given path as a piece of it.
      *  For validation purposes.
      */
     def acknowledges(path: Path): Boolean
   }
-  
+
   /** Every TestEntity is partly characterized by a series of actions
    *  which are applied to the TestEntity in the given order.  The test
    *  passes if all those actions return true, fails otherwise.

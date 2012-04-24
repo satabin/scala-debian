@@ -19,7 +19,7 @@ import scala.collection.Iterator
  */
 object MetaData {
 
-  /** 
+  /**
    * appends all attributes from new_tail to attribs, without attempting to detect
    * or remove duplicates. The method guarantees that all attributes from attribs come before
    * the attributes in new_tail, but does not guarantee to preserve the relative order of attribs.
@@ -34,7 +34,7 @@ object MetaData {
    * returns normalized MetaData, with all duplicates removed and namespace prefixes resolved to
    *  namespace URIs via the given scope.
    */
-  def normalize(attribs: MetaData, scope: NamespaceBinding): MetaData = {    
+  def normalize(attribs: MetaData, scope: NamespaceBinding): MetaData = {
     def iterate(md: MetaData, normalized_attribs: MetaData, set: Set[String]): MetaData = {
       lazy val key = getUniversalKey(md, scope)
       if (md eq Null) normalized_attribs
@@ -43,7 +43,7 @@ object MetaData {
     }
     iterate(attribs, Null, Set())
   }
- 
+
   /**
    * returns key if md is unprefixed, pre+key is md is prefixed
    */
@@ -73,7 +73,7 @@ object MetaData {
  */
 abstract class MetaData extends Iterable[MetaData] with Equality with Serializable {
   /** Updates this MetaData with the MetaData given as argument. All attributes that occur in updates
-   *  are part of the resulting MetaData. If an attribute occurs in both this instance and 
+   *  are part of the resulting MetaData. If an attribute occurs in both this instance and
    *  updates, only the one in updates is part of the result (avoiding duplicates). For prefixed
    *  attributes, namespaces are resolved using the given scope, which defaults to TopScope.
    *
@@ -119,7 +119,7 @@ abstract class MetaData extends Iterable[MetaData] with Equality with Serializab
   def copy(next: MetaData): MetaData
 
   /** if owner is the element of this metadata item, returns namespace */
-  def getNamespace(owner: Node): String 
+  def getNamespace(owner: Node): String
 
   def hasNext = (Null != next)
 
@@ -139,10 +139,6 @@ abstract class MetaData extends Iterable[MetaData] with Equality with Serializab
   }
   def basisForHashCode: Seq[Any] = List(this.asAttrMap)
 
-  /** Returns an iterator on attributes */
-  def iterator: Iterator[MetaData] = Iterator.single(this) ++ next.iterator
-  override def size: Int = 1 + iterator.length
-
   /** filters this sequence of meta data */
   override def filter(f: MetaData => Boolean): MetaData =
     if (f(this)) copy(next filter f)
@@ -161,7 +157,7 @@ abstract class MetaData extends Iterable[MetaData] with Equality with Serializab
     case x: Attribute if x.isPrefixed => x.pre + ":" + key
     case _                            => key
   }
-  
+
   /** Returns a Map containing the attributes stored as key/value pairs.
    */
   def asAttrMap: Map[String, String] =

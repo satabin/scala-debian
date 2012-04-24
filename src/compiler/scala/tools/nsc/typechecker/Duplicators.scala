@@ -36,7 +36,7 @@ abstract class Duplicators extends Analyzer {
     (new BodyDuplicator(context)).retypedMethod(tree.asInstanceOf[DefDef], oldThis, newThis)
 
   /** Return the special typer for duplicate method bodies. */
-  override def newTyper(context: Context): Typer = 
+  override def newTyper(context: Context): Typer =
     new BodyDuplicator(context)
 
   private def resetClassOwners() {
@@ -49,15 +49,15 @@ abstract class Duplicators extends Analyzer {
   private var envSubstitution: SubstTypeMap = _
 
   private class SubstSkolemsTypeMap(from: List[Symbol], to: List[Type]) extends SubstTypeMap(from, to) {
-    protected override def matches(sym1: Symbol, sym2: Symbol) = 
+    protected override def matches(sym1: Symbol, sym2: Symbol) =
       if (sym2.isTypeSkolem) sym2.deSkolemize eq sym1
       else sym1 eq sym2
   }
 
-  private val invalidSyms: mutable.Map[Symbol, Tree] = mutable.HashMap.empty[Symbol, Tree]
-  
+  private val invalidSyms: mutable.Map[Symbol, Tree] = perRunCaches.newMap[Symbol, Tree]()
+
   /** A typer that creates new symbols for all definitions in the given tree
-   *  and updates references to them while re-typechecking. All types in the 
+   *  and updates references to them while re-typechecking. All types in the
    *  tree, except for TypeTrees, are erased prior to type checking. TypeTrees
    *  are fixed by substituting invalid symbols for the new ones.
    */
@@ -83,7 +83,7 @@ abstract class Duplicators extends Analyzer {
           if (newsym ne sym) {
             log("fixing " + sym + " -> " + newsym)
             typeRef(mapOver(pre), newsym, mapOverArgs(args, newsym.typeParams))
-          } else 
+          } else
             super.mapOver(tpe)
 
         case SingleType(pre, sym) =>
@@ -102,12 +102,12 @@ abstract class Duplicators extends Analyzer {
           } else
             super.mapOver(tpe)
 
-        
+
         case _ =>
           super.mapOver(tpe)
       }
     }
-    
+
     /** Fix the given type by replacing invalid symbols with the new ones. */
     def fixType(tpe: Type): Type = {
       val tpe1 = envSubstitution(tpe)
@@ -120,18 +120,18 @@ abstract class Duplicators extends Analyzer {
 
     /** Return the new symbol corresponding to `sym'. */
     private def updateSym(sym: Symbol): Symbol =
-      if (invalidSyms.isDefinedAt(sym)) 
+      if (invalidSyms.isDefinedAt(sym))
         invalidSyms(sym).symbol
       else
         sym
-      
+
     private def invalidate(tree: Tree) {
       if (tree.isDef && tree.symbol != NoSymbol) {
         log("invalid " + tree.symbol)
         invalidSyms(tree.symbol) = tree
 
-        tree match { 
-          case ldef @ LabelDef(name, params, rhs) =>        
+        tree match {
+          case ldef @ LabelDef(name, params, rhs) =>
             log("LabelDef " + name + " sym.info: " + ldef.symbol.info)
             invalidSyms(ldef.symbol) = ldef
           //          breakIf(true, this, ldef, context)
@@ -145,7 +145,7 @@ abstract class Duplicators extends Analyzer {
             invalidate(tparams ::: vparamss.flatten)
             tree.symbol = NoSymbol
 
-          case _ => 
+          case _ =>
             tree.symbol = NoSymbol
         }
       }
@@ -154,7 +154,7 @@ abstract class Duplicators extends Analyzer {
     private def invalidate(stats: List[Tree]) {
       stats foreach invalidate
     }
-      
+
 
     def retypedMethod(ddef: DefDef, oldThis: Symbol, newThis: Symbol): Tree = {
       oldClassOwner = oldThis
@@ -169,7 +169,7 @@ abstract class Duplicators extends Analyzer {
       log("remapping this of " + oldClassOwner + " to " + newClassOwner)
       typed(ddef)
     }
-    
+
     private def inspectTpe(tpe: Type) = {
       tpe match {
         case MethodType(_, res) =>
@@ -180,7 +180,7 @@ abstract class Duplicators extends Analyzer {
         case _ =>
       }
     }
-    
+
     /** Special typer method for re-type checking trees. It expects a typed tree.
      *  Returns a typed tree that has fresh symbols for all definitions in the original tree.
      *
@@ -197,7 +197,7 @@ abstract class Duplicators extends Analyzer {
      */
     override def typed(tree: Tree, mode: Int, pt: Type): Tree = {
       if (settings.debug.value) log("typing " + tree + ": " + tree.tpe)
-      if (tree.hasSymbol && tree.symbol != NoSymbol 
+      if (tree.hasSymbol && tree.symbol != NoSymbol
           && !tree.symbol.isLabel  // labels cannot be retyped by the type checker as LabelDef has no ValDef/return type trees
           && invalidSyms.isDefinedAt(tree.symbol)) {
         if (settings.debug.value) log("removed symbol " + tree.symbol)
@@ -215,7 +215,7 @@ abstract class Duplicators extends Analyzer {
           invalidate(res)
           tree.tpe = null
           super.typed(tree, mode, pt)
-        
+
         case ClassDef(_, _, _, tmpl @ Template(parents, _, stats)) =>
 //          log("invalidating classdef " + tree.tpe)
           tmpl.symbol = tree.symbol.newLocalDummy(tree.pos)
@@ -227,7 +227,7 @@ abstract class Duplicators extends Analyzer {
           ddef.tpt.tpe = fixType(ddef.tpt.tpe)
           ddef.tpe = null
           super.typed(ddef, mode, pt)
-          
+
         case vdef @ ValDef(_, _, tpt, rhs) =>
 //          log("vdef fixing tpe: " + tree.tpe + " with sym: " + tree.tpe.typeSymbol + " and " + invalidSyms)
           vdef.tpt.tpe = fixType(vdef.tpt.tpe)
@@ -298,13 +298,13 @@ abstract class Duplicators extends Analyzer {
           super.typed(atPos(tree.pos)(Match(scrut, cases1)), mode, pt)
 
         case EmptyTree =>
-          // no need to do anything, in particular, don't set the type to null, EmptyTree.tpe_= asserts 
+          // no need to do anything, in particular, don't set the type to null, EmptyTree.tpe_= asserts
           tree
 
         case _ =>
           // log("default: " + tree)
           if (tree.hasSymbol && tree.symbol != NoSymbol && (tree.symbol.owner == definitions.AnyClass)) {
-            tree.symbol = NoSymbol // maybe we can find a more specific member in a subclass of Any (see AnyVal members, like ==) 
+            tree.symbol = NoSymbol // maybe we can find a more specific member in a subclass of Any (see AnyVal members, like ==)
           }
           tree.tpe = null
           super.typed(tree, mode, pt)

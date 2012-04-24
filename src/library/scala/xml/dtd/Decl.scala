@@ -18,7 +18,7 @@ abstract class MarkupDecl extends Decl {
   def buildString(sb: StringBuilder): StringBuilder
 }
 
-/** an element declaration 
+/** an element declaration
  */
 case class ElemDecl(name: String, contentModel: ContentModel)
 extends MarkupDecl
@@ -60,7 +60,7 @@ case class AttrDecl(name: String, tpe: String, default: DefaultDecl) {
 }
 
 /** an entity declaration */
-abstract class EntityDecl extends MarkupDecl 
+abstract class EntityDecl extends MarkupDecl
 
 /** a parsed general entity declaration */
 case class ParsedEntityDecl(name: String, entdef: EntityDef) extends EntityDecl {
@@ -108,7 +108,7 @@ case class IntDef(value:String) extends EntityDef {
       else {
         val n = tmp.substring(ix, iz);
 
-        if( !Utility.isName( n )) 
+        if( !Utility.isName( n ))
           throw new IllegalArgumentException("internal entity def: \""+n+"\" must be an XML Name");
 
         tmp = tmp.substring(iz+1, tmp.length());
@@ -118,23 +118,23 @@ case class IntDef(value:String) extends EntityDef {
   }
   validateValue();
 
-  override def buildString(sb: StringBuilder): StringBuilder = 
+  override def buildString(sb: StringBuilder): StringBuilder =
     Utility.appendQuoted(value, sb);
 
 }
 
 case class ExtDef(extID:ExternalID) extends EntityDef {
-  override def buildString(sb: StringBuilder): StringBuilder = 
+  override def buildString(sb: StringBuilder): StringBuilder =
     extID.buildString(sb);
 }
 
 
 /** a parsed entity reference */
 case class PEReference(ent:String) extends MarkupDecl {
-  if( !Utility.isName( ent )) 
+  if( !Utility.isName( ent ))
     throw new IllegalArgumentException("ent must be an XML Name");
-  
-  override def buildString(sb: StringBuilder): StringBuilder = 
+
+  override def buildString(sb: StringBuilder): StringBuilder =
     sb.append('%').append(ent).append(';');
 }
 

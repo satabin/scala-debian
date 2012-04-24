@@ -108,15 +108,18 @@ trait Scopes {
      *
      *  @param e ...
      */
-    def enter(e: ScopeEntry) {
+    protected def enter(e: ScopeEntry) {
       elemsCache = null
-      if (hashtable ne null) {
-        val i = e.sym.name.start & HASHMASK
-        elems.tail = hashtable(i)
-        hashtable(i) = elems
-      } else if (size >= MIN_HASH) {
+      if (hashtable ne null)
+        enterInHash(e)
+      else if (size >= MIN_HASH)
         createHash()
-      }
+    }
+
+    private def enterInHash(e: ScopeEntry): Unit = {
+      val i = e.sym.name.start & HASHMASK
+      e.tail = hashtable(i)
+      hashtable(i) = e
     }
 
     /** enter a symbol
@@ -136,15 +139,23 @@ trait Scopes {
 
     private def createHash() {
       hashtable = new Array[ScopeEntry](HASHSIZE)
-      enterInHash(elems)
+      enterAllInHash(elems)
     }
 
-    private def enterInHash(e: ScopeEntry) {
+    private def enterAllInHash(e: ScopeEntry, n: Int = 0) {
       if (e ne null) {
-        enterInHash(e.next)
-        val i = e.sym.name.start & HASHMASK
-        e.tail = hashtable(i)
-        hashtable(i) = e
+        if (n < maxRecursions) {
+          enterAllInHash(e.next, n + 1)
+          enterInHash(e)
+        } else {
+          var entries: List[ScopeEntry] = List()
+          var ee = e
+          while (ee ne null) {
+            entries = ee :: entries
+            ee = ee.next
+          }
+          entries foreach enterInHash
+        }
       }
     }
 
@@ -246,12 +257,12 @@ trait Scopes {
       e
     }
 
-    /** lookup next entry with same name as this one 
+    /** lookup next entry with same name as this one
      *  @note from Martin: I believe this is a hotspot or will be one
      *  in future versions of the type system. I have reverted the previous
      *  change to use iterators as too costly.
      */
-    def lookupNextEntry(entry: ScopeEntry): ScopeEntry = {      
+    def lookupNextEntry(entry: ScopeEntry): ScopeEntry = {
       var e = entry
       if (hashtable ne null)
         do { e = e.tail } while ((e ne null) && e.sym.name != entry.sym.name)
@@ -281,7 +292,7 @@ trait Scopes {
     /** Return all symbols as an iterator in the order they were entered in this scope.
      */
     def iterator: Iterator[Symbol] = toList.iterator
-    
+
 /*
     /** Does this scope contain an entry for `sym`?
      */
@@ -290,7 +301,7 @@ trait Scopes {
     /** A scope that contains all symbols of this scope and that also contains `sym`.
      */
     def +(sym: Symbol): Scope =
-      if (contains(sym)) this 
+      if (contains(sym)) this
       else {
         val result = cloneScope
         result enter sym
@@ -300,7 +311,7 @@ trait Scopes {
     /** A scope that contains all symbols of this scope except `sym`.
      */
     def -(sym: Symbol): Scope =
-      if (!contains(sym)) this 
+      if (!contains(sym)) this
       else {
         val result = cloneScope
         result unlink sym
@@ -332,5 +343,8 @@ trait Scopes {
   /** The error scope.
    */
   class ErrorScope(owner: Symbol) extends Scope(null: ScopeEntry)
+
+  private final val maxRecursions = 1000
+
 }
 

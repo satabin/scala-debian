@@ -11,7 +11,7 @@
 package scala
 
 /** This class implements errors which are thrown whenever a
- *  field is used before it has been initialized. 
+ *  field is used before it has been initialized.
  *
  *  Such runtime checks are not emitted by default. See the
  *  compiler documentation for knowing how to turn them on.
@@ -21,7 +21,7 @@ package scala
  *
  *  @since 2.7
  */
-final case class UninitializedFieldError(msg: String) 
+final case class UninitializedFieldError(msg: String)
            extends RuntimeException(msg) {
   def this(obj: Any) =
     this(if (null != obj) obj.toString() else "null")

@@ -17,18 +17,18 @@ trait CompilationUnits { self: Global =>
 
     /** the fresh name creator */
     var fresh: FreshNameCreator = new FreshNameCreator.Default
-    
+
     def freshTermName(prefix: String): TermName = newTermName(fresh.newName(prefix))
     def freshTypeName(prefix: String): TypeName = newTypeName(fresh.newName(prefix))
 
     /** the content of the compilation unit in tree form */
     var body: Tree = EmptyTree
-    
-    /** representation for a source code comment, includes 
+
+    /** representation for a source code comment, includes
      * '//' or '/*' '*/' in the value and the position
      */
     case class Comment(text: String, pos: Position)
-        
+
     /** all comments found in this compilation unit */
     val comments = new ListBuffer[Comment]
 
@@ -47,7 +47,7 @@ trait CompilationUnits { self: Global =>
      */
     val depends = new HashSet[Symbol]
 
-    /** so we can relink 
+    /** so we can relink
      */
     val defined = new HashSet[Symbol]
 
@@ -75,26 +75,26 @@ trait CompilationUnits { self: Global =>
     def error(pos: Position, msg: String) =
       reporter.error(pos, msg)
 
-    def warning(pos: Position, msg: String) = 
+    def warning(pos: Position, msg: String) =
       reporter.warning(pos, msg)
 
-    def deprecationWarning(pos: Position, msg: String) = 
+    def deprecationWarning(pos: Position, msg: String) =
       if (opt.deprecation) warning(pos, msg)
       else currentRun.deprecationWarnings += 1
 
-    def uncheckedWarning(pos: Position, msg: String) = 
+    def uncheckedWarning(pos: Position, msg: String) =
       if (opt.unchecked) warning(pos, msg)
       else currentRun.uncheckedWarnings += 1
 
     def incompleteInputError(pos: Position, msg:String) =
-      reporter.incompleteInputError(pos, msg) 
+      reporter.incompleteInputError(pos, msg)
 
     def comment(pos: Position, msg: String) =
       reporter.comment(pos, msg)
-      
+
     /** Is this about a .java source file? */
     lazy val isJava = source.file.name.endsWith(".java")
-    
+
     override def toString() = source.toString()
 
     def clear() {

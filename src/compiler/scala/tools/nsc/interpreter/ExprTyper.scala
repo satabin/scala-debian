@@ -15,7 +15,7 @@ trait ExprTyper {
   import global.{ reporter => _, _ }
   import syntaxAnalyzer.UnitParser
   import naming.freshInternalVarName
-  
+
   object codeParser extends { val global: repl.global.type = repl.global } with CodeHandlers[Tree] {
     def applyRule[T](code: String, rule: UnitParser => T): T = {
       reporter.reset()
@@ -24,10 +24,10 @@ trait ExprTyper {
       val result  = rule(scanner)
       if (!reporter.hasErrors)
         scanner.accept(EOF)
-      
+
       result
     }
-    
+
     def decl(code: String)  = CodeHandlers.fail("todo")
     def defn(code: String)  = CodeHandlers.fail("todo")
     def expr(code: String)  = applyRule(code, _.expr())
@@ -39,7 +39,7 @@ trait ExprTyper {
       case xs       => CodeHandlers.fail("Not a single statement: " + xs.mkString(", "))
     }
   }
-  
+
   /** Parse a line into a sequence of trees. Returns None if the input is incomplete. */
   def parse(line: String): Option[List[Tree]] = {
     var isIncomplete = false
@@ -50,9 +50,9 @@ trait ExprTyper {
       else Some(trees)
     }
   }
-  
+
   // TODO: integrate these into a CodeHandler[Type].
-  
+
   // XXX literals.
   // 1) Identifiers defined in the repl.
   // 2) A path loadable via getModule.
@@ -86,7 +86,7 @@ trait ExprTyper {
       try typeOfTerm(expr) orElse asModule orElse asExpr orElse asQualifiedImport
       finally typeOfExpressionDepth -= 1
     }
-    
+
     // Don't presently have a good way to suppress undesirable success output
     // while letting errors through, so it is first trying it silently: if there
     // is an error, and errors are desired, then it re-evaluates non-silently
@@ -94,7 +94,7 @@ trait ExprTyper {
     beSilentDuring(evaluate()) orElse beSilentDuring(typeOfDeclaration(expr)) orElse {
       if (!silent)
         evaluate()
-      
+
       None
     }
   }
@@ -103,7 +103,7 @@ trait ExprTyper {
   private def typeOfDeclaration(code: String): Option[Type] = {
     repltrace("typeOfDeclaration(" + code + ")")
     val obname = freshInternalVarName()
-    
+
     interpret("object " + obname + " {\n" + code + "\n}\n", true) match {
       case IR.Success =>
         val sym = symbolOfTerm(obname)
@@ -116,7 +116,7 @@ trait ExprTyper {
       case _          =>
         None
     }
-  }    
+  }
   // def compileAndTypeExpr(expr: String): Option[Typer] = {
   //   class TyperRun extends Run {
   //     override def stopPhase(name: String) = name == "superaccessors"

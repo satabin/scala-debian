@@ -53,14 +53,14 @@ import Flags._
 
     /** Does symbol have ANY flag in `mask` set? */
     final def hasFlag(mask: Long): Boolean = (flags & mask) != 0L
-    
+
     /** Does symbol have ALL the flags in `mask` set? */
     final def hasAllFlags(mask: Long): Boolean = (flags & mask) == mask
 
     /** Set when symbol has a modifier of the form private[X], NoSymbol otherwise.
      */
     def privateWithin: Symbol
-        
+
     final def hasAccessBoundary = (privateWithin != null) && (privateWithin != NoSymbol)
 
     /** The raw info of the type
@@ -72,7 +72,7 @@ import Flags._
     def tpe: Type = info
 
     /** The info of the symbol. This is like tpe, except for class symbols where the `info`
-     *  describes the contents of the class whereas the `tpe` is a reference to the class. 
+     *  describes the contents of the class whereas the `tpe` is a reference to the class.
      */
     def info: Type = {
       val tp = rawInfo
@@ -113,9 +113,9 @@ import Flags._
      *  otherwise NoSymbol
      */
     def moduleClass: Symbol
-    
+
     /**
-     *  If symbol is a lazy val, it's lazy accessor 
+     *  If symbol is a lazy val, it's lazy accessor
      */
     def lazyAccessor: Symbol
 
@@ -151,19 +151,19 @@ import Flags._
     final def isEmptyPackageClass = isPackageClass && name == tpnme.EMPTY_PACKAGE_NAME
     final def isPackage = isModule && hasFlag(PACKAGE)
     final def isPackageClass = isClass && hasFlag(PACKAGE)
-    final def isRoot = isPackageClass && owner == NoSymbol 
+    final def isRoot = isPackageClass && owner == NoSymbol
     final def isRootPackage = isPackage && owner == NoSymbol
 
     /** Is this symbol an effective root for fullname string?
      */
     def isEffectiveRoot = isRoot || isEmptyPackageClass
-    
+
     /** If this is NoSymbol, evaluate the argument: otherwise, this.
      */
     def orElse[T](alt: => Symbol): Symbol = if (this ne NoSymbol) this else alt
 
-    // creators 
-    
+    // creators
+
     def newAbstractType(name: TypeName, pos: Position = NoPosition): Symbol
     def newAliasType(name: TypeName, pos: Position = NoPosition): Symbol
     def newClass(name: TypeName, pos: Position = NoPosition): Symbol
@@ -183,5 +183,5 @@ import Flags._
 
   val NoSymbol: Symbol
 }
-  
-  
+
+

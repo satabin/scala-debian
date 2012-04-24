@@ -13,7 +13,7 @@ package mutable
 
 
 /** A trait for mutable maps with multiple values assigned to a key.
- *  
+ *
  *  This class is typically used as a mixin. It turns maps which map `A`
  *  to `Set[B]` objects into multi maps which map `A` to
  *  `B` objects.
@@ -21,17 +21,17 @@ package mutable
  *  @define coll multimap
  *  @define Coll MultiMap
  *  @author  Matthias Zenger
- *  @author  Martin Odersky 
+ *  @author  Martin Odersky
  *  @version 2.8
  *  @since   1
  */
 trait MultiMap[A, B] extends Map[A, Set[B]] {
   /** Creates a new set.
-   *  
+   *
    *  Classes that use this trait as a mixin can override this method
    *  to have the desired implementation of sets assigned to new keys.
    *  By default this is `HashSet`.
-   *  
+   *
    *  @return An empty set of values of type `B`.
    */
   protected def makeSet: Set[B] = new HashSet[B]
@@ -43,7 +43,7 @@ trait MultiMap[A, B] extends Map[A, Set[B]] {
    *  the existing value assigned to that `key` if it is equal to
    *  the specified value. Otherwise, simply adds another binding to
    *  the `key`.
-   *  
+   *
    *  @param key    The key to which to bind the new value.
    *  @param value  The value to bind to the key.
    *  @return       A reference to this multimap.
@@ -61,10 +61,10 @@ trait MultiMap[A, B] extends Map[A, Set[B]] {
   }
 
   /** Removes the binding of `value` to `key` if it exists.
-   *  
+   *
    *  If this was the last value assigned to the specified key, the
    *  set assigned to that key will be removed as well.
-   *  
+   *
    *  @param key     The key of the binding.
    *  @param value   The value to remove.
    *  @return        A reference to this multimap.
@@ -78,9 +78,9 @@ trait MultiMap[A, B] extends Map[A, Set[B]] {
     }
     this
   }
-  
+
   /** Checks if there exists a binding to `key` such that it satisfies the predicate `p`.
-   *  
+   *
    *  @param key   The key for which the predicate is checked.
    *  @param p     The predicate which a value assigned to the key must satisfy.
    *  @return      A boolean if such a binding exists

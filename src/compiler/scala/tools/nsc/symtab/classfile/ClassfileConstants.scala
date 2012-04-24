@@ -95,7 +95,7 @@ object ClassfileConstants {
   final val SCALA_NOTHING = "scala.runtime.Nothing$"
   final val SCALA_NULL = "scala.runtime.Null$"
 
-  
+
   // tags describing the type of newarray
   final val T_BOOLEAN = 4
   final val T_CHAR    = 5
@@ -110,14 +110,14 @@ object ClassfileConstants {
   final val nop         = 0x00
   final val aconst_null = 0x01
   final val iconst_m1   = 0x02
-  
+
   final val iconst_0    = 0x03
   final val iconst_1    = 0x04
   final val iconst_2    = 0x05
   final val iconst_3    = 0x06
   final val iconst_4    = 0x07
   final val iconst_5    = 0x08
-	
+
   final val lconst_0    = 0x09
   final val lconst_1    = 0x0a
   final val fconst_0    = 0x0b
@@ -131,13 +131,13 @@ object ClassfileConstants {
   final val ldc         = 0x12
   final val ldc_w       = 0x13
   final val ldc2_w      = 0x14
-  	  
+
   final val iload       = 0x15
   final val lload       = 0x16
   final val fload       = 0x17
   final val dload       = 0x18
   final val aload       = 0x19
-  	  
+
   final val iload_0     = 0x1a
   final val iload_1     = 0x1b
   final val iload_2     = 0x1c
@@ -166,7 +166,7 @@ object ClassfileConstants {
   final val baload      = 0x33
   final val caload      = 0x34
   final val saload      = 0x35
-  	  
+
   final val istore      = 0x36
   final val lstore      = 0x37
   final val fstore      = 0x38
@@ -200,7 +200,7 @@ object ClassfileConstants {
   final val bastore     = 0x54
   final val castore     = 0x55
   final val sastore     = 0x56
-	
+
   final val pop         = 0x57
   final val pop2        = 0x58
   final val dup         = 0x59
@@ -210,7 +210,7 @@ object ClassfileConstants {
   final val dup2_x1     = 0x5d
   final val dup2_x2     = 0x5e
   final val swap        = 0x5f
-  	  
+
   final val iadd        = 0x60
   final val ladd        = 0x61
   final val fadd        = 0x62
@@ -231,12 +231,12 @@ object ClassfileConstants {
   final val lrem        = 0x71
   final val frem        = 0x72
   final val drem        = 0x73
-  	  
+
   final val ineg        = 0x74
   final val lneg        = 0x75
   final val fneg        = 0x76
   final val dneg        = 0x77
-	
+
   final val ishl        = 0x78
   final val lshl        = 0x79
   final val ishr        = 0x7a
@@ -250,7 +250,7 @@ object ClassfileConstants {
   final val ixor        = 0x82
   final val lxor        = 0x83
   final val iinc        = 0x84
-  	  
+
   final val i2l         = 0x85
   final val i2f         = 0x86
   final val i2d         = 0x87
@@ -266,13 +266,13 @@ object ClassfileConstants {
   final val i2b         = 0x91
   final val i2c         = 0x92
   final val i2s         = 0x93
-  	  
+
   final val lcmp        = 0x94
   final val fcmpl       = 0x95
   final val fcmpg       = 0x96
   final val dcmpl       = 0x97
   final val dcmpg       = 0x98
-  	  
+
   final val ifeq        = 0x99
   final val ifne        = 0x9a
   final val iflt        = 0x9b
@@ -303,20 +303,20 @@ object ClassfileConstants {
   final val putstatic   = 0xb3
   final val getfield    = 0xb4
   final val putfield    = 0xb5
-  	  	
+
   final val invokevirtual   = 0xb6
   final val invokespecial   = 0xb7
   final val invokestatic    = 0xb8
   final val invokeinterface = 0xb9
   final val xxxunusedxxxx   = 0xba
-  	  
+
   final val new_          = 0xbb
   final val newarray      = 0xbc
   final val anewarray     = 0xbd
   final val arraylength   = 0xbe
   final val athrow        = 0xbf
   final val checkcast     = 0xc0
-  final val instanceof    = 0xc1    
+  final val instanceof    = 0xc1
   final val monitorenter  = 0xc2
   final val monitorexit   = 0xc3
   final val wide          = 0xc4
@@ -325,9 +325,9 @@ object ClassfileConstants {
   final val ifnonnull     = 0xc7
   final val goto_w        = 0xc8
   final val jsr_w         = 0xc9
-  	  
+
   // reserved opcodes
   final val breakpoint    = 0xca
   final val impdep1       = 0xfe
-  final val impdep2       = 0xff  
+  final val impdep2       = 0xff
 }

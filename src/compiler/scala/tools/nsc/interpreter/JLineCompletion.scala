@@ -19,20 +19,20 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
   import definitions.{ PredefModule, RootClass, AnyClass, AnyRefClass, ScalaPackage, JavaLangPackage }
   type ExecResult = Any
   import intp.{ debugging, afterTyper }
-  
+
   // verbosity goes up with consecutive tabs
   private var verbosity: Int = 0
   def resetVerbosity() = verbosity = 0
-    
+
   def getType(name: String, isModule: Boolean) = {
     val f = if (isModule) definitions.getModule(_: Name) else definitions.getClass(_: Name)
     try Some(f(name).tpe)
     catch { case _: MissingRequirementError => None }
   }
-  
+
   def typeOf(name: String) = getType(name, false)
   def moduleOf(name: String) = getType(name, true)
-    
+
   trait CompilerCompletion {
     def tp: Type
     def effectiveTp = tp match {
@@ -68,7 +68,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
       new TypeMemberCompletion(tp) {
         var upgraded = false
         lazy val upgrade = {
-          intp rebind param          
+          intp rebind param
           intp.reporter.printMessage("\nRebinding stable value %s from %s to %s".format(param.name, tp, param.tpe))
           upgraded = true
           new TypeMemberCompletion(runtimeType)
@@ -101,7 +101,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
     def excludeEndsWith: List[String] = Nil
     def excludeStartsWith: List[String] = List("<") // <byname>, <repeated>, etc.
     def excludeNames: List[String] = (anyref.methodNames filterNot anyRefMethodsToShow) :+ "_root_"
-    
+
     def methodSignatureString(sym: Symbol) = {
       IMain stripString afterTyper(new MethodSymbolOutput(sym).methodString())
     }
@@ -116,10 +116,10 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
 
     def completions(verbosity: Int) =
       debugging(tp + " completions ==> ")(filtered(memberNames))
-    
+
     override def follow(s: String): Option[CompletionAware] =
-      debugging(tp + " -> '" + s + "' ==> ")(memberNamed(s) map (x => TypeMemberCompletion(x.tpe)))      
-    
+      debugging(tp + " -> '" + s + "' ==> ")(memberNamed(s) map (x => TypeMemberCompletion(x.tpe)))
+
     override def alternativesFor(id: String): List[String] =
       debugging(id + " alternatives ==> ") {
         val alts = members filter (x => x.isMethod && tos(x) == id) map methodSignatureString
@@ -129,7 +129,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
 
     override def toString = "%s (%d members)".format(tp, members.size)
   }
-  
+
   class PackageCompletion(tp: Type) extends TypeMemberCompletion(tp) {
     override def excludeNames = anyref.methodNames
   }
@@ -140,17 +140,17 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
       case _    => memberNames
     }
   }
-  
+
   class ImportCompletion(tp: Type) extends TypeMemberCompletion(tp) {
     override def completions(verbosity: Int) = verbosity match {
       case 0    => filtered(members filterNot (_.isSetter) map tos)
       case _    => super.completions(verbosity)
     }
   }
-  
+
   // not for completion but for excluding
   object anyref extends TypeMemberCompletion(AnyRefClass.tpe) { }
-  
+
   // the unqualified vals/defs/etc visible in the repl
   object ids extends CompletionAware {
     override def completions(verbosity: Int) = intp.unqualifiedIds ++ List("classOf") //, "_root_")
@@ -185,7 +185,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
   private def imported = intp.sessionWildcards map TypeMemberCompletion.imported
 
   // literal Ints, Strings, etc.
-  object literals extends CompletionAware {    
+  object literals extends CompletionAware {
     def simpleParse(code: String): Tree = {
       val unit    = new CompilationUnit(new util.BatchSourceFile("<console>", code))
       val scanner = new syntaxAnalyzer.UnitParser(unit)
@@ -193,9 +193,9 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
 
       if (tss.size == 1) tss.head else EmptyTree
     }
-  
+
     def completions(verbosity: Int) = Nil
-    
+
     override def follow(id: String) = simpleParse(id) match {
       case x: Literal   => Some(new LiteralCompletion(x))
       case _            => None
@@ -208,18 +208,18 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
     override def follow(id: String) = id match {
       case "_root_" => Some(this)
       case _        => super.follow(id)
-    }    
+    }
   }
   // members of Predef
   object predef extends TypeMemberCompletion(PredefModule.tpe) {
     override def excludeEndsWith    = super.excludeEndsWith ++ List("Wrapper", "ArrayOps")
     override def excludeStartsWith  = super.excludeStartsWith ++ List("wrap")
     override def excludeNames       = anyref.methodNames
-    
+
     override def exclude(name: String) = super.exclude(name) || (
       (name contains "2")
     )
-    
+
     override def completions(verbosity: Int) = verbosity match {
       case 0    => Nil
       case _    => super.completions(verbosity)
@@ -232,7 +232,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
     override def exclude(name: String) = super.exclude(name) || (
       skipArity(name)
     )
-    
+
     override def completions(verbosity: Int) = verbosity match {
       case 0    => filtered(packageNames ++ aliasNames)
       case _    => super.completions(verbosity)
@@ -242,7 +242,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
   object javalang extends PackageCompletion(JavaLangPackage.tpe) {
     override lazy val excludeEndsWith   = super.excludeEndsWith ++ List("Exception", "Error")
     override lazy val excludeStartsWith = super.excludeStartsWith ++ List("CharacterData")
-    
+
     override def completions(verbosity: Int) = verbosity match {
       case 0    => filtered(packageNames)
       case _    => super.completions(verbosity)
@@ -254,7 +254,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
   lazy val topLevelBase: List[CompletionAware] = List(ids, rootClass, predef, scalalang, javalang, literals)
   def topLevel = topLevelBase ++ imported
   def topLevelThreshold = 50
-  
+
   // the first tier of top level objects (doesn't include file completion)
   def topLevelFor(parsed: Parsed): List[String] = {
     val buf = new ListBuffer[String]
@@ -282,7 +282,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
   def execute(line: String): Option[ExecResult] = {
     val parsed = Parsed(line)
     def noDotOrSlash = line forall (ch => ch != '.' && ch != '/')
-    
+
     if (noDotOrSlash) None  // we defer all unqualified ids to the repl.
     else {
       (ids executionFor parsed) orElse
@@ -290,7 +290,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
       (FileCompletion executionFor line)
     }
   }
-  
+
   // generic interface for querying (e.g. interpreter loop, testing)
   def completions(buf: String): List[String] =
     topLevelFor(Parsed.dotted(buf + ".", buf.length + 1))
@@ -329,7 +329,7 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
 
       // we don't try lower priority completions unless higher ones return no results.
       def tryCompletion(p: Parsed, completionFunction: Parsed => List[String]): Option[Candidates] = {
-        val winners = completionFunction(p) 
+        val winners = completionFunction(p)
         if (winners.isEmpty)
           return None
         val newCursor =
@@ -342,23 +342,23 @@ class JLineCompletion(val intp: IMain) extends Completion with CompletionOutput 
               p, lastBuf, lastCursor, p.position))
             p.position
           }
-        
+
         Some(Candidates(newCursor, winners))
       }
-      
+
       def mkDotted      = Parsed.dotted(buf, cursor) withVerbosity verbosity
       def mkUndelimited = Parsed.undelimited(buf, cursor) withVerbosity verbosity
 
       // a single dot is special cased to completion on the previous result
       def lastResultCompletion =
-        if (!looksLikeInvocation(buf)) None            
+        if (!looksLikeInvocation(buf)) None
         else tryCompletion(Parsed.dotted(buf drop 1, cursor), lastResultFor)
 
       def regularCompletion = tryCompletion(mkDotted, topLevelFor)
-      def fileCompletion    = 
+      def fileCompletion    =
         if (!looksLikePath(buf)) None
         else tryCompletion(mkUndelimited, FileCompletion completionsFor _.buffer)
-      
+
       /** This is the kickoff point for all manner of theoretically possible compiler
        *  unhappiness - fault may be here or elsewhere, but we don't want to crash the
        *  repl regardless.  Hopefully catching Exception is enough, but because the

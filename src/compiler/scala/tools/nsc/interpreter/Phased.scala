@@ -15,7 +15,7 @@ import immutable.SortedMap
 trait Phased {
   val global: Global
   import global._
-  
+
   private var active: PhaseName = NoPhaseName
   private var multi: Seq[PhaseName] = Nil
 
@@ -32,7 +32,7 @@ trait Phased {
       true
     }
   }
-  
+
   private def parsePhaseChange(str: String): Option[Int] = {
     if (str == "") Some(0)
     else if (str startsWith ".prev") parsePhaseChange(str drop 5) map (_ - 1)
@@ -46,7 +46,7 @@ trait Phased {
         None
     }
   }
-  
+
   /** Takes a string like 4, typer+2, typer.next, etc.
    *  and turns it into a PhaseName instance.
    */
@@ -57,7 +57,7 @@ trait Phased {
       val (name, rest) = str.toLowerCase span (_.isLetter)
       val start        = PhaseName(name)
       val change       = parsePhaseChange(rest)
-    
+
       if (start.isEmpty || change.isEmpty) NoPhaseName
       else PhaseName(start.id + change.get)
     }
@@ -65,10 +65,10 @@ trait Phased {
   def parse(str: String): PhaseName =
     try parseInternal(str)
     catch { case _: Exception => NoPhaseName }
-  
+
   def apply[T](body: => T): SortedMap[PhaseName, T] =
     SortedMap[PhaseName, T](atMap(PhaseName.all)(body): _*)
-  
+
   def atCurrent[T](body: => T): T = atPhase(get)(body)
   def multi[T](body: => T): Seq[T] = multi map (ph => at(ph)(body))
   def all[T](body: => T): Seq[T] = atMulti(PhaseName.all)(body)
@@ -77,7 +77,7 @@ trait Phased {
     pairs foreach { case (ph, op) => Console.println("%15s -> %s".format(ph, op.toString take 240)) }
     pairs map (_._2)
   }
-  
+
   def at[T](ph: PhaseName)(body: => T): T = {
     val saved = get
     set(ph)
@@ -98,10 +98,10 @@ trait Phased {
 
   def atMap[T](phs: Seq[PhaseName])(body: => T): Seq[(PhaseName, T)] =
     phs zip atMulti(phs)(body)
-  
+
   object PhaseName {
     implicit lazy val phaseNameOrdering: Ordering[PhaseName] = Ordering[Int] on (_.id)
-    
+
     lazy val all = List(
       Parser, Namer, Packageobjects, Typer, Superaccessors, Pickler, Refchecks,
       Selectiveanf, Liftcode, Selectivecps, Uncurry, Tailcalls, Specialize,
@@ -124,7 +124,7 @@ trait Phased {
     // Execute some code during this phase.
     def apply[T](body: => T): T = atPhase(phase)(body)
   }
-  
+
   case object Parser extends PhaseName
   case object Namer extends PhaseName
   case object Packageobjects extends PhaseName
@@ -157,7 +157,7 @@ trait Phased {
     override lazy val name = phase.name
     override def phase     = NoPhase
   }
-  
+
   implicit def phaseEnumToPhase(name: PhaseName): Phase = name.phase
-  implicit def phaseNameToPhase(name: String): Phase = currentRun.phaseNamed(name)  
+  implicit def phaseNameToPhase(name: String): Phase = currentRun.phaseNamed(name)
 }

@@ -7,7 +7,7 @@ import java.awt.{Color, Dimension, Graphics, Graphics2D, Point, geom}
 
 /**
  * Dragging the mouse draws a simple graph
- * 
+ *
  * @author Frank Teubler, Ingo Maier
  */
 object LinePainting extends SimpleSwingApplication {
@@ -17,14 +17,14 @@ object LinePainting extends SimpleSwingApplication {
 
     focusable = true
     listenTo(mouse.clicks, mouse.moves, keys)
-    
+
     reactions += {
-      case e: MousePressed  => 
+      case e: MousePressed  =>
         moveTo(e.point)
         requestFocusInWindow()
       case e: MouseDragged  => lineTo(e.point)
       case e: MouseReleased => lineTo(e.point)
-      case KeyTyped(_,'c',_,_) => 
+      case KeyTyped(_,'c',_,_) =>
         path = new geom.GeneralPath
         repaint()
       case _: FocusLost => repaint()
@@ -39,13 +39,13 @@ object LinePainting extends SimpleSwingApplication {
     override def paintComponent(g: Graphics2D) = {
       super.paintComponent(g)
       g.setColor(new Color(100,100,100))
-      g.drawString("Press left mouse button and drag to paint." + 
+      g.drawString("Press left mouse button and drag to paint." +
                    (if(hasFocus) " Press 'c' to clear." else ""), 10, size.height-10)
       g.setColor(Color.black)
       g.draw(path)
     }
   }
-  
+
   def top = new MainFrame {
     title = "Simple Line Painting Demo"
     contents = ui

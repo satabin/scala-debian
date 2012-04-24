@@ -24,7 +24,7 @@ import scala.collection.mutable.{ ArrayBuilder, WrappedArray }
   def arr[T] = new Array[T](0)                          // does not compile
   def arr[T](implicit m: Manifest[T]) = new Array[T](0) // compiles
   def arr[T: Manifest] = new Array[T](0)                // shorthand for the preceding
-  
+
   // Methods manifest, classManifest, and optManifest are in [[scala.Predef]].
   def isApproxSubType[T: Manifest, U: Manifest] = manifest[T] <:< manifest[U]
   isApproxSubType[List[String], List[AnyRef]] // true
@@ -42,7 +42,7 @@ import scala.collection.mutable.{ ArrayBuilder, WrappedArray }
 trait Manifest[T] extends ClassManifest[T] with Equals {
   override def typeArguments: List[Manifest[_]] = Nil
 
-  override def arrayManifest: Manifest[Array[T]] = 
+  override def arrayManifest: Manifest[Array[T]] =
     Manifest.classType[Array[T]](arrayClass[T](erasure))
 
   override def canEqual(that: Any): Boolean = that match {
@@ -56,11 +56,11 @@ trait Manifest[T] extends ClassManifest[T] with Equals {
     case m: Manifest[_] => (m canEqual this) && (this.erasure == m.erasure) && (this <:< m) && (m <:< this)
     case _              => false
   }
-  override def hashCode = this.erasure.##  
+  override def hashCode = this.erasure.##
 }
 
 trait AnyValManifest[T] extends Manifest[T] with Equals {
-  override def <:<(that: ClassManifest[_]): Boolean = 
+  override def <:<(that: ClassManifest[_]): Boolean =
     (that eq this) || (that eq Manifest.Any) || (that eq Manifest.AnyVal)
   override def canEqual(other: Any) = other match {
     case _: AnyValManifest[_] => true
@@ -198,7 +198,7 @@ object Manifest {
     override def hashCode = System.identityHashCode(this)
     private def readResolve(): Any = Manifest.Nothing
   }
-  
+
   private class SingletonTypeManifest[T <: AnyRef](value: AnyRef) extends Manifest[T] {
     lazy val erasure = value.getClass
     override lazy val toString = value.toString + ".type"
@@ -231,16 +231,16 @@ object Manifest {
 
   /** Manifest for the class type `clazz[args]', where `clazz' is
     * a top-level or static class. */
-  private class ClassTypeManifest[T](prefix: Option[Manifest[_]], 
-                                     val erasure: Predef.Class[_], 
+  private class ClassTypeManifest[T](prefix: Option[Manifest[_]],
+                                     val erasure: Predef.Class[_],
                                      override val typeArguments: List[Manifest[_]]) extends Manifest[T] {
-    override def toString = 
+    override def toString =
       (if (prefix.isEmpty) "" else prefix.get.toString+"#") +
       (if (erasure.isArray) "Array" else erasure.getName) +
       argString
    }
 
-  def arrayType[T](arg: Manifest[_]): Manifest[Array[T]] = 
+  def arrayType[T](arg: Manifest[_]): Manifest[Array[T]] =
     arg.asInstanceOf[Manifest[T]].arrayManifest
 
   /** Manifest for the abstract type `prefix # name'. `upperBound' is not
@@ -258,9 +258,9 @@ object Manifest {
   def wildcardType[T](lowerBound: Manifest[_], upperBound: Manifest[_]): Manifest[T] =
     new Manifest[T] {
       def erasure = upperBound.erasure
-      override def toString = 
+      override def toString =
         "_" +
-        (if (lowerBound eq Nothing) "" else " >: "+lowerBound) + 
+        (if (lowerBound eq Nothing) "" else " >: "+lowerBound) +
         (if (upperBound eq Nothing) "" else " <: "+upperBound)
     }
 

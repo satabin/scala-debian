@@ -16,7 +16,7 @@ import scala.tools.util.StringOps.countElementsAsString
  */
 class ConsoleReporter(val settings: Settings, reader: BufferedReader, writer: PrintWriter) extends AbstractReporter {
   def this(settings: Settings) = this(settings, Console.in, new PrintWriter(Console.err, true))
-  
+
   /** Whether a short file name should be displayed before errors */
   var shortname: Boolean = false
 
@@ -78,9 +78,9 @@ class ConsoleReporter(val settings: Settings, reader: BufferedReader, writer: Pr
    *
    *  @param pos ...
    */
-  def printColumnMarker(pos: Position) = 
+  def printColumnMarker(pos: Position) =
     if (pos.isDefined) { printMessage(" " * (pos.column - 1) + "^") }
-  
+
   /** Prints the number of errors and warnings if their are non-zero. */
   def printSummary() {
     if (WARNING.count > 0) printMessage(getCountString(WARNING) + " found")
@@ -107,7 +107,7 @@ class ConsoleReporter(val settings: Settings, reader: BufferedReader, writer: Pr
 	        continue = false
       }
     }
-  } 
+  }
   catch {
     case ex: IOException => {
       ex.printStackTrace()

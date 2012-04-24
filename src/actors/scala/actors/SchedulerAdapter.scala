@@ -33,7 +33,7 @@ trait SchedulerAdapter extends IScheduler {
     Scheduler.shutdown()
 
   /** When the scheduler is active, it can execute tasks.
-   */ 
+   */
   def isActive: Boolean =
     Scheduler.isActive
 
@@ -46,7 +46,7 @@ trait SchedulerAdapter extends IScheduler {
 
   /** Unregisters an actor from this scheduler, because it
    *  has terminated.
-   * 
+   *
    *  @param  a  the actor to be unregistered
    */
   def terminated(a: TrackedReactor) =
@@ -54,7 +54,7 @@ trait SchedulerAdapter extends IScheduler {
 
   /** Registers a closure to be executed when the specified
    *  actor terminates.
-   * 
+   *
    *  @param  a  the actor
    *  @param  f  the closure to be registered
    */

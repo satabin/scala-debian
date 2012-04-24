@@ -10,14 +10,14 @@ import javax.swing.{Icon, ImageIcon}
 
 /**
  * Demonstrates how to use combo boxes and custom item renderers.
- * 
+ *
  * TODO: clean up layout
  */
 object ComboBoxes extends SimpleSwingApplication {
   import ComboBox._
   lazy val ui = new FlowPanel {
    	contents += new ComboBox(List(1,2,3,4))
-        
+
     val patterns = List("dd MMMMM yyyy",
                         "dd.MM.yy",
                         "MM/dd/yy",
@@ -31,12 +31,12 @@ object ComboBoxes extends SimpleSwingApplication {
     contents += dateBox
     val field = new TextField(20) { editable = false }
     contents += field
-    
+
     reactions += {
       case SelectionChanged(`dateBox`) => reformat()
     }
     listenTo(dateBox.selection)
-    
+
     def reformat() {
       try {
         val today = new Date
@@ -50,15 +50,15 @@ object ComboBoxes extends SimpleSwingApplication {
           field.text = "Error: " + e.getMessage
       }
     }
-    
-    
-    val icons = try { 
+
+
+    val icons = try {
       List(new ImageIcon(resourceFromClassloader("images/margarita1.jpg")),
-           new ImageIcon(resourceFromClassloader("images/margarita2.jpg")), 
+           new ImageIcon(resourceFromClassloader("images/margarita2.jpg")),
            new ImageIcon(resourceFromClassloader("images/rose.jpg")),
            new ImageIcon(resourceFromClassloader("images/banana.jpg")))
     } catch {
-      case _ => 
+      case _ =>
         println("Couldn't load images for combo box")
         List(Swing.EmptyIcon)
     }
@@ -78,7 +78,7 @@ object ComboBoxes extends SimpleSwingApplication {
     }
     contents += iconBox
   }
-    
+
   def top = new MainFrame {
     title = "ComboBoxes Demo"
    	contents = ui

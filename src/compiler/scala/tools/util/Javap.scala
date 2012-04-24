@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools
 package util
 
@@ -17,24 +17,24 @@ class Javap(
   val loader: ScalaClassLoader = ScalaClassLoader.getSystemLoader(),
   val printWriter: PrintWriter = new PrintWriter(System.out, true)
 ) {
-  
+
   lazy val parser = new JpOptions
-  
+
   def findBytes(path: String): Array[Byte] =
     tryFile(path) getOrElse tryClass(path)
-  
-  def apply(args: Seq[String]): List[JpResult] = {    
+
+  def apply(args: Seq[String]): List[JpResult] = {
     args.toList filterNot (_ startsWith "-") map { path =>
       val bytes = findBytes(path)
       if (bytes.isEmpty) new JpError("Could not find class bytes for '%s'".format(path))
       else new JpSuccess(newPrinter(new ByteArrayInputStream(bytes), newEnv(args)))
     }
   }
-  
+
   // "documentation"
-  type FakeEnvironment = AnyRef 
+  type FakeEnvironment = AnyRef
   type FakePrinter = AnyRef
-  
+
   val Env      = "sun.tools.javap.JavapEnvironment"
   val EnvClass = loader.tryToInitializeClass[FakeEnvironment](Env).orNull
   val EnvCtr   = EnvClass.getConstructor(List[Class[_]](): _*)
@@ -42,7 +42,7 @@ class Javap(
   val Printer      = "sun.tools.javap.JavapPrinter"
   val PrinterClass = loader.tryToInitializeClass[FakePrinter](Printer).orNull
   val PrinterCtr   = PrinterClass.getConstructor(classOf[InputStream], classOf[PrintWriter], EnvClass)
-  
+
   def newPrinter(in: InputStream, env: FakeEnvironment): FakePrinter =
     PrinterCtr.newInstance(in, printWriter, env)
 
@@ -57,7 +57,7 @@ class Javap(
 
     env
   }
-  
+
   /** Assume the string is a path and try to find the classfile
    *  it represents.
    */
@@ -65,7 +65,7 @@ class Javap(
     val file = File(
       if (path.endsWith(".class")) path
       else path.replace('.', '/') + ".class"
-    )    
+    )
     if (!file.exists) None
     else try Some(file.toByteArray) catch { case x: Exception => None }
   }
@@ -84,7 +84,7 @@ class Javap(
 object Javap {
   def apply(path: String): Unit      = apply(Seq(path))
   def apply(args: Seq[String]): Unit = new Javap() apply args foreach (_.show())
-  
+
   sealed trait JpResult {
     type ResultType
     def isError: Boolean
@@ -107,7 +107,7 @@ object Javap {
     def isError = false
     def show() = value.asInstanceOf[{ def print(): Unit }].print()
   }
-  
+
   class JpOptions {
     private object Access {
       final val PRIVATE = 0
@@ -136,7 +136,7 @@ object Javap {
       opts flatMap { opt =>
         envActionMap get opt match {
           case Some(pair) => List(pair)
-          case _          => 
+          case _          =>
             val charOpts = opt.tail.toSeq map ("-" + _)
             if (charOpts forall (envActionMap contains _))
               charOpts map envActionMap

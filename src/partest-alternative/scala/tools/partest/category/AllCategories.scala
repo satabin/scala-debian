@@ -12,7 +12,7 @@ package category
 
 trait AllCategories extends Compiler with Analysis with Runner {
   self: Universe =>
-  
+
   object Pos extends DirBasedCategory("pos") { lazy val testSequence: TestSequence = List(compile) }
   object Neg extends DirBasedCategory("neg") { lazy val testSequence: TestSequence = List(checkFileRequired, not(compile), diff) }
   object Run extends DirBasedCategory("run") { lazy val testSequence: TestSequence = List(compile, run, diff) }

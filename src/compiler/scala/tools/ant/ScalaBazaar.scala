@@ -7,9 +7,9 @@
 \*                                                                      */
 
 
-  
+
 package scala.tools.ant {
-  
+
   import scala.collection.DefaultMap
   import scala.collection.mutable.HashMap
   import java.io.{File, FileInputStream, FileOutputStream,
@@ -17,7 +17,7 @@ package scala.tools.ant {
   import java.net.URL
   import java.util.ArrayList
   import java.util.zip.{ZipOutputStream, ZipEntry}
-  
+
   import org.apache.tools.ant.{AntClassLoader, BuildException,
                                DirectoryScanner, Project}
   import org.apache.tools.ant.Task
@@ -25,14 +25,14 @@ package scala.tools.ant {
   import org.apache.tools.ant.util.{FileUtils, MergingMapper,
                                     SourceFileScanner}
   import org.apache.tools.ant.types.{EnumeratedAttribute, Reference, FileSet}
-    
+
   /** A set of files that can be installed at any relative location */
     class LooseFileSet {
       var destination: Option[String] = None
       def setDestination(dest: String) = {
         destination = Some(dest)
       }
-      
+
       var fileset: Option[FileSet] = None
       def addConfiguredFileSet(fs: FileSet) = {
         fileset = Some(fs)
@@ -50,17 +50,17 @@ package scala.tools.ant {
     *  <li>description,</li>
     *  <li>link.</li>
     *  </ul>
-    * 
+    *
     * @author Gilles Dubochet */
   class ScalaBazaar extends Task with ScalaTask {
-    
+
     /** The unique Ant file utilities instance to use in this task. */
     private val fileUtils = FileUtils.getFileUtils()
-    
+
 /******************************************************************************\
 **                             Ant user-properties                            **
 \******************************************************************************/
-    
+
     /** The path to the archive file. */
     private var file: Option[File] = None
     /** The optional path to the advertisement file. */
@@ -75,7 +75,7 @@ package scala.tools.ant {
     private var desc: Option[String] = None
     /** An (optional) URL link pointing to the location of the package */
     private var link: Option[String] = None
-    
+
     /** The sets of files to include in the package */
     private object fileSetsMap extends DefaultMap[String, List[FileSet]] {
       private var content = new HashMap[String, List[FileSet]]()
@@ -89,38 +89,38 @@ package scala.tools.ant {
       def fileSets = content.toList
       def iterator = content.iterator
     }
-    
-    
-    
+
+
+
 /******************************************************************************\
 **                             Internal properties                            **
 \******************************************************************************/
 
-      
+
 /******************************************************************************\
 **                             Properties setters                             **
 \******************************************************************************/
-    
+
     /** Sets the file attribute. Used by Ant.
       * @param input The value of <code>file</code>. */
     def setFile(input: File) =
       file = Some(input)
-      
+
     /** Sets the advertisement file attribute. Used by Ant.
       * @param input The value of <code>adfile</code>. */
     def setAdfile(input: File) =
       adfile = Some(input)
-      
+
     /** Sets the name attribute of this package. Used by Ant.
       * @param input The value of <code>name</code>. */
     def setName(input: String) =
       name = Some(input)
-      
+
     /** Sets the version attribute of this package. Used by Ant.
       * @param input The value of <code>version</code>. */
     def setVersion(input: String) =
       version = Some(input)
-    
+
     /** Sets the depends attribute. Used by Ant.
       * @param input The value for <code>depends</code>. */
     def setDepends(input: String) = {
@@ -129,7 +129,7 @@ package scala.tools.ant {
         (if (st != "") List(st) else Nil)
       }
     }
-      
+
     /** Sets the description attribute of this package. Used by Ant.
       * @param input The value of <code>description</code>. */
     def setDesc(input: String) =
@@ -142,30 +142,30 @@ package scala.tools.ant {
 
     def addConfiguredLibset(input: FileSet) =
       fileSetsMap.update("lib", input)
-    
+
     def addConfiguredBinset(input: FileSet) =
       fileSetsMap.update("bin", input)
-    
+
     def addConfiguredSrcset(input: FileSet) =
       fileSetsMap.update("src", input)
-    
+
     def addConfiguredManset(input: FileSet) =
       fileSetsMap.update("man", input)
-    
+
     def addConfiguredDocset(input: FileSet) =
       fileSetsMap.update("doc/" + getName, input)
-    
+
     def addConfiguredMiscset(input: FileSet) =
       fileSetsMap.update("misc/" + getName, input)
-      
+
     def addConfiguredLooseset(set: LooseFileSet) = {
       Pair(set.destination, set.fileset) match {
         case Pair(None, _) =>
           buildError("destination not specified for a loose file set")
-        
-        case Pair(_, None) => 
+
+        case Pair(_, None) =>
           buildError("no files specified for a loose file set")
-          
+
         case Pair(Some(dest), Some(fileset)) =>
           fileSetsMap.update(dest, fileset)
       }
@@ -174,20 +174,20 @@ package scala.tools.ant {
 /******************************************************************************\
 **                             Properties getters                             **
 \******************************************************************************/
-    
-    /** Gets the value of the file attribute in a Scala-friendly form. 
+
+    /** Gets the value of the file attribute in a Scala-friendly form.
       * @return The file as a file. */
     private def getName: String =
       if (name.isEmpty) buildError("Name attribute must be defined first.")
       else name.get
-      
-    /** Gets the value of the file attribute in a Scala-friendly form. 
+
+    /** Gets the value of the file attribute in a Scala-friendly form.
       * @return The file as a file. */
     private def getFile: File =
       if (file.isEmpty) buildError("Member 'file' is empty.")
       else getProject().resolveFile(file.get.toString())
-      
-    /** Gets the value of the adfile attribute in a Scala-friendly form. 
+
+    /** Gets the value of the adfile attribute in a Scala-friendly form.
       * @return The adfile as a file. */
     private def getAdfile: File =
       if (adfile.isEmpty) buildError("Member 'adfile' is empty.")
@@ -204,14 +204,14 @@ package scala.tools.ant {
       * @return A file created from the name and the base file. */
     private def nameToFile(base: File)(name: String): File =
       existing(fileUtils.resolveFile(base, name))
-    
+
     /** Transforms a string name into a file relative to the build root
       * directory.
       * @param name A relative or absolute path to the file as a string.
       * @return A file created from the name. */
     private def nameToFile(name: String): File =
       existing(getProject().resolveFile(name))
-    
+
     /** Tests if a file exists and prints a warning in case it doesn't. Always
       * returns the file, even if it doesn't exist.
       * @param file A file to test for existance.
@@ -222,7 +222,7 @@ package scala.tools.ant {
             Project.MSG_WARN)
       file
     }
-    
+
     private def writeFile(file: File, content: String) =
       if (file.exists() && !file.canWrite())
         buildError("File " + file + " is not writable")
@@ -242,7 +242,7 @@ package scala.tools.ant {
       if (file.isEmpty) buildError("Attribute 'file' is not set.")
       if (name.isEmpty) buildError("Attribute 'name' is not set.")
       if (version.isEmpty) buildError("Attribute 'version' is not set.")
-      
+
       val pack = {
         <package>
           <name>{name.get}</name>
@@ -262,7 +262,7 @@ package scala.tools.ant {
       }
 
       log("Creating package '" + name.get + "'")
-      
+
       // Creates the advert file
       val advert = {
         <availablePackage>
@@ -273,12 +273,12 @@ package scala.tools.ant {
           }}
         </availablePackage>
       };
-      
+
       if (!adfile.isEmpty)
         writeFile(getAdfile, advert.toString())
-      
+
       // Checks for new files and creates the ZIP
-      
+
       val zipContent =
         for {
           Pair(folder, fileSets) <- fileSetsMap.fileSets
@@ -312,7 +312,7 @@ package scala.tools.ant {
       packInput.close()
       zip.close
     }
-  
+
   }
-  
+
 }

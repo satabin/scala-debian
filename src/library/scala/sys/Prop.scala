@@ -22,7 +22,7 @@ trait Prop[+T] {
   /** The full name of the property, e.g. "java.awt.headless".
    */
   def key: String
-  
+
   /** If the key exists in the properties map, converts the value
    *  to type `T` using valueFn.  As yet no validation is performed:
    *  it will throw an exception on a failed conversion.
@@ -35,24 +35,24 @@ trait Prop[+T] {
    *  @return   whether the map contains the key
    */
   def isSet: Boolean
-  
+
   /** Sets the property.
    *
    *  @param    the new string value
    *  @return   the old value, or null if it was unset.
    */
   def set(newValue: String): String
-  
+
   /** Sets the property with a value of the represented type.
    */
   def setValue[T1 >: T](value: T1): T
-  
+
   /** Gets the current string value if any.  Will not return null: use
    *  `isSet` to test for existence.
    *  @return   the current string value if any, else the empty string
    */
   def get: String
-  
+
   /** Some(value) if the property is set, None otherwise.
    */
   def option: Option[T]
@@ -60,7 +60,7 @@ trait Prop[+T] {
   /** Removes the property from the underlying map.
    */
   def clear(): Unit
-  
+
   /** A value of type `T` for use when the property is unset.
    *  The default implementation delivers null for reference types
    *  and 0/0.0/false for non-reference types.
@@ -68,7 +68,7 @@ trait Prop[+T] {
   protected def zero: T
 }
 
-object Prop {  
+object Prop {
   /** A creator of property instances.  For any type `T`, if an implicit
    *  parameter of type Creator[T] is in scope, a Prop[T] can be created
    *  via this object's apply method.
@@ -78,7 +78,7 @@ object Prop {
     /** Creates a Prop[T] of this type based on the given key. */
     def apply(key: String): Prop[T]
   }
-  
+
   implicit object FileProp extends CreatorImpl[java.io.File](s => new java.io.File(s))
   implicit object StringProp extends CreatorImpl[String](s => s)
   implicit object IntProp extends CreatorImpl[Int](_.toInt)

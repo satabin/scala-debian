@@ -38,7 +38,7 @@ trait Unapplies extends ast.TreeDSL
    *   - returns T otherwise
    */
   def unapplyTypeListFromReturnType(tp1: Type): List[Type] = {
-    val tp = unapplyUnwrap(tp1)    
+    val tp = unapplyUnwrap(tp1)
     tp.typeSymbol match {                             // unapplySeqResultToMethodSig
       case BooleanClass             => Nil
       case OptionClass | SomeClass  =>
@@ -53,8 +53,8 @@ trait Unapplies extends ast.TreeDSL
   }
 
   /** let type be the result type of the (possibly polymorphic) unapply method
-   *  for type Option[T] or Some[T] 
-   *  -returns T0...Tn-1,Tn* if n>0 and T <: Product[T0...Tn-1,Seq[Tn]]], 
+   *  for type Option[T] or Some[T]
+   *  -returns T0...Tn-1,Tn* if n>0 and T <: Product[T0...Tn-1,Seq[Tn]]],
    *  -returns R* if T = Seq[R]
    */
   def unapplyTypeListFromReturnTypeSeq(tp1: Type): List[Type] = {
@@ -99,10 +99,10 @@ trait Unapplies extends ast.TreeDSL
 
   def copyUntypedInvariant(td: TypeDef): TypeDef = {
     val copy = treeCopy.TypeDef(td, td.mods &~ (COVARIANT | CONTRAVARIANT), td.name, td.tparams, td.rhs)
-    
+
     returning[TypeDef](copy.duplicate)(UnTyper traverse _)
   }
-  
+
   private def toIdent(x: DefTree) = Ident(x.name) setPos x.pos.focus
 
   private def classType(cdef: ClassDef, tparams: List[TypeDef]): Tree = {
@@ -121,7 +121,7 @@ trait Unapplies extends ast.TreeDSL
    */
   private def caseClassUnapplyReturnValue(param: Name, caseclazz: Symbol) = {
     def caseFieldAccessorValue(selector: Symbol): Tree = Ident(param) DOT selector
-    
+
     caseclazz.caseFieldAccessors match {
       case Nil      => TRUE
       case xs       => SOME(xs map caseFieldAccessorValue: _*)
@@ -157,7 +157,7 @@ trait Unapplies extends ast.TreeDSL
   }
 
   private val caseMods = Modifiers(SYNTHETIC | CASE)
-  
+
   /** The apply method corresponding to a case class
    */
   def caseModuleApplyMeth(cdef: ClassDef): DefDef = {
@@ -187,11 +187,11 @@ trait Unapplies extends ast.TreeDSL
     )
   }
 
-  def caseClassCopyMeth(cdef: ClassDef): Option[DefDef] = {    
+  def caseClassCopyMeth(cdef: ClassDef): Option[DefDef] = {
     def isDisallowed(vd: ValDef) = isRepeatedParamType(vd.tpt) || isByNameParamType(vd.tpt)
     val cparamss  = constrParamss(cdef)
     val flat      = cparamss flatten
-    
+
     if (flat.isEmpty || cdef.symbol.hasAbstractFlag || (flat exists isDisallowed)) None
     else {
       val tparams = cdef.tparams map copyUntypedInvariant
@@ -200,10 +200,10 @@ trait Unapplies extends ast.TreeDSL
       // and re-added in ``finishWith'' in the namer.
       def paramWithDefault(vd: ValDef) =
         treeCopy.ValDef(vd, vd.mods | DEFAULTPARAM, vd.name, atPos(vd.pos.focus)(TypeTree() setOriginal vd.tpt), toIdent(vd))
-      
+
       val paramss   = cparamss map (_ map paramWithDefault)
       val classTpe  = classType(cdef, tparams)
-      
+
       Some(atPos(cdef.pos.focus)(
         DefDef(Modifiers(SYNTHETIC), nme.copy, tparams, paramss, classTpe,
           New(classTpe, paramss map (_ map toIdent)))

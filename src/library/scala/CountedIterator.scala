@@ -19,6 +19,6 @@ trait CountedIterator[+A] extends Iterator[A] {
   /** counts the elements in this iterator; counts start at 0
    */
   def count: Int
-  
+
   override def counted : this.type = this
 }

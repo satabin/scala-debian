@@ -23,16 +23,16 @@ object Statistics {
       val total2 = System.nanoTime() - start
       println("Enabling statistics, measuring overhead = "+
               total/10000.0+"ns to "+total2/10000.0+"ns per timer")
-      _enabled = true 
+      _enabled = true
     }
   }
 
   var phasesShown = List("parser", "typer", "erasure", "cleanup")
 
-  def currentTime() = 
+  def currentTime() =
     if (_enabled) System.nanoTime() else 0L
 
-  private def showPercent(x: Double, base: Double) = 
+  private def showPercent(x: Double, base: Double) =
     if (base == 0) "" else " ("+"%2.1f".format(x / base * 100)+"%)"
 
   def incCounter(c: Counter) {
@@ -50,7 +50,7 @@ object Statistics {
     if (_enabled) sc.stop(start)
   }
 
-  def startTimer(tm: Timer): LongPair = 
+  def startTimer(tm: Timer): LongPair =
     if (_enabled) tm.start() else null
 
   def stopTimer(tm: Timer, start: LongPair) {
@@ -75,17 +75,17 @@ object Statistics {
         value = value0 + c.value - cvalue0
       }
     }
-    override def toString = 
+    override def toString =
       value+showPercent(value, c.value)
   }
 
   class Timer {
     var nanos: Long = 0
     var timings = 0
-    def start(): LongPair = 
+    def start(): LongPair =
       if (_enabled) {
         timings += 1
-        LongPair(nanos, System.nanoTime()) 
+        LongPair(nanos, System.nanoTime())
       } else null
     def stop(prev: LongPair) {
       if (_enabled) {
@@ -105,7 +105,7 @@ object Statistics {
 
   var microsByType = new ClassCounts
   var visitsByType = new ClassCounts
-  var pendingTreeTypes: List[Class[_]] = List() 
+  var pendingTreeTypes: List[Class[_]] = List()
   var typerTime: Long = 0L
 
   val singletonBaseTypeSeqCount = new Counter
@@ -186,15 +186,15 @@ abstract class Statistics {
     counts
   }
 
-  def showRelative(base: Long)(value: Long) = 
+  def showRelative(base: Long)(value: Long) =
     value+showPercent(value, base)
 
-  def showRelTyper(timer: Timer) = 
+  def showRelTyper(timer: Timer) =
     timer+showPercent(timer.nanos, typerNanos.nanos)
 
-  def showCounts(counts: ClassCounts) = 
-    counts.toSeq.sortWith(_._2 > _._2).map { 
-      case (cls, cnt) => 
+  def showCounts(counts: ClassCounts) =
+    counts.toSeq.sortWith(_._2 > _._2).map {
+      case (cls, cnt) =>
         cls.toString.substring(cls.toString.lastIndexOf("$") + 1)+": "+cnt
     }
 
@@ -231,10 +231,10 @@ abstract class Statistics {
       inform("#subtype                 : " + subtypeCount)
       inform("  of which in failed     : " + subtypeFailed)
       inform("  of which in implicits  : " + subtypeImpl)
-      inform("  of which in app impl   : " + subtypeAppInfos) 
-      inform("  of which in improv     : " + subtypeImprovCount) 
+      inform("  of which in app impl   : " + subtypeAppInfos)
+      inform("  of which in improv     : " + subtypeImprovCount)
       inform("#sametype                : " + sametypeCount)
-      inform("ms type-flow-analysis: " + analysis.timer.millis) 
+      inform("ms type-flow-analysis: " + analysis.timer.millis)
 
       if (phase.name == "typer") {
         inform("time spent typechecking  : "+showRelTyper(typerNanos))
@@ -247,9 +247,9 @@ abstract class Statistics {
         inform("       assembling parts  : "+showRelTyper(subtypeETNanos))
         inform("              matchesPT  : "+showRelTyper(matchesPtNanos))
         inform("implicit cache hits      : "+showRelative(implicitCacheHits.value + implicitCacheMisses.value)(implicitCacheHits.value))
-        inform("time spent in failed     : "+showRelTyper(failedSilentNanos))     
+        inform("time spent in failed     : "+showRelTyper(failedSilentNanos))
         inform("       failed apply      : "+showRelTyper(failedApplyNanos))
-        inform("       failed op=        : "+showRelTyper(failedOpEqNanos))     
+        inform("       failed op=        : "+showRelTyper(failedOpEqNanos))
         inform("micros by tree node      : "+showCounts(microsByType))
         inform("#visits by tree node     : "+showCounts(visitsByType))
         val average = new ClassCounts

@@ -80,7 +80,7 @@ trait TraversableProxyLike[+A, +Repr <: TraversableLike[A, Repr] with Traversabl
   override def toIndexedSeq[B >: A] = self.toIndexedSeq
   override def toBuffer[B >: A] = self.toBuffer
   override def toStream: Stream[A] = self.toStream
-  override def toSet[B >: A]: immutable.Set[B] = self.toSet  
+  override def toSet[B >: A]: immutable.Set[B] = self.toSet
   override def toMap[T, U](implicit ev: A <:< (T, U)): immutable.Map[T, U] = self.toMap(ev)
   override def toTraversable: Traversable[A] = self.toTraversable
   override def toIterator: Iterator[A] = self.toIterator

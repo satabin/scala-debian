@@ -17,16 +17,16 @@ package expression;
   expression: Expression,
   castType: DataType
 ) extends Expression {
-  
+
   /** A SQL-99 compliant string representation of the relation sub-
     * statement. This only has a meaning inside another statement. */
   def sqlInnerString: String = {
     "CAST (" + expression.sqlInnerString + " AS " + castType.sqlString + ")";
   }
-  
+
   /** The expression that will be casted. */
   //def expression: Expression;
-  
+
   /** The type to which to cast. */
   //def castType: scala.dbc.datatype.DataType;
 }

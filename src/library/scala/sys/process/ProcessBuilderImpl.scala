@@ -17,16 +17,16 @@ import Uncloseable.protect
 
 private[process] trait ProcessBuilderImpl {
   self: ProcessBuilder.type =>
-  
+
   private[process] class DaemonBuilder(underlying: ProcessBuilder) extends AbstractBuilder {
     final def run(io: ProcessIO): Process = underlying.run(io.daemonized())
   }
-  
+
   private[process] class Dummy(override val toString: String, exitValue: => Int) extends AbstractBuilder {
     override def run(io: ProcessIO): Process = new DummyProcess(exitValue)
     override def canPipeTo = true
   }
-  
+
   private[process] class URLInput(url: URL) extends IStreamBuilder(url.openStream, url.toString)
   private[process] class FileInput(file: File) extends IStreamBuilder(new FileInputStream(file), file.getAbsolutePath)
   private[process] class FileOutput(file: File, append: Boolean) extends OStreamBuilder(new FileOutputStream(file, append), file.getAbsolutePath)
@@ -37,7 +37,7 @@ private[process] trait ProcessBuilderImpl {
   ) extends ThreadBuilder(label, _ writeInput protect(stream)) {
     override def hasExitValue = false
   }
-  
+
   private[process] class IStreamBuilder(
     stream: => InputStream,
     label: String
@@ -49,7 +49,7 @@ private[process] trait ProcessBuilderImpl {
     override val toString: String,
     runImpl: ProcessIO => Unit
   ) extends AbstractBuilder {
-    
+
     override def run(io: ProcessIO): Process = {
       val success = new SyncVar[Boolean]
       success put false
@@ -57,11 +57,11 @@ private[process] trait ProcessBuilderImpl {
         runImpl(io)
         success set true
       }, io.daemonizeThreads)
-      
+
       new ThreadProcess(t, success)
     }
   }
-  
+
   /** Represents a simple command without any redirection or combination. */
   private[process] class Simple(p: JProcessBuilder) extends AbstractBuilder {
     override def run(io: ProcessIO): Process = {
@@ -80,7 +80,7 @@ private[process] trait ProcessBuilderImpl {
     override def toString = p.command.toString
     override def canPipeTo = true
   }
-  
+
   private[scala] abstract class AbstractBuilder extends ProcessBuilder with Sink with Source {
     protected def toSource = this
     protected def toSink = this
@@ -113,7 +113,7 @@ private[process] trait ProcessBuilderImpl {
     def !(log: ProcessLogger)  = runBuffered(log, false)
     def !<                     = run(true).exitValue()
     def !<(log: ProcessLogger) = runBuffered(log, true)
-    
+
     /** Constructs a new builder which runs this command with all input/output threads marked
      *  as daemon threads.  This allows the creation of a long running process while still
      *  allowing the JVM to exit normally.
@@ -126,7 +126,7 @@ private[process] trait ProcessBuilderImpl {
     private[this] def slurp(log: Option[ProcessLogger], withIn: Boolean): String = {
       val buffer = new StringBuffer
       val code   = this ! BasicIO(withIn, buffer, log)
-      
+
       if (code == 0) buffer.toString
       else sys.error("Nonzero exit value: " + code)
     }
@@ -142,7 +142,7 @@ private[process] trait ProcessBuilderImpl {
       Spawn(streamed done process.exitValue())
       streamed.stream()
     }
-    
+
     private[this] def runBuffered(log: ProcessLogger, connectInput: Boolean) =
       log buffer run(log, connectInput).exitValue()
 
@@ -178,7 +178,7 @@ private[process] trait ProcessBuilderImpl {
     b: ProcessBuilder,
     operatorString: String
   ) extends BasicBuilder {
-    
+
     checkNotThis(a)
     checkNotThis(b)
     override def toString = " ( " + a + " " + operatorString + " " + b + " ) "
@@ -192,21 +192,21 @@ private[process] trait ProcessBuilderImpl {
 
     override def createProcess(io: ProcessIO) = new PipedProcesses(first, second, io, toError)
   }
-  
+
   private[process] class AndBuilder(
     first: ProcessBuilder,
     second: ProcessBuilder
   ) extends SequentialBuilder(first, second, "#&&") {
     override def createProcess(io: ProcessIO) = new AndProcess(first, second, io)
   }
-  
+
   private[process] class OrBuilder(
     first: ProcessBuilder,
     second: ProcessBuilder
   ) extends SequentialBuilder(first, second, "#||") {
     override def createProcess(io: ProcessIO) = new OrProcess(first, second, io)
   }
-  
+
   private[process] class SequenceBuilder(
     first: ProcessBuilder,
     second: ProcessBuilder

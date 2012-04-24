@@ -44,7 +44,7 @@ trait SetMethods[A, +This <: SetLike[A, This] with Set[A]]
   def apply(elem: A): Boolean
   def diff(that: Set[A]): This
   def intersect(that: Set[A]): This
-  def subsetOf(that: Set[A]): Boolean  
+  def subsetOf(that: Set[A]): Boolean
   def subsets(len: Int): Iterator[This]
   def subsets: Iterator[This]
   def union(that: Set[A]): This

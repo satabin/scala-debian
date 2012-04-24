@@ -11,7 +11,7 @@
 package scala.concurrent
 
 /** The <code>ManagedBlocker</code> trait...
- *  
+ *
  *  @author Philipp Haller
  */
 trait ManagedBlocker {

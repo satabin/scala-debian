@@ -12,23 +12,23 @@ package scala.reflect
 /** Provides some simple runtime processing necessary to create
  *  JavaBean descriptors for Scala entities. The compiler creates
  *  subclasses of this class automatically when the BeanInfo annotation is
- *  attached to a class. 
+ *  attached to a class.
  *
  *  @author Ross Judson (rjudson@managedobjects.com)
  */
-abstract class ScalaBeanInfo(clazz: java.lang.Class[_], 
-                             props: Array[String], 
+abstract class ScalaBeanInfo(clazz: java.lang.Class[_],
+                             props: Array[String],
                              methods: Array[String]) extends java.beans.SimpleBeanInfo {
 
   import java.beans._
-  
+
   private val pd = new Array[PropertyDescriptor](props.length / 3)
-  private val md = 
+  private val md =
     for (m <- clazz.getMethods if methods.exists(_ == m.getName))
       yield new MethodDescriptor(m)
 
   init
-  
+
   override def getPropertyDescriptors() = pd
   override def getMethodDescriptors() = md
 
@@ -41,6 +41,6 @@ abstract class ScalaBeanInfo(clazz: java.lang.Class[_],
       i = i + 3;
     }
   }
-  
+
 }
 

@@ -7,7 +7,7 @@ package scala.tools.nsc
 package symtab
 
 import ast.{Trees, TreePrinters, DocComments}
-
+import scala.collection.{ mutable, immutable }
 import util._
 
 abstract class SymbolTable extends reflect.generic.Universe
@@ -39,7 +39,7 @@ abstract class SymbolTable extends reflect.generic.Universe
 
   /** Are we compiling for .NET ? */
   def forMSIL: Boolean
-  
+
   /** A period is an ordinal number for a phase in a run.
    *  Phases in later runs have higher periods than phases in earlier runs.
    *  Later phases have higher periods than earlier phases in the same run.
@@ -84,7 +84,7 @@ abstract class SymbolTable extends reflect.generic.Universe
   /** The phase associated with given period */
   final def phaseOf(period: Period): Phase = phaseWithId(phaseId(period))
 
-  final def period(rid: RunId, pid: Phase#Id): Period = 
+  final def period(rid: RunId, pid: Phase#Id): Period =
     (currentRunId << 8) + pid
 
   /** Perform given operation at given phase */
@@ -97,7 +97,7 @@ abstract class SymbolTable extends reflect.generic.Universe
   }
   final def afterPhase[T](ph: Phase)(op: => T): T =
     atPhase(ph.next)(op)
-  
+
   final def isValid(period: Period): Boolean =
     period != 0 && runId(period) == currentRunId && {
       val pid = phaseId(period)
@@ -115,6 +115,34 @@ abstract class SymbolTable extends reflect.generic.Universe
       if (phase.id > pid) noChangeInBaseClasses(infoTransformers.nextFrom(pid), phase.id)
       else noChangeInBaseClasses(infoTransformers.nextFrom(phase.id), pid)
     }
+  }
+
+  object perRunCaches {
+    import java.lang.ref.WeakReference
+
+    // We can allow ourselves a structural type, these methods
+    // amount to a few calls per run at most.  This does suggest
+    // a "Clearable" trait may be useful.
+    private type Clearable = {
+      def size: Int
+      def clear(): Unit
+    }
+    // Weak references so the garbage collector will take care of
+    // letting us know when a cache is really out of commission.
+    private val caches = mutable.HashSet[WeakReference[Clearable]]()
+
+    def clearAll() = {
+      caches foreach { ref =>
+        val cache = ref.get()
+        if (cache == null)
+          caches -= ref
+        else
+          cache.clear()
+      }
+    }
+
+    def newMap[K, V]() = { val m = mutable.HashMap[K, V]() ; caches += new WeakReference(m) ; m }
+    def newSet[K]()    = { val s = mutable.HashSet[K]() ; caches += new WeakReference(s) ; s }
   }
 
   /** Break into repl debugger if assertion is true */

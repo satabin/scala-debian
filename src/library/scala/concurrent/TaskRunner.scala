@@ -11,7 +11,7 @@
 package scala.concurrent
 
 /** The <code>TaskRunner</code> trait...
- *  
+ *
  *  @author Philipp Haller
  */
 trait TaskRunner {

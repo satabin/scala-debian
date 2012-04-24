@@ -11,7 +11,7 @@ package icode
 import scala.collection.{ mutable, immutable, generic }
 import util.{ Position, NoPosition }
 
-/** 
+/**
  * Exception handlers are pieces of code that `handle' exceptions on
  * the covered basic blocks. Since Scala's exception handling uses
  * pattern matching instead of just class names to identify handlers,
@@ -20,10 +20,10 @@ import util.{ Position, NoPosition }
  */
 trait ExceptionHandlers {
   self: ICodes =>
-  
+
   import global.{ definitions, Symbol, NoSymbol }
   import definitions.{ ThrowableClass }
-  
+
   class ExceptionHandler(val method: IMethod, val label: String, val cls: Symbol, val pos: Position) {
     def loadExceptionClass = if (cls == NoSymbol) ThrowableClass else cls
     private var _startBlock: BasicBlock = _;
@@ -52,15 +52,15 @@ trait ExceptionHandlers {
     /** The body of this exception handler. May contain 'dead' blocks (which will not
       * make it into generated code because linearizers may not include them) */
     var blocks: List[BasicBlock] = Nil;
-    
+
     def addBlock(b: BasicBlock): Unit = blocks = b :: blocks;
-    
+
     override def toString() = "exh_" + label + "(" + cls.simpleName + ")";
 
     /** A standard copy constructor */
     def this(other: ExceptionHandler) = {
       this(other.method, other.label, other.cls, other.pos)
-      
+
       covered   = other.covered
       setStartBlock(other.startBlock)
       finalizer = other.finalizer

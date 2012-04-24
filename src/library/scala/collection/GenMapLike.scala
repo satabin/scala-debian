@@ -28,11 +28,11 @@ trait GenMapLike[A, +B, +Repr] extends GenIterableLike[(A, B), Repr] with Equals
   def seq: Map[A, B]
   def +[B1 >: B](kv: (A, B1)): GenMap[A, B1]
   def - (key: A): Repr
-  
+
   // This hash code must be symmetric in the contents but ought not
   // collide trivially.
   override def hashCode() = util.MurmurHash.symmetricHash(seq, Map.hashSeed)
-  
+
   /** Compares two maps structurally; i.e. checks if all mappings
    *  contained in this map are also contained in the other map,
    *  and vice versa.
@@ -42,21 +42,21 @@ trait GenMapLike[A, +B, +Repr] extends GenIterableLike[(A, B), Repr] with Equals
    *              same mappings, `false` otherwise.
    */
   override def equals(that: Any): Boolean = that match {
-    case that: GenMap[b, _] => 
+    case that: GenMap[b, _] =>
       (this eq that) ||
       (that canEqual this) &&
       (this.size == that.size) && {
       try {
-        this forall { 
+        this forall {
           case (k, v) => that.get(k.asInstanceOf[b]) match {
             case Some(`v`) =>
               true
             case _ => false
           }
         }
-      } catch { 
-        case ex: ClassCastException => 
-          println("class cast "); false 
+      } catch {
+        case ex: ClassCastException =>
+          println("class cast "); false
       }}
     case _ =>
       false

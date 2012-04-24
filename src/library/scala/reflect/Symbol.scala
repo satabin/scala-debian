@@ -73,7 +73,7 @@ case class LabelSymbol(val name: String) extends Symbol {
 
 /* Standard pattern match:
 
-    case reflect.Class(fullname) => 
+    case reflect.Class(fullname) =>
     case reflect.Method(fullname, tpe) =>
     case reflect.Field(fullname, tpe) =>
     case reflect.TypeField(fullname, tpe) =>
@@ -81,5 +81,5 @@ case class LabelSymbol(val name: String) extends Symbol {
     case reflect.LocalMethod(owner, name, tpe) =>
     case reflect.NoSymbol =>
     case reflect.RootSymbol =>
-    case reflect.LabelSymbol(name) => 
+    case reflect.LabelSymbol(name) =>
 */

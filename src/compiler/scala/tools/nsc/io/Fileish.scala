@@ -18,11 +18,11 @@ class Fileish(val path: Path, val input: () => InputStream) extends Streamable.C
   def parent       = path.parent
   def name         = path.name
   def isSourceFile = path.hasExtension("java", "scala")
-  
+
   private lazy val pkgLines = lines() collect { case x if x startsWith "package " => x stripPrefix "package" trim }
   lazy val pkgFromPath      = parent.path.replaceAll("""[/\\]""", ".")
   lazy val pkgFromSource    = pkgLines map (_ stripSuffix ";") mkString "."
-  
+
   override def toString = path.path
 }
 

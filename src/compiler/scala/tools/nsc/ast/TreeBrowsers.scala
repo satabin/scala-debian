@@ -125,12 +125,12 @@ abstract class TreeBrowsers {
     def packChildren(t: AnyRef): List[AnyRef] = TreeInfo.children(t.asInstanceOf[Tree])
   }
 
-    
+
 
 
   /**
-   * A window that can host the Tree widget and provide methods for 
-   * displaying information 
+   * A window that can host the Tree widget and provide methods for
+   * displaying information
    *
    * @author Iulian Dragos
    * @version 1.0
@@ -160,7 +160,7 @@ abstract class TreeBrowsers {
     private def setExpansionState(root: JTree, expand: Boolean): Unit = {
       def _setExpansionState(root: JTree, path: TreePath): Unit = {
         val last = path.getLastPathComponent
-        for (i <- 0 until root.getModel.getChildCount(last)) {  
+        for (i <- 0 until root.getModel.getChildCount(last)) {
           val child = root.getModel.getChild(last, i)
           val childPath = path pathByAddingChild child
           _setExpansionState(root, childPath)
@@ -179,7 +179,7 @@ abstract class TreeBrowsers {
      *
      * @param lock The lock is used in order to stop the compilation thread
      * until the user is done with the tree inspection. Swing creates its
-     * own threads when the frame is packed, and therefore execution 
+     * own threads when the frame is packed, and therefore execution
      * would continue. However, this is not what we want, as the tree and
      * especially symbols/types would change while the window is visible.
      */
@@ -315,9 +315,9 @@ abstract class TreeBrowsers {
           str.append("\ntree.pos: ").append(t.pos)
           str.append("\nSymbol: ").append(TreeInfo.symbolText(t))
           str.append("\nSymbol owner: ").append(
-            if ((t.symbol ne null) && t.symbol != NoSymbol) 
+            if ((t.symbol ne null) && t.symbol != NoSymbol)
               t.symbol.owner.toString
-            else 
+            else
               "NoSymbol has no owner")
           if ((t.symbol ne null) && t.symbol.isType) {
             str.append("\ntermSymbol: " + t.symbol.tpe.termSymbol
@@ -403,10 +403,10 @@ abstract class TreeBrowsers {
 
       case Bind(name, rhs) =>
         ("Bind", name)
-      
+
       case UnApply(fun, args) =>
         ("UnApply", EMPTY)
-        
+
       case Match(selector, cases) =>
         ("Visitor", EMPTY)
 
@@ -460,7 +460,7 @@ abstract class TreeBrowsers {
 
       case Annotated(annot, arg) =>
         ("Annotated", EMPTY)
-        
+
       case SingletonTypeTree(ref) =>
         ("SingletonType", EMPTY)
 
@@ -475,10 +475,10 @@ abstract class TreeBrowsers {
 
       case TypeBoundsTree(lo, hi) =>
         ("TypeBoundsTree", EMPTY)
-      
+
       case ExistentialTypeTree(tpt, whereClauses) =>
         ("ExistentialTypeTree", EMPTY)
-        
+
       case Try(block, catcher, finalizer) =>
         ("Try", EMPTY)
 
@@ -544,10 +544,10 @@ abstract class TreeBrowsers {
 
       case Bind(name, rhs) =>
         List(rhs)
-        
+
       case UnApply(fun, args) =>
         fun :: args
-        
+
       case Match(selector, cases) =>
         selector :: cases
 
@@ -601,7 +601,7 @@ abstract class TreeBrowsers {
 
       case Annotated(annot, arg) =>
         annot :: List(arg)
-        
+
       case SingletonTypeTree(ref) =>
         List(ref)
 
@@ -619,7 +619,7 @@ abstract class TreeBrowsers {
 
       case ExistentialTypeTree(tpt, whereClauses) =>
         tpt :: whereClauses
-        
+
       case Try(block, catches, finalizer) =>
         block :: catches ::: List(finalizer)
 
@@ -662,8 +662,8 @@ abstract class TreeBrowsers {
         var str = flagsToString(s.flags)
         if (s.isStaticMember) str = str + " isStatic ";
         (str + " annotations: " + s.annotations.mkString("", " ", "")
-          + (if (s.isTypeSkolem) "\ndeSkolemized annotations: " + s.deSkolemize.annotations.mkString("", " ", "") else "")) 
-      } 
+          + (if (s.isTypeSkolem) "\ndeSkolemized annotations: " + s.deSkolemize.annotations.mkString("", " ", "") else ""))
+      }
       else ""
     }
   }
@@ -682,7 +682,7 @@ abstract class TreeBrowsers {
       case s :: Nil => Document.group(toDocument(s))
       case _ =>
         Document.group(
-          syms.tail.foldLeft (toDocument(syms.head) :: ", ") ( 
+          syms.tail.foldLeft (toDocument(syms.head) :: ", ") (
             (d: Document, s2: Symbol) => toDocument(s2) :: ", " :/: d) )
     }
 
@@ -691,7 +691,7 @@ abstract class TreeBrowsers {
       case t :: Nil => Document.group(toDocument(t))
       case _ =>
         Document.group(
-          ts.tail.foldLeft (toDocument(ts.head) :: ", ") ( 
+          ts.tail.foldLeft (toDocument(ts.head) :: ", ") (
             (d: Document, t2: Type) => toDocument(t2) :: ", " :/: d) )
     }
 
@@ -704,7 +704,7 @@ abstract class TreeBrowsers {
 
       case SingleType(pre, sym) =>
         Document.group(
-          Document.nest(4, "SingleType(" :/:  
+          Document.nest(4, "SingleType(" :/:
                       toDocument(pre) :: ", " :/: sym.name.toString() :: ")")
         )
 
@@ -713,7 +713,7 @@ abstract class TreeBrowsers {
 
       case TypeRef(pre, sym, args) =>
         Document.group(
-          Document.nest(4, "TypeRef(" :/: 
+          Document.nest(4, "TypeRef(" :/:
                         toDocument(pre) :: ", " :/:
                         sym.name.toString() + sym.idString :: ", " :/:
                         "[ " :: toDocument(args) ::"]" :: ")")
@@ -721,7 +721,7 @@ abstract class TreeBrowsers {
 
       case TypeBounds(lo, hi) =>
         Document.group(
-          Document.nest(4, "TypeBounds(" :/: 
+          Document.nest(4, "TypeBounds(" :/:
                         toDocument(lo) :: ", " :/:
                         toDocument(hi) :: ")")
         )
@@ -757,19 +757,19 @@ abstract class TreeBrowsers {
       case PolyType(tparams, result) =>
         Document.group(
           Document.nest(4,"PolyType(" :/:
-                        Document.group("(" :/: 
+                        Document.group("(" :/:
                                        symsToDocument(tparams) :/:
                                        "), ") :/:
                         toDocument(result) :: ")")
         )
-        
+
       case AnnotatedType(annots, tp, _) =>
         Document.group(
           Document.nest(4, "AnnotatedType(" :/:
                         annots.mkString("[", ",", "]") :/:
                         "," :/: toDocument(tp) :: ")")
         )
-        
+
       case ExistentialType(tparams, result) =>
         Document.group(
             Document.nest(4, "ExistentialType(" :/:

@@ -22,9 +22,9 @@ import script._
  *  @author  Matthias Zenger
  *  @version 1.0, 16/04/2004
  *  @since   1
- *  
+ *
  *  @tparam A     type of the elements the buffer proxy contains.
- *  
+ *
  *  @define Coll BufferProxy
  *  @define coll buffer proxy
  */
@@ -55,7 +55,7 @@ trait BufferProxy[A] extends Buffer[A] with Proxy {
   def +=(elem: A): this.type = { self.+=(elem); this }
 
   override def readOnly = self.readOnly
-  
+
   /** Appends a number of elements provided by a traversable object
    *  via its <code>foreach</code> method. The identity of the
    *  buffer is returned.

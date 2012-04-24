@@ -97,20 +97,20 @@ final class MultipleFilesILPrinterVisitor(destPath: String, sourceFilesPath: Str
 		// only write assembly boilerplate and class prototypes
 		if (!append && nomembers) {
 			printAssemblyBoilerplate()
-			
+
 			print(".module \'"); print(module.Name); println("\'")
-		    printAttributes(module)	
+		    printAttributes(module)
         }
 
 	    print(t(i).asInstanceOf[TypeBuilder])
 	    out.close()
 	}
-	
+
     // now write the global methods (typically contains the "main" method)
 	if(!nomembers) {
        var globalMethods: File = new File(destPath, ILPrinterVisitor.currAssembly.GetName().Name + ".msil")
        val append = assemblyBuilder.generatedFiles.contains(globalMethods.getPath)
-		
+
 		out = new PrintWriter(new BufferedWriter(new FileWriter(globalMethods, append)))
 
         // make sure we're the first in the list (ilasm uses the first file name to guess the output file name)
@@ -119,15 +119,15 @@ final class MultipleFilesILPrinterVisitor(destPath: String, sourceFilesPath: Str
 		// if this file hasn't been created by one of the classes, write boilerplate
 		if(!append) {
 			printAssemblyBoilerplate()
-			
+
 			print(".module \'"); print(module.Name); println("\'")
-		    printAttributes(module)	
+		    printAttributes(module)
 		}
 
                 for(val i <- 0 until m.length) {
 	   		print(m(i).asInstanceOf[MethodBuilder])
 		}
-	
+
 		out.close()
 	}
 

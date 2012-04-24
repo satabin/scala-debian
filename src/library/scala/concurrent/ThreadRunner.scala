@@ -13,7 +13,7 @@ package scala.concurrent
 import java.lang.Thread
 
 /** The <code>ThreadRunner</code> trait...
- *  
+ *
  *  @author Philipp Haller
  */
 class ThreadRunner extends FutureTaskRunner {

@@ -305,11 +305,11 @@ object scalac extends Command {
         SeqPara(
           "Specify the options to be passed to the " & MBold("java") &
           " command defined by " & MBold("JAVACMD") & ".",
-        
+
           "With Java 1.5 (or newer) one may for example configure the " &
           "memory usage of the JVM as follows: " &
           Mono("JAVA_OPTS=\"-Xmx512M -Xms16M -Xss16M\""),
-        
+
           "With " & Link("GNU Java", "http://gcc.gnu.org/java/") & " one " &
           "may configure the memory usage of the GIJ as follows: " &
           Mono("JAVA_OPTS=\"--mx512m --ms16m\"")

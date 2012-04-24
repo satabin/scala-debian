@@ -17,5 +17,5 @@ trait Universer extends Generator {
   checks += { () =>
     universeField != null
   }
-  
+
 }

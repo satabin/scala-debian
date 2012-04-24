@@ -46,6 +46,6 @@ extends UnicastRemoteObject with RemoteBooleanRef with Unreferenced {
   override def toString() = x.elem.toString
   def unreferenced() {
     Debug.info("[RemoteBooleanRefImpl] unreferenced: "+this)
-    RemoteRef.unbind(name)  
+    RemoteRef.unbind(name)
   }
 }

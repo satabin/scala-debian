@@ -41,8 +41,8 @@ class Properties(val name: String) extends Prop {
   def apply(p: Prop.Params) = oneProperty(p)
 
   /** Convenience method that checks the properties with the given parameters
-   *  and reports the result on the console. If you need to get the results 
-   *  from the test use the <code>check</code> methods in <code>Test</code> 
+   *  and reports the result on the console. If you need to get the results
+   *  from the test use the <code>check</code> methods in <code>Test</code>
    *  instead. */
   override def check(prms: Test.Params): Unit = Test.checkProperties(
     prms copy (testCallback = ConsoleReporter(1) chain prms.testCallback), this
@@ -55,7 +55,7 @@ class Properties(val name: String) extends Prop {
 
   /** Convenience method that makes it possible to use a this instance
    *  as an application that checks itself on execution */
-  override def main(args: Array[String]): Unit = 
+  override def main(args: Array[String]): Unit =
     Test.cmdLineParser.parseParams(args) match {
       case Success(params, _) => Test.checkProperties(params, this)
       case e: NoSuccess =>
@@ -64,7 +64,7 @@ class Properties(val name: String) extends Prop {
     }
 
   /** Adds all properties from another property collection to this one. */
-  def include(ps: Properties) = for((n,p) <- ps.properties) property(n) = p 
+  def include(ps: Properties) = for((n,p) <- ps.properties) property(n) = p
 
   /** Used for specifying properties. Usage:
    *  <code>property("myProp") = ...</code> */

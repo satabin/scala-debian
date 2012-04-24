@@ -7,7 +7,7 @@ package scala.tools.nsc
 
 import scala.tools.util.PathResolver
 
-class GenericRunnerSettings(error: String => Unit) extends Settings(error) {  
+class GenericRunnerSettings(error: String => Unit) extends Settings(error) {
   def classpathURLs = new PathResolver(this) asURLs
 
   val howtorun =
@@ -31,11 +31,11 @@ class GenericRunnerSettings(error: String => Unit) extends Settings(error) {
       "execute a single command",
       "")
 
-  val save = 
+  val save =
     BooleanSetting(
       "-save",
       "save the compiled script (assumes the code is a script)") withAbbreviation "-savecompiled"
-  
+
   val nc = BooleanSetting(
       "-nc",
       "do not use the fsc compilation daemon") withAbbreviation "-nocompdaemon"

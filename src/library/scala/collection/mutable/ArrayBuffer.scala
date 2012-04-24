@@ -23,9 +23,12 @@ import parallel.mutable.ParArray
  *  @author  Martin Odersky
  *  @version 2.8
  *  @since   1
- *  
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#array_buffers "Scala's Collection Library overview"]]
+ *  section on `Array Buffers` for more information.
+
+ *
  *  @tparam A    the type of this arraybuffer's elements.
- *  
+ *
  *  @define Coll ArrayBuffer
  *  @define coll arraybuffer
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
@@ -35,18 +38,18 @@ import parallel.mutable.ParArray
  *    result class `That` from the current representation type `Repr`
  *    and the new element type `B`. This is usually the `canBuildFrom` value
  *    defined in object `ArrayBuffer`.
- *  @define orderDependent 
+ *  @define orderDependent
  *  @define orderDependentFold
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
 @SerialVersionUID(1529165946227428979L)
-class ArrayBuffer[A](override protected val initialSize: Int) 
-  extends Buffer[A] 
+class ArrayBuffer[A](override protected val initialSize: Int)
+  extends Buffer[A]
      with GenericTraversableTemplate[A, ArrayBuffer]
      with BufferLike[A, ArrayBuffer[A]]
      with IndexedSeqOptimized[A, ArrayBuffer[A]]
-     with Builder[A, ArrayBuffer[A]] 
+     with Builder[A, ArrayBuffer[A]]
      with ResizableArray[A]
      with CustomParallelizable[A, ParArray[A]]
      with Serializable {
@@ -66,9 +69,9 @@ class ArrayBuffer[A](override protected val initialSize: Int)
       array = newarray
     }
   }
-  
+
   override def par = ParArray.handoff[A](array.asInstanceOf[Array[A]], size)
-  
+
   /** Appends a single element to this buffer and returns
    *  the identity of the buffer. It takes constant amortized time.
    *
@@ -100,11 +103,11 @@ class ArrayBuffer[A](override protected val initialSize: Int)
   }
 
   /** Prepends a single element to this buffer and returns
-   *  the identity of the buffer. It takes time linear in 
+   *  the identity of the buffer. It takes time linear in
    *  the buffer size.
    *
    *  @param elem  the element to append.
-   *  @return      the updated buffer. 
+   *  @return      the updated buffer.
    */
   def +=:(elem: A): this.type = {
     ensureSize(size0 + 1)
@@ -113,7 +116,7 @@ class ArrayBuffer[A](override protected val initialSize: Int)
     size0 += 1
     this
   }
-   
+
   /** Prepends a number of elements provided by a traversable object.
    *  The identity of the buffer is returned.
    *
@@ -121,11 +124,11 @@ class ArrayBuffer[A](override protected val initialSize: Int)
    *  @return      the updated buffer.
    */
   override def ++=:(xs: TraversableOnce[A]): this.type = { insertAll(0, xs.toTraversable); this }
-  
+
   /** Inserts new elements at the index `n`. Opposed to method
    *  `update`, this method will not replace an element with a
    *  one. Instead, it will insert a new element at index `n`.
-   *  
+   *
    *  @param n     the index where a new element will be inserted.
    *  @param seq   the traversable object providing all elements to insert.
    *  @throws Predef.IndexOutOfBoundsException if `n` is out of bounds.
@@ -139,10 +142,10 @@ class ArrayBuffer[A](override protected val initialSize: Int)
     xs.copyToArray(array.asInstanceOf[scala.Array[Any]], n)
     size0 += len
   }
-  
+
   /** Removes the element on a given index position. It takes time linear in
    *  the buffer size.
-   *  
+   *
    *  @param n       the index which refers to the first element to delete.
    *  @param count   the number of elements to delete
    *  @throws Predef.IndexOutOfBoundsException if `n` is out of bounds.
@@ -155,7 +158,7 @@ class ArrayBuffer[A](override protected val initialSize: Int)
   }
 
   /** Removes the element at a given index position.
-   *  
+   *
    *  @param n  the index which refers to the element to delete.
    *  @return   the element that was formerly at position `n`.
    */
@@ -176,11 +179,11 @@ class ArrayBuffer[A](override protected val initialSize: Int)
   /** Defines the prefix of the string representation.
    */
   override def stringPrefix: String = "ArrayBuffer"
-  
+
 }
 
 /** Factory object for the `ArrayBuffer` class.
- *  
+ *
  *  $factoryInfo
  *  @define coll array buffer
  *  @define Coll ArrayBuffer

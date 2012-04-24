@@ -244,7 +244,7 @@ trait Reactor[Msg >: Null] extends OutputChannel[Msg] with Combinators {
   }
 
   /** Returns the execution state of this $actor.
-   *  
+   *
    *  @return the execution state
    */
   def getState: Actor.State.Value = synchronized {

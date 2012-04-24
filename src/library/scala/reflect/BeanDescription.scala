@@ -11,7 +11,7 @@ package scala.reflect
 
 /** Provides a short description that will be included when generating
  *  bean information. This annotation can be attached to the bean itself,
- *  or to any member. 
+ *  or to any member.
  *
  *  @author Ross Judson (rjudson@managedobjects.com)
  */

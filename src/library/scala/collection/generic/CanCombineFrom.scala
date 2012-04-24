@@ -13,7 +13,7 @@ import scala.collection.parallel._
 
 /**
  * A base trait for parallel builder factories.
- * 
+ *
  * @tparam From   the type of the underlying collection that requests a builder to be created
  * @tparam Elem   the element type of the collection to be created
  * @tparam To     the type of the collection to be created

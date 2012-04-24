@@ -18,7 +18,7 @@ package scala.util.parsing.input
  *    <li> generating a visual representation of this position (`longString');
  *    <li> comparing two positions (`<').
  *  </ul>
- *  <p> 
+ *  <p>
  *    To use this class for a concrete kind of ``document'', implement the
  *    <code>lineContents</code> method.
  *  </p>
@@ -34,12 +34,12 @@ trait Position {
   def column: Int
 
   /** The contents of the line numbered `lnum' (must not contain a new-line character).
-   * 
+   *
    * @param lnum a 1-based integer index into the `document'
    * @return the line at `lnum' (not including a newline)
    */
   protected def lineContents: String
-  
+
   /** Returns a string representation of the `Position', of the form `line.column' */
   override def toString = ""+line+"."+column
 
@@ -63,7 +63,7 @@ trait Position {
    *         its column is smaller than the corresponding components of `that'
    */
   def <(that: Position) = {
-    this.line < that.line || 
+    this.line < that.line ||
     this.line == that.line && this.column < that.column
   }
 }

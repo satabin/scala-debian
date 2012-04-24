@@ -6,10 +6,10 @@ class JlineProject(info: ProjectInfo) extends DefaultProject(info) with Proguard
   val snapShots = "Snapshots" at "http://scala-tools.org/repo-snapshots/"
   val jansi = "org.fusesource.jansi" % "jansi" % "1.4"
   val junitInterface = "com.novocode" % "junit-interface" % "0.5" % "test->default"
-  
+
   // val junit = "junit" % "junit" % "4.8.1" % "test"
   // lazy val jansiPath = (managedDependencyPath / "compile" ** "jansi*").get.toList.head.absolutePath
-  
+
   override def javaCompileOptions = super.javaCompileOptions ++ javaCompileOptions("-target", "1.5")
 
   override def makeInJarFilter(file: String) =  {

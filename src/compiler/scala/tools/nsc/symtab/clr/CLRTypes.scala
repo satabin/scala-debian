@@ -15,7 +15,7 @@ import ch.epfl.lamp.compiler.msil._
 
 import scala.collection.mutable.{ListBuffer, Map, HashMap, Set, HashSet}
 import scala.tools.nsc.util.{Position, NoPosition}
- 
+
 /**
  * Collects all types from all reference assemblies.
  */
@@ -62,7 +62,7 @@ abstract class CLRTypes {
   val fields: Map[Symbol, FieldInfo] = new HashMap
   val sym2type: Map[Type,Symbol] = new HashMap
   val addressOfViews: HashSet[Symbol] = new HashSet[Symbol]
-  val mdgptrcls4clssym: Map[ /*cls*/ Symbol, /*cls*/ Symbol] = new HashMap 
+  val mdgptrcls4clssym: Map[ /*cls*/ Symbol, /*cls*/ Symbol] = new HashMap
 
   def isAddressOf(msym : Symbol) = addressOfViews.contains(msym)
 

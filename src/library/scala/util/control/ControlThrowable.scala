@@ -17,7 +17,7 @@ package scala.util.control
  * may extend any other <code>Throwable</code> subclass (eg.
  * <code>RuntimeException</code>) and are not required to extend
  * <code>Throwable</code> directly.</p>
- * 
+ *
  * <p>Instances of <code>Throwable</code> subclasses marked in
  * this way should not normally be caught. Where catch-all behaviour is
  * required <code>ControlThrowable</code>s should be propagated, for

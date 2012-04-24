@@ -23,7 +23,7 @@ trait Printers { self: ICodes =>
     private var out = writer
 
     final val TAB = 2
-    
+
     def setWriter(w: PrintWriter) { out = w }
 
     def indent() { margin += TAB }
@@ -72,12 +72,12 @@ trait Printers { self: ICodes =>
 
     def printField(f: IField) {
       print(f.symbol.keyString); print(" ");
-      print(f.symbol.nameString); print(": "); 
+      print(f.symbol.nameString); print(": ");
       println(f.symbol.info.toString());
     }
 
     def printMethod(m: IMethod) {
-      print("def "); print(m.symbol.name); 
+      print("def "); print(m.symbol.name);
       print("("); printList(printParam)(m.params, ", "); print(")");
       print(": "); print(m.symbol.info.resultType)
 
@@ -89,7 +89,7 @@ trait Printers { self: ICodes =>
         println
         lin.linearize(m) foreach printBlock
         println("}")
-        
+
         indent; println("Exception handlers: ")
         m.exh foreach printExceptionHandler
 

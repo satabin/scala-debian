@@ -19,9 +19,9 @@ import symtab.Flags._
 import util.Statistics
 import util.Statistics._
 import scala.tools.util.StringOps.{ countAsString, countElementsAsString }
- 
+
 // Suggestion check whether we can do without priming scopes with symbols of outer scopes,
-// like the IDE does. 
+// like the IDE does.
 /** This trait provides methods to assign types to trees.
  *
  *  @author  Martin Odersky
@@ -59,7 +59,7 @@ trait Typers extends Modes {
       if (tree.hasSymbol) tree.symbol = NoSymbol
       super.traverse(tree)
     }
-  } 
+  }
 /* needed for experimental version where eraly types can be type arguments
   class EarlyMap(clazz: Symbol) extends TypeMap {
     def apply(tp: Type): Type = tp match {
@@ -106,7 +106,7 @@ trait Typers extends Modes {
             case _ =>
               "could not find implicit value for "+
                  (if (paramName startsWith nme.EVIDENCE_PARAM_PREFIX) "evidence parameter of type "
-                  else "parameter "+paramName+": ")+paramTp  
+                  else "parameter "+paramName+": ")+paramTp
           }
 
         // DEPMETTODO: instantiate type vars that depend on earlier implicit args (see adapt (4.1))
@@ -128,7 +128,7 @@ trait Typers extends Modes {
             if (!param.hasDefault)
               context.error(fun.pos, errorMessage(param.name, param.tpe))
             /* else {
-             TODO: alternative (to expose implicit search failure more) --> 
+             TODO: alternative (to expose implicit search failure more) -->
              resolve argument, do type inference, keep emitting positional args, infer type params based on default value for arg
              for (ar <- argResultsBuff) ar.subst traverse defaultVal
              val targs = exprTypeArgs(context.undetparams, defaultVal.tpe, paramTp)
@@ -195,7 +195,7 @@ trait Typers extends Modes {
     def checkStable(tree: Tree): Tree =
       if (treeInfo.isPureExpr(tree)) tree
       else errorTree(
-        tree, 
+        tree,
         "stable identifier required, but "+tree+" found."+
         (if (isStableExceptVolatile(tree)) {
           val tpe = tree.symbol.tpe match {
@@ -224,7 +224,7 @@ trait Typers extends Modes {
     /** Check that `tpt' refers to a non-refinement class type */
     def checkClassType(tpt: Tree, existentialOK: Boolean, stablePrefix: Boolean) {
       def check(tpe: Type): Unit = tpe.normalize match {
-        case TypeRef(pre, sym, _) if sym.isClass && !sym.isRefinementClass => 
+        case TypeRef(pre, sym, _) if sym.isClass && !sym.isRefinementClass =>
           if (stablePrefix && phase.id <= currentRun.typerPhase.id && !pre.isStable)
             error(tpt.pos, "type "+pre+" is not a stable prefix")
         case ErrorType => ;
@@ -306,8 +306,8 @@ trait Typers extends Modes {
         case _ =>
       }
     }
-    
-    def checkStarPatOK(pos: Position, mode: Int) = 
+
+    def checkStarPatOK(pos: Position, mode: Int) =
       if ((mode & STARmode) == 0 && phase.id <= currentRun.typerPhase.id)
         error(pos, "star patterns must correspond with varargs parameters")
 
@@ -390,14 +390,14 @@ trait Typers extends Modes {
         }
         mapOver(
           t match {
-            case TypeRef(_, sym, args) => 
+            case TypeRef(_, sym, args) =>
               checkNoEscape(sym)
-              if (!hiddenSymbols.isEmpty && hiddenSymbols.head == sym && 
+              if (!hiddenSymbols.isEmpty && hiddenSymbols.head == sym &&
                   sym.isAliasType && sameLength(sym.typeParams, args)) {
                 hiddenSymbols = hiddenSymbols.tail
                 t.normalize
               } else t
-            case SingleType(_, sym) => 
+            case SingleType(_, sym) =>
               checkNoEscape(sym)
               t
             case _ =>
@@ -415,8 +415,8 @@ trait Typers extends Modes {
     def reenterTypeParams(tparams: List[TypeDef]): List[Symbol] =
       for (tparam <- tparams) yield {
         tparam.symbol = context.scope enter tparam.symbol
-        tparam.symbol.deSkolemize 
-      } 
+        tparam.symbol.deSkolemize
+      }
 
     /** The qualifying class
      *  of a this or super with prefix <code>qual</code>.
@@ -425,18 +425,18 @@ trait Typers extends Modes {
       context.enclClass.owner.ownerChain.find(o => qual.isEmpty || o.isClass && o.name == qual) match {
         case Some(c) if packageOK || !c.isPackageClass =>
           c
-        case _ => 
+        case _ =>
           error(
-            tree.pos, 
+            tree.pos,
             if (qual.isEmpty) tree+" can be used only in a class, object, or template"
             else qual+" is not an enclosing class")
           NoSymbol
       }
 
-    /** The typer for an expression, depending on where we are. If we are before a superclass 
+    /** The typer for an expression, depending on where we are. If we are before a superclass
      *  call, this is a typer over a constructor context; otherwise it is the current typer.
-     */  
-    def constrTyperIf(inConstr: Boolean): Typer =  
+     */
+    def constrTyperIf(inConstr: Boolean): Typer =
       if (inConstr) {
         assert(context.undetparams.isEmpty)
         newTyper(context.makeConstructorContext)
@@ -445,7 +445,7 @@ trait Typers extends Modes {
     /** The typer for a label definition. If this is part of a template we
      *  first have to enter the label definition.
      */
-    def labelTyper(ldef: LabelDef): Typer = 
+    def labelTyper(ldef: LabelDef): Typer =
       if (ldef.symbol == NoSymbol) { // labeldef is part of template
         val typer1 = newTyper(context.makeNewScope(ldef, context.owner))
         typer1.enterLabelDef(ldef)
@@ -474,8 +474,8 @@ trait Typers extends Modes {
 
     /** Does the context of tree <code>tree</code> require a stable type?
      */
-    private def isStableContext(tree: Tree, mode: Int, pt: Type) =  
-      isNarrowable(tree.tpe) && ((mode & (EXPRmode | LHSmode)) == EXPRmode) && 
+    private def isStableContext(tree: Tree, mode: Int, pt: Type) =
+      isNarrowable(tree.tpe) && ((mode & (EXPRmode | LHSmode)) == EXPRmode) &&
       (xtypes ||
       (pt.isStable ||
        (mode & QUALmode) != 0 && !tree.symbol.isConstant ||
@@ -486,7 +486,7 @@ trait Typers extends Modes {
      *  If symbol refers to package object, insert `.package` as second to last selector.
      *  (exception for some symbols in scala package which are dealiased immediately)
      *  Call checkAccessible, which sets tree's attributes.
-     *  Also note that checkAccessible looks up sym on pre without checking that pre is well-formed 
+     *  Also note that checkAccessible looks up sym on pre without checking that pre is well-formed
      *  (illegal type applications in pre will be skipped -- that's why typedSelect wraps the resulting tree in a TreeWithDeferredChecks)
      *  @return modified tree and new prefix type
      */
@@ -526,11 +526,11 @@ trait Typers extends Modes {
 
     /** Is `sym` defined in package object of package `pkg`?
      */
-    private def isInPackageObject(sym: Symbol, pkg: Symbol) = 
+    private def isInPackageObject(sym: Symbol, pkg: Symbol) =
       pkg.isPackageClass && {
         sym.alternatives forall { sym =>
           !sym.owner.isPackage && {
-            sym.owner.isPackageObjectClass && 
+            sym.owner.isPackageObjectClass &&
             sym.owner.owner == pkg ||
             pkg.isInitialized && {
               // need to be careful here to not get a cyclic reference during bootstrap
@@ -551,7 +551,7 @@ trait Typers extends Modes {
       if (tree.symbol.isOverloaded && !inFunMode(mode))
         inferExprAlternative(tree, pt)
       val sym = tree.symbol
-      
+
       if (tree.tpe.isError) tree
       else if ((mode & (PATTERNmode | FUNmode)) == PATTERNmode && tree.isTerm) { // (1)
         if (sym.isValue) checkStable(tree)
@@ -573,7 +573,7 @@ trait Typers extends Modes {
       case PolyType(_, tpe1) => isNarrowable(tpe1)
       case NullaryMethodType(tpe1) => isNarrowable(tpe1)
       case _ => !phase.erasedTypes
-    } 
+    }
 
     /**
      *  @param tree ...
@@ -607,16 +607,16 @@ trait Typers extends Modes {
 
     def silent[T](op: Typer => T,
                   reportAmbiguousErrors: Boolean = context.reportAmbiguousErrors,
-                  newtree: Tree = context.tree): Any /* in fact, TypeError or T */ = { 
+                  newtree: Tree = context.tree): Any /* in fact, TypeError or T */ = {
       val rawTypeStart = startCounter(rawTypeFailed)
       val findMemberStart = startCounter(findMemberFailed)
       val subtypeStart = startCounter(subtypeFailed)
       val failedSilentStart = startTimer(failedSilentNanos)
       try {
-        if (context.reportGeneralErrors ||  
-            reportAmbiguousErrors != context.reportAmbiguousErrors || 
-            newtree != context.tree) { 
-          val context1 = context.makeSilent(reportAmbiguousErrors, newtree) 
+        if (context.reportGeneralErrors ||
+            reportAmbiguousErrors != context.reportAmbiguousErrors ||
+            newtree != context.tree) {
+          val context1 = context.makeSilent(reportAmbiguousErrors, newtree)
           context1.undetparams = context.undetparams
           context1.savedTypeBounds = context.savedTypeBounds
           context1.namedApplyBlockInfo = context.namedApplyBlockInfo
@@ -644,7 +644,7 @@ trait Typers extends Modes {
      */
     def tryBoth(tree: Tree)(op1: (Typer, Tree) => Tree)(op2: (Typer, Tree) => Tree): Tree =
       silent(op1(_, tree)) match {
-        case result1: Tree => 
+        case result1: Tree =>
           result1
         case ex1: TypeError =>
           silent(op2(_, resetAllAttrs(tree))) match {
@@ -657,14 +657,14 @@ trait Typers extends Modes {
           }
       }
 
-    /** Perform the following adaptations of expression, pattern or type `tree' wrt to 
+    /** Perform the following adaptations of expression, pattern or type `tree' wrt to
      *  given mode `mode' and given prototype `pt':
      *  (-1) For expressions with annotated types, let AnnotationCheckers decide what to do
      *  (0) Convert expressions with constant types to literals (unless in interactive/scaladoc mode)
-     *  (1) Resolve overloading, unless mode contains FUNmode 
+     *  (1) Resolve overloading, unless mode contains FUNmode
      *  (2) Apply parameterless functions
      *  (3) Apply polymorphic types to fresh instances of their type parameters and
-     *      store these instances in context.undetparams, 
+     *      store these instances in context.undetparams,
      *      unless followed by explicit type application.
      *  (4) Do the following to unapplied methods used as values:
      *  (4.1) If the method has only implicit parameters pass implicit arguments
@@ -686,7 +686,7 @@ trait Typers extends Modes {
      *  (9) If there are undetermined type variables and not POLYmode, infer expression instance
      *  Then, if tree's type is not a subtype of expected type, try the following adaptations:
      *  (10) If the expected type is Byte, Short or Char, and the expression
-     *      is an integer fitting in the range of that type, convert it to that type. 
+     *      is an integer fitting in the range of that type, convert it to that type.
      *  (11) Widen numeric literals to their expected type, if necessary
      *  (12) When in mode EXPRmode, convert E to { E; () } if expected type is scala.Unit.
      *  (13) When in mode EXPRmode, apply AnnotationChecker conversion if expected type is annotated.
@@ -711,7 +711,7 @@ trait Typers extends Modes {
       case TypeRef(_, ByNameParamClass, List(arg))
       if ((mode & EXPRmode) != 0)   => // (2)
         adapt(tree setType arg, mode, pt, original)
-      case tr @ TypeRef(_, sym, _) 
+      case tr @ TypeRef(_, sym, _)
       if sym.isAliasType && tr.normalize.isInstanceOf[ExistentialType] &&
         ((mode & (EXPRmode | LHSmode)) == EXPRmode) =>
         adapt(tree setType tr.normalize.skolemizeExistential(context.owner, tree), mode, pt, original)
@@ -726,8 +726,8 @@ trait Typers extends Modes {
           // -- are we sure we want to expand aliases this early?
           // -- what caused this change in behaviour??
         val tparams1 = cloneSymbols(tparams)
-        val tree1 = if (tree.isType) tree 
-                    else TypeApply(tree, tparams1 map (tparam => 
+        val tree1 = if (tree.isType) tree
+                    else TypeApply(tree, tparams1 map (tparam =>
                       TypeTree(tparam.tpeHK) setPos tree.pos.focus)) setPos tree.pos //@M/tcpolyinfer: changed tparam.tpe to tparam.tpeHK
         context.undetparams ++= tparams1
         adapt(tree1 setType restpe.substSym(tparams, tparams1), mode, pt, original)
@@ -751,7 +751,7 @@ trait Typers extends Modes {
         if (original != EmptyTree && pt != WildcardType)
           typer1.silent(tpr => tpr.typed(tpr.applyImplicitArgs(tree), mode, pt)) match {
             case result: Tree => result
-            case ex: TypeError => 
+            case ex: TypeError =>
               if (settings.debug.value) log("fallback on implicits: "+tree+"/"+resetAllAttrs(original))
               val tree1 = typed(resetAllAttrs(original), mode, WildcardType)
               tree1.tpe = addAnnotations(tree1, tree1.tpe)
@@ -760,7 +760,7 @@ trait Typers extends Modes {
         else
           typer1.typed(typer1.applyImplicitArgs(tree), mode, pt)
       case mt: MethodType
-      if (((mode & (EXPRmode | FUNmode | LHSmode)) == EXPRmode) && 
+      if (((mode & (EXPRmode | FUNmode | LHSmode)) == EXPRmode) &&
           (context.undetparams.isEmpty || inPolyMode(mode))) =>
 
         val meth = tree match {
@@ -798,33 +798,33 @@ trait Typers extends Modes {
           def applyMeth = member(adaptToName(tree, nme.apply), nme.apply)
           if ((mode & TAPPmode) != 0)
             tree.tpe.typeParams.isEmpty && applyMeth.filter(! _.tpe.typeParams.isEmpty) != NoSymbol
-          else 
+          else
             applyMeth.filter(_.tpe.paramSectionCount > 0) != NoSymbol
         }
         if (tree.isType) {
           if (inFunMode(mode)) {
             tree
           } else if (tree.hasSymbol && !tree.symbol.typeParams.isEmpty && !inHKMode(mode) &&
-                     !(tree.symbol.isJavaDefined && context.unit.isJava)) { // (7) 
-            // @M When not typing a higher-kinded type ((mode & HKmode) == 0) 
-            // or raw type (tree.symbol.isJavaDefined && context.unit.isJava), types must be of kind *, 
+                     !(tree.symbol.isJavaDefined && context.unit.isJava)) { // (7)
+            // @M When not typing a higher-kinded type ((mode & HKmode) == 0)
+            // or raw type (tree.symbol.isJavaDefined && context.unit.isJava), types must be of kind *,
             // and thus parameterized types must be applied to their type arguments
             // @M TODO: why do kind-* tree's have symbols, while higher-kinded ones don't?
             errorTree(tree, tree.symbol+" takes type parameters")
             tree setType tree.tpe
-          } else if ( // (7.1) @M: check kind-arity 
+          } else if ( // (7.1) @M: check kind-arity
                     // @M: removed check for tree.hasSymbol and replace tree.symbol by tree.tpe.symbol (TypeTree's must also be checked here, and they don't directly have a symbol)
-                     (inHKMode(mode)) && 
-                    // @M: don't check tree.tpe.symbol.typeParams. check tree.tpe.typeParams!!! 
+                     (inHKMode(mode)) &&
+                    // @M: don't check tree.tpe.symbol.typeParams. check tree.tpe.typeParams!!!
                     // (e.g., m[Int] --> tree.tpe.symbol.typeParams.length == 1, tree.tpe.typeParams.length == 0!)
                     !sameLength(tree.tpe.typeParams, pt.typeParams) &&
-                     !(tree.tpe.typeSymbol==AnyClass || 
-                       tree.tpe.typeSymbol==NothingClass || 
+                     !(tree.tpe.typeSymbol==AnyClass ||
+                       tree.tpe.typeSymbol==NothingClass ||
                        pt == WildcardType )) {
               // Check that the actual kind arity (tree.symbol.typeParams.length) conforms to the expected
               // kind-arity (pt.typeParams.length). Full checks are done in checkKindBounds in Infer.
-              // Note that we treat Any and Nothing as kind-polymorphic. 
-              // We can't perform this check when typing type arguments to an overloaded method before the overload is resolved 
+              // Note that we treat Any and Nothing as kind-polymorphic.
+              // We can't perform this check when typing type arguments to an overloaded method before the overload is resolved
               // (or in the case of an error type) -- this is indicated by pt == WildcardType (see case TypeApply in typed1).
               errorTree(tree, tree.tpe+" takes "+countElementsAsString(tree.tpe.typeParams.length, "type parameter")+
                               ", expected: "+countAsString(pt.typeParams.length))
@@ -845,7 +845,7 @@ trait Typers extends Modes {
               val prefix = tree.tpe.prefix
               val tree1 = TypeTree(clazz.primaryConstructor.tpe.asSeenFrom(prefix, clazz.owner))
                   .setOriginal(tree)
-              
+
               inferConstructorInstance(tree1, clazz.typeParams, pt)
               tree1
             } else {
@@ -854,21 +854,21 @@ trait Typers extends Modes {
           } else {
             errorTree(tree, tree.symbol + " is not a case class constructor, nor does it have an unapply/unapplySeq method")
           }
-        } else if (inAllModes(mode, EXPRmode | FUNmode) && 
-                   !tree.tpe.isInstanceOf[MethodType] && 
-                   !tree.tpe.isInstanceOf[OverloadedType] && 
+        } else if (inAllModes(mode, EXPRmode | FUNmode) &&
+                   !tree.tpe.isInstanceOf[MethodType] &&
+                   !tree.tpe.isInstanceOf[OverloadedType] &&
                    applyPossible) {
           assert(!inHKMode(mode)) //@M
           val qual = adaptToName(tree, nme.apply) match {
             case id @ Ident(_) =>
               val pre = if (id.symbol.owner.isPackageClass) id.symbol.owner.thisType
-                        else if (id.symbol.owner.isClass) 
+                        else if (id.symbol.owner.isClass)
                           context.enclosingSubClassContext(id.symbol.owner).prefix
                         else NoPrefix
               stabilize(id, pre, EXPRmode | QUALmode, WildcardType)
-            case sel @ Select(qualqual, _) => 
+            case sel @ Select(qualqual, _) =>
               stabilize(sel, qualqual.tpe, EXPRmode | QUALmode, WildcardType)
-            case other => 
+            case other =>
               other
           }
           typed(atPos(tree.pos)(Select(qual, nme.apply)), mode, pt)
@@ -892,7 +892,7 @@ trait Typers extends Modes {
                 case TypeRef(_, sym, _) =>
                   // note: was if (pt.typeSymbol == UnitClass) but this leads to a potentially
                   // infinite expansion if pt is constant type ()
-                  if (sym == UnitClass && tree.tpe <:< AnyClass.tpe) { // (12) 
+                  if (sym == UnitClass && tree.tpe <:< AnyClass.tpe) { // (12)
                     if (settings.warnValueDiscard.value)
                       context.unit.warning(tree.pos, "discarded non-Unit value")
                     return typed(atPos(tree.pos)(Block(List(tree), Literal(()))), mode, pt)
@@ -909,8 +909,8 @@ trait Typers extends Modes {
               if (!context.undetparams.isEmpty) {
                 return instantiate(tree, mode, pt)
               }
-              if (context.implicitsEnabled && !tree.tpe.isError && !pt.isError) { 
-                // (14); the condition prevents chains of views 
+              if (context.implicitsEnabled && !tree.tpe.isError && !pt.isError) {
+                // (14); the condition prevents chains of views
                 if (settings.debug.value) log("inferring view from "+tree.tpe+" to "+pt)
                 val coercion = inferView(tree, tree.tpe, pt, true)
                 // convert forward views of delegate types into closures wrapped around
@@ -935,7 +935,7 @@ trait Typers extends Modes {
             try {
               typeErrorTree(tree, tree.tpe, pt)
             } catch {
-              case ex: TypeError => 
+              case ex: TypeError =>
                 if (phase.id > currentRun.typerPhase.id &&
                     pt.existentialSkolems.nonEmpty) {
                   // Ignore type errors raised in later phases that are due to mismatching types with existential skolems
@@ -943,20 +943,20 @@ trait Typers extends Modes {
                   // Here's my hypothsis why this happens. The pattern matcher defines a variable of type
                   //
                   //   val x: T = expr
-                  // 
+                  //
                   // where T is the type of expr, but T contains existential skolems ts.
-                  // In that case, this value definition does not typecheck. 
+                  // In that case, this value definition does not typecheck.
                   // The value definition
-                  // 
+                  //
                   //   val x: T forSome { ts } = expr
-                  // 
-                  // would typecheck. Or one can simply leave out the type of the `val':
+                  //
+                  // would typecheck. Or one can simply leave out the type of the `val`:
                   //
                   //   val x = expr
                   context.unit.warning(tree.pos, "recovering from existential Skolem type error in tree \n"+tree+"\nwith type "+tree.tpe+"\n expected type = "+pt+"\n context = "+context.tree)
                   adapt(tree, mode, pt.subst(pt.existentialSkolems, pt.existentialSkolems map (_ => WildcardType)))
-                } else 
-                  throw ex 
+                } else
+                  throw ex
             }
           }
         }
@@ -975,15 +975,15 @@ trait Typers extends Modes {
 
     def adaptToMember(qual: Tree, searchTemplate: Type): Tree = {
       var qtpe = qual.tpe.widen
-      if (qual.isTerm && 
+      if (qual.isTerm &&
           ((qual.symbol eq null) || !qual.symbol.isTerm || qual.symbol.isValue) &&
           phase.id <= currentRun.typerPhase.id && !qtpe.isError &&
-          qtpe.typeSymbol != NullClass && qtpe.typeSymbol != NothingClass && qtpe != WildcardType && 
+          qtpe.typeSymbol != NullClass && qtpe.typeSymbol != NothingClass && qtpe != WildcardType &&
           !qual.isInstanceOf[ApplyImplicitView] && // don't chain views
           context.implicitsEnabled) { // don't try to adapt a top-level type that's the subject of an implicit search
-                                      // this happens because, if isView, typedImplicit tries to apply the "current" implicit value to 
+                                      // this happens because, if isView, typedImplicit tries to apply the "current" implicit value to
                                       // a value that needs to be coerced, so we check whether the implicit value has an `apply` method
-                                     // (if we allow this, we get divergence, e.g., starting at `conforms` during ant quick.bin) 
+                                     // (if we allow this, we get divergence, e.g., starting at `conforms` during ant quick.bin)
                                      // note: implicit arguments are still inferred (this kind of "chaining" is allowed)
         if (qtpe.normalize.isInstanceOf[ExistentialType]) {
           qtpe = qtpe.normalize.skolemizeExistential(context.owner, qual) // open the existential
@@ -1005,7 +1005,7 @@ trait Typers extends Modes {
      *  This helps avoiding propagating result information too far and solves
      *  #1756.
      *  If no conversion is found, return `qual' unchanged.
-     * 
+     *
      */
     def adaptToArguments(qual: Tree, name: Name, args: List[Tree], pt: Type): Tree = {
       def doAdapt(restpe: Type) =
@@ -1013,16 +1013,16 @@ trait Typers extends Modes {
         adaptToMember(qual, HasMethodMatching(name, args map (_.tpe), restpe))
       if (pt != WildcardType) {
         silent(_ => doAdapt(pt)) match {
-          case result: Tree if result != qual => 
+          case result: Tree if result != qual =>
             result
-          case _ => 
+          case _ =>
             if (settings.debug.value) log("fallback on implicits in adaptToArguments: "+qual+" . "+name)
             doAdapt(WildcardType)
         }
-      } else 
+      } else
         doAdapt(pt)
     }
-    
+
     /** Try o apply an implicit conversion to `qual' to that it contains
      *  a method `name`. If that's ambiguous try taking arguments into account using `adaptToArguments`.
      */
@@ -1032,7 +1032,7 @@ trait Typers extends Modes {
       } catch {
         case ex: TypeError =>
         // this happens if implicits are ambiguous; try again with more context info.
-        // println("last ditch effort: "+qual+" . "+name) 
+        // println("last ditch effort: "+qual+" . "+name)
         context.tree match {
           case Apply(tree1, args) if (tree1 eq tree) && args.nonEmpty => // try handling the arguments
             // println("typing args: "+args)
@@ -1063,11 +1063,11 @@ trait Typers extends Modes {
       namer.enterValueParams(context.owner, vparamss)
       typed(cbody)
     }
-    
+
     private def validateNoCaseAncestor(clazz: Symbol) = {
       if (!phase.erasedTypes) {
         for (ancestor <- clazz.ancestors find (_.isCase)) {
-          unit.deprecationWarning(clazz.pos, ( 
+          unit.deprecationWarning(clazz.pos, (
             "case class `%s' has case ancestor `%s'.  Case-to-case inheritance has potentially "+
             "dangerous bugs which are unlikely to be fixed.  You are strongly encouraged to "+
             "instead use extractors to pattern match on non-leaf nodes."
@@ -1076,7 +1076,7 @@ trait Typers extends Modes {
       }
     }
 
-    def parentTypes(templ: Template): List[Tree] = 
+    def parentTypes(templ: Template): List[Tree] =
       if (templ.parents.isEmpty) List()
       else try {
         val clazz = context.owner
@@ -1085,7 +1085,7 @@ trait Typers extends Modes {
         var supertpt = typedTypeConstructor(templ.parents.head)
         val firstParent = supertpt.tpe.typeSymbol
         var mixins = templ.parents.tail map typedType
-        // If first parent is a trait, make it first mixin and add its superclass as first parent 
+        // If first parent is a trait, make it first mixin and add its superclass as first parent
         while ((supertpt.tpe.typeSymbol ne null) && supertpt.tpe.typeSymbol.initialize.isTrait) {
           val supertpt1 = typedType(supertpt)
           if (!supertpt1.tpe.isError) {
@@ -1094,7 +1094,7 @@ trait Typers extends Modes {
           }
         }
 
-        // Determine 
+        // Determine
         //  - supertparams: Missing type parameters from supertype
         //  - supertpe: Given supertype, polymorphic in supertparams
         val supertparams = if (supertpt.hasSymbol) supertpt.symbol.typeParams else List()
@@ -1108,7 +1108,7 @@ trait Typers extends Modes {
             treeCopy.Apply(scall, transformSuperCall(fn), args map (_.duplicate))
           case Select(Super(_, _), nme.CONSTRUCTOR) =>
             treeCopy.Select(
-              scall, 
+              scall,
               atPos(supertpt.pos.focus)(New(TypeTree(supertpe)) setType supertpe),
               nme.CONSTRUCTOR)
         }
@@ -1117,30 +1117,30 @@ trait Typers extends Modes {
           case constr @ DefDef(_, _, _, vparamss, _, cbody @ Block(cstats, cunit)) =>
             // Convert constructor body to block in environment and typecheck it
             val (preSuperStats, rest) = cstats span (!treeInfo.isSuperConstrCall(_))
-            val (scall, upToSuperStats) = 
-              if (rest.isEmpty) (EmptyTree, preSuperStats) 
+            val (scall, upToSuperStats) =
+              if (rest.isEmpty) (EmptyTree, preSuperStats)
               else (rest.head, preSuperStats :+ rest.head)
             val cstats1: List[Tree] = upToSuperStats map (_.duplicate)
             val cbody1 = scall match {
               case Apply(_, _) =>
-                treeCopy.Block(cbody, cstats1.init, 
-                           if (supertparams.isEmpty) cunit.duplicate 
+                treeCopy.Block(cbody, cstats1.init,
+                           if (supertparams.isEmpty) cunit.duplicate
                            else transformSuperCall(scall))
               case _ =>
                 treeCopy.Block(cbody, cstats1, cunit.duplicate)
             }
 
-            val outercontext = context.outer 
+            val outercontext = context.outer
             assert(clazz != NoSymbol)
             val cscope = outercontext.makeNewScope(constr, outercontext.owner)
             val cbody2 = newTyper(cscope) // called both during completion AND typing.
-                .typePrimaryConstrBody(clazz,  
+                .typePrimaryConstrBody(clazz,
                   cbody1, supertparams, clazz.unsafeTypeParams, vparamss map (_.map(_.duplicate)))
 
             scall match {
               case Apply(_, _) =>
                 val sarg = treeInfo.firstArgument(scall)
-                if (sarg != EmptyTree && supertpe.typeSymbol != firstParent) 
+                if (sarg != EmptyTree && supertpe.typeSymbol != firstParent)
                   error(sarg.pos, firstParent+" is a trait; does not take constructor arguments")
                 if (!supertparams.isEmpty) supertpt = TypeTree(cbody2.tpe) setPos supertpt.pos.focus
               case _ =>
@@ -1156,7 +1156,7 @@ trait Typers extends Modes {
 /* experimental: early types as type arguments
         val hasEarlyTypes = templ.body exists (treeInfo.isEarlyTypeDef)
         val earlyMap = new EarlyMap(clazz)
-        List.mapConserve(supertpt :: mixins){ tpt => 
+        List.mapConserve(supertpt :: mixins){ tpt =>
           val tpt1 = checkNoEscaping.privates(clazz, tpt)
           if (hasEarlyTypes) tpt1 else tpt1 setType earlyMap(tpt1.tpe)
         }
@@ -1201,10 +1201,10 @@ trait Typers extends Modes {
             } else {
               error(parent.pos, psym+" needs to be a trait to be mixed in")
             }
-          } 
+          }
           if (psym.isFinal) {
             error(parent.pos, "illegal inheritance from final "+psym)
-          } 
+          }
           if (psym.isSealed && !phase.erasedTypes) {
             // AnyVal is sealed, but we have to let the value classes through manually
             if (context.unit.source.file == psym.sourceFile || isValueClass(context.owner))
@@ -1212,13 +1212,13 @@ trait Typers extends Modes {
             else
               error(parent.pos, "illegal inheritance from sealed "+psym)
           }
-          if (!(selfType <:< parent.tpe.typeOfThis) && 
-              !phase.erasedTypes &&     
+          if (!(selfType <:< parent.tpe.typeOfThis) &&
+              !phase.erasedTypes &&
               !context.owner.isSynthetic &&   // don't check synthetic concrete classes for virtuals (part of DEVIRTUALIZE)
               !settings.noSelfCheck.value &&  // setting to suppress this very check
-              !selfType.isErroneous && 
+              !selfType.isErroneous &&
               !parent.tpe.isErroneous)
-          { 
+          {
             //Console.println(context.owner);//DEBUG
             //Console.println(context.owner.unsafeTypeParams);//DEBUG
             //Console.println(List.fromArray(context.owner.info.closure));//DEBUG
@@ -1241,7 +1241,7 @@ trait Typers extends Modes {
         println("INFO "+context.owner+
                 ", baseclasses = "+(context.owner.info.baseClasses map (_.fullName))+
                 ", lin = "+(context.owner.info.baseClasses map (context.owner.thisType.baseType)))
-*/ 
+*/
     }
 
     def checkFinitary(classinfo: ClassInfoType) {
@@ -1250,8 +1250,8 @@ trait Typers extends Modes {
         if (classinfo.expansiveRefs(tparam) contains tparam) {
           error(tparam.pos, "class graph is not finitary because type parameter "+tparam.name+" is expansively recursive")
           val newinfo = ClassInfoType(
-            classinfo.parents map (_.instantiateTypeParams(List(tparam), List(AnyRefClass.tpe))), 
-            classinfo.decls, 
+            classinfo.parents map (_.instantiateTypeParams(List(tparam), List(AnyRefClass.tpe))),
+            classinfo.decls,
             clazz)
           clazz.setInfo {
             clazz.info match {
@@ -1281,7 +1281,7 @@ trait Typers extends Modes {
           (clazz isNonBottomSubClass ClassfileAnnotationClass))
         restrictionWarning(cdef.pos, unit,
           "subclassing Classfile does not\n"+
-          "make your annotation visible at runtime.  If that is what\n"+ 
+          "make your annotation visible at runtime.  If that is what\n"+
           "you want, you must write the annotation class in Java.")
       if (phase.id <= currentRun.typerPhase.id) {
         for (ann <- clazz.getAnnotation(DeprecatedAttr)) {
@@ -1293,7 +1293,7 @@ trait Typers extends Modes {
       treeCopy.ClassDef(cdef, typedMods, cdef.name, tparams1, impl2)
         .setType(NoType)
     }
- 
+
     /**
      *  @param mdef ...
      *  @return     ...
@@ -1334,7 +1334,7 @@ trait Typers extends Modes {
      *  @return     ...
      */
     def addGetterSetter(stat: Tree): List[Tree] = stat match {
-      case ValDef(mods, name, tpt, rhs) 
+      case ValDef(mods, name, tpt, rhs)
         // PRIVATE | LOCAL are fields generated for primary constructor arguments
         if !mods.isPrivateLocal && !stat.symbol.isModuleVar =>
         val isDeferred = mods.isDeferred
@@ -1347,7 +1347,7 @@ trait Typers extends Modes {
 
         val getter = if (isDeferred) value else value.getter(value.owner)
         assert(getter != NoSymbol, stat)
-        if (getter.isOverloaded) 
+        if (getter.isOverloaded)
           error(getter.pos, getter+" is defined twice")
 
         getter.setAnnotations(memberAnnots(allAnnots, GetterTargetClass))
@@ -1377,8 +1377,8 @@ trait Typers extends Modes {
             val defTree =
               if ((mods hasFlag DEFERRED) || (setter hasFlag OVERLOADED)) EmptyTree
               else Assign(Select(This(value.owner), value), Ident(setter.paramss.head.head))
-            
-            
+
+
             typedPos(vdef.pos.focus)(DefDef(setter, defTree)).asInstanceOf[DefDef]
           }
 
@@ -1479,19 +1479,19 @@ trait Typers extends Modes {
         templ setSymbol clazz.newLocalDummy(templ.pos)
       val self1 = templ.self match {
         case vd @ ValDef(mods, name, tpt, EmptyTree) =>
-          val tpt1 = 
+          val tpt1 =
             checkNoEscaping.privates(
-              clazz.thisSym, 
+              clazz.thisSym,
               treeCopy.TypeTree(tpt).setOriginal(tpt) setType vd.symbol.tpe)
           treeCopy.ValDef(vd, mods, name, tpt1, EmptyTree) setType NoType
       }
-// was: 
+// was:
 //          val tpt1 = checkNoEscaping.privates(clazz.thisSym, typedType(tpt))
 //          treeCopy.ValDef(vd, mods, name, tpt1, EmptyTree) setType NoType
 // but this leads to cycles for existential self types ==> #2545
     if (self1.name != nme.WILDCARD) context.scope enter self1.symbol
       val selfType =
-        if (clazz.isAnonymousClass && !phase.erasedTypes) 
+        if (clazz.isAnonymousClass && !phase.erasedTypes)
           intersectionType(clazz.info.parents, clazz.owner)
         else clazz.typeOfThis
       // the following is necessary for templates generated later
@@ -1500,15 +1500,15 @@ trait Typers extends Modes {
       validateParentClasses(parents1, selfType)
       if (clazz.isCase)
         validateNoCaseAncestor(clazz)
-      
+
       if ((clazz isSubClass ClassfileAnnotationClass) && !clazz.owner.isPackageClass)
         unit.error(clazz.pos, "inner classes cannot be classfile annotations")
       if (!phase.erasedTypes && !clazz.info.resultType.isError) // @S: prevent crash for duplicated type members
         checkFinitary(clazz.info.resultType.asInstanceOf[ClassInfoType])
-      val body = 
-        if (phase.id <= currentRun.typerPhase.id && !reporter.hasErrors) 
+      val body =
+        if (phase.id <= currentRun.typerPhase.id && !reporter.hasErrors)
           templ.body flatMap addGetterSetter
-        else templ.body 
+        else templ.body
       val body1 = typedStats(body, templ.symbol)
       treeCopy.Template(templ, parents1, self1, body1) setType clazz.tpe
     }
@@ -1528,7 +1528,7 @@ trait Typers extends Modes {
       val sym = vdef.symbol
       val typer1 = constrTyperIf(sym.isParameter && sym.owner.isConstructor)
       val typedMods = removeAnnotations(vdef.mods)
-      
+
       // complete lazy annotations
       val annots = sym.annotations
 
@@ -1556,7 +1556,7 @@ trait Typers extends Modes {
               override def matches(sym: Symbol, sym1: Symbol) =
                 if (sym.isSkolem) matches(sym.deSkolemize, sym1)
                 else if (sym1.isSkolem) matches(sym, sym1.deSkolemize)
-                else super[SubstTypeMap].matches(sym, sym1) 
+                else super[SubstTypeMap].matches(sym, sym1)
             }
             // allow defaults on by-name parameters
             if (sym hasFlag BYNAMEPARAM)
@@ -1583,7 +1583,7 @@ trait Typers extends Modes {
           val params = fn.tpe.params
           val args2 = if (params.isEmpty || !isRepeatedParamType(params.last.tpe)) args
                       else args.take(params.length - 1) :+ EmptyTree
-          assert(sameLength(args2, params), "mismatch " + clazz + " " + (params map (_.tpe)) + " " + args2)//debug 
+          assert(sameLength(args2, params), "mismatch " + clazz + " " + (params map (_.tpe)) + " " + args2)//debug
           (superConstr, args1 ::: args2)
         case Block(stats, expr) if !stats.isEmpty =>
           decompose(stats.last)
@@ -1592,12 +1592,12 @@ trait Typers extends Modes {
       }
       val (superConstr, superArgs) = decompose(rhs)
       assert(superConstr.symbol ne null)//debug
-      
+
       // an object cannot be allowed to pass a reference to itself to a superconstructor
       // because of initialization issues; bug #473
       for (arg <- superArgs ; tree <- arg) {
         val sym = tree.symbol
-        if (sym != null && (sym.info.baseClasses contains clazz)) {          
+        if (sym != null && (sym.info.baseClasses contains clazz)) {
           if (sym.isModule)
             error(tree.pos, "super constructor cannot be passed a self reference unless parameter is declared by-name")
           tree match {
@@ -1607,7 +1607,7 @@ trait Typers extends Modes {
           }
         }
       }
-      
+
       if (superConstr.symbol.isPrimaryConstructor) {
         val superClazz = superConstr.symbol.owner
         if (!superClazz.isJavaDefined) {
@@ -1642,7 +1642,7 @@ trait Typers extends Modes {
         }
       }
     }
-      
+
     /** Check if a method is defined in such a way that it can be called.
       * A method cannot be called if it is a non-private member of a structural type
       * and if its parameter's types are not one of
@@ -1714,7 +1714,7 @@ trait Typers extends Modes {
      */
     def typedDefDef(ddef: DefDef): DefDef = {
       val meth = ddef.symbol
-   
+
       reenterTypeParams(ddef.tparams)
       reenterValueParams(ddef.vparamss)
 
@@ -1727,13 +1727,13 @@ trait Typers extends Modes {
           }
         }
       }
-      
+
       val tparams1 = ddef.tparams mapConserve typedTypeDef
       val vparamss1 = ddef.vparamss mapConserve (_ mapConserve typedValDef)
-      
+
       // complete lazy annotations
       val annots = meth.annotations
-      
+
       for (vparams1 <- vparamss1; vparam1 <- vparams1 dropRight 1)
         if (isRepeatedParamType(vparam1.symbol.tpe))
           error(vparam1.pos, "*-parameter must come last")
@@ -1748,7 +1748,7 @@ trait Typers extends Modes {
       checkNonCyclic(ddef, tpt1)
       ddef.tpt.setType(tpt1.tpe)
       val typedMods = removeAnnotations(ddef.mods)
-      var rhs1 = 
+      var rhs1 =
         if (ddef.name == nme.CONSTRUCTOR && !ddef.symbol.hasStaticFlag) { // need this to make it possible to generate static ctors
           if (!meth.isPrimaryConstructor &&
               (!meth.owner.isClass ||
@@ -1759,8 +1759,8 @@ trait Typers extends Modes {
         } else {
           transformedOrTyped(ddef.rhs, EXPRmode, tpt1.tpe)
         }
-      
-      if (meth.isPrimaryConstructor && meth.isClassConstructor && 
+
+      if (meth.isPrimaryConstructor && meth.isClassConstructor &&
           phase.id <= currentRun.typerPhase.id && !reporter.hasErrors)
         computeParamAliases(meth.owner, vparamss1, rhs1)
       if (tpt1.tpe.typeSymbol != NothingClass && !context.returnsSeen && rhs1.tpe.typeSymbol != NothingClass)
@@ -1811,7 +1811,7 @@ trait Typers extends Modes {
 
       val rhs1 = checkNoEscaping.privates(tdef.symbol, typedType(tdef.rhs))
       checkNonCyclic(tdef.symbol)
-      if (tdef.symbol.owner.isType) 
+      if (tdef.symbol.owner.isType)
         rhs1.tpe match {
           case TypeBounds(lo1, hi1) =>
             if (!(lo1 <:< hi1))
@@ -1879,13 +1879,13 @@ trait Typers extends Modes {
           // making every term member private conflicts with private escape checking
           // see ticket #3174 for an example.
           // The cleanest way forward is if we would find a way to suppress
-          // structural type checking for these members and maybe defer 
+          // structural type checking for these members and maybe defer
           // type errors to the places where members are called. But that would
           // be a big refactoring and also a  big departure from existing code.
           // The probably safest fix for 2.8 is to keep members of an anonymous
           // class that are not mentioned in a parent type private (as before)
           // but to disable escape checking for code that's in the same anonymous class.
-          // That's what's done here. 
+          // That's what's done here.
           // We really should go back and think hard whether we find a better
           // way to address the problem of escaping idents on the one hand and well-formed
           // structural types on the other.
@@ -1926,7 +1926,7 @@ trait Typers extends Modes {
         for (sym <- syntheticPrivates) sym resetFlag SYNTHETIC_PRIVATE
       }
     }
- 
+
     /**
      *  @param cdef   ...
      *  @param pattpe ...
@@ -1934,7 +1934,7 @@ trait Typers extends Modes {
      *  @return       ...
      */
     def typedCase(cdef: CaseDef, pattpe: Type, pt: Type): CaseDef = {
-      // verify no _* except in last position      
+      // verify no _* except in last position
       for (Apply(_, xs) <- cdef.pat ; x <- xs dropRight 1 ; if treeInfo isStar x)
         error(x.pos, "_* may only come last")
 
@@ -1948,10 +1948,10 @@ trait Typers extends Modes {
 
       if (forInteractive) {
         for (bind @ Bind(name, _) <- cdef.pat)
-          if (name.toTermName != nme.WILDCARD && bind.symbol != null && bind.symbol != NoSymbol) 
+          if (name.toTermName != nme.WILDCARD && bind.symbol != null && bind.symbol != NoSymbol)
             namer.enterIfNotThere(bind.symbol)
       }
-        
+
       val guard1: Tree = if (cdef.guard == EmptyTree) EmptyTree
                          else typed(cdef.guard, BooleanClass.tpe)
       var body1: Tree = typed(cdef.body, pt)
@@ -1984,18 +1984,18 @@ trait Typers extends Modes {
     def typedFunction(fun: Function, mode: Int, pt: Type): Tree = {
       val numVparams = fun.vparams.length
       val codeExpected = !forMSIL && (pt.typeSymbol isNonBottomSubClass CodeClass)
-      
+
       if (numVparams > definitions.MaxFunctionArity)
         return errorTree(fun, "implementation restricts functions to " + definitions.MaxFunctionArity + " parameters")
 
       def decompose(pt: Type): (Symbol, List[Type], Type) =
         if ((isFunctionType(pt)
-             || 
-             pt.typeSymbol == PartialFunctionClass && 
+             ||
+             pt.typeSymbol == PartialFunctionClass &&
              numVparams == 1 && fun.body.isInstanceOf[Match])
              && // see bug901 for a reason why next conditions are needed
             (pt.normalize.typeArgs.length - 1 == numVparams
-             || 
+             ||
              fun.vparams.exists(_.tpt.isEmpty)))
           (pt.typeSymbol, pt.normalize.typeArgs.init, pt.normalize.typeArgs.last)
         else
@@ -2008,14 +2008,14 @@ trait Typers extends Modes {
       else {
         val vparamSyms = (fun.vparams, argpts).zipped map { (vparam, argpt) =>
           if (vparam.tpt.isEmpty) {
-            vparam.tpt.tpe = 
+            vparam.tpt.tpe =
               if (isFullyDefined(argpt)) argpt
               else {
                 fun match {
                   case etaExpansion(vparams, fn, args) if !codeExpected =>
                     silent(_.typed(fn, forFunMode(mode), pt)) match {
                       case fn1: Tree if context.undetparams.isEmpty =>
-                        // if context,undetparams is not empty, the function was polymorphic, 
+                        // if context,undetparams is not empty, the function was polymorphic,
                         // so we need the missing arguments to infer its type. See #871
                         //println("typing eta "+fun+":"+fn1.tpe+"/"+context.undetparams)
                         val ftpe = normalize(fn1.tpe) baseType FunctionClass(numVparams)
@@ -2077,20 +2077,20 @@ trait Typers extends Modes {
 
     def typedStats(stats: List[Tree], exprOwner: Symbol): List[Tree] = {
       val inBlock = exprOwner == context.owner
-      def includesTargetPos(tree: Tree) = 
+      def includesTargetPos(tree: Tree) =
         tree.pos.isRange && context.unit != null && (tree.pos includes context.unit.targetPos)
       val localTarget = stats exists includesTargetPos
       def typedStat(stat: Tree): Tree = {
         if (context.owner.isRefinementClass && !treeInfo.isDeclaration(stat))
           errorTree(stat, "only declarations allowed here")
-        else 
+        else
           stat match {
             case imp @ Import(_, _) =>
               context = context.makeNewImport(imp)
               imp.symbol.initialize
               typedImport(imp)
             case _ =>
-              if (localTarget && !includesTargetPos(stat)) { 
+              if (localTarget && !includesTargetPos(stat)) {
                 // skip typechecking of statements in a sequence where some other statement includes
                 // the targetposition
                 stat
@@ -2129,12 +2129,12 @@ trait Typers extends Modes {
             if (needsCheck) {
               var e1 = scope.lookupNextEntry(e)
               while ((e1 ne null) && e1.owner == scope) {
-                if (!accesses(e.sym, e1.sym) && !accesses(e1.sym, e.sym) && 
+                if (!accesses(e.sym, e1.sym) && !accesses(e1.sym, e.sym) &&
                     (e.sym.isType || inBlock || (e.sym.tpe matches e1.sym.tpe)))
                   // default getters are defined twice when multiple overloads have defaults. an
                   // error for this is issued in RefChecks.checkDefaultsInOverloaded
                   if (!e.sym.isErroneous && !e1.sym.isErroneous && !e.sym.hasDefaultFlag &&
-                      !e.sym.hasAnnotation(BridgeClass) && !e1.sym.hasAnnotation(BridgeClass)) {                    
+                      !e.sym.hasAnnotation(BridgeClass) && !e1.sym.hasAnnotation(BridgeClass)) {
                     error(e.sym.pos, e1.sym+" is defined twice"+
                     {if(!settings.debug.value) "" else " in "+unit.toString})
                     scope.unlink(e1) // need to unlink to avoid later problems with lub; see #2779
@@ -2200,7 +2200,7 @@ trait Typers extends Modes {
       if (isVarArgTypes(originalFormals)) // TR check really necessary?
         newmodes = newmodes.init ++ List.fill(args.length - originalFormals.length + 1)(STARmode | BYVALmode)
 
-      (args, adaptedFormals, newmodes).zipped map { (arg, formal, m) => 
+      (args, adaptedFormals, newmodes).zipped map { (arg, formal, m) =>
         typedArg(arg, mode, m, formal)
       }
     }
@@ -2213,7 +2213,7 @@ trait Typers extends Modes {
         val losym = tparam.info.bounds.lo.typeSymbol
         losym != NothingClass && losym != NullClass
       }
-      (formals, args).zipped exists { 
+      (formals, args).zipped exists {
         case (formal, Function(vparams, _)) =>
           (vparams exists (_.tpt.isEmpty)) &&
           vparams.length <= MaxFunctionArity &&
@@ -2225,7 +2225,7 @@ trait Typers extends Modes {
             case _ =>
               false
           })
-        case _ => 
+        case _ =>
           false
       }
     }
@@ -2248,6 +2248,9 @@ trait Typers extends Modes {
 
     def doTypedApply(tree: Tree, fun0: Tree, args: List[Tree], mode: Int, pt: Type): Tree = {
       // TODO_NMT: check the assumption that args nonEmpty
+      def errTree = setError(treeCopy.Apply(tree, fun0, args))
+      def errorTree(msg: String) = { error(tree.pos, msg); errTree }
+
       var fun = fun0
       if (fun.hasSymbol && fun.symbol.isOverloaded) {
         // remove alternatives with wrong number of parameters without looking at types.
@@ -2283,7 +2286,7 @@ trait Typers extends Modes {
         if (sym != NoSymbol)
           fun = adapt(fun setSymbol sym setType pre.memberType(sym), forFunMode(mode), WildcardType)
       }
-      
+
       fun.tpe match {
         case OverloadedType(pre, alts) =>
           val undetparams = context.extractUndetparams()
@@ -2324,7 +2327,7 @@ trait Typers extends Modes {
               // the inner "doTypedApply" does "extractUndetparams" => restore when it fails
               val savedUndetparams = context.undetparams
               silent(_.doTypedApply(tree, fun, tupleArgs, mode, pt)) match {
-                case t: Tree => 
+                case t: Tree =>
 //                  println("tuple conversion to "+t+" for "+mt)//DEBUG
                   Some(t)
                 case ex =>
@@ -2341,23 +2344,22 @@ trait Typers extends Modes {
            */
           def tryNamesDefaults: Tree = {
             val lencmp = compareLengths(args, formals)
-            
-            if (mt.isErroneous) setError(tree)
+
+            if (mt.isErroneous) errTree
             else if (inPatternMode(mode))
               // #2064
-              errorTree(tree, "wrong number of arguments for "+ treeSymTypeMsg(fun))
+              errorTree("wrong number of arguments for "+ treeSymTypeMsg(fun))
             else if (lencmp > 0) {
-              tryTupleApply getOrElse errorTree(tree, "too many arguments for "+treeSymTypeMsg(fun))
+              tryTupleApply getOrElse errorTree("too many arguments for "+treeSymTypeMsg(fun))
             } else if (lencmp == 0) {
               // we don't need defaults. names were used, so this application is transformed
               // into a block (@see transformNamedApplication in NamesDefaults)
               val (namelessArgs, argPos) = removeNames(Typer.this)(args, params)
               if (namelessArgs exists (_.isErroneous)) {
-                setError(tree)
+                errTree
               } else if (!isIdentity(argPos) && !sameLength(formals, params))
                 // !isIdentity indicates that named arguments are used to re-order arguments
-                errorTree(tree, "when using named arguments, the vararg parameter "+
-                                "has to be specified exactly once")
+                errorTree("when using named arguments, the vararg parameter has to be specified exactly once")
               else if (isIdentity(argPos) && !isNamedApplyBlock(fun)) {
                 // if there's no re-ordering, and fun is not transformed, no need to transform
                 // more than an optimization, e.g. important in "synchronized { x = update-x }"
@@ -2371,7 +2373,7 @@ trait Typers extends Modes {
               // calls to the default getters. Example:
               //  foo[Int](a)()  ==>  foo[Int](a)(b = foo$qual.foo$default$2[Int](a))
               val fun1 = transformNamedApplication(Typer.this, mode, pt)(fun, x => x)
-              if (fun1.isErroneous) setError(tree)
+              if (fun1.isErroneous) errTree
               else {
                 assert(isNamedApplyBlock(fun1), fun1)
                 val NamedApplyInfo(qual, targs, previousArgss, _) = context.namedApplyBlockInfo.get._2
@@ -2386,19 +2388,19 @@ trait Typers extends Modes {
                 val (allArgs, missing) = addDefaults(args, qual, targs, previousArgss, params, fun.pos.focus, context)
                 val funSym = fun1 match { case Block(_, expr) => expr.symbol }
                 val lencmp2 = compareLengths(allArgs, formals)
-                
+
                 if (!sameLength(allArgs, args) && callToCompanionConstr(context, funSym)) {
-                  errorTree(tree, "module extending its companion class cannot use default constructor arguments")
+                  errorTree("module extending its companion class cannot use default constructor arguments")
                 } else if (lencmp2 > 0) {
                   removeNames(Typer.this)(allArgs, params) // #3818
-                  setError(tree)
+                  errTree
                 } else if (lencmp2 == 0) {
                   // useful when a default doesn't match parameter type, e.g. def f[T](x:T="a"); f[Int]()
                   val note = "Error occurred in an application involving default arguments."
                   if (!(context.diagnostic contains note)) context.diagnostic = note :: context.diagnostic
                   doTypedApply(tree, if (blockIsEmpty) fun else fun1, allArgs, mode, pt)
                 } else {
-                  tryTupleApply getOrElse errorTree(tree, notEnoughArgumentsMsg(fun, missing))
+                  tryTupleApply getOrElse errorTree(notEnoughArgumentsMsg(fun, missing))
                 }
               }
             }
@@ -2470,7 +2472,7 @@ trait Typers extends Modes {
               var remainingParams = paramTypes
               def typedArgToPoly(arg: Tree, formal: Type): Tree = { //TR TODO: cleanup
                 val lenientPt = formal.instantiateTypeParams(tparams, lenientTargs)
-                val newmode = 
+                val newmode =
                   if (isByNameParamType(remainingParams.head)) POLYmode
                   else POLYmode | BYVALmode
                 if (remainingParams.tail.nonEmpty) remainingParams = remainingParams.tail
@@ -2483,7 +2485,7 @@ trait Typers extends Modes {
                 arg1
               }
               val args1 = (args, formals).zipped map typedArgToPoly
-              if (args1 exists (_.tpe.isError)) setError(tree)
+              if (args1 exists (_.tpe.isError)) errTree
               else {
                 if (settings.debug.value) log("infer method inst "+fun+", tparams = "+tparams+", args = "+args1.map(_.tpe)+", pt = "+pt+", lobounds = "+tparams.map(_.tpe.bounds.lo)+", parambounds = "+tparams.map(_.info)) //debug
                 // define the undetparams which have been fixed by this param list, replace the corresponding symbols in "fun"
@@ -2498,7 +2500,7 @@ trait Typers extends Modes {
 
         case SingleType(_, _) =>
           doTypedApply(tree, fun setType fun.tpe.widen, args, mode, pt)
-        
+
         case ErrorType =>
           setError(treeCopy.Apply(tree, fun, args))
         /* --- begin unapply  --- */
@@ -2508,9 +2510,9 @@ trait Typers extends Modes {
             error(fun.pos, "too many arguments for unapply pattern, maximum = "+MaxTupleArity)
 
           def freshArgType(tp: Type): (Type, List[Symbol]) = (tp: @unchecked) match {
-            case MethodType(param :: _, _) => 
+            case MethodType(param :: _, _) =>
               (param.tpe, Nil)
-            case PolyType(tparams, restype) => 
+            case PolyType(tparams, restype) =>
               val tparams1 = cloneSymbols(tparams)
               (freshArgType(restype)._1.substSym(tparams, tparams1), tparams1)
             case OverloadedType(_, _) =>
@@ -2518,20 +2520,20 @@ trait Typers extends Modes {
               (ErrorType, Nil)
           }
 
-          val unapp     = unapplyMember(otpe)          
+          val unapp     = unapplyMember(otpe)
           val unappType = otpe.memberType(unapp)
           val argDummy  = context.owner.newValue(fun.pos, nme.SELECTOR_DUMMY) setFlag SYNTHETIC setInfo pt
           val arg       = Ident(argDummy) setType pt
-          
+
           if (!isApplicableSafe(Nil, unappType, List(pt), WildcardType)) {
             //Console.println("UNAPP: need to typetest, arg.tpe = "+arg.tpe+", unappType = "+unappType)
             val (unappFormal, freeVars) = freshArgType(unappType.skolemizeExistential(context.owner, tree))
             val context1 = context.makeNewScope(context.tree, context.owner)
             freeVars foreach context1.scope.enter
-            
+
             val typer1 = newTyper(context1)
             val pattp  = typer1.infer.inferTypedPattern(tree.pos, unappFormal, arg.tpe)
-            
+
             // turn any unresolved type variables in freevars into existential skolems
             val skolems = freeVars map { fv =>
               val skolem = new TypeSkolem(context1.owner, fun.pos, fv.name.toTypeName, fv)
@@ -2545,8 +2547,8 @@ trait Typers extends Modes {
 
           // setType null is necessary so that ref will be stabilized; see bug 881
           val fun1 = typedPos(fun.pos)(Apply(Select(fun setType null, unapp), List(arg)))
-          
-          if (fun1.tpe.isErroneous) setError(tree)
+
+          if (fun1.tpe.isErroneous) errTree
           else {
             val formals0 = unapplyTypeList(fun1.symbol, fun1.tpe)
             val formals1 = formalTypes(formals0, args.length)
@@ -2562,13 +2564,13 @@ trait Typers extends Modes {
               UnApply(fun1, args1) setPos tree.pos setType itype
             }
             else {
-              errorTree(tree, "wrong number of arguments for "+treeSymTypeMsg(fun))
+              errorTree("wrong number of arguments for "+treeSymTypeMsg(fun))
             }
           }
-          
+
 /* --- end unapply  --- */
         case _ =>
-          errorTree(tree, fun.tpe+" does not take parameters")
+          errorTree(fun.tpe+" does not take parameters")
       }
     }
 
@@ -2745,12 +2747,12 @@ trait Typers extends Modes {
                                          // will retain the old symbol
                                          // from the previous typing.
             val fun1clazz = FunctionClass(1)
-            val funcType = typeRef(fun1clazz.tpe.prefix, 
-                                   fun1clazz, 
+            val funcType = typeRef(fun1clazz.tpe.prefix,
+                                   fun1clazz,
                                    List(selfsym.info, annClass.tpe))
 
             (typed(func, mode, funcType): @unchecked) match {
-              case t @ Function(List(arg), rhs) => 
+              case t @ Function(List(arg), rhs) =>
                 val subs =
                   new TreeSymSubstituter(List(arg.symbol),List(selfsym))
                 subs(rhs)
@@ -2814,7 +2816,7 @@ trait Typers extends Modes {
         val bound      = sym.existentialBound
         val sowner     = if (isRawParameter(sym)) context.owner else sym.owner
         val quantified = sowner.newExistential(sym.pos, name)
-        
+
         quantified setInfo bound.cloneInfo(quantified)
       }
       // Higher-kinded existentials are not yet supported, but this is
@@ -2829,7 +2831,7 @@ trait Typers extends Modes {
 
     /** Compute an existential type from raw hidden symbols `syms' and type `tp'
      */
-    def packSymbols(hidden: List[Symbol], tp: Type): Type = 
+    def packSymbols(hidden: List[Symbol], tp: Type): Type =
       if (hidden.isEmpty) tp
       else {
 //          Console.println("original type: "+tp)
@@ -2843,12 +2845,12 @@ trait Typers extends Modes {
 
     /** convert skolems to existentials */
     def packedType(tree: Tree, owner: Symbol): Type = {
-      def defines(tree: Tree, sym: Symbol) = 
+      def defines(tree: Tree, sym: Symbol) =
         sym.isExistentialSkolem && sym.unpackLocation == tree ||
         tree.isDef && tree.symbol == sym
-      def isVisibleParameter(sym: Symbol) = 
+      def isVisibleParameter(sym: Symbol) =
         sym.isParameter && (sym.owner == owner) && (sym.isType || !owner.isAnonymousFunction)
-      def containsDef(owner: Symbol, sym: Symbol): Boolean = 
+      def containsDef(owner: Symbol, sym: Symbol): Boolean =
         (!sym.hasPackageFlag) && {
           var o = sym.owner
           while (o != owner && o != NoSymbol && !o.hasPackageFlag) o = o.owner
@@ -2860,16 +2862,16 @@ trait Typers extends Modes {
         if (sym == NoSymbol || sym.isRefinementClass || sym.isLocalDummy) false
         else if (owner == NoSymbol) tree exists (defines(_, sym))
         else containsDef(owner, sym) || isRawParameter(sym)
-      def containsLocal(tp: Type): Boolean = 
+      def containsLocal(tp: Type): Boolean =
         tp exists (t => isLocal(t.typeSymbol) || isLocal(t.termSymbol))
       val normalizeLocals = new TypeMap {
         def apply(tp: Type): Type = tp match {
           case TypeRef(pre, sym, args) =>
             if (sym.isAliasType && containsLocal(tp)) apply(tp.normalize)
             else {
-              if (pre.isVolatile) 
+              if (pre.isVolatile)
                 context.error(tree.pos, "Inferred type "+tree.tpe+" contains type selection from volatile type "+pre)
-              mapOver(tp) 
+              mapOver(tp)
             }
           case _ =>
             mapOver(tp)
@@ -2885,15 +2887,15 @@ trait Typers extends Modes {
               localSyms += sym
               remainingSyms += sym
             } else {
-              unit.error(tree.pos, 
+              unit.error(tree.pos,
                 "can't existentially abstract over parameterized type " + tp)
-            } 
+            }
           }
         }
 
         for (t <- tp) {
           t match {
-            case ExistentialType(tparams, _) => 
+            case ExistentialType(tparams, _) =>
               boundSyms ++= tparams
             case AnnotatedType(annots, _, _) =>
               for (annot <- annots; arg <- annot.args) {
@@ -2943,16 +2945,16 @@ trait Typers extends Modes {
         val args1 = if (sameLength(args, tparams)) {
           //@M: in case TypeApply we can't check the kind-arities of the type arguments,
           // as we don't know which alternative to choose... here we do
-          map2Conserve(args, tparams) { 
+          map2Conserve(args, tparams) {
             //@M! the polytype denotes the expected kind
-            (arg, tparam) => typedHigherKindedType(arg, mode, polyType(tparam.typeParams, AnyClass.tpe)) 
-          }          
+            (arg, tparam) => typedHigherKindedType(arg, mode, polyType(tparam.typeParams, AnyClass.tpe))
+          }
         } else // @M: there's probably something wrong when args.length != tparams.length... (triggered by bug #320)
-         // Martin, I'm using fake trees, because, if you use args or arg.map(typedType), 
+         // Martin, I'm using fake trees, because, if you use args or arg.map(typedType),
          // inferPolyAlternatives loops...  -- I have no idea why :-(
          // ...actually this was looping anyway, see bug #278.
           return errorTree(fun, "wrong number of type parameters for "+treeSymTypeMsg(fun))
-        
+
         typedTypeApply(tree, mode, fun, args1)
       case SingleType(_, _) =>
         typedTypeApply(tree, mode, fun setType fun.tpe.widen, args)
@@ -2961,7 +2963,7 @@ trait Typers extends Modes {
           val targs = args map (_.tpe)
           checkBounds(tree.pos, NoPrefix, NoSymbol, tparams, targs, "")
           if (fun.symbol == Predef_classOf) {
-            checkClassType(args.head, true, false) 
+            checkClassType(args.head, true, false)
             atPos(tree.pos) { gen.mkClassOf(targs.head) }
           } else {
             if (phase.id <= currentRun.typerPhase.id &&
@@ -2970,9 +2972,9 @@ trait Typers extends Modes {
             val resultpe = restpe.instantiateTypeParams(tparams, targs)
             //@M substitution in instantiateParams needs to be careful!
             //@M example: class Foo[a] { def foo[m[x]]: m[a] = error("") } (new Foo[Int]).foo[List] : List[Int]
-            //@M    --> first, m[a] gets changed to m[Int], then m gets substituted for List, 
+            //@M    --> first, m[a] gets changed to m[Int], then m gets substituted for List,
             //          this must preserve m's type argument, so that we end up with List[Int], and not List[a]
-            //@M related bug: #1438 
+            //@M related bug: #1438
             //println("instantiating type params "+restpe+" "+tparams+" "+targs+" = "+resultpe)
             treeCopy.TypeApply(tree, fun, args) setType resultpe
           }
@@ -2980,7 +2982,7 @@ trait Typers extends Modes {
           errorTree(tree, "wrong number of type parameters for "+treeSymTypeMsg(fun))
         }
       case ErrorType =>
-        setError(tree)
+        setError(treeCopy.TypeApply(tree, fun, args))
       case _ =>
         errorTree(tree, treeSymTypeMsg(fun)+" does not take type parameters.")
     }
@@ -2998,17 +3000,17 @@ trait Typers extends Modes {
 
     protected def typed1(tree: Tree, mode: Int, pt: Type): Tree = {
       def isPatternMode = inPatternMode(mode)
-      
+
       //Console.println("typed1("+tree.getClass()+","+Integer.toHexString(mode)+","+pt+")")
       def ptOrLub(tps: List[Type]) = if (isFullyDefined(pt)) (pt, false) else weakLub(tps map (_.deconst))
-      
+
       //@M! get the type of the qualifier in a Select tree, otherwise: NoType
-      def prefixType(fun: Tree): Type = fun match { 
+      def prefixType(fun: Tree): Type = fun match {
         case Select(qualifier, _) => qualifier.tpe
 //        case Ident(name) => ??
         case _ => NoType
       }
-      
+
       def typedAnnotated(ann: Tree, arg1: Tree): Tree = {
         /** mode for typing the annotation itself */
         val annotMode = mode & ~TYPEmode | EXPRmode
@@ -3035,7 +3037,7 @@ trait Typers extends Modes {
                      *
                      * (Note: -Yself-in-annots must be on to see the problem)
                      * */
-                    val sym = 
+                    val sym =
                       context.owner.newLocalDummy(ann.pos)
                         .newValue(ann.pos, nme.self)
                     sym.setInfo(arg1.tpe.withoutAnnotations)
@@ -3076,11 +3078,11 @@ trait Typers extends Modes {
         var vble = tree.symbol
         def typedBindType(name: TypeName) = {
           assert(body == EmptyTree, context.unit + " typedBind: " + name.debugString + " " + body + " " + body.getClass)
-          if (vble == NoSymbol) 
-            vble = 
+          if (vble == NoSymbol)
+            vble =
               if (isFullyDefined(pt))
                 context.owner.newAliasType(tree.pos, name) setInfo pt
-              else 
+              else
                 context.owner.newAbstractType(tree.pos, name) setInfo TypeBounds.empty
           val rawInfo = vble.rawInfo
           vble = if (vble.name == tpnme.WILDCARD) context.scope.enter(vble)
@@ -3088,7 +3090,7 @@ trait Typers extends Modes {
           tree setSymbol vble setType vble.tpe
         }
         def typedBindTerm(name: TermName) = {
-          if (vble == NoSymbol) 
+          if (vble == NoSymbol)
             vble = context.owner.newValue(tree.pos, name)
           if (vble.name.toTermName != nme.WILDCARD) {
             if ((mode & ALTmode) != 0)
@@ -3122,23 +3124,23 @@ trait Typers extends Modes {
         def failMsg =
           if (varsym != null && varsym.isValue) "reassignment to val"
           else "assignment to non variable"
-        
-        def fail = {    
+
+        def fail = {
           if (!lhs1.tpe.isError)
             error(tree.pos, failMsg)
-          
+
           setError(tree)
         }
         if (varsym == null)
           return fail
-        
+
         if (treeInfo.mayBeVarGetter(varsym)) {
           treeInfo.methPart(lhs1) match {
             case Select(qual, name) =>
               val sel = Select(qual, nme.getterToSetter(name.toTermName)) setPos lhs.pos
-              val app = Apply(sel, List(rhs)) setPos tree.pos              
+              val app = Apply(sel, List(rhs)) setPos tree.pos
               return typed(app, mode, pt)
-          
+
             case _ =>
           }
         }
@@ -3154,7 +3156,7 @@ trait Typers extends Modes {
         if (elsep.isEmpty) { // in the future, should be unnecessary
           val thenp1 = typed(thenp, UnitClass.tpe)
           treeCopy.If(tree, cond1, thenp1, elsep) setType thenp1.tpe
-        } else { 
+        } else {
           var thenp1 = typed(thenp, pt)
           var elsep1 = typed(elsep, pt)
           val (owntype, needAdapt) = ptOrLub(List(thenp1.tpe, elsep1.tpe))
@@ -3168,8 +3170,8 @@ trait Typers extends Modes {
 
       def typedReturn(expr: Tree) = {
         val enclMethod = context.enclMethod
-        if (enclMethod == NoContext || 
-            enclMethod.owner.isConstructor || 
+        if (enclMethod == NoContext ||
+            enclMethod.owner.isConstructor ||
             context.enclClass.enclMethod == enclMethod // i.e., we are in a constructor of a local class
             ) {
           errorTree(tree, "return outside method definition")
@@ -3226,7 +3228,7 @@ trait Typers extends Modes {
                   || narrowRhs(tp) <:< tp.typeOfThis
                   || phase.erasedTypes
                   )) {
-          error(tree.pos, sym + 
+          error(tree.pos, sym +
                 " cannot be instantiated because it does not conform to its self-type "+
                 tp.typeOfThis)
         }
@@ -3248,9 +3250,9 @@ trait Typers extends Modes {
         case MethodType(formals, _) =>
           if (isFunctionType(pt)) expr1
           else expr1 match {
-            case Select(qual, name) if (forMSIL && 
-                                        pt != WildcardType && 
-                                        pt != ErrorType && 
+            case Select(qual, name) if (forMSIL &&
+                                        pt != WildcardType &&
+                                        pt != ErrorType &&
                                         isSubType(pt, DelegateClass.tpe)) =>
               val scalaCaller = newScalaCaller(pt)
               addScalaCallerInfo(scalaCaller, expr1.symbol)
@@ -3262,7 +3264,7 @@ trait Typers extends Modes {
                                      else List(qual) // where the scala-method is located
               val rhs = Apply(f, args)
               typed(rhs)
-            case _ => 
+            case _ =>
               adapt(expr1, mode, functionType(formals map (t => WildcardType), WildcardType))
           }
         case ErrorType =>
@@ -3297,9 +3299,9 @@ trait Typers extends Modes {
             t
           case ex: TypeError =>
             stopTimer(failedApplyNanos, start)
-            
+
             // If the problem is with raw types, copnvert to existentials and try again.
-            // See #4712 for a case where this situation arises, 
+            // See #4712 for a case where this situation arises,
             if ((fun.symbol ne null) && fun.symbol.isJavaDefined) {
               val newtpe = rawToExistential(fun.tpe)
               if (fun.tpe ne newtpe) {
@@ -3307,7 +3309,7 @@ trait Typers extends Modes {
                 return tryTypedApply(fun setType newtpe, args)
               }
             }
-            
+
             def treesInResult(tree: Tree): List[Tree] = tree :: (tree match {
               case Block(_, r)                        => treesInResult(r)
               case Match(_, cases)                    => cases
@@ -3329,7 +3331,7 @@ trait Typers extends Modes {
               val Select(qual, name) = fun
               val args1 = tryTypedArgs(args, forArgMode(fun, mode), ex)
               val qual1 =
-                if ((args1 ne null) && !pt.isError) adaptToArguments(qual, name, args1, pt) 
+                if ((args1 ne null) && !pt.isError) adaptToArguments(qual, name, args1, pt)
                 else qual
               if (qual1 ne qual) {
                 val tree1 = Apply(Select(qual1, name) setPos fun.pos, args1) setPos tree.pos
@@ -3337,10 +3339,10 @@ trait Typers extends Modes {
               }
             }
             reportTypeError(tree.pos, ex)
-            setError(tree)
+            setError(treeCopy.Apply(tree, fun, args))
         }
       }
-    
+
       def typedApply(fun: Tree, args: List[Tree]) = {
         val stableApplication = (fun.symbol ne null) && fun.symbol.isMethod && fun.symbol.isStable
         if (stableApplication && isPatternMode) {
@@ -3350,8 +3352,8 @@ trait Typers extends Modes {
           val funpt = if (isPatternMode) pt else WildcardType
           val appStart = startTimer(failedApplyNanos)
           val opeqStart = startTimer(failedOpEqNanos)
-          silent(_.typed(fun, forFunMode(mode), funpt),  
-                 if ((mode & EXPRmode) != 0) false else context.reportAmbiguousErrors,  
+          silent(_.typed(fun, forFunMode(mode), funpt),
+                 if ((mode & EXPRmode) != 0) false else context.reportAmbiguousErrors,
                  if ((mode & EXPRmode) != 0) tree else context.tree) match {
             case fun1: Tree =>
               val fun2 = if (stableApplication) stabilizeFun(fun1, mode, pt) else fun1
@@ -3360,9 +3362,9 @@ trait Typers extends Modes {
                 case mt: MethodType => mt.isImplicit
                 case _ => false
               }
-              val res = 
+              val res =
                 if (phase.id <= currentRun.typerPhase.id &&
-                    fun2.isInstanceOf[Select] && 
+                    fun2.isInstanceOf[Select] &&
                     !isImplicitMethod(fun2.tpe) &&
                     ((fun2.symbol eq null) || !fun2.symbol.isConstructor) &&
                     (mode & (EXPRmode | SNDTRYmode)) == EXPRmode) {
@@ -3379,7 +3381,7 @@ trait Typers extends Modes {
               //if (fun2.hasSymbol && fun2.symbol.name == nme.apply && fun2.symbol.owner == ArrayClass) {
               // But this causes cyclic reference for Array class in Cleanup. It is easy to overcome this
               // by calling ArrayClass.info here (or some other place before specialize).
-              if (fun2.symbol == Array_apply) { 
+              if (fun2.symbol == Array_apply) {
                 val checked = gen.mkCheckInit(res)
                 // this check is needed to avoid infinite recursion in Duplicators
                 // (calling typed1 more than once for the same tree)
@@ -3388,38 +3390,38 @@ trait Typers extends Modes {
               } else res
             case ex: TypeError =>
               fun match {
-                case Select(qual, name) 
+                case Select(qual, name)
                 if !isPatternMode && nme.isOpAssignmentName(name.decode) =>
                   val qual1 = typedQualifier(qual)
                   if (treeInfo.isVariableOrGetter(qual1)) {
                     stopTimer(failedOpEqNanos, opeqStart)
-                    convertToAssignment(fun, qual1, name, args, ex) 
+                    convertToAssignment(fun, qual1, name, args, ex)
                   } else {
                     stopTimer(failedApplyNanos, appStart)
-                    if ((qual1.symbol ne null) && qual1.symbol.isValue) 
+                    if ((qual1.symbol ne null) && qual1.symbol.isValue)
                       error(tree.pos, "reassignment to val")
                     else
                       reportTypeError(fun.pos, ex)
-                    setError(tree)                           
+                    setError(tree)
                   }
                 case _ =>
                   stopTimer(failedApplyNanos, appStart)
                   reportTypeError(fun.pos, ex)
-                  setError(tree)                           
+                  setError(tree)
               }
           }
         }
       }
-    
+
       def convertToAssignment(fun: Tree, qual: Tree, name: Name, args: List[Tree], ex: TypeError): Tree = {
         val prefix = name.subName(0, name.length - nme.EQL.length)
-        def mkAssign(vble: Tree): Tree = 
+        def mkAssign(vble: Tree): Tree =
           Assign(
             vble,
             Apply(
               Select(vble.duplicate, prefix) setPos fun.pos.focus, args) setPos tree.pos.makeTransparent
           ) setPos tree.pos
-        
+
         def mkUpdate(table: Tree, indices: List[Tree]) = {
           gen.evalOnceAll(table :: indices, context.owner, context.unit) { ts =>
             val tab = ts.head
@@ -3432,23 +3434,23 @@ trait Typers extends Modes {
                      Apply(
                        Select(tab(), nme.apply) setPos table.pos,
                        is map (i => i())) setPos qual.pos,
-                     prefix) setPos fun.pos, 
+                     prefix) setPos fun.pos,
                    args) setPos tree.pos)
                )
              ) setPos tree.pos
            }
         }
-      
+
         val tree1 = qual match {
           case Ident(_) =>
             mkAssign(qual)
-            
+
           case Select(qualqual, vname) =>
             gen.evalOnce(qualqual, context.owner, context.unit) { qq =>
               val qq1 = qq()
               mkAssign(Select(qq1, vname) setPos qual.pos)
             }
-          
+
           case Apply(fn, indices) =>
             treeInfo.methPart(fn) match {
               case Select(table, nme.apply) => mkUpdate(table, indices)
@@ -3459,11 +3461,11 @@ trait Typers extends Modes {
 /*
         if (settings.debug.value) log("retry assign: "+tree1)
         silent(_.typed1(tree1, mode, pt)) match {
-          case t: Tree => 
+          case t: Tree =>
             t
           case _ =>
             reportTypeError(tree.pos, ex)
-            setError(tree)                           
+            setError(tree)
         }
 */
       }
@@ -3473,7 +3475,7 @@ trait Typers extends Modes {
 
       def typedSuper(qual: Tree, mix: TypeName) = {
         val qual1 = typed(qual)
-        
+
         val clazz = qual1 match {
           case This(_) => qual1.symbol
           case _ => qual1.tpe.typeSymbol
@@ -3506,10 +3508,10 @@ trait Typers extends Modes {
             ps.head
           }
         }
-        
+
         val owntype =
           if (mix.isEmpty) {
-            if ((mode & SUPERCONSTRmode) != 0) 
+            if ((mode & SUPERCONSTRmode) != 0)
               if (clazz.info.parents.isEmpty) AnyRefClass.tpe // can happen due to cyclic references ==> #1036
               else clazz.info.parents.head
             else intersectionType(clazz.info.parents)
@@ -3556,13 +3558,13 @@ trait Typers extends Modes {
             member(qual, name)
           }
         if (sym == NoSymbol && name != nme.CONSTRUCTOR && (mode & EXPRmode) != 0) {
-          val qual1 = 
+          val qual1 =
             if (member(qual, name) != NoSymbol) qual
             else adaptToMemberWithArgs(tree, qual, name, mode)
           if (qual1 ne qual) return typed(treeCopy.Select(tree, qual1, name), mode, pt)
         }
-        
-        if (!reallyExists(sym)) {          
+
+        if (!reallyExists(sym)) {
           if (context.owner.toplevelClass.isJavaDefined && name.isTypeName) {
             val tree1 = atPos(tree.pos) { gen.convertToSelectFromType(qual, name)  }
             if (tree1 != EmptyTree) return typed1(tree1, mode, pt)
@@ -3573,14 +3575,14 @@ trait Typers extends Modes {
           if (settings.Xexperimental.value && (qual.tpe.widen.typeSymbol isNonBottomSubClass DynamicClass)) {
             var dynInvoke = Apply(Select(qual, nme.applyDynamic), List(Literal(Constant(name.decode))))
             context.tree match {
-              case Apply(tree1, args) if tree1 eq tree => 
+              case Apply(tree1, args) if tree1 eq tree =>
                 ;
-              case _ => 
+              case _ =>
                 dynInvoke = Apply(dynInvoke, List())
             }
             return typed1(util.trace("dynatype: ")(dynInvoke), mode, pt)
           }
-                  
+
           if (settings.debug.value) {
             log(
               "qual = "+qual+":"+qual.tpe+
@@ -3589,7 +3591,7 @@ trait Typers extends Modes {
               "\nname = "+name+"\nfound = "+sym+"\nowner = "+context.enclClass.owner
             )
           }
-          
+
           def makeErrorTree = {
             val tree1 = tree match {
               case Select(_, _) => treeCopy.Select(tree, qual, name)
@@ -3597,14 +3599,14 @@ trait Typers extends Modes {
             }
             setError(tree1)
           }
-          
+
           if (name == nme.ERROR && forInteractive)
             return makeErrorTree
-            
+
           if (!qual.tpe.widen.isErroneous)
             notAMember(tree, qual, name)
-            
-          if (forInteractive) makeErrorTree else setError(tree) 
+
+          if (forInteractive) makeErrorTree else setError(tree)
         } else {
           val tree1 = tree match {
             case Select(_, _) => treeCopy.Select(tree, qual, name)
@@ -3634,7 +3636,7 @@ trait Typers extends Modes {
                   qual // you only get to see the wrapped tree after running this check :-p
                 }) setType qual.tpe,
                 name)
-            case accErr: Inferencer#AccessError => 
+            case accErr: Inferencer#AccessError =>
               val qual1 =
                 try adaptToMemberWithArgs(tree, qual, name, mode)
                 catch { case _: TypeError => qual }
@@ -3663,7 +3665,7 @@ trait Typers extends Modes {
 
       /** Attribute an identifier consisting of a simple name or an outer reference.
        *
-       *  @param tree      The tree representing the identifier. 
+       *  @param tree      The tree representing the identifier.
        *  @param name      The name of the identifier.
        *  Transformations: (1) Prefix class members with this.
        *                   (2) Change imported symbols to selections
@@ -3678,7 +3680,7 @@ trait Typers extends Modes {
         var inaccessibleSym: Symbol = NoSymbol // the first symbol that was found but that was discarded
                                           // for being inaccessible; used for error reporting
         var inaccessibleExplanation: String = ""
-        
+
         // If a special setting is given, the empty package will be checked as a
         // last ditch effort before failing.  This method sets defSym and returns
         // true if a member of the given name exists.
@@ -3697,7 +3699,7 @@ trait Typers extends Modes {
           reallyExists(sym) &&
           ((mode & PATTERNmode | FUNmode) != (PATTERNmode | FUNmode) || !sym.isSourceMethod || sym.hasFlag(ACCESSOR))
         }
-        
+
         if (defSym == NoSymbol) {
           var defEntry: ScopeEntry = null // the scope entry of defSym, if defined in a local scope
 
@@ -3705,7 +3707,7 @@ trait Typers extends Modes {
           if ((mode & (PATTERNmode | TYPEPATmode)) != 0) {
             // println("ignoring scope: "+name+" "+cx.scope+" "+cx.outer.scope)
             // ignore current variable scope in patterns to enforce linearity
-            cx = cx.outer 
+            cx = cx.outer
           }
 
           while (defSym == NoSymbol && cx != NoContext) {
@@ -3746,7 +3748,7 @@ trait Typers extends Modes {
           if (defSym.exists && impSym.exists) {
             // imported symbols take precedence over package-owned symbols in different
             // compilation units. Defined symbols take precedence over erroneous imports.
-            if (defSym.definedInPackage && 
+            if (defSym.definedInPackage &&
                 (!currentRun.compiles(defSym) ||
                  (context.unit ne null) && defSym.sourceFile != context.unit.source.file))
               defSym = NoSymbol
@@ -3771,7 +3773,7 @@ trait Typers extends Modes {
                   ambiguousError(
                     "it is imported twice in the same scope by\n"+imports.head +  "\nand "+imports1.head)
               }
-              while (!imports1.isEmpty && 
+              while (!imports1.isEmpty &&
                      (!imports.head.isExplicitImport(name) ||
                       imports1.head.depth == imports.head.depth)) {
                 var impSym1 = imports1.head.importedSymbol(name)
@@ -3802,7 +3804,7 @@ trait Typers extends Modes {
                 error(tree.pos, "not found: "+decodeWithKind(name, context.owner))
               }
               else new AccessError(
-                tree, inaccessibleSym, context.enclClass.owner.thisType, 
+                tree, inaccessibleSym, context.enclClass.owner.thisType,
                 inaccessibleExplanation
               ).emit()
               defSym = context.owner.newErrorSymbol(name)
@@ -3847,22 +3849,22 @@ trait Typers extends Modes {
           val tparams = tpt1.symbol.typeParams
           if (sameLength(tparams, args)) {
             // @M: kind-arity checking is done here and in adapt, full kind-checking is in checkKindBounds (in Infer)
-            val args1 = 
+            val args1 =
               if(!tpt1.symbol.rawInfo.isComplete)
                 args mapConserve (typedHigherKindedType(_, mode))
                 // if symbol hasn't been fully loaded, can't check kind-arity
-              else map2Conserve(args, tparams) { 
-                (arg, tparam) => 
-                  typedHigherKindedType(arg, mode, polyType(tparam.typeParams, AnyClass.tpe)) 
+              else map2Conserve(args, tparams) {
+                (arg, tparam) =>
+                  typedHigherKindedType(arg, mode, polyType(tparam.typeParams, AnyClass.tpe))
                   //@M! the polytype denotes the expected kind
               }
             val argtypes = args1 map (_.tpe)
 
             (args, tparams).zipped foreach { (arg, tparam) => arg match {
-              // note: can't use args1 in selector, because Bind's got replaced 
-              case Bind(_, _) => 
+              // note: can't use args1 in selector, because Bind's got replaced
+              case Bind(_, _) =>
                 if (arg.symbol.isAbstractType)
-                  arg.symbol setInfo // XXX, feedback. don't trackSymInfo here! 
+                  arg.symbol setInfo // XXX, feedback. don't trackSymInfo here!
                     TypeBounds(
                       lub(List(arg.symbol.info.bounds.lo, tparam.info.bounds.lo.subst(tparams, argtypes))),
                       glb(List(arg.symbol.info.bounds.hi, tparam.info.bounds.hi.subst(tparams, argtypes))))
@@ -3889,12 +3891,12 @@ trait Typers extends Modes {
         }
       }
 
-      def adaptCase(cdef: CaseDef, tpe: Type): CaseDef = 
+      def adaptCase(cdef: CaseDef, tpe: Type): CaseDef =
         treeCopy.CaseDef(cdef, cdef.pat, cdef.guard, adapt(cdef.body, mode, tpe))
 
       // begin typed1
       val sym: Symbol = tree.symbol
-      if ((sym ne null) && (sym ne NoSymbol)) sym.initialize 
+      if ((sym ne null) && (sym ne NoSymbol)) sym.initialize
       //if (settings.debug.value && tree.isDef) log("typing definition of "+sym);//DEBUG
       tree match {
         case PackageDef(pid, stats) =>
@@ -3915,7 +3917,7 @@ trait Typers extends Modes {
         case vdef @ ValDef(_, _, _, _) =>
           typedValDef(vdef)
 
-        case ddef @ DefDef(_, _, _, _, _, _) => 
+        case ddef @ DefDef(_, _, _, _, _, _) =>
           newTyper(context.makeNewScope(tree, sym)).typedDefDef(ddef)
 
         case tdef @ TypeDef(_, _, _, _) =>
@@ -3989,9 +3991,9 @@ trait Typers extends Modes {
         case tree @ Match(selector, cases) =>
           if (selector == EmptyTree) {
             val arity = if (isFunctionType(pt)) pt.normalize.typeArgs.length - 1 else 1
-            val params = for (i <- List.range(0, arity)) yield 
+            val params = for (i <- List.range(0, arity)) yield
               atPos(tree.pos.focusStart) {
-                ValDef(Modifiers(PARAM | SYNTHETIC), 
+                ValDef(Modifiers(PARAM | SYNTHETIC),
                        unit.freshTermName("x" + i + "$"), TypeTree(), EmptyTree)
               }
             val ids = for (p <- params) yield Ident(p.name)
@@ -4055,43 +4057,43 @@ trait Typers extends Modes {
         case Typed(expr, tpt) =>
           val tpt1 = typedType(tpt, mode)
           val expr1 = typed(expr, onlyStickyModes(mode), tpt1.tpe.deconst)
-          val owntype = 
-            if (isPatternMode) inferTypedPattern(tpt1.pos, tpt1.tpe, pt) 
+          val owntype =
+            if (isPatternMode) inferTypedPattern(tpt1.pos, tpt1.tpe, pt)
             else tpt1.tpe
           //Console.println(typed pattern: "+tree+":"+", tp = "+tpt1.tpe+", pt = "+pt+" ==> "+owntype)//DEBUG
           treeCopy.Typed(tree, expr1, tpt1) setType owntype
 
         case TypeApply(fun, args) =>
-          // @M: kind-arity checking is done here and in adapt, full kind-checking is in checkKindBounds (in Infer)        
+          // @M: kind-arity checking is done here and in adapt, full kind-checking is in checkKindBounds (in Infer)
           //@M! we must type fun in order to type the args, as that requires the kinds of fun's type parameters.
           // However, args should apparently be done first, to save context.undetparams. Unfortunately, the args
           // *really* have to be typed *after* fun. We escape from this classic Catch-22 by simply saving&restoring undetparams.
 
           // @M TODO: the compiler still bootstraps&all tests pass when this is commented out..
-          //val undets = context.undetparams 
-          
+          //val undets = context.undetparams
+
           // @M: fun is typed in TAPPmode because it is being applied to its actual type parameters
-          val fun1 = typed(fun, forFunMode(mode) | TAPPmode, WildcardType) 
+          val fun1 = typed(fun, forFunMode(mode) | TAPPmode, WildcardType)
           val tparams = fun1.symbol.typeParams
 
           //@M TODO: val undets_fun = context.undetparams  ?
           // "do args first" (by restoring the context.undetparams) in order to maintain context.undetparams on the function side.
-          
+
           // @M TODO: the compiler still bootstraps when this is commented out.. TODO: run tests
           //context.undetparams = undets
-          
-          // @M maybe the well-kindedness check should be done when checking the type arguments conform to the type parameters' bounds?          
+
+          // @M maybe the well-kindedness check should be done when checking the type arguments conform to the type parameters' bounds?
           val args1 = if (sameLength(args, tparams)) map2Conserve(args, tparams) {
                         //@M! the polytype denotes the expected kind
-                        (arg, tparam) => typedHigherKindedType(arg, mode, polyType(tparam.typeParams, AnyClass.tpe)) 
-                      } else { 
+                        (arg, tparam) => typedHigherKindedType(arg, mode, polyType(tparam.typeParams, AnyClass.tpe))
+                      } else {
                       //@M  this branch is correctly hit for an overloaded polymorphic type. It also has to handle erroneous cases.
-                      // Until the right alternative for an overloaded method is known, be very liberal, 
-                      // typedTypeApply will find the right alternative and then do the same check as 
+                      // Until the right alternative for an overloaded method is known, be very liberal,
+                      // typedTypeApply will find the right alternative and then do the same check as
                       // in the then-branch above. (see pos/tcpoly_overloaded.scala)
                       // this assert is too strict: be tolerant for errors like trait A { def foo[m[x], g]=error(""); def x[g] = foo[g/*ERR: missing argument type*/] }
                       //assert(fun1.symbol.info.isInstanceOf[OverloadedType] || fun1.symbol.isError) //, (fun1.symbol,fun1.symbol.info,fun1.symbol.info.getClass,args,tparams))
-                        args mapConserve (typedHigherKindedType(_, mode)) 
+                        args mapConserve (typedHigherKindedType(_, mode))
                       }
 
           //@M TODO: context.undetparams = undets_fun ?
@@ -4102,15 +4104,15 @@ trait Typers extends Modes {
 
         case Apply(fun, args) =>
           typedApply(fun, args) match {
-            case Apply(Select(New(tpt), name), args) 
+            case Apply(Select(New(tpt), name), args)
             if (tpt.tpe != null &&
-                tpt.tpe.typeSymbol == ArrayClass && 
-                args.length == 1 && 
+                tpt.tpe.typeSymbol == ArrayClass &&
+                args.length == 1 &&
                 erasure.GenericArray.unapply(tpt.tpe).isDefined) => // !!! todo simplify by using extractor
               // convert new Array[T](len) to evidence[ClassManifest[T]].newArray(len)
               // convert new Array^N[T](len) for N > 1 to evidence[ClassManifest[T]].newArrayN(len)
               val Some((level, manifType)) = erasure.GenericArray.unapply(tpt.tpe)
-              if (level > MaxArrayDims) 
+              if (level > MaxArrayDims)
                 error(tree.pos, "cannot create a generic multi-dimensional array of more than "+MaxArrayDims+" dimensions")
               val newArrayApp = atPos(tree.pos) {
                 val manif = getManifestTree(tree.pos, manifType, false)
@@ -4122,7 +4124,7 @@ trait Typers extends Modes {
           }
 
         case ApplyDynamic(qual, args) =>
-          val reflectiveCalls = !(settings.refinementMethodDispatch.value == "invoke-dynamic") 
+          val reflectiveCalls = !(settings.refinementMethodDispatch.value == "invoke-dynamic")
           val qual1 = typed(qual, AnyRefClass.tpe)
           val args1 = args mapConserve (arg => if (reflectiveCalls) typed(arg, AnyRefClass.tpe) else typed(arg))
           treeCopy.ApplyDynamic(tree, qual1, args1) setType (if (reflectiveCalls) AnyRefClass.tpe else tree.symbol.info.resultType)
@@ -4134,7 +4136,7 @@ trait Typers extends Modes {
           typedThis(qual)
 
         case Select(qual @ Super(_, _), nme.CONSTRUCTOR) =>
-          val qual1 = 
+          val qual1 =
             typed(qual, EXPRmode | QUALmode | POLYmode | SUPERCONSTRmode, WildcardType)
           // the qualifier type of a supercall constructor is its first parent class
           typedSelect(qual1, nme.CONSTRUCTOR)
@@ -4147,7 +4149,7 @@ trait Typers extends Modes {
           val tree1 = // temporarily use `filter' and an alternative for `withFilter'
             if (name == nme.withFilter)
               silent(_ => typedSelect(qual1, name)) match {
-                case result1: Tree => 
+                case result1: Tree =>
                   result1
                 case ex1: TypeError =>
                   silent(_ => typed1(Select(qual1, nme.filter) setPos tree.pos, mode, pt)) match {
@@ -4172,9 +4174,9 @@ trait Typers extends Modes {
           if ((name == nme.WILDCARD && (mode & (PATTERNmode | FUNmode)) == PATTERNmode) ||
               (name == tpnme.WILDCARD && (mode & TYPEmode) != 0))
             tree setType makeFullyDefined(pt)
-          else 
+          else
             typedIdent(name)
-          
+
         case Literal(value) =>
           tree setType (
             if (value.tag == UnitTag) UnitClass.tpe
@@ -4187,7 +4189,7 @@ trait Typers extends Modes {
 
         case SelectFromTypeTree(qual, selector) =>
           val qual1 = typedType(qual, mode)
-          if (qual1.tpe.isVolatile) error(tree.pos, "illegal type selection from volatile type "+qual.tpe) 
+          if (qual1.tpe.isVolatile) error(tree.pos, "illegal type selection from volatile type "+qual.tpe)
           typedSelect(qual1, selector)
 
         case CompoundTypeTree(templ) =>
@@ -4209,8 +4211,8 @@ trait Typers extends Modes {
           if (tpt.original != null)
             tree setType typedType(tpt.original, mode).tpe
           else
-            // we should get here only when something before failed 
-            // and we try again (@see tryTypedApply). In that case we can assign 
+            // we should get here only when something before failed
+            // and we try again (@see tryTypedApply). In that case we can assign
             // whatever type to tree; we just have to survive until a real error message is issued.
             tree setType AnyClass.tpe
         case Import(expr, selectors) =>
@@ -4231,7 +4233,7 @@ trait Typers extends Modes {
       indentTyping()
 
       def dropExistential(tp: Type): Type = tp match {
-        case ExistentialType(tparams, tpe) => 
+        case ExistentialType(tparams, tpe) =>
           if (settings.debug.value)
             log("Dropping existential: " + tree + " " + tp)
           new SubstWildcardMap(tparams).apply(tp)
@@ -4257,7 +4259,7 @@ trait Typers extends Modes {
           tree.tpe = null
           if (tree.hasSymbol) tree.symbol = NoSymbol
         }
-        
+
         alreadyTyped = tree.tpe ne null
         var tree1: Tree = if (alreadyTyped) tree else {
           printTyping(
@@ -4270,15 +4272,15 @@ trait Typers extends Modes {
           )
           val tree1 = typed1(tree, mode, dropExistential(pt))
           printTyping("typed %s: %s%s".format(
-            ptTree(tree1), tree1.tpe, 
+            ptTree(tree1), tree1.tpe,
             if (isSingleType(tree1.tpe)) " with underlying "+tree1.tpe.widen else "")
           )
           tree1
         }
-       
+
         tree1.tpe = addAnnotations(tree1, tree1.tpe)
         val result = if (tree1.isEmpty) tree1 else adapt(tree1, mode, pt, tree)
-        
+
         if (!alreadyTyped) {
           printTyping("adapted %s: %s to %s, %s".format(
             tree1, tree1.tpe.widen, pt, context.undetparamsString)
@@ -4305,7 +4307,7 @@ trait Typers extends Modes {
       }
       finally {
         deindentTyping()
-          
+
         if (Statistics.enabled) {
           val t = currentTime()
           microsByType(pendingTreeTypes.head) += ((t - typerTime) / 1000).toInt
@@ -4380,10 +4382,10 @@ trait Typers extends Modes {
     def typedHigherKindedType(tree: Tree, mode: Int, pt: Type): Tree =
       if (pt.typeParams.isEmpty) typedType(tree, mode) // kind is known and it's *
       else typed(tree, HKmode, pt)
-      
-    def typedHigherKindedType(tree: Tree, mode: Int): Tree = 
+
+    def typedHigherKindedType(tree: Tree, mode: Int): Tree =
       typed(tree, HKmode, WildcardType)
-             
+
     def typedHigherKindedType(tree: Tree): Tree = typedHigherKindedType(tree, NOmode)
 
     /** Types a type constructor tree used in a new or supertype */
@@ -4392,9 +4394,9 @@ trait Typers extends Modes {
 
       val restpe = result.tpe.normalize // normalize to get rid of type aliases for the following check (#1241)
       if (!phase.erasedTypes && restpe.isInstanceOf[TypeRef] && !restpe.prefix.isStable && !context.unit.isJava) {
-        // The isJava exception if OK only because the only type constructors scalac gets 
-        // to see are those in the signatures. These do not need a unique object as a prefix. 
-        // The situation is different for new's and super's, but scalac does not look deep 
+        // The isJava exception if OK only because the only type constructors scalac gets
+        // to see are those in the signatures. These do not need a unique object as a prefix.
+        // The situation is different for new's and super's, but scalac does not look deep
         // enough to see those. See #3938
         error(tree.pos, restpe.prefix+" is not a legal prefix for a constructor")
       }
@@ -4430,7 +4432,7 @@ trait Typers extends Modes {
 
     def findManifest(tp: Type, full: Boolean) = atPhase(currentRun.typerPhase) {
       inferImplicit(
-        EmptyTree, 
+        EmptyTree,
         appliedType((if (full) FullManifestClass else PartialManifestClass).typeConstructor, List(tp)),
         true, false, context)
     }

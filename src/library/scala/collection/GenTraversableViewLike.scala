@@ -12,44 +12,42 @@ package scala.collection
 import generic._
 import mutable.{ Builder, ArrayBuffer }
 import TraversableView.NoBuilder
-import annotation.migration
 
 
-
-trait GenTraversableViewLike[+A, 
-                             +Coll, 
+trait GenTraversableViewLike[+A,
+                             +Coll,
                              +This <: GenTraversableView[A, Coll] with GenTraversableViewLike[A, Coll, This]]
 extends GenTraversable[A] with GenTraversableLike[A, This] {
 self =>
 
   def force[B >: A, That](implicit bf: CanBuildFrom[Coll, B, That]): That
-  
+
   protected def underlying: Coll
   protected[this] def viewIdentifier: String
   protected[this] def viewIdString: String
   def viewToString = stringPrefix + viewIdString + "(...)"
-  
+
   /** The implementation base trait of this view.
    *  This trait and all its subtraits has to be re-implemented for each
-   *  ViewLike class. 
+   *  ViewLike class.
    */
   trait Transformed[+B] extends GenTraversableView[B, Coll] {
     def foreach[U](f: B => U): Unit
-    
+
     lazy val underlying = self.underlying
     final override protected[this] def viewIdString = self.viewIdString + viewIdentifier
     override def stringPrefix = self.stringPrefix
     override def toString = viewToString
   }
-  
+
   trait EmptyView extends Transformed[Nothing] {
     final override def isEmpty = true
     final override def foreach[U](f: Nothing => U): Unit = ()
   }
-  
+
   /** A fall back which forces everything into a vector and then applies an operation
    *  on it. Used for those operations which do not naturally lend themselves to a view
-   */ 
+   */
   trait Forced[B] extends Transformed[B] {
     protected[this] val forced: GenSeq[B]
     def foreach[U](f: B => U) = forced foreach f
@@ -62,7 +60,7 @@ self =>
     protected[this] def until = endpoints.until
     // protected def newSliced(_endpoints: SliceInterval): Transformed[A] =
     //   self.newSliced(endpoints.recalculate(_endpoints))
-    
+
     def foreach[U](f: A => U) {
       var index = 0
       for (x <- self) {
@@ -105,7 +103,7 @@ self =>
   }
 
   trait Filtered extends Transformed[A] {
-    protected[this] val pred: A => Boolean 
+    protected[this] val pred: A => Boolean
     def foreach[U](f: A => U) {
       for (x <- self)
         if (pred(x)) f(x)
@@ -114,7 +112,7 @@ self =>
   }
 
   trait TakenWhile extends Transformed[A] {
-    protected[this] val pred: A => Boolean 
+    protected[this] val pred: A => Boolean
     def foreach[U](f: A => U) {
       for (x <- self) {
         if (!pred(x)) return
@@ -125,7 +123,7 @@ self =>
   }
 
   trait DroppedWhile extends Transformed[A] {
-    protected[this] val pred: A => Boolean 
+    protected[this] val pred: A => Boolean
     def foreach[U](f: A => U) {
       var go = false
       for (x <- self) {
@@ -135,7 +133,7 @@ self =>
     }
     final override protected[this] def viewIdentifier = "D"
   }
-  
+
 }
 
 

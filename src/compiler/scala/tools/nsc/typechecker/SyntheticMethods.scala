@@ -12,7 +12,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /** Synthetic method implementations for case classes and case objects.
- * 
+ *
  *  Added to all case classes/objects:
  *    def productArity: Int
  *    def productElement(n: Int): Any
@@ -31,10 +31,10 @@ import scala.collection.mutable.ListBuffer
  */
 trait SyntheticMethods extends ast.TreeDSL {
   self: Analyzer =>
-  
+
   import global._                  // the global environment
   import definitions._             // standard classes and methods
-  
+
   /** In general case classes/objects are not given synthetic equals methods if some
    *  non-AnyRef implementation is inherited.  However if you let a case object inherit
    *  an implementation from a case class, it creates an asymmetric equals with all the
@@ -43,7 +43,7 @@ trait SyntheticMethods extends ast.TreeDSL {
    *  reference equality.
    *
    *  TODO: remove once (deprecated) case class inheritance is dropped form nsc.
-   */  
+   */
   private val createdMethodSymbols = new mutable.HashSet[Symbol]
 
   /** Clear the cache of createdMethodSymbols.  */
@@ -79,7 +79,7 @@ trait SyntheticMethods extends ast.TreeDSL {
       method setInfo tpeCons(method)
       clazz.info.decls.enter(method)
     }
-    
+
     def makeNoArgConstructor(res: Type) =
       (sym: Symbol) => MethodType(Nil, res)
     def makeTypeConstructor(args: List[Type], res: Type) =
@@ -118,7 +118,7 @@ trait SyntheticMethods extends ast.TreeDSL {
     }
     def productElementMethod(accs: List[Symbol]): Tree =
       perElementMethod(accs, nme.productElement, AnyClass.tpe, x => Ident(x))
-  
+
     // def productElementNameMethod(accs: List[Symbol]): Tree =
     //   perElementMethod(accs, nme.productElementName, StringClass.tpe, x => Literal(x.name.toString))
 
@@ -138,7 +138,7 @@ trait SyntheticMethods extends ast.TreeDSL {
       val target      = getMember(ScalaRunTimeModule, targetName)
       val paramtypes  = target.tpe.paramTypes drop 1
       val method      = syntheticMethod(name, 0, makeTypeConstructor(paramtypes, target.tpe.resultType))
-        
+
       typer typed {
         DEF(method) === {
           Apply(REF(target), This(clazz) :: (method ARGNAMES))
@@ -152,12 +152,12 @@ trait SyntheticMethods extends ast.TreeDSL {
     def equalsModuleMethod: Tree = {
       val method = makeEqualityMethod(nme.equals_)
       val that   = method ARG 0
-      
+
       localTyper typed {
         DEF(method) === (This(clazz) ANY_EQ that)
       }
     }
-    
+
     /** The canEqual method for case classes.  Note that if we spot
      *  a user-supplied equals implementation, we simply return true
      *  so as not to interfere.
@@ -165,7 +165,7 @@ trait SyntheticMethods extends ast.TreeDSL {
     def canEqualMethod: Tree = {
       val method  = makeEqualityMethod(nme.canEqual_)
       val that    = method ARG 0
-      
+
       typer typed (DEF(method) === (that IS_OBJ clazz.tpe))
     }
 
@@ -173,10 +173,10 @@ trait SyntheticMethods extends ast.TreeDSL {
      *  but because of boxing it will always be an Object, so a check
      *  is neither necessary nor useful before the cast.
      *
-     *   def equals(that: Any) = 
-     *     (this eq that.asInstanceOf[AnyRef]) || 
+     *   def equals(that: Any) =
+     *     (this eq that.asInstanceOf[AnyRef]) ||
      *     (that match {
-     *       case x @ this.C(this.arg_1, ..., this.arg_n) => x canEqual this  
+     *       case x @ this.C(this.arg_1, ..., this.arg_n) => x canEqual this
      *       case _                                       => false
      *     })
      */
@@ -184,7 +184,7 @@ trait SyntheticMethods extends ast.TreeDSL {
       val method           = makeEqualityMethod(nme.equals_)
       val that             = method ARG 0
       val constrParamTypes = clazz.primaryConstructor.tpe.paramTypes
-      
+
       // returns (Apply, Bind)
       def makeTrees(acc: Symbol, cpt: Type): (Tree, Bind) = {
         val varName     = context.unit.freshTermName(acc.name + "$")
@@ -196,7 +196,7 @@ trait SyntheticMethods extends ast.TreeDSL {
 
         (eqMethod, Bind(varName, binding))
       }
-      
+
       // Creates list of parameters and a guard for each
       val (guards, params) = (clazz.caseFieldAccessors, constrParamTypes).zipped map makeTrees unzip
 
@@ -204,15 +204,15 @@ trait SyntheticMethods extends ast.TreeDSL {
       def canEqualCheck() = {
         val that: Tree              = (method ARG 0) AS clazz.tpe
         val canEqualOther: Symbol   = clazz.info nonPrivateMember nme.canEqual_
-        
+
         typer typed {
           (that DOT canEqualOther)(This(clazz))
         }
       }
-        
+
       // Pattern is classname applied to parameters, and guards are all logical and-ed
       val (guard, pat) = (AND(guards: _*), Ident(clazz.name.toTermName) APPLY params)
-      
+
       localTyper typed {
         DEF(method) === {
           (This(clazz) ANY_EQ that) OR (that MATCH(
@@ -234,7 +234,7 @@ trait SyntheticMethods extends ast.TreeDSL {
         log("new accessor method " + result)
         result
     }
-    
+
     def needsReadResolve = (
       // only nested objects inside objects should get readResolve automatically
       // otherwise after de-serialization we get null references for lazy accessors (nested object -> lazy val + class def)
@@ -260,7 +260,7 @@ trait SyntheticMethods extends ast.TreeDSL {
             stat.symbol resetFlag CASEACCESSOR
           }
         }
-        
+
         // methods for case classes only
         def classMethods = List(
           Object_hashCode -> (() => forwardingMethod(nme.hashCode_, "_" + nme.hashCode_)),
@@ -289,7 +289,7 @@ trait SyntheticMethods extends ast.TreeDSL {
         if (clazz.isModuleClass) {
           // if there's a synthetic method in a parent case class, override its equality
           // with eq (see #883)
-          val otherEquals = clazz.info.nonPrivateMember(Object_equals.name) 
+          val otherEquals = clazz.info.nonPrivateMember(Object_equals.name)
           if (otherEquals.owner != clazz && createdMethodSymbols(otherEquals)) ts += equalsModuleMethod
         }
 
@@ -322,9 +322,9 @@ trait SyntheticMethods extends ast.TreeDSL {
       case ex: TypeError =>
         if (!reporter.hasErrors) throw ex
     }
-    
+
     if (phase.id <= currentRun.typerPhase.id) {
-      treeCopy.Template(templ, templ.parents, templ.self, 
+      treeCopy.Template(templ, templ.parents, templ.self,
         if (ts.isEmpty) templ.body else templ.body ++ ts // avoid copying templ.body if empty
       )
     }

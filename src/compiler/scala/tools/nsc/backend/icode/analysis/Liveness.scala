@@ -24,7 +24,7 @@ abstract class Liveness {
   /** The lattice for this analysis.   */
   object livenessLattice extends SemiLattice {
     type Elem = Set[Local]
-    
+
     object top extends ListSet[Local] with ReferenceEquality
     object bottom extends ListSet[Local] with ReferenceEquality
 

@@ -15,4 +15,4 @@ import generic._
 
 trait GenIterableView[+A, +Coll] extends GenIterableViewLike[A, Coll, GenIterableView[A, Coll]] { }
 
- 
+

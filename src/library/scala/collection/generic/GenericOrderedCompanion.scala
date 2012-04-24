@@ -24,11 +24,11 @@ import mutable.Builder
  */
 abstract class GenericOrderedCompanion[+CC[X] <: Traversable[X]] {
   type Coll = CC[_]
-  
+
   def newBuilder[A](implicit ord: Ordering[A]): Builder[A, CC[A]]
-  
+
   def empty[A: Ordering]: CC[A] = newBuilder[A].result
-  
+
   def apply[A](elems: A*)(implicit ord: Ordering[A]): CC[A] = {
     val b = newBuilder[A]
     b ++= elems

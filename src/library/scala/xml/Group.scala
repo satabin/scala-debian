@@ -16,7 +16,7 @@ package scala.xml
  */
 final case class Group(val nodes: Seq[Node]) extends Node {
   override def theSeq = nodes
-  
+
   override def canEqual(other: Any) = other match {
     case x: Group => true
     case _        => false
@@ -26,12 +26,12 @@ final case class Group(val nodes: Seq[Node]) extends Node {
     case _          => false
   }
   override def basisForHashCode = nodes
-  
+
   /** Since Group is very much a hack it throws an exception if you
    *  try to do anything with it.
    */
   private def fail(msg: String) = throw new UnsupportedOperationException("class Group does not support method '%s'" format msg)
-  
+
   def label                           = fail("label")
   override def attributes             = fail("attributes")
   override def namespace              = fail("namespace")

@@ -3,13 +3,12 @@
  * @author  Martin Odersky
  */
 
-
 package scala.tools.nsc
 package backend.icode.analysis
 
 import scala.collection.{mutable, immutable}
 
-/** A data-flow analysis on types, that works on <code>ICode</code>.
+/** A data-flow analysis on types, that works on `ICode`.
  *
  *  @author Iulian Dragos
  */
@@ -46,7 +45,7 @@ abstract class TypeFlowAnalysis {
     def lub2(exceptional: Boolean)(s1: TypeStack, s2: TypeStack) = {
       if (s1 eq bottom) s2
       else if (s2 eq bottom) s1
-      else if ((s1 eq exceptionHandlerStack) || (s2 eq exceptionHandlerStack)) sys.error("merging with exhan stack") 
+      else if ((s1 eq exceptionHandlerStack) || (s2 eq exceptionHandlerStack)) sys.error("merging with exhan stack")
       else {
 //        if (s1.length != s2.length)
 //          throw new CheckerException("Incompatible stacks: " + s1 + " and " + s2);
@@ -89,13 +88,13 @@ abstract class TypeFlowAnalysis {
       val stack =
         if (exceptional) typeStackLattice.exceptionHandlerStack
         else typeStackLattice.lub2(exceptional)(a.stack, b.stack)
-      
-      IState(resultingLocals, stack)  
+
+      IState(resultingLocals, stack)
     }
   }
 
   val timer = new Timer
-  
+
   class MethodTFA extends DataFlowAnalysis[typeFlowLattice.type] {
     import icodes._
     import icodes.opcodes._
@@ -166,7 +165,7 @@ abstract class TypeFlowAnalysis {
       val t = timer.stop
       if (settings.debug.value) {
         linearizer.linearize(method).foreach(b => if (b != method.code.startBlock)
-          assert(visited.contains(b), 
+          assert(visited.contains(b),
             "Block " + b + " in " + this.method + " has input equal to bottom -- not visited? .." + visited));
       }
 //      log("" + method.symbol.fullName + " ["  + method.code.blocks.size + " blocks] "
@@ -179,15 +178,15 @@ abstract class TypeFlowAnalysis {
     }
     /** The flow function of a given basic block. */
     /* var flowFun: immutable.Map[BasicBlock, TransferFunction] = new immutable.HashMap */
-    
+
     /** Fill flowFun with a transfer function per basic block. */
-/*    
+/*
     private def buildFlowFunctions(blocks: List[BasicBlock]) {
       def transfer(b: BasicBlock): TransferFunction = {
         var gens: List[Gen] = Nil
         var consumed: Int = 0
         val stack = new SimulatedStack
-        
+
         for (instr <- b) instr match {
         case THIS(clasz) =>
           stack push toTypeKind(clasz.tpe)
@@ -217,7 +216,7 @@ abstract class TypeFlowAnalysis {
         case STORE_LOCAL(local) =>
           val t = stack.pop
           bindings += (local -> t)
-        
+
         case STORE_THIS(_) =>
           stack.pop
 
@@ -350,23 +349,23 @@ abstract class TypeFlowAnalysis {
 
         case MONITOR_EXIT() =>
           stack.pop
-          
+
         case SCOPE_ENTER(_) | SCOPE_EXIT(_) =>
           ()
 
         case LOAD_EXCEPTION(_) =>
           stack.pop(stack.length)
           stack.push(typeLattice.Object)
-          
+
         case _ =>
           dump
           abort("Unknown instruction: " + i)
 
         }
-        
+
         new TransferFunction(consumed, gens)
       }
-      
+
       for (b <- blocks) {
         flowFun = flowFun + (b -> transfer(b))
       }
@@ -417,7 +416,7 @@ abstract class TypeFlowAnalysis {
         case STORE_LOCAL(local) =>
           val t = stack.pop
           bindings += (local -> t)
-        
+
         case STORE_THIS(_) =>
           stack.pop
 
@@ -534,14 +533,14 @@ abstract class TypeFlowAnalysis {
 
         case MONITOR_EXIT() =>
           stack.pop
-          
+
         case SCOPE_ENTER(_) | SCOPE_EXIT(_) =>
           ()
 
         case LOAD_EXCEPTION(_) =>
           stack.pop(stack.length)
           stack.push(typeLattice.top)
-          
+
         case _ =>
           dump
           abort("Unknown instruction: " + i)
@@ -549,43 +548,43 @@ abstract class TypeFlowAnalysis {
       }
       out
     } // interpret
-    
-    
+
+
     class SimulatedStack {
       private var types: List[InferredType] = Nil
       private var depth = 0
-      
+
       /** Remove and return the topmost element on the stack. If the
        *  stack is empty, return a reference to a negative index on the
-       *  stack, meaning it refers to elements pushed by a predecessor block. 
+       *  stack, meaning it refers to elements pushed by a predecessor block.
        */
       def pop: InferredType = types match {
-        case head :: rest => 
+        case head :: rest =>
           types = rest
           head
         case _ =>
           depth -= 1
           TypeOfStackPos(depth)
       }
-      
+
       def pop2: (InferredType, InferredType) = {
         (pop, pop)
       }
-      
+
       def push(t: InferredType) {
         depth += 1
         types = types ::: List(t)
       }
-      
+
       def push(k: TypeKind) { push(Const(k)) }
     }
-    
+
 	abstract class InferredType {
-      /** Return the type kind pointed by this inferred type. */   
+      /** Return the type kind pointed by this inferred type. */
       def getKind(in: lattice.Elem): icodes.TypeKind = this match {
-        case Const(k) => 
+        case Const(k) =>
           k
-        case TypeOfVar(l: icodes.Local) => 
+        case TypeOfVar(l: icodes.Local) =>
           if (in.vars.isDefinedAt(l)) in.vars(l) else l.kind
         case TypeOfStackPos(n: Int) =>
           assert(in.stack.length >= n)
@@ -598,18 +597,18 @@ abstract class TypeFlowAnalysis {
 	case class TypeOfVar(l: icodes.Local) extends InferredType
 	/** The type found at a stack position. */
 	case class TypeOfStackPos(n: Int) extends InferredType
-	  
+
 	abstract class Gen
 	case class Bind(l: icodes.Local, t: InferredType) extends Gen
 	case class Push(t: InferredType) extends Gen
-	  
+
     /** A flow transfer function of a basic block. */
 	class TransferFunction(consumed: Int, gens: List[Gen]) extends (lattice.Elem => lattice.Elem) {
 	  def apply(in: lattice.Elem): lattice.Elem = {
         val out = lattice.IState(new VarBinding(in.vars), new TypeStack(in.stack))
         val bindings = out.vars
         val stack = out.stack
-        
+
         out.stack.pop(consumed)
         for (g <- gens) g match {
           case Bind(l, t) =>
@@ -619,22 +618,22 @@ abstract class TypeFlowAnalysis {
         }
         out
       }
-	}    
+	}
   }
-  
+
   class Timer {
     var millis = 0L
-    
+
     private var lastStart = 0L
-    
+
     def reset() {
       millis = 0L
     }
-    
+
     def start() {
       lastStart = System.currentTimeMillis
     }
-    
+
     /** Stop the timer and return the number of milliseconds since the last
      * call to start. The 'millis' field is increased by the elapsed time.
      */

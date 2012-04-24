@@ -22,19 +22,19 @@ trait Naming {
       else ch
     }
   }
-  
+
   // The two name forms this is catching are the two sides of this assignment:
   //
-  // $line3.$read.$iw.$iw.Bippy = 
+  // $line3.$read.$iw.$iw.Bippy =
   //   $line3.$read$$iw$$iw$Bippy@4a6a00ca
-  
+
   private def noMeta(s: String) = "\\Q" + s + "\\E"
   private lazy val lineRegex = {
     val sn = sessionNames
     val members = List(sn.read, sn.eval, sn.print) map noMeta mkString ("(?:", "|", ")")
     debugging("lineRegex")(noMeta(sn.line) + """\d+[./]""" + members + """[$.]""")
   }
-  
+
   private def removeLineWrapper(s: String) = s.replaceAll(lineRegex, "")
   private def removeIWPackages(s: String)  = s.replaceAll("""\$iw[$.]""", "")
 
@@ -49,20 +49,20 @@ trait Naming {
     def read  = propOr("read")
     def eval  = propOr("eval")
     def print = propOr("print")
-    
+
     // The prefix for unnamed results: by default res0, res1, etc.
     def res   = propOr("res", "res")  // INTERPRETER_VAR_PREFIX
     // Internal ones
     def ires  = propOr("ires")
   }
   lazy val sessionNames: SessionNames = new SessionNames { }
-  
+
   /** Generates names pre0, pre1, etc. via calls to apply method */
   class NameCreator(pre: String) {
     private var x = -1
     var mostRecent: String = ""
-    
-    def apply(): String = { 
+
+    def apply(): String = {
       x += 1
       mostRecent = pre + x
       mostRecent
@@ -71,10 +71,10 @@ trait Naming {
     def didGenerate(name: String) =
       (name startsWith pre) && ((name drop pre.length) forall (_.isDigit))
   }
-  
+
   private lazy val userVar     = new NameCreator(sessionNames.res)  // var name, like res0
   private lazy val internalVar = new NameCreator(sessionNames.ires) // internal var name, like $ires0
-  
+
   def isLineName(name: String)        = (name startsWith sessionNames.line) && (name stripPrefix sessionNames.line forall (_.isDigit))
   def isUserVarName(name: String)     = userVar didGenerate name
   def isInternalVarName(name: String) = internalVar didGenerate name
@@ -85,11 +85,11 @@ trait Naming {
   }
   def freshUserVarName()     = userVar()
   def freshInternalVarName() = internalVar()
-  
+
   def resetAllCreators() {
     userVar.reset()
     internalVar.reset()
   }
-  
+
   def mostRecentVar = userVar.mostRecent
 }

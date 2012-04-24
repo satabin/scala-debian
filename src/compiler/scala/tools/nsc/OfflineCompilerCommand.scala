@@ -16,7 +16,7 @@ import Properties.isWin
 class OfflineCompilerCommand(arguments: List[String], settings: FscSettings) extends CompilerCommand(arguments, settings) {
   import settings.currentDir
   def extraFscArgs = List(currentDir.name, currentDir.value)
-  
+
   locally {
     // if -current-dir is unset, we're on the client and need to obtain it.
     if (currentDir.isDefault) {
@@ -37,7 +37,7 @@ class OfflineCompilerCommand(arguments: List[String], settings: FscSettings) ext
     }
   }
 
-  override def cmdName = "fsc"  
+  override def cmdName = "fsc"
   override def usageMsg = (
     createUsageMsg("where possible fsc", false, x => x.isStandard && settings.isFscSpecific(x.name)) +
     "\n\nStandard scalac options also available:" +

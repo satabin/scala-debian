@@ -46,8 +46,8 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
      *  @param from  the collection requesting the builder to be created.
      *  @return the result of invoking the `genericBuilder` method on `from`.
      */
-    def apply(from: Coll) = from.genericBuilder[A] 
-    
+    def apply(from: Coll) = from.genericBuilder[A]
+
     /** Creates a new builder from scratch
      *  @return the result of invoking the `newBuilder` method of this factory.
      */
@@ -64,7 +64,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
     // At present we're using IndexedSeq as a proxy for "has a cheap size method".
     if (xss forall (_.isInstanceOf[IndexedSeq[_]]))
       b.sizeHint(xss map (_.size) sum)
-    
+
     for (xs <- xss.seq) b ++= xs
     b.result
   }
@@ -91,7 +91,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   elem the element computation
    *  @return  A $coll that contains the results of `n1 x n2` evaluations of `elem`.
    */
-  def fill[A](n1: Int, n2: Int)(elem: => A): CC[CC[A]] = 
+  def fill[A](n1: Int, n2: Int)(elem: => A): CC[CC[A]] =
     tabulate(n1)(_ => fill(n2)(elem))
 
   /** Produces a three-dimensional $coll containing the results of some element computation a number of times.
@@ -101,7 +101,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   elem the element computation
    *  @return  A $coll that contains the results of `n1 x n2 x n3` evaluations of `elem`.
    */
-  def fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): CC[CC[CC[A]]] = 
+  def fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): CC[CC[CC[A]]] =
     tabulate(n1)(_ => fill(n2, n3)(elem))
 
   /** Produces a four-dimensional $coll containing the results of some element computation a number of times.
@@ -112,7 +112,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   elem the element computation
    *  @return  A $coll that contains the results of `n1 x n2 x n3 x n4` evaluations of `elem`.
    */
-  def fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): CC[CC[CC[CC[A]]]] = 
+  def fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): CC[CC[CC[CC[A]]]] =
     tabulate(n1)(_ => fill(n2, n3, n4)(elem))
 
   /** Produces a five-dimensional $coll containing the results of some element computation a number of times.
@@ -124,14 +124,14 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   elem the element computation
    *  @return  A $coll that contains the results of `n1 x n2 x n3 x n4 x n5` evaluations of `elem`.
    */
-  def fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): CC[CC[CC[CC[CC[A]]]]] = 
+  def fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): CC[CC[CC[CC[CC[A]]]]] =
     tabulate(n1)(_ => fill(n2, n3, n4, n5)(elem))
 
   /** Produces a $coll containing values of a given function over a range of integer values starting from 0.
    *  @param  n   The number of elements in the $coll
    *  @param  f   The function computing element values
    *  @return A $coll consisting of elements `f(0), ..., f(n -1)`
-   */	
+   */
   def tabulate[A](n: Int)(f: Int => A): CC[A] = {
     val b = newBuilder[A]
     b.sizeHint(n)
@@ -149,8 +149,8 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   f   The function computing element values
    *  @return A $coll consisting of elements `f(i1, i2)`
    *          for `0 <= i1 < n1` and `0 <= i2 < n2`.
-   */	
-  def tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): CC[CC[A]] = 
+   */
+  def tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): CC[CC[A]] =
     tabulate(n1)(i1 => tabulate(n2)(f(i1, _)))
 
   /** Produces a three-dimensional $coll containing values of a given function over ranges of integer values starting from 0.
@@ -160,8 +160,8 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   f   The function computing element values
    *  @return A $coll consisting of elements `f(i1, i2, i3)`
    *          for `0 <= i1 < n1`, `0 <= i2 < n2`, and `0 <= i3 < n3`.
-   */	
-  def tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): CC[CC[CC[A]]] = 
+   */
+  def tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): CC[CC[CC[A]]] =
     tabulate(n1)(i1 => tabulate(n2, n3)(f(i1, _, _)))
 
   /** Produces a four-dimensional $coll containing values of a given function over ranges of integer values starting from 0.
@@ -172,8 +172,8 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   f   The function computing element values
    *  @return A $coll consisting of elements `f(i1, i2, i3, i4)`
    *          for `0 <= i1 < n1`, `0 <= i2 < n2`, `0 <= i3 < n3`, and `0 <= i4 < n4`.
-   */	
-  def tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): CC[CC[CC[CC[A]]]] = 
+   */
+  def tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): CC[CC[CC[CC[A]]]] =
     tabulate(n1)(i1 => tabulate(n2, n3, n4)(f(i1, _, _, _)))
 
   /** Produces a five-dimensional $coll containing values of a given function over ranges of integer values starting from 0.
@@ -185,8 +185,8 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
    *  @param   f   The function computing element values
    *  @return A $coll consisting of elements `f(i1, i2, i3, i4, i5)`
    *          for `0 <= i1 < n1`, `0 <= i2 < n2`, `0 <= i3 < n3`, `0 <= i4 < n4`, and `0 <= i5 < n5`.
-   */	
-  def tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): CC[CC[CC[CC[CC[A]]]]] = 
+   */
+  def tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): CC[CC[CC[CC[CC[A]]]]] =
     tabulate(n1)(i1 => tabulate(n2, n3, n4, n5)(f(i1, _, _, _, _)))
 
   /** Produces a $coll containing a sequence of increasing of integers.
@@ -206,7 +206,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
   def range[T: Integral](start: T, end: T, step: T): CC[T] = {
     val num = implicitly[Integral[T]]
     import num._
-    
+
     if (step == zero) throw new IllegalArgumentException("zero step")
     val b = newBuilder[T]
     b sizeHint immutable.NumericRange.count(start, end, step, false)
@@ -219,7 +219,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
   }
 
   /** Produces a $coll containing repeated applications of a function to a start value.
-   *  
+   *
    *  @param start the start value of the $coll
    *  @param len   the number of elements contained inthe $coll
    *  @param f     the function that's repeatedly applied
@@ -232,7 +232,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
       var acc = start
       var i = 1
       b += acc
-      
+
       while (i < len) {
         acc = f(acc)
         i += 1

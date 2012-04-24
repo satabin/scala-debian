@@ -42,7 +42,7 @@ abstract class ClassfileParser {
   private var   externalName: Name = _      // JVM name of the current class
   protected var classTParams = Map[Name,Symbol]()
   protected var srcfile0 : Option[AbstractFile] = None
-  
+
   def srcfile = srcfile0
 
   private object metaParser extends MetaParser {
@@ -58,7 +58,7 @@ abstract class ClassfileParser {
       if (settings.debug.value) e.printStackTrace
       throw new IOException("Missing dependency '" + e.req + "', required by " + in.file)
     }
-      
+
     def handleError(e: Exception) = {
       if (settings.debug.value) e.printStackTrace()
       throw new IOException("class file '" + in.file + "' is broken\n(" + {
@@ -71,7 +71,7 @@ abstract class ClassfileParser {
       if (s1 eq s2) "unsatisfiable cyclic dependency in '%s'".format(s1)
       else "illegal class file dependency between '%s' and '%s'".format(s1, s2)
     })
-      
+
     busy = Some(root)
     /*root match {
       case cs: ClassSymbol =>
@@ -157,7 +157,7 @@ abstract class ClassfileParser {
     def getName(index: Int): Name = {
       if (index <= 0 || len <= index)
         errorBadIndex(index)
-        
+
       values(index) match {
         case name: Name => name
         case null   =>
@@ -196,7 +196,7 @@ abstract class ClassfileParser {
       }
       c
     }
-    
+
     /** Return the external name of the class info structure found at 'index'.
      *  Use 'getClassSymbol' if the class is sure to be a top-level class.
      */
@@ -205,14 +205,14 @@ abstract class ClassfileParser {
       if (in.buf(start).toInt != CONSTANT_CLASS) errorBadTag(start)
       getExternalName(in.getChar(start + 1))
     }
-    
+
     /** Return the symbol of the class member at <code>index</code>.
      *  The following special cases exist:
      *   - If the member refers to special MODULE$ static field, return
      *  the symbol of the corresponding module.
      *   - If the member is a field, and is not found with the given name,
      *     another try is made by appending nme.LOCAL_SUFFIX_STRING
-     *   - If no symbol is found in the right tpe, a new try is made in the 
+     *   - If no symbol is found in the right tpe, a new try is made in the
      *     companion class, in case the owner is an implementation class.
      */
     def getMemberSymbol(index: Int, static: Boolean): Symbol = {
@@ -267,14 +267,14 @@ abstract class ClassfileParser {
         assert(f != NoSymbol, "could not find\n  " + name + ": " + tpe + "\ninside:\n  " + ownerTpe.members.mkString(", "))
         values(index) = f
       }
-      f 
+      f
     }
-    
+
     /** Return a name and a type at the given index. If the type is a method
      *  type, a dummy symbol is created in 'ownerTpe', which is used as the
      *  owner of its value parameters. This might lead to inconsistencies,
      *  if a symbol of the given name already exists, and has a different
-     *  type. 
+     *  type.
      */
     private def getNameAndType(index: Int, ownerTpe: Type): (Name, Type) = {
       if (index <= 0 || len <= index) errorBadIndex(index)
@@ -330,7 +330,7 @@ abstract class ClassfileParser {
     }
 
     def getType(index: Int): Type = getType(null, index)
-    
+
     def getType(sym: Symbol, index: Int): Type =
       sigToType(sym, getExternalName(index))
 
@@ -475,10 +475,10 @@ abstract class ClassfileParser {
         definitions.getMember(definitions.EmptyPackageClass, name.toTypeName)
       else
         definitions.getClass(name) // see tickets #2464, #3756
-    } catch { 
-      case _: FatalError => loadClassSymbol(name) 
+    } catch {
+      case _: FatalError => loadClassSymbol(name)
     }
-    
+
     innerClasses.get(name) match {
       case Some(entry) =>
         //println("found inner class " + name)
@@ -490,9 +490,9 @@ abstract class ClassfileParser {
         lookupClass(name)
     }
   }
-  
+
   var sawPrivateConstructor = false
-  
+
   def parseClass() {
     val jflags = in.nextChar
     val isAnnotation = hasAnnotation(jflags)
@@ -534,7 +534,7 @@ abstract class ClassfileParser {
     // get the class file parser to reuse scopes.
     instanceDefs = new Scope
     staticDefs = new Scope
-    
+
     val classInfo = ClassInfoType(parseParents, instanceDefs, clazz)
     val staticInfo = ClassInfoType(List(), staticDefs, statics)
 
@@ -557,7 +557,7 @@ abstract class ClassfileParser {
       staticModule.setFlag(JAVA)
       staticModule.moduleClass.setFlag(JAVA)
       // attributes now depend on having infos set already
-      parseAttributes(clazz, classInfo) 
+      parseAttributes(clazz, classInfo)
 
       loaders.pendingLoadActions = { () =>
         in.bp = curbp
@@ -613,7 +613,7 @@ abstract class ClassfileParser {
       val info    = pool.getType(in.nextChar)
       val sym     = getOwner(jflags).newValue(NoPosition, name).setFlag(sflags)
       val isEnum  = (jflags & JAVA_ACC_ENUM) != 0
-      
+
       sym setInfo {
         if (isEnum) ConstantType(Constant(sym))
         else info
@@ -621,14 +621,14 @@ abstract class ClassfileParser {
       setPrivateWithin(sym, jflags)
       parseAttributes(sym, info)
       getScope(jflags).enter(sym)
-      
+
       // sealed java enums (experimental)
       if (isEnum && opt.experimental) {
         // need to give singleton type
         sym setInfo info.narrow
         if (!sym.superClass.isSealed)
           sym.superClass setFlag (SEALED | ABSTRACT)
-          
+
         sym.superClass addChild sym
       }
     }
@@ -643,7 +643,7 @@ abstract class ClassfileParser {
         sawPrivateConstructor = true
       in.skip(2); skipAttributes()
     } else {
-      if ((jflags & JAVA_ACC_BRIDGE) != 0) 
+      if ((jflags & JAVA_ACC_BRIDGE) != 0)
         sflags |= BRIDGE
       if ((sflags & PRIVATE) != 0L && global.settings.XO.value) {
         in.skip(4); skipAttributes()
@@ -684,9 +684,9 @@ abstract class ClassfileParser {
       assert(formals.last.typeSymbol == definitions.ArrayClass)
       val method = params.last.owner
       val elemtp = formals.last.typeArgs.head match {
-        case RefinedType(List(t1, t2), _) if (t1.typeSymbol.isAbstractType && t2.typeSymbol == definitions.ObjectClass) => 
+        case RefinedType(List(t1, t2), _) if (t1.typeSymbol.isAbstractType && t2.typeSymbol == definitions.ObjectClass) =>
           t1 // drop intersection with Object for abstract types in varargs. UnCurry can handle them.
-        case t => 
+        case t =>
           t
       }
       val newParams = method.newSyntheticValueParams(
@@ -695,7 +695,7 @@ abstract class ClassfileParser {
     case PolyType(tparams, rtpe) =>
       PolyType(tparams, arrayToRepeated(rtpe))
   }
-  
+
   private def sigToType(sym: Symbol, sig: Name): Type = {
     var index = 0
     val end = sig.length
@@ -708,7 +708,7 @@ abstract class ClassfileParser {
       while (!isDelimiter(sig(index))) { index += 1 }
       sig.subName(start, index)
     }
-    def existentialType(tparams: List[Symbol], tp: Type): Type = 
+    def existentialType(tparams: List[Symbol], tp: Type): Type =
       if (tparams.isEmpty) tp else ExistentialType(tparams, tp)
     def sig2type(tparams: immutable.Map[Name,Symbol], skiptvs: Boolean): Type = {
       val tag = sig(index); index += 1
@@ -749,10 +749,10 @@ abstract class ClassfileParser {
                       existentials += newtparam
                       xs += newtparam.tpe //@M should probably be .tpeHK
                       i += 1
-                    case _ => 
+                    case _ =>
                       xs += sig2type(tparams, skiptvs)
                   }
-                } 
+                }
                 accept('>')
                 assert(xs.length > 0)
                 existentialType(existentials.toList, typeRef(pre, classSym, xs.toList))
@@ -760,14 +760,14 @@ abstract class ClassfileParser {
                 tp
               } else {
                 // raw type - existentially quantify all type parameters
-                val eparams = typeParamsToExistentials(classSym, classSym.unsafeTypeParams)            
+                val eparams = typeParamsToExistentials(classSym, classSym.unsafeTypeParams)
                 val t = typeRef(pre, classSym, eparams.map(_.tpe))
                 val res = existentialType(eparams, t)
                 if (settings.debug.value && settings.verbose.value)
                   println("raw type " + classSym + " -> " + res)
                 res
               }
-            case tp => 
+            case tp =>
               assert(sig(index) != '<')
               tp
           }
@@ -945,7 +945,7 @@ abstract class ClassfileParser {
 
         case tpnme.ExceptionsATTR if (!isScala) =>
           parseExceptions(attrLen)
-          
+
         case tpnme.SourceFileATTR =>
           val srcfileLeaf = pool.getName(in.nextChar).toString.trim
           val srcpath = sym.enclosingPackage match {
@@ -1051,7 +1051,7 @@ abstract class ClassfileParser {
       case ex: Throwable =>
         if (settings.debug.value)
           log("dropping annotation on " + sym + ", an error occured during parsing (e.g. annotation  class not found)")
-                          
+
         None // ignore malformed annotations ==> t1135
     }
 
@@ -1099,7 +1099,7 @@ abstract class ClassfileParser {
     def className(name: Name): Name = {
       name.subName(name.lastPos('.') + 1, name.length)
     }
-    
+
     def enterClassAndModule(entry: InnerClassEntry, completer: global.loaders.SymbolLoader, jflags: Int) {
       val name = entry.originalName
       var sflags = transFlags(jflags, true)
@@ -1110,7 +1110,7 @@ abstract class ClassfileParser {
 
       getScope(jflags).enter(innerClass)
       getScope(jflags).enter(innerModule)
-      
+
       val decls = innerClass.enclosingPackage.info.decls
       val e = decls.lookupEntry(className(entry.externalName))
       if (e ne null) {
@@ -1123,7 +1123,7 @@ abstract class ClassfileParser {
         decls.unlink(e1)
       }
     }
-    
+
     for (entry <- innerClasses.values) {
       // create a new class member for immediate inner classes
       if (entry.outerName == externalName) {
@@ -1134,7 +1134,7 @@ abstract class ClassfileParser {
       }
     }
   }
-  
+
   /** Parse inner classes. Expects in.bp to point to the superclass entry. Restores the
    *  old bp.
    */
@@ -1182,17 +1182,17 @@ abstract class ClassfileParser {
     }
     in.bp = oldbp
   }
-  
+
   /** An entry in the InnerClasses attribute of this class file. */
   case class InnerClassEntry(external: Int, outer: Int, name: Int, jflags: Int) {
     def externalName = pool.getClassName(external)
     def outerName    = pool.getClassName(outer)
     def originalName = pool.getName(name)
-    
-    override def toString = 
+
+    override def toString =
       originalName + " in " + outerName + "(" + externalName +")"
   }
-  
+
   object innerClasses extends collection.mutable.HashMap[Name, InnerClassEntry] {
     /** Return the Symbol of the top level class enclosing 'name', or 'name's symbol
      *  if no entry found for 'name'.
@@ -1207,10 +1207,10 @@ abstract class ClassfileParser {
         name
       classNameToSymbol(tlName)
     }
-    
-    /** Return the class symbol for 'externalName'. It looks it up in its outer class. 
+
+    /** Return the class symbol for 'externalName'. It looks it up in its outer class.
      *  Forces all outer class symbols to be completed.
-     * 
+     *
      *  If the given name is not an inner class, it returns the symbol found in 'definitions'.
      */
     def classSymbol(externalName: Name): Symbol = {
@@ -1230,12 +1230,12 @@ abstract class ClassfileParser {
               if (entry.outerName.endsWith("$")) entry.outerName.subName(0, entry.outerName.length - 1)
               else entry.outerName
             val sym = classSymbol(outerName)
-            val s = 
+            val s =
               // if loading during initialization of `definitions' typerPhase is not yet set.
               // in that case we simply load the member at the current phase
               if (currentRun.typerPhase != null)
                 atPhase(currentRun.typerPhase)(getMember(sym, innerName.toTypeName))
-              else 
+              else
                 getMember(sym, innerName.toTypeName)
             assert(s ne NoSymbol, sym + "." + innerName + " linkedModule: " + sym.companionModule + sym.companionModule.info.members)
             s
@@ -1256,7 +1256,7 @@ abstract class ClassfileParser {
       }
     }
   }
-  
+
   class LazyAliasType(alias: Symbol) extends LazyType {
     override def complete(sym: Symbol) {
       alias.initialize
@@ -1264,7 +1264,7 @@ abstract class ClassfileParser {
       sym.setInfo(typeFun(tparams1, alias.tpe.substSym(alias.typeParams, tparams1)))
     }
   }
-  
+
   def skipAttributes() {
     val attrCount = in.nextChar
     for (i <- 0 until attrCount) {
@@ -1278,7 +1278,7 @@ abstract class ClassfileParser {
       in.skip(6); skipAttributes()
     }
   }
-  
+
   def skipSuperclasses() {
     in.skip(2) // superclass
     val ifaces = in.nextChar
@@ -1326,7 +1326,7 @@ abstract class ClassfileParser {
       if (sym.toplevelClass != NoSymbol)
         sym.privateWithin = sym.toplevelClass.owner
   }
-  
+
   @inline final private def isPrivate(flags: Int) =
     (flags & JAVA_ACC_PRIVATE) != 0
   @inline final private def isStatic(flags: Int) =

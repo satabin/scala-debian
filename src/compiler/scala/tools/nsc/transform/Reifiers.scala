@@ -27,10 +27,10 @@ trait Reifiers {
       reflect.RootSymbol
     else if (sym.isValueParameter)
       mkGlobalSymbol(sym.name.toString, sym)
-    else if (sym.owner.isTerm) 
+    else if (sym.owner.isTerm)
       reflect.NoSymbol
     else reify(sym.owner) match {
-      case reflect.NoSymbol => 
+      case reflect.NoSymbol =>
         reflect.NoSymbol;
       case reflect.RootSymbol =>
         mkGlobalSymbol(sym.name.toString(), sym)
@@ -87,7 +87,7 @@ trait Reifiers {
 	  param <- tparams
 	  TypeBounds(lo,hi) = param.info.bounds
 	} yield (reify(lo), reify(hi))
-	  
+
       reflect.PolyType(
 	tparams.map(reify),
 	boundss,
@@ -132,19 +132,19 @@ trait Reifiers {
         definitions.FloatClass.tpe
       case reflect.PrefixedType(_, reflect.Class("scala.Double")) =>
         definitions.DoubleClass.tpe
-      case reflect.PrefixedType(pre, sym) => 
+      case reflect.PrefixedType(pre, sym) =>
 	NoType
-      case reflect.SingleType(pre, sym) => 
+      case reflect.SingleType(pre, sym) =>
 	SingleType(unreify(pre), unreify(sym))
-      case reflect.ThisType(clazz) => 
+      case reflect.ThisType(clazz) =>
 	ThisType(unreify(clazz))
-      case reflect.AppliedType(tpe, args) => 
+      case reflect.AppliedType(tpe, args) =>
 	val untpe = unreify(tpe)
 	if (untpe == NoType)
 	  NoType
 	else
 	  appliedType(untpe, args.map(unreify))
-      case reflect.TypeBounds(lo, hi) => 
+      case reflect.TypeBounds(lo, hi) =>
 	TypeBounds(unreify(lo), unreify(hi))
       case reflect.MethodType(params, restpe) =>
 	MethodType(params.map(unreify), unreify(restpe))
@@ -162,7 +162,7 @@ trait Reifiers {
    */
   def unreify(symbol: reflect.Symbol): Symbol =
     symbol match {
-      case reflect.Class(fullname) => 
+      case reflect.Class(fullname) =>
 	fullname match {
 	  case "scala.Unit" => definitions.UnitClass
 	  case "scala.Boolean" => definitions.BooleanClass
@@ -205,7 +205,7 @@ trait Reifiers {
       super.update(sym,rsym)
   }
 
-  
+
   class Reifier(env: ReifyEnvironment, currentOwner: reflect.Symbol)
   {
     def reify(tree: Tree): reflect.Tree = tree match {
@@ -246,16 +246,16 @@ trait Reifiers {
             currentOwner, vparam.symbol.name.toString(), reify(vparam.symbol.tpe));
           env1.update(vparam.symbol, local);
         }
-        reflect.Function(vparams map (_.symbol) map env1, 
+        reflect.Function(vparams map (_.symbol) map env1,
                          new Reifier(env1, currentOwner).reify(body))
       case tree@This(_) if tree.symbol.isModule =>
         // there is no reflect node for a module's this, so
         // represent it as a selection of the module
 	reify(
 	  Select(This(tree.symbol.owner), tree.symbol.name))
-      case This(_) => 
+      case This(_) =>
         reflect.This(reify(tree.symbol))
-      case Block(stats, expr) => 
+      case Block(stats, expr) =>
         reflect.Block(stats.map(reify), reify(expr))
       case New(clazz) if (clazz.isType) =>
 	val reifiedSymbol = reify(clazz.symbol)
@@ -283,8 +283,8 @@ trait Reifiers {
         val rhs_ = reify(rhs)
         reflect.ValDef(sym, rhs_)
 
-      case cd @ ClassDef(mods, name, tparams, impl) => 
-        if(!tparams.isEmpty) 
+      case cd @ ClassDef(mods, name, tparams, impl) =>
+        if(!tparams.isEmpty)
           throw new TypeError("cannot handle polymorphic ClassDef ("+name+"): " + tparams)
         val rsym = reify(cd.symbol)
         val rimp = reify(impl)
@@ -297,7 +297,7 @@ trait Reifiers {
         reflect.Template(rparents, body.map(reify))
 
       case dd @ DefDef(mods, name, tparams, vparamss, tpt, rhs) =>
-        if(!tparams.isEmpty) 
+        if(!tparams.isEmpty)
           throw new TypeError("cannot handle polymorphic DefDef ("+name+"): " + tparams)
         val rsym   = reify(dd.symbol)
         val rparss = vparamss map { x => x map (reify) }
@@ -315,7 +315,7 @@ trait Reifiers {
 
     def reify(sym: Symbol): reflect.Symbol =
       env.get(sym) match {
-	case Some(rsym) => 
+	case Some(rsym) =>
 	  rsym
 	case None =>
 	  Reifiers.this.reify(sym)

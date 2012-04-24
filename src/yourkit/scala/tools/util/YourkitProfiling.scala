@@ -9,18 +9,18 @@ class YourkitProfiling extends Profiling {
   @volatile private var active = false
   @volatile private var freq: Option[Int] = None
   lazy val controller = new Controller
-  
+
   def defaultFreq = 100
   def allocationFreq = freq
   def setAllocationFreq(x: Int) = freq = if (x <= 0) None else Some(x)
-  
+
   def startRecordingAllocations() = {
     controller.startAllocationRecording(true, freq getOrElse defaultFreq, false, 0)
   }
   def stopRecordingAllocations() = {
     controller.stopAllocationRecording()
   }
-  
+
   def startProfiling(): Unit = {
     if (isActive)
       return
@@ -33,7 +33,7 @@ class YourkitProfiling extends Profiling {
           startRecordingAllocations()
       }
       catch {
-        case _: PresentableException  => () // if it's already running, no big deal 
+        case _: PresentableException  => () // if it's already running, no big deal
       }
     }
   }
@@ -41,12 +41,12 @@ class YourkitProfiling extends Profiling {
   def captureSnapshot() = {
     daemonize(true)(controller.captureSnapshot(ProfilingModes.SNAPSHOT_WITH_HEAP))
   }
-  
+
   def stopProfiling() = {
     try {
       if (freq.isDefined)
         stopRecordingAllocations()
-    
+
       controller.stopCPUProfiling()
     }
     catch {
@@ -54,10 +54,10 @@ class YourkitProfiling extends Profiling {
     }
     finally active = false
   }
-  
+
   def advanceGeneration(desc: String) {
     controller.advanceGeneration(desc)
   }
-  
+
   def isActive = active
 }

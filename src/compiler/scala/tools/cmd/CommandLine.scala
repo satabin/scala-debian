@@ -18,21 +18,21 @@ trait CommandLineConfig {
 class CommandLine(val spec: Reference, val originalArgs: List[String]) extends CommandLineConfig {
   def this(spec: Reference, line: String) = this(spec, Parser tokenize line)
   def this(spec: Reference, args: Array[String]) = this(spec, args.toList)
-    
+
   import spec.{ isAnyOption, isUnaryOption, isBinaryOption, isExpandOption }
-  
+
   val Terminator = "--"
   val ValueForUnaryOption = "true"  // so if --opt is given, x(--opt) = true
 
   def mapForUnary(opt: String) = Map(opt -> ValueForUnaryOption)
   def errorFn(msg: String) = println(msg)
-  
+
   /** argMap is option -> argument (or "" if it is a unary argument)
    *  residualArgs are what is left after removing the options and their args.
    */
   lazy val (argMap, residualArgs) = {
     val residualBuffer = new ListBuffer[String]
-    
+
     def loop(args: List[String]): Map[String, String] = {
       def residual(xs: List[String]) = { residualBuffer ++= xs ; Map[String, String]() }
 
@@ -47,7 +47,7 @@ class CommandLine(val spec: Reference, val originalArgs: List[String]) extends C
         }
         else None
       }
-      
+
       /** Assumes known options have all been ruled out already. */
       def isUnknown(opt: String) =
         onlyKnownOptions && (opt startsWith "-") && {
@@ -62,14 +62,14 @@ class CommandLine(val spec: Reference, val originalArgs: List[String]) extends C
           expand(x) foreach (exp => return loop(exp))
           if (isBinaryOption(x) && enforceArity)
             errorFn("Option '%s' requires argument, found EOF instead.".format(x))
-      
+
           if (isUnaryOption(x)) mapForUnary(x)
           else if (isUnknown(x)) Map()
           else residual(args)
-          
+
         case x1 :: x2 :: xs   =>
           expand(x1) foreach (exp => return loop(exp ++ args.tail))
-          
+
           if (x2 == Terminator)         mapForUnary(x1) ++ residual(xs)
           else if (isUnaryOption(x1))   mapForUnary(x1) ++ loop(args.tail)
           else if (isBinaryOption(x1))  Map(x1 -> x2) ++ loop(xs)
@@ -77,10 +77,10 @@ class CommandLine(val spec: Reference, val originalArgs: List[String]) extends C
           else                          residual(List(x1)) ++ loop(args.tail)
       }
     }
-    
+
     (loop(originalArgs), residualBuffer map stripQuotes toList)
   }
-  
+
   def apply(arg: String)  = argMap(arg)
   def get(arg: String)    = argMap get arg
   def isSet(arg: String)  = argMap contains arg

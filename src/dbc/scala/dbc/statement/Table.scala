@@ -16,20 +16,20 @@ package statement
   * @author Gilles Dubochet
   * @version 1.0 */
 @deprecated(DbcIsDeprecated, "2.9.0") abstract class Table extends Relation {
-  
+
   /** The name of the table in the database. */
   def tableName: String
-  
+
   /** The name that the table will be called in the enclosing statement. */
   def tableRename: Option[String]
-  
+
   /** A SQL-99 compliant string representation of the relation statement. */
   def sqlString: String = "SELECT * FROM " + tableName
-  
+
   /** A SQL-99 compliant string representation of the relation sub-
     * statement. This only has a meaning inside a query. */
   def sqlInnerString: String =
-    tableName + 
+    tableName +
     (tableRename match {
       case None => ""
       case Some(rename) => " AS " + rename

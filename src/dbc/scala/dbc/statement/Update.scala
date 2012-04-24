@@ -20,7 +20,7 @@ import scala.dbc.statement.expression._;
   setClauses: List[SetClause],
   whereClause: Option[Expression]
 ) extends Status {
-  
+
 
   /** A SQL-99 compliant string representation of the select statement. */
   def sqlString: String = (
@@ -32,16 +32,16 @@ import scala.dbc.statement.expression._;
       case Some(expr) => " WHERE " + expr.sqlString
     })
   );
-  
+
   /** The name of the table that should be updated. */
   //def updateTarget: String;
-  
+
   /** The data that will be added tot he table. */
   //def setClauses: List[SetClause];
-  
+
   /** Defines condition that must be true in the tuples that will be updated.
     * This value expression must return a boolean or boolean-compatible
     * value. */
   //def whereClause: Option[scala.dbc.statement.expression.Expression];
-  
+
 }

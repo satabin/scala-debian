@@ -17,7 +17,7 @@ import collection.Iterator
 import annotation.migration
 
 /** Factory object for the `mutable.Stack` class.
- *  
+ *
  *  $factoryInfo
  *  @define coll mutable stack
  *  @define Coll mutable.Stack
@@ -32,7 +32,7 @@ object Stack extends SeqFactory[Stack] {
       new Stack(lst)
     }
   }
-  
+
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Stack[A]] = new GenericCanBuildFrom[A]
   def newBuilder[A]: Builder[A, Stack[A]] = new StackBuilder[A]
   val empty: Stack[Nothing] = new Stack(Nil)
@@ -40,13 +40,15 @@ object Stack extends SeqFactory[Stack] {
 
 /** A stack implements a data structure which allows to store and retrieve
  *  objects in a last-in-first-out (LIFO) fashion.
- *  
+ *
  *  @tparam A    type of the elements contained in this stack.
- *  
+ *
  *  @author  Matthias Zenger
  *  @author  Martin Odersky
  *  @version 2.8
  *  @since   1
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stacks"Scala's Collection Library overview"]]
+ *  section on `Stacks` for more information.
  *  @define Coll Stack
  *  @define coll stack
  *  @define orderDependent
@@ -63,7 +65,7 @@ extends Seq[A]
    with Serializable
 {
   def this() = this(Nil)
-  
+
   override def companion = Stack
 
   /** Checks if the stack is empty.
@@ -84,7 +86,7 @@ extends Seq[A]
    *  @throws IndexOutOfBoundsException if the index is out of bounds
    */
   override def apply(index: Int) = elems(index)
-  
+
   /** Replace element at index <code>n</code> with the new element
    *  <code>newelem</code>.
    *
@@ -94,7 +96,7 @@ extends Seq[A]
    *  @param newelem the new element.
    *  @throws   IndexOutOfBoundsException if the index is not valid
    */
-  def update(n: Int, newelem: A) = 
+  def update(n: Int, newelem: A) =
     if(n < 0 || n >= length) throw new IndexOutOfBoundsException(n.toString)
     else elems = elems.take(n) ++ (newelem :: elems.drop(n+1))
 
@@ -162,17 +164,17 @@ extends Seq[A]
    *
    *  @return an iterator over all stack elements.
    */
-  @migration(2, 8, "Stack iterator and foreach now traverse in FIFO order.")
+  @migration("`iterator` traverses in FIFO order.", "2.8.0")
   override def iterator: Iterator[A] = elems.iterator
 
   /** Creates a list of all stack elements in LIFO order.
    *
    *  @return the created list.
    */
-  @migration(2, 8, "Stack iterator and foreach now traverse in FIFO order.")
+  @migration("`toList` traverses in FIFO order.", "2.8.0")
   override def toList: List[A] = elems
 
-  @migration(2, 8, "Stack iterator and foreach now traverse in FIFO order.")
+  @migration("`foreach` traverses in FIFO order.", "2.8.0")
   override def foreach[U](f: A => U): Unit = super.foreach(f)
 
   /** This method clones the stack.

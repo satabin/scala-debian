@@ -18,7 +18,7 @@ object testLogged extends Application {
         with scala.util.logging.ConsoleLogger
 
   Console.println("Start")
-  val doc = x.load(new java.net.URL("http://lampsvn.epfl.ch/svn-repos/scala/scala/trunk/build.xml"))
+  val doc = x.load(new java.net.URL("http://example.com/file.xml"))
   Console.println("End")
   Console.println(doc)
 }
@@ -39,7 +39,7 @@ trait LoggedNodeFactory[A <: Node] extends NodeFactory[A] with scala.util.loggin
   final val FULL  = 2
   /** 0 = no logging, 1 = cache hits, 2 = detail */
   val logCompressLevel  = 1
-  
+
   // methods of NodeFactory
 
   /** logged version of makeNode method */
@@ -63,7 +63,7 @@ trait LoggedNodeFactory[A <: Node] extends NodeFactory[A] with scala.util.loggin
 
     super.makeNode(pre, label, attrSeq, scope, children)
   }
-  
+
   override def makeText(s: String) = {
     if (logText)
       log("[makeText:\""+s+"\"]");

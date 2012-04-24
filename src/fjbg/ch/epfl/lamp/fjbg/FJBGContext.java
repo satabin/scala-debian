@@ -137,7 +137,7 @@ public class FJBGContext {
     }
 
     public JEnclosingMethodAttribute JEnclosingMethodAttribute(JClass clazz,
-                                                               String className, 
+                                                               String className,
                                                                String methodName,
                                                                JType methodType) {
         return new JEnclosingMethodAttribute(this, clazz, className, methodName, methodType);

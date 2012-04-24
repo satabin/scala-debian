@@ -13,22 +13,22 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.util.ClassPath
 import scala.tools.nsc.io._
 
-abstract class TestFile(kind: String) {  
+abstract class TestFile(kind: String) {
   def file: JFile
   def fileManager: FileManager
-	
+
   val dir = file.toAbsolute.parent
   val fileBase = file.stripExtension
   lazy val objectDir = dir / "%s-%s.obj".format(fileBase, kind) createDirectory true
   val flags: Option[String] = dir / "%s.flags".format(fileBase) ifFile { _.slurp().trim }
-  
+
   def setOutDirTo = objectDir
 
   def defineSettings(settings: Settings, setOutDir: Boolean): Boolean = {
     settings.classpath append dir.path
     if (setOutDir)
       settings.outdir.value = setOutDirTo.path
-    
+
     // have to catch bad flags somewhere
     flags foreach { f =>
       if (!settings.processArgumentString(f)._1)
@@ -43,7 +43,7 @@ abstract class TestFile(kind: String) {
 
 case class PosTestFile(file: JFile, fileManager: FileManager) extends TestFile("pos")
 case class NegTestFile(file: JFile, fileManager: FileManager) extends TestFile("neg")
-case class RunTestFile(file: JFile, fileManager: FileManager) extends TestFile("run") 
+case class RunTestFile(file: JFile, fileManager: FileManager) extends TestFile("run")
 case class BuildManagerTestFile(file: JFile, fileManager: FileManager) extends TestFile("bm")
 case class ScalaCheckTestFile(file: JFile, fileManager: FileManager) extends TestFile("scalacheck")
 case class JvmTestFile(file: JFile, fileManager: FileManager) extends TestFile("jvm")

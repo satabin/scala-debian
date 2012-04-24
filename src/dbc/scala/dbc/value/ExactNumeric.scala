@@ -16,20 +16,20 @@ import java.math.BigInteger;
 import java.math.BigDecimal;
 
 @deprecated(DbcIsDeprecated, "2.9.0") abstract class ExactNumeric [Type] extends Value {
-  
+
   val dataType: datatype.ExactNumeric[Type];
-  
+
   def sqlString = nativeValue.toString();
-  
+
 }
 
 @deprecated(DbcIsDeprecated, "2.9.0") object ExactNumeric {
-  
+
   implicit def exactNumericToByte (obj:value.ExactNumeric[Byte]): Byte = obj.nativeValue;
   implicit def exactNumericToShort (obj:value.ExactNumeric[Short]): Short = obj.nativeValue;
   implicit def exactNumericToInt (obj:value.ExactNumeric[Int]): Int = obj.nativeValue;
   implicit def exactNumericToLong (obj:value.ExactNumeric[Long]): Long = obj.nativeValue;
   implicit def exactNumericToBigInteger (obj:value.ExactNumeric[BigInteger]): BigInteger = obj.nativeValue;
   implicit def exactNumericToBigDecimal (obj:value.ExactNumeric[BigDecimal]): BigDecimal = obj.nativeValue;
-  
+
 }

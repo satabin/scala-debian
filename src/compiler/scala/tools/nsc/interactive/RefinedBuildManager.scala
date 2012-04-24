@@ -25,7 +25,7 @@ import scala.tools.util.PathResolver
 class RefinedBuildManager(val settings: Settings) extends Changes with BuildManager {
 
   class BuilderGlobal(settings: Settings, reporter : Reporter) extends scala.tools.nsc.Global(settings, reporter)  {
-    
+
     def this(settings: Settings) =
       this(settings, new ConsoleReporter(settings))
 
@@ -35,38 +35,38 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
     }
     lazy val _classpath: ClassPath[_] = new NoSourcePathPathResolver(settings).result
     override def classPath: ClassPath[_] = _classpath
-    
+
     def newRun() = new Run()
   }
-  
+
   class NoSourcePathPathResolver(settings: Settings) extends PathResolver(settings) {
     override def containers = Calculated.basis.dropRight(1).flatten.distinct
   }
 
-  protected def newCompiler(settings: Settings) = new BuilderGlobal(settings) 
-  
+  protected def newCompiler(settings: Settings) = new BuilderGlobal(settings)
+
   val compiler = newCompiler(settings)
   import compiler.{Symbol, Type, atPhase, currentRun}
   import compiler.dependencyAnalysis.Inherited
-  
+
   private case class SymWithHistory(sym: Symbol, befErasure: Type)
 
   /** Managed source files. */
   private val sources: mutable.Set[AbstractFile] = new mutable.HashSet[AbstractFile]
 
-  private val definitions: mutable.Map[AbstractFile, List[SymWithHistory]] = 
+  private val definitions: mutable.Map[AbstractFile, List[SymWithHistory]] =
     new mutable.HashMap[AbstractFile, List[SymWithHistory]] {
       override def default(key: AbstractFile) = Nil
     }
 
   /** External references used by source file. */
   private var references: mutable.Map[AbstractFile, immutable.Set[String]] = _
-  
+
   /** External references for inherited members */
   private var inherited: mutable.Map[AbstractFile, immutable.Set[Inherited]] = _
-  
+
   /** Reverse of definitions, used for caching */
-  private var classes: mutable.Map[String, AbstractFile] = 
+  private var classes: mutable.Map[String, AbstractFile] =
     new mutable.HashMap[String, AbstractFile] {
       override def default(key: String) = null
   }
@@ -109,13 +109,13 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
     val coll: mutable.Map[AbstractFile, immutable.Set[AbstractFile]] =
         mutable.HashMap[AbstractFile, immutable.Set[AbstractFile]]()
     compiler.reporter.reset()
-        
+
     // See if we really have corresponding symbols, not just those
     // which share the name
     def isCorrespondingSym(from: Symbol, to: Symbol): Boolean =
       (from.hasTraitFlag == to.hasTraitFlag) &&
       (from.hasModuleFlag == to.hasModuleFlag)
-      
+
     // For testing purposes only, order irrelevant for compilation
     def toStringSet(set: Set[AbstractFile]): String =
       set.toList sortBy (_.name) mkString("Set(", ", ", ")")
@@ -162,7 +162,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
                     atPhase(currentRun.erasurePhase.prev) {
                         changeSet(info, sym)
                     }
-                changesOf(oldSym) = (changes ++ changesErasure).distinct 
+                changesOf(oldSym) = (changes ++ changesErasure).distinct
               case _ =>
                 // a new top level definition
                 changesOf(sym) =
@@ -207,26 +207,26 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
           if (newDeps.isEmpty) rest else followChain(newDeps, rest ++ newDeps)
       }
       var res:Set[AbstractFile] = mutable.Set()
-      files.foreach( f => 
+      files.foreach( f =>
         if (collect contains f) {
           val chain = followChain(Set(f), immutable.Set()) ++ files
           chain.foreach((fc: AbstractFile) => collect += fc -> chain)
           res ++= chain
-        } else 
+        } else
           res += f
        )
 
       initial.foreach((f: AbstractFile) => collect += (f -> (collect.getOrElse(f, immutable.Set()) ++ res)))
       if (res.subsetOf(initial)) Set() else res
-  }  
-  
+  }
+
   /** Return the set of source files that are invalidated by the given changes. */
   def invalidated(files: Set[AbstractFile], changesOf: collection.Map[Symbol, List[Change]],
                   processed: Set[AbstractFile] = Set.empty):
     Set[AbstractFile] = {
     val buf = new mutable.HashSet[AbstractFile]
     val newChangesOf = new mutable.HashMap[Symbol, List[Change]]
-    var directDeps = 
+    var directDeps =
       compiler.dependencyAnalysis.dependencies.dependentFiles(1, files)
 
     def invalidate(file: AbstractFile, reason: String, change: Change) = {
@@ -238,7 +238,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
         newChangesOf(syms.sym) = List(change, parentChangeSet(syms.sym))
       break
     }
-    
+
     for ((oldSym, changes) <- changesOf; change <- changes) {
       def checkParents(cls: Symbol, file: AbstractFile) {
         val parentChange = cls.info.parents.exists(_.typeSymbol.fullName == oldSym.fullName)
@@ -260,7 +260,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
           case _ => ()
         }
       }
-      
+
       def checkInterface(cls: Symbol, file: AbstractFile) {
         change match {
           case Added(Definition(name)) =>
@@ -296,7 +296,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
           }
         }
       }
-      
+
       def checkInheritedReferences(file: AbstractFile) {
         val refs = inherited(file)
         if (!refs.isEmpty)
@@ -351,7 +351,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
       sources ++= compiler.dependencyAnalysis.managedFiles
     success
   }
-  
+
   /** Save dependency information to `file'. */
   def saveTo(file: AbstractFile, fromFile: AbstractFile => String) {
     compiler.dependencyAnalysis.dependenciesFile = file

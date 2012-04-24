@@ -14,18 +14,18 @@ class SelectiveCPSPlugin(val global: Global) extends Plugin {
 
   val name = "continuations"
   val description = "applies selective cps conversion"
-  
-  val anfPhase = new SelectiveANFTransform() { 
+
+  val anfPhase = new SelectiveANFTransform() {
     val global = SelectiveCPSPlugin.this.global
-    val runsAfter = List("pickler") 
+    val runsAfter = List("pickler")
   }
-  
-  val cpsPhase = new SelectiveCPSTransform() { 
+
+  val cpsPhase = new SelectiveCPSTransform() {
     val global = SelectiveCPSPlugin.this.global
     val runsAfter = List("selectiveanf")
   }
-  
-  
+
+
   val components = List[PluginComponent](anfPhase, cpsPhase)
 
   val checker = new CPSAnnotationChecker {
@@ -42,7 +42,7 @@ class SelectiveCPSPlugin(val global: Global) extends Plugin {
   }
 
   // TODO: require -enabled command-line flag
-  
+
   override def processOptions(options: List[String], error: String => Unit) = {
     var enabled = false
     for (option <- options) {

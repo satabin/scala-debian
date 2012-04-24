@@ -17,14 +17,16 @@ import parallel.mutable.ParArray
 /** A class for polymorphic arrays of elements that's represented
  *  internally by an array of objects. This means that elements of
  *  primitive types are boxed.
- *  
+ *
  *  @author Martin Odersky
  *  @version 2.8
  *  @since   2.8
- *  
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#array_sequences "Scala's Collection Library overview"]]
+ *  section on `Array Sequences` for more information.
+ *
  *  @tparam A      type of the elements contained in this array sequence.
  *  @param length  the length of the underlying array.
- *  
+ *
  *  @define Coll ArraySeq
  *  @define coll array sequence
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
@@ -34,14 +36,14 @@ import parallel.mutable.ParArray
  *    result class `That` from the current representation type `Repr`
  *    and the new element type `B`. This is usually the `canBuildFrom` value
  *    defined in object `ArraySeq`.
- *  @define orderDependent 
+ *  @define orderDependent
  *  @define orderDependentFold
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
 @SerialVersionUID(1530165946227428979L)
 class ArraySeq[A](override val length: Int)
-extends IndexedSeq[A] 
+extends IndexedSeq[A]
    with GenericTraversableTemplate[A, ArraySeq]
    with IndexedSeqOptimized[A, ArraySeq[A]]
    with CustomParallelizable[A, ParArray[A]]
@@ -51,19 +53,19 @@ extends IndexedSeq[A]
   override def companion: GenericCompanion[ArraySeq] = ArraySeq
 
   val array: Array[AnyRef] = new Array[AnyRef](length)
-  
+
   override def par = ParArray.handoff(array.asInstanceOf[Array[A]], length)
 
   def apply(idx: Int): A = {
     if (idx >= length) throw new IndexOutOfBoundsException(idx.toString)
     array(idx).asInstanceOf[A]
   }
-  
+
   def update(idx: Int, elem: A) {
     if (idx >= length) throw new IndexOutOfBoundsException(idx.toString)
     array(idx) = elem.asInstanceOf[AnyRef]
   }
-  
+
   override def foreach[U](f: A =>  U) {
     var i = 0
     while (i < length) {
@@ -85,7 +87,7 @@ extends IndexedSeq[A]
     val len1 = len min (xs.length - start) min length
     Array.copy(array, 0, xs, start, len1)
   }
-  
+
 }
 
 /** $factoryInfo
@@ -95,8 +97,8 @@ extends IndexedSeq[A]
 object ArraySeq extends SeqFactory[ArraySeq] {
   /** $genericCanBuildFromInfo */
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ArraySeq[A]] = new GenericCanBuildFrom[A]
-  def newBuilder[A]: Builder[A, ArraySeq[A]] = 
-    new ArrayBuffer[A] mapResult { buf => 
+  def newBuilder[A]: Builder[A, ArraySeq[A]] =
+    new ArrayBuffer[A] mapResult { buf =>
       val result = new ArraySeq[A](buf.length)
       buf.copyToArray(result.array.asInstanceOf[Array[Any]], 0)
       result

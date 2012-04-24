@@ -10,7 +10,7 @@ package gen
  */
 trait AnyValReps {
   self: AnyVals =>
-  
+
   sealed abstract class AnyValNum(name: String) extends AnyValRep(name) {
     def isCardinal: Boolean = isIntegerType(this)
     def unaryOps            = if (isCardinal) List("+", "-", "~") else List("+", "-")
@@ -18,7 +18,7 @@ trait AnyValReps {
     def shiftOps            = if (isCardinal) List("<<", ">>>", ">>") else Nil
     def comparisonOps       = List("==", "!=", "<", "<=", ">", ">=")
     def otherOps            = List("+", "-" ,"*", "/", "%")
-  
+
     // Given two numeric value types S and T , the operation type of S and T is defined as follows:
     // If both S and T are subrange types then the operation type of S and T is Int.
     // Otherwise the operation type of S and T is the larger of the two types wrt ranking.
@@ -30,16 +30,16 @@ trait AnyValReps {
         case (-1, -1)   => I
         case (r1, r2)   => rank apply (r1 max r2)
       }
-    }  
-  
+    }
+
     def mkCoercions = numeric map (x => "def to%s: %s".format(x, x))
     def mkUnaryOps  = unaryOps map (x => "def unary_%s : %s".format(x, this opType I))
-    def mkStringOps = List("def +(x: String): String") 
+    def mkStringOps = List("def +(x: String): String")
     def mkShiftOps  = (
       for (op <- shiftOps ; arg <- List(I, L)) yield
         "def %s(x: %s): %s".format(op, arg, this opType I)
     )
-    
+
     def clumps: List[List[String]] = {
       val xs1 = List(mkCoercions, mkUnaryOps, mkStringOps, mkShiftOps) map (xs => if (xs.isEmpty) xs else xs :+ "")
       val xs2 = List(
@@ -64,7 +64,7 @@ trait AnyValReps {
     }
 
     /** Makes a set of binary operations based on the given set of ops, args, and resultFn.
-     * 
+     *
      *  @param    ops       list of function names e.g. List(">>", "%")
      *  @param    args      list of types which should appear as arguments
      *  @param    resultFn  function which calculates return type based on arg type
@@ -100,7 +100,7 @@ trait AnyValReps {
 
     def indent(s: String)  = if (s == "") "" else "  " + s
     def indentN(s: String) = s.lines map indent mkString "\n"
-  
+
     def boxUnboxImpls = Map(
       "@boxImpl@"   -> "%s.valueOf(x)".format(boxedName),
       "@unboxImpl@" -> "x.asInstanceOf[%s].%sValue()".format(boxedName, lcname),
@@ -129,11 +129,11 @@ trait AnyValReps {
       objectDoc,
       mkObject
     ) mkString ""
-  
+
     def assemble(what: String, parent: String, lines: List[String]): String = {
       val decl = "%s %s extends %s ".format(what, name, parent)
       val body = if (lines.isEmpty) "{ }\n\n" else lines map indent mkString ("{\n", "\n", "\n}\n")
-      
+
       decl + body
     }
     override def toString = name
@@ -164,7 +164,7 @@ package scala
  */
 """.trim + "\n")
 
-  def timestampString = "// DO NOT EDIT, CHANGES WILL BE LOST.\n"  
+  def timestampString = "// DO NOT EDIT, CHANGES WILL BE LOST.\n"
   def stub            = """sys.error("stub")"""
 
   def allCompanions = """
@@ -189,7 +189,7 @@ def unbox(x: java.lang.Object): @name@ = @unboxImpl@
  */
 override def toString = "object scala.@name@"
 """
-  
+
   def cardinalCompanion = """
 /** The smallest value representable as a @name@.
  */
@@ -278,7 +278,7 @@ def getClass(): Class[Boolean] = sys.error("stub")
 
   def cardinal = numeric filter isIntegerType
   def numeric  = List(B, S, C, I, L, F, D)
-  def values   = List(U, Z) ++ numeric  
+  def values   = List(U, Z) ++ numeric
 
   def make() = values map (x => (x.name, x.make()))
 }

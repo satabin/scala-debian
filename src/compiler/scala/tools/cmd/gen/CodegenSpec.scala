@@ -13,9 +13,9 @@ trait CodegenSpec extends Spec with Meta.StdOpts with Interpolation {
   def programInfo         = Spec.Info("codegen", "", "scala.tools.cmd.gen.Codegen")
 
   import FromString.ExistingDir
-  
+
   help("Usage: codegen [<options>]")
-  
+
   // val inDir    = "in" / "directory containing templates" --^ ExistingDir
   val outDir   = "out" / "directory for generated files" --^ ExistingDir
   // val install  = "install" / "write source files directly to src/library/scala"
@@ -25,7 +25,7 @@ trait CodegenSpec extends Spec with Meta.StdOpts with Interpolation {
   val stamp    = "stamp" / "add a timestamp to the generated files" --?
 }
 
-object CodegenSpec extends CodegenSpec with Reference {  
+object CodegenSpec extends CodegenSpec with Reference {
   type ThisCommandLine = CommandLine
   def creator(args: List[String]): ThisCommandLine = new CommandLine(CodegenSpec, args)
 }

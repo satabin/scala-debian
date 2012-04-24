@@ -8,9 +8,9 @@ package scala.util
 package object continuations {
 
   type cps[A] = cpsParam[A,A]
-  
+
   type suspendable = cps[Unit]
-  
+
 
   def shift[A,B,C](fun: (A => B) => C): A @cpsParam[B,C] = {
     throw new NoSuchMethodException("this code has to be compiled with the Scala continuations plugin enabled")
@@ -34,7 +34,7 @@ package object continuations {
       ctxR.foreach((x:Any) => ())
   }
 
-  
+
   // methods below are primarily implementation details and are not
   // needed frequently in client code
 
@@ -48,7 +48,7 @@ package object continuations {
 
   def reify[A,B,C](ctx: =>(A @cpsParam[B,C])): ControlContext[A,B,C] = {
     throw new NoSuchMethodException("this code has to be compiled with the Scala continuations plugin enabled")
-  }  
+  }
 
   def shiftUnitR[A,B](x: A): ControlContext[A,B,B] = {
     new ControlContext(null, x)

@@ -17,10 +17,10 @@ package scala.util.parsing.input
  */
 abstract class Reader[+T] {
 
-  /** If this is a reader over character sequences, the underlying char sequence 
+  /** If this is a reader over character sequences, the underlying char sequence
    *  If not, throws a <code>NoSuchMethodError</code> exception.
    */
-  def source: java.lang.CharSequence = 
+  def source: java.lang.CharSequence =
     throw new NoSuchMethodError("not a char sequence reader")
 
   def offset: Int =
@@ -30,17 +30,17 @@ abstract class Reader[+T] {
     */
   def first: T
 
-  /** Returns an abstract reader consisting of all elements except the first 
-   * 
+  /** Returns an abstract reader consisting of all elements except the first
+   *
    * @return If <code>atEnd</code> is <code>true</code>, the result will be
    *         <code>this'; otherwise, it's a <code>Reader</code> containing
    *         more elements.
    */
   def rest: Reader[T]
-  
+
   /** Returns an abstract reader consisting of all elements except the first
    *  <code>n</code> elements.
-   */ 
+   */
   def drop(n: Int): Reader[T] = {
     var r: Reader[T] = this
     var cnt = n
@@ -54,7 +54,7 @@ abstract class Reader[+T] {
    */
   def pos: Position
 
-  /** true iff there are no more elements in this reader 
+  /** true iff there are no more elements in this reader
    */
   def atEnd: Boolean
 }

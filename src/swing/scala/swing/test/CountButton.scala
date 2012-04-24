@@ -1,8 +1,8 @@
 package scala.swing
 package test
 
-import scala.swing._ 
-import scala.swing.event._ 
+import scala.swing._
+import scala.swing.event._
 
 object CountButton extends SimpleSwingApplication {
   def top = new MainFrame {
@@ -14,17 +14,17 @@ object CountButton extends SimpleSwingApplication {
         text = "Press Me!"
       }
       contents += button
-      val label = new Label { 
-        text = "No button clicks registered" 
+      val label = new Label {
+        text = "No button clicks registered"
       }
       contents += label
-      
-      listenTo(button) 
-      var nclicks = 0 
-      reactions += { 
-        case ButtonClicked(b) => 
-          nclicks += 1 
-          label.text = "Number of button clicks: "+nclicks 
+
+      listenTo(button)
+      var nclicks = 0
+      reactions += {
+        case ButtonClicked(b) =>
+          nclicks += 1
+          label.text = "Number of button clicks: "+nclicks
       }
     }
   }

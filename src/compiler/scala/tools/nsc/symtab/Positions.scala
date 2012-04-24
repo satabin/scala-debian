@@ -3,10 +3,10 @@ package symtab
 
 import scala.tools.nsc.util.{ SourceFile, Position, OffsetPosition, NoPosition }
 
-trait Positions { 
+trait Positions {
 self: scala.tools.nsc.symtab.SymbolTable =>
 
-  def rangePos(source: SourceFile, start: Int, point: Int, end: Int) = 
+  def rangePos(source: SourceFile, start: Int, point: Int, end: Int) =
     new OffsetPosition(source, point)
 
   /** A position that wraps a set of trees.

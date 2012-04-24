@@ -13,10 +13,10 @@ package mutable
 
 /** This class implements synchronized priority queues using a binary heap.
  *  The elements of the queue have to be ordered in terms of the `Ordered[T]` class.
- *  
+ *
  *  @tparam A    type of the elements contained in this synchronized priority queue
  *  @param ord   implicit ordering used to compared elements of type `A`
- *  
+ *
  *  @author  Matthias Zenger
  *  @version 1.0, 03/05/2004
  *  @since   1
@@ -72,7 +72,7 @@ class SynchronizedPriorityQueue[A](implicit ord: Ordering[A]) extends PriorityQu
    *  @return   the element with the highest priority.
    */
   override def head: A = synchronized { super.head }
-  
+
   /** Returns the element with the highest priority in the queue,
    *  or throws an error if there is no element contained in the queue.
    *

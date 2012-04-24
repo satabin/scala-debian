@@ -6,8 +6,8 @@
 package scala.tools.nsc
 package io
 
-import java.io.{ 
-  FileInputStream, FileOutputStream, BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter, 
+import java.io.{
+  FileInputStream, FileOutputStream, BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter,
   BufferedInputStream, BufferedOutputStream, RandomAccessFile }
 import java.net.{ URI, URL }
 import scala.util.Random.alphanumeric
@@ -27,7 +27,7 @@ import scala.util.Random.alphanumeric
  *  @since   2.8
  */
 
-object Path {  
+object Path {
   def isExtensionJarOrZip(jfile: JFile): Boolean = isExtensionJarOrZip(jfile.getName)
   def isExtensionJarOrZip(name: String): Boolean = {
     val ext = extension(name)
@@ -46,7 +46,7 @@ object Path {
   // not certain these won't be problematic, but looks good so far
   implicit def string2path(s: String): Path = apply(s)
   implicit def jfile2path(jfile: JFile): Path = apply(jfile)
-  
+
   // java 7 style, we don't use it yet
   // object AccessMode extends Enumeration("AccessMode") {
   //   val EXECUTE, READ, WRITE = Value
@@ -59,12 +59,12 @@ object Path {
   //   }
   //   true
   // }
-  
+
   def onlyDirs(xs: Iterator[Path]): Iterator[Directory] = xs filter (_.isDirectory) map (_.toDirectory)
   def onlyDirs(xs: List[Path]): List[Directory] = xs filter (_.isDirectory) map (_.toDirectory)
   def onlyFiles(xs: Iterator[Path]): Iterator[File] = xs filter (_.isFile) map (_.toFile)
   def onlyFiles(xs: List[Path]): List[File] = xs filter (_.isFile) map (_.toFile)
-  
+
   def roots: List[Path] = java.io.File.listRoots().toList map Path.apply
 
   def apply(segments: Seq[String]): Path = apply(segments mkString java.io.File.separator)
@@ -104,14 +104,14 @@ class Path private[io] (val jfile: JFile) {
    *  path made up of root / this.
    */
   def toAbsoluteWithRoot(root: Path) = if (isAbsolute) this else root.toAbsolute / this
-  
+
   /** Creates a new Path with the specified path appended.  Assumes
    *  the type of the new component implies the type of the result.
-   */  
+   */
   def /(child: Path): Path = if (isEmpty) child else new Path(new JFile(jfile, child.path))
   def /(child: Directory): Directory = /(child: Path).toDirectory
   def /(child: File): File = /(child: Path).toFile
-  
+
   /** If this path is a container, recursively iterate over its contents.
    *  The supplied condition is a filter which is applied to each element,
    *  with that branch of the tree being closed off if it is true.  So for
@@ -123,7 +123,7 @@ class Path private[io] (val jfile: JFile) {
     if (isFile) toFile walkFilter cond
     else if (isDirectory) toDirectory walkFilter cond
     else Iterator.empty
-  
+
   /** Equivalent to walkFilter(_ => false).
    */
   def walk: Iterator[Path] = walkFilter(_ => true)
@@ -133,7 +133,7 @@ class Path private[io] (val jfile: JFile) {
   def path: String = jfile.getPath()
   def normalize: Path = Path(jfile.getAbsolutePath())
   def isRootPath: Boolean = roots exists (_ isSame this)
-  
+
   def resolve(other: Path) = if (other.isAbsolute || isEmpty) other else /(other)
   def relativize(other: Path) = {
     assert(isAbsolute == other.isAbsolute, "Paths not of same type: "+this+", "+other)
@@ -144,10 +144,10 @@ class Path private[io] (val jfile: JFile) {
         case (bs, os) => ((".."+separator)*bs.length)+os.mkString(separatorStr)
       }
     }
-  
+
     Path(createRelativePath(segments, other.segments))
   }
-  
+
   // derived from identity
   def root: Option[Path] = roots find (this startsWith _)
   def segments: List[String] = (path split separator).toList filterNot (_.length == 0)
@@ -196,7 +196,7 @@ class Path private[io] (val jfile: JFile) {
   def addExtension(ext: String): Path = Path(path + "." + ext)
   // changes the existing extension out for a new one
   def changeExtension(ext: String): Path = Path(path stripSuffix extension) addExtension ext
-  
+
   // conditionally execute
   def ifFile[T](f: File => T): Option[T] = if (isFile) Some(f(toFile)) else None
   def ifDirectory[T](f: Directory => T): Option[T] = if (isDirectory) Some(f(toDirectory)) else None
@@ -204,24 +204,24 @@ class Path private[io] (val jfile: JFile) {
   // Boolean tests
   def canRead = jfile.canRead()
   def canWrite = jfile.canWrite()
-  def exists = jfile.exists()  
+  def exists = jfile.exists()
   def notExists = try !jfile.exists() catch { case ex: SecurityException => false }
 
   def isFile = jfile.isFile()
   def isDirectory = jfile.isDirectory()
   def isAbsolute = jfile.isAbsolute()
   def isHidden = jfile.isHidden()
-  def isSymlink = {    
+  def isSymlink = {
     val x = parent / name
     x.toCanonical != x.toAbsolute
   }
-  def isEmpty = path.length == 0 
-  
+  def isEmpty = path.length == 0
+
   // Information
   def lastModified = jfile.lastModified()
   def lastModified_=(time: Long) = jfile setLastModified time // should use setXXX function?
   def length = jfile.length()
-  
+
   // Boolean path comparisons
   def endsWith(other: Path) = segments endsWith other.segments
   def startsWith(other: Path) = segments startsWith other.segments
@@ -241,7 +241,7 @@ class Path private[io] (val jfile: JFile) {
     else if (isFile) toFile
     else new File(jfile)
   }
-  
+
   // deletions
   def delete() = jfile.delete()
   def deleteIfExists() = if (jfile.exists()) delete() else false
@@ -251,7 +251,7 @@ class Path private[io] (val jfile: JFile) {
    */
   def deleteRecursively(): Boolean = deleteRecursively(jfile)
   private def deleteRecursively(f: JFile): Boolean = {
-    if (f.isDirectory) f.listFiles match { 
+    if (f.isDirectory) f.listFiles match {
       case null =>
       case xs   => xs foreach deleteRecursively
     }
@@ -265,7 +265,7 @@ class Path private[io] (val jfile: JFile) {
       raf.close()
       length == 0
     }
-  
+
   def touch(modTime: Long = System.currentTimeMillis) = {
     createFile()
     if (isFile)
@@ -275,11 +275,11 @@ class Path private[io] (val jfile: JFile) {
   // todo
   // def copyTo(target: Path, options ...): Boolean
   // def moveTo(target: Path, options ...): Boolean
-  
+
   override def toString() = path
   override def equals(other: Any) = other match {
     case x: Path  => path == x.path
     case _        => false
-  }  
+  }
   override def hashCode() = path.hashCode()
 }

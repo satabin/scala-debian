@@ -11,7 +11,7 @@ import io.{ File, Path }
 
 /** Support for run-time loading of compiler plugins.
  *
- *  @author Lex Spoon 
+ *  @author Lex Spoon
  *  @version 1.1, 2009/1/2
  *  Updated 2009/1/2 by Anders Bach Nielsen: Added features to implement SIP 00002
  */
@@ -27,7 +27,7 @@ trait Plugins {
     val jars = settings.plugin.value map Path.apply
     val dirs = (settings.pluginsDir.value split File.pathSeparator).toList map Path.apply
     val classes = Plugin.loadAllFrom(jars, dirs, settings.disable.value)
-    
+
     // Lach plugin must only be instantiated once. A common pattern
     // is to register annotation checkers during object construction, so
     // creating multiple plugin instances will leave behind stale checkers.
@@ -43,21 +43,21 @@ trait Plugins {
   protected def loadPlugins(): List[Plugin] = {
     // remove any with conflicting names or subcomponent names
     def pick(
-      plugins: List[Plugin], 
-      plugNames: Set[String], 
+      plugins: List[Plugin],
+      plugNames: Set[String],
       phaseNames: Set[String]): List[Plugin] =
     {
       if (plugins.isEmpty) return Nil // early return
-      
+
       val plug :: tail      = plugins
       val plugPhaseNames    = Set(plug.components map (_.phaseName): _*)
       def withoutPlug       = pick(tail, plugNames, plugPhaseNames)
       def withPlug          = plug :: pick(tail, plugNames + plug.name, phaseNames ++ plugPhaseNames)
       lazy val commonPhases = phaseNames intersect plugPhaseNames
-      
+
       def note(msg: String): Unit = if (settings.verbose.value) inform(msg format plug.name)
       def fail(msg: String)       = { note(msg) ; withoutPlug }
-      
+
       if (plugNames contains plug.name)
         fail("[skipping a repeated plugin: %s]")
       else if (settings.disable.value contains plug.name)
@@ -71,7 +71,7 @@ trait Plugins {
     }
 
     val plugs = pick(roughPluginsList, Set(), phasesSet map (_.phaseName) toSet)
-    
+
     /** Verify requirements are present. */
     for (req <- settings.require.value ; if !(plugs exists (_.name == req)))
       globalError("Missing required plugin: " + req)
@@ -87,8 +87,8 @@ trait Plugins {
       if (!opts.isEmpty)
         p.processOptions(opts, globalError)
     }
-      
-    /** Verify no non-existent plugin given with -P */      
+
+    /** Verify no non-existent plugin given with -P */
     for (opt <- settings.pluginOptions.value ; if plugs forall (p => optList(List(opt), p).isEmpty))
       globalError("bad option: -P:" + opt)
 

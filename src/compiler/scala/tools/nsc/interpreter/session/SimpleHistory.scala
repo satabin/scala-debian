@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 
 class SimpleHistory extends JLineHistory {
   private var _index: Int = 0
-  private val buf: Buffer[String] = new ListBuffer[String]  
+  private val buf: Buffer[String] = new ListBuffer[String]
   private def toEntries(): Seq[JEntry] = buf.zipWithIndex map { case (x, i) => Entry(i, x) }
   private def setTo(num: Int)          = { _index = num ; true }
   private def minusOne                 = { _index -= 1 ; true }
@@ -24,14 +24,14 @@ class SimpleHistory extends JLineHistory {
     )
     ""
   }
-  
+
   case class Entry(index: Int, value: CharSequence) extends JEntry {
     override def toString = value
   }
-  
+
   def maxSize: Int = 2500
   def last = if (isEmpty) fail("last") else buf.last
-  
+
   def size = buf.size
   def index = _index
   def isEmpty = buf.isEmpty
@@ -41,11 +41,11 @@ class SimpleHistory extends JLineHistory {
   def replace(item: CharSequence): Unit = {
     buf trimEnd 1
     add(item)
-  }  
+  }
   def entries(idx: Int): JListIterator[JEntry] = toEntries().asJava.listIterator(idx)
   def entries(): JListIterator[JEntry]         = toEntries().asJava.listIterator()
   def iterator: JIterator[JEntry]              = toEntries().iterator.asJava
-  
+
   def current()         = if (index >= 0 && index < buf.size) buf(index) else fail("current()")
   def previous()        = (index > 0) && minusOne
   def next()            = (index <= lastIndex) && plusOne

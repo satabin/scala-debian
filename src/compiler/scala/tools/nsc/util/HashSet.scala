@@ -31,7 +31,7 @@ class HashSet[T >: Null <: AnyRef](val label: String, initialCapacity: Int) exte
     while (entry ne null) {
       if (x == entry)
         return entry.asInstanceOf[T]
-        
+
       h = index(h + 1)
       entry = table(h)
     }
@@ -77,7 +77,7 @@ class HashSet[T >: Null <: AnyRef](val label: String, initialCapacity: Int) exte
       if (hasNext) { i += 1; table(i - 1).asInstanceOf[T] }
       else null
   }
-  
+
   private def addOldEntry(x: T) {
     var h = index(x.##)
     var entry = table(h)
@@ -94,7 +94,7 @@ class HashSet[T >: Null <: AnyRef](val label: String, initialCapacity: Int) exte
       if (table.length <= initialCapacity) 8
       else if (table.length <= (initialCapacity * 8)) 4
       else 2
-      
+
     table = new Array[AnyRef](table.length * growthFactor)
     var i = 0
     while (i < oldtable.length) {

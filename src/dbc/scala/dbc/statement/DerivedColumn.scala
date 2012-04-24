@@ -13,18 +13,18 @@ package statement
 
 
 @deprecated(DbcIsDeprecated, "2.9.0") abstract class DerivedColumn {
-  
+
   /** The value for the column. This value can be of any type but must be
    *  calculated from fields that appear in a relation that takes part
    *  in the query.
    */
   def valueExpression: Expression
-  
+
   /** A new name for this field. This name must be unique for the query in
    *  which the column takes part.
    */
   def asClause: Option[String]
-  
+
   /** A SQL-99 compliant string representation of the derived column
    *  sub-statement. This only has a meaning inside a select statement.
    */
@@ -34,5 +34,5 @@ package statement
       case None => ""
       case Some(ac) => " AS " + ac
     })
-  
+
 }

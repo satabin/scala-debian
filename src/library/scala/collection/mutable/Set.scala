@@ -30,7 +30,7 @@ trait Set[A] extends Iterable[A]
   override def companion: GenericCompanion[Set] = Set
   override def seq: Set[A] = this
 }
-                
+
 /** $factoryInfo
  *  The current default implementation of a $Coll is a `HashSet`.
  *  @define coll mutable set

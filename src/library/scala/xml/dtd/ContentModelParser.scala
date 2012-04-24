@@ -31,9 +31,9 @@ object ContentModelParser extends Scanner { // a bit too permissive concerning #
   }
 
   // s [ '+' | '*' | '?' ]
-  def maybeSuffix(s: RegExp) = token match {	
-    case STAR => nextToken; Star(s) 
-    case PLUS => nextToken; Sequ(s, Star(s)) 
+  def maybeSuffix(s: RegExp) = token match {
+    case STAR => nextToken; Star(s)
+    case PLUS => nextToken; Sequ(s, Star(s))
     case OPT  => nextToken; Alt(Eps, s)
     case _    => s
   }
@@ -43,13 +43,13 @@ object ContentModelParser extends Scanner { // a bit too permissive concerning #
   def contentspec: ContentModel = token match {
 
     case NAME => value match {
-      case "ANY"   => ANY 
+      case "ANY"   => ANY
       case "EMPTY" => EMPTY
       case _       => sys.error("expected ANY, EMPTY or '(' instead of " + value );
     }
-    case LPAREN => 
+    case LPAREN =>
 
-      nextToken; 
+      nextToken;
       sOpt;
       if (token != TOKEN_PCDATA)
         ELEMENTS(regexp);
@@ -90,7 +90,7 @@ object ContentModelParser extends Scanner { // a bit too permissive concerning #
   }
 
   //                                             seqRest ::= (',' S? cp S?)+
-  def seqRest(p: RegExp) = { 
+  def seqRest(p: RegExp) = {
     var k = List(p);
     while( token == COMMA ) {
       nextToken;
@@ -102,7 +102,7 @@ object ContentModelParser extends Scanner { // a bit too permissive concerning #
   }
 
   //                                          choiceRest ::= ('|' S? cp S?)+
-  def choiceRest( p:RegExp ) = { 
+  def choiceRest( p:RegExp ) = {
     var k = List( p );
     while( token == CHOICE ) {
       nextToken;
@@ -116,7 +116,7 @@ object ContentModelParser extends Scanner { // a bit too permissive concerning #
   //                                  particle ::=  '(' S? regexp
   //                                             |  name [ '+' | '*' | '?' ]
   def particle = token match {
-    case LPAREN => nextToken; sOpt; regexp; 
+    case LPAREN => nextToken; sOpt; regexp;
     case NAME   => val a = Letter(ElemName(value)); nextToken; maybeSuffix(a)
     case _      => sys.error("expected '(' or Name, got:"+token2string(token));
   }

@@ -41,7 +41,7 @@ trait Product extends Equals {
     def hasNext = c < cmax
     def next() = { val result = productElement(c); c += 1; result }
   }
-  
+
   @deprecated("use productIterator instead", "2.8.0")
   def productElements: Iterator[Any] = productIterator
 

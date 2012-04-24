@@ -15,14 +15,16 @@ import generic._
 import immutable.{List, Nil}
 
 // !!! todo: convert to LinkedListBuffer?
-/** 
+/**
  *  This class is used internally to represent mutable lists. It is the
  *  basis for the implementation of the class `Queue`.
- *  
+ *
  *  @author  Matthias Zenger
  *  @author  Martin Odersky
  *  @version 2.8
  *  @since   1
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#mutable_lists "Scala's Collection Library overview"]]
+ *  section on `Mutable Lists` for more information.
  */
 @SerialVersionUID(5938451523372603072L)
 class MutableList[A]
@@ -33,15 +35,15 @@ extends LinearSeq[A]
    with Serializable
 {
   override def companion: GenericCompanion[MutableList] = MutableList
-  
+
   override protected[this] def newBuilder: Builder[A, MutableList[A]] = new MutableList[A]
 
   protected var first0: LinkedList[A] = new LinkedList[A]
   protected var last0: LinkedList[A] = first0
   protected var len: Int = 0
-  
+
   def toQueue = new Queue(first0, last0, len)
-  
+
   /** Is the list empty?
    */
   override def isEmpty = len == 0
@@ -73,12 +75,12 @@ extends LinearSeq[A]
   override def length: Int = len
 
   /** Returns the <code>n</code>th element of this list.
-   *  @throws IndexOutofBoundsException if index does not exist.
+   *  @throws IndexOutOfBoundsException if index does not exist.
    */
   override def apply(n: Int): A = first0.apply(n)
 
   /** Updates the <code>n</code>th element of this list to a new value.
-   *  @throws IndexOutofBoundsException if index does not exist.
+   *  @throws IndexOutOfBoundsException if index does not exist.
    */
   def update(n: Int, x: A): Unit = first0.update(n, x)
 
@@ -144,7 +146,7 @@ extends LinearSeq[A]
 
 object MutableList extends SeqFactory[MutableList] {
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, MutableList[A]] = new GenericCanBuildFrom[A]
-  
+
   def newBuilder[A]: Builder[A, MutableList[A]] = new MutableList[A]
 }
 

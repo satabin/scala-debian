@@ -13,7 +13,7 @@ package scala.runtime;
 
 public class VolatileBooleanRef implements java.io.Serializable {
     private static final long serialVersionUID = -5730524563015615974L;
-    
+
     volatile public boolean elem;
     public VolatileBooleanRef(boolean elem) { this.elem = elem; }
     public String toString() { return String.valueOf(elem); }

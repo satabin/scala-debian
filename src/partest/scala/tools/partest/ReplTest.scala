@@ -33,7 +33,7 @@ abstract class ReplTest extends App {
   }
   def eval() = ILoop.runForTranscript(code, settings).lines drop 1
   def show() = eval() foreach println
-  
+
   try show()
   catch { case t => println(t) ; sys.exit(1) }
 }

@@ -126,7 +126,7 @@ object scaladoc extends Command {
     "the specified input files. Non zero is returned in case of failure.")
 
   override val authors = Section("AUTHORS",
-    
+
     "This version of Scaladoc was written by Gilles Dubochet with contributions by Pedro Furlanetto and Johannes Rudolph. " &
     "It is based on the original Scaladoc (Sean McDirmid, Geoffrey Washburn, Vincent Cremet and Stéphane Michleoud), " &
     "on vScaladoc (David Bernard), as well as on an unreleased version of Scaladoc 2 (Manohar Jonnalagedda).")

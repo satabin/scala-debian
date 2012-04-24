@@ -12,38 +12,38 @@ package parallel.mutable
 import collection.parallel.IterableSplitter
 
 /** Parallel flat hash table.
- *  
+ *
  *  @tparam T      type of the elements in the $coll.
  *  @define coll   table
  *  @define Coll   flat hash table
- *  
+ *
  *  @author Aleksandar Prokopec
  */
 trait ParFlatHashTable[T] extends collection.mutable.FlatHashTable[T] {
-  
+
   override def alwaysInitSizeMap = true
-  
+
   abstract class ParFlatHashTableIterator(var idx: Int, val until: Int, val totalsize: Int)
   extends IterableSplitter[T] with SizeMapUtils {
     import collection.DebugUtils._
-    
+
     private var traversed = 0
     private val itertable = table
-    
+
     if (hasNext) scan()
-    
+
     private def scan() {
       while (itertable(idx) eq null) {
         idx += 1
       }
     }
-    
+
     private def checkbounds() = if (idx >= itertable.length) {
       throw new IndexOutOfBoundsException(idx.toString)
     }
-    
+
     def newIterator(index: Int, until: Int, totalsize: Int): IterableSplitter[T]
-    
+
     def remaining = totalsize - traversed
     def hasNext = traversed < totalsize
     def next() = if (hasNext) {
@@ -56,20 +56,20 @@ trait ParFlatHashTable[T] extends collection.mutable.FlatHashTable[T] {
     def dup = newIterator(idx, until, totalsize)
     def split = if (remaining > 1) {
       val divpt = (until + idx) / 2
-      
+
       val fstidx = idx
       val fstuntil = divpt
       val fsttotal = calcNumElems(idx, divpt, itertable.length, sizeMapBucketSize)
       val fstit = newIterator(fstidx, fstuntil, fsttotal)
-      
+
       val sndidx = divpt
       val snduntil = until
       val sndtotal = remaining - fsttotal
       val sndit = newIterator(sndidx, snduntil, sndtotal)
-      
+
       Seq(fstit, sndit)
     } else Seq(this)
-    
+
     override def debugInformation = buildString {
       append =>
       append("Parallel flat hash table iterator")
@@ -82,7 +82,7 @@ trait ParFlatHashTable[T] extends collection.mutable.FlatHashTable[T] {
       append("Sizemap: ")
       append(arrayString(sizemap, 0, sizemap.length))
     }
-    
+
     protected def countElems(from: Int, until: Int) = {
       var count = 0
       var i = from
@@ -92,7 +92,7 @@ trait ParFlatHashTable[T] extends collection.mutable.FlatHashTable[T] {
       }
       count
     }
-    
+
     protected def countBucketSizes(frombucket: Int, untilbucket: Int) = {
       var count = 0
       var i = frombucket
@@ -102,11 +102,11 @@ trait ParFlatHashTable[T] extends collection.mutable.FlatHashTable[T] {
       }
       count
     }
-    
+
     private def check() = if (table.slice(idx, until).count(_ != null) != remaining) {
       println("Invariant broken: " + debugInformation)
       assert(false)
     }
   }
-  
+
 }

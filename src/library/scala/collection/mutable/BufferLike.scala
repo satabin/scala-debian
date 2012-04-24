@@ -16,17 +16,17 @@ import script._
 import annotation.{migration, bridge}
 
 /** A template trait for buffers of type `Buffer[A]`.
- * 
+ *
  *  Buffers are used to create sequences of elements incrementally by
  *  appending, prepending, or inserting new elements. It is also
  *  possible to access and modify elements in a random access fashion
  *  via the index of the element in the current sequence.
- * 
+ *
  *  @tparam A    the type of the elements of the buffer
  *  @tparam This the type of the buffer itself.
  *
  *  $buffernote
- * 
+ *
  *  @author  Martin Odersky
  *  @author  Matthias Zenger
  *  @version 2.8
@@ -59,7 +59,7 @@ import annotation.{migration, bridge}
  *  undeprecated methods throughout the collections hierarchy.
  */
 @cloneable
-trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]] 
+trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
                 extends Growable[A]
                    with Shrinkable[A]
                    with Scriptable[A]
@@ -90,7 +90,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *
    *  @param n      the index where new elements are inserted.
    *  @param elems  the traversable collection containing the elements to insert.
-   *  @throws   IndexOutofBoundsException if the index `n` is not in the valid range
+   *  @throws   IndexOutOfBoundsException if the index `n` is not in the valid range
    *            `0 <= n <= length`.
    */
   def insertAll(n: Int, elems: collection.Traversable[A])
@@ -99,7 +99,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
     *
     *  @param n  the index which refers to the element to delete.
     *  @return   the previous element at index `n`
-    *   @throws   IndexOutofBoundsException if the if the index `n` is not in the valid range
+    *   @throws   IndexOutOfBoundsException if the if the index `n` is not in the valid range
     *            `0 <= n < length`.
     */
   def remove(n: Int): A
@@ -108,7 +108,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *
    *  @param n  the index which refers to the first element to remove.
    *  @param count  the number of elements to remove.
-   *  @throws   IndexOutofBoundsException if the index `n` is not in the valid range
+   *  @throws   IndexOutOfBoundsException if the index `n` is not in the valid range
    *            `0 <= n <= length - count`.
    *  @throws   IllegalArgumentException if `count < 0`.
    */
@@ -127,7 +127,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
     if (i != -1) remove(i)
     this
   }
-  
+
   /** Prepends elements to this buffer.
    *
    *  @param xs  the TraversableOnce containing the elements to prepend.
@@ -149,10 +149,10 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
   /** Prepends given elements to this buffer.
    *  @param elems  the elements to prepend.
    */
-  def prepend(elems: A*) { prependAll(elems) } 
+  def prepend(elems: A*) { prependAll(elems) }
 
   /** Prepends the elements contained in a traversable object to this buffer.
-   *  @param elems  the collection containing the elements to prepend.
+   *  @param xs  the collection containing the elements to prepend.
    */
   def prependAll(xs: TraversableOnce[A]) { xs ++=: this }
 
@@ -160,10 +160,10 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *
    *  @param n      the index where new elements are inserted.
    *  @param elems  the traversable collection containing the elements to insert.
-   *  @throws   IndexOutofBoundsException if the index `n` is not in the valid range
+   *  @throws   IndexOutOfBoundsException if the index `n` is not in the valid range
    *            `0 <= n <= length`.
    */
-  def insert(n: Int, elems: A*) { insertAll(n, elems) } 
+  def insert(n: Int, elems: A*) { insertAll(n, elems) }
 
   /** Removes the first ''n'' elements of this buffer.
    *
@@ -188,16 +188,16 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
     case Include(End, x)        => append(x)
     case Include(Index(n), x)   => insert(n, x)
     case Include(NoLo, x)       => this += x
-    
+
     case Update(Start, x)       => update(0, x)
     case Update(End, x)         => update(length - 1, x)
     case Update(Index(n), x)    => update(n, x)
-    
+
     case Remove(Start, x)       => if (this(0) == x) remove(0)
     case Remove(End, x)         => if (this(length - 1) == x) remove(length - 1)
     case Remove(Index(n), x)    => if (this(n) == x) remove(n)
     case Remove(NoLo, x)        => this -= x
-    
+
     case Reset()                => clear
     case s: Script[_]           => s.iterator foreach <<
     case _                      => throw new UnsupportedOperationException("message " + cmd + " not understood")
@@ -208,7 +208,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *           Unless overridden this is simply `"Buffer"`.
    */
   override def stringPrefix: String = "Buffer"
-    
+
   /** Provide a read-only view of this buffer as a sequence
    *  @return  A sequence which refers to this buffer for all its operations.
    */
@@ -230,7 +230,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
     }
   }
 
-  /** Adds a single element to this collection and returns 
+  /** Adds a single element to this collection and returns
    *  the collection itself.
    *
    *  $compatMutate
@@ -244,7 +244,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
 
   /** Adds two or more elements to this collection and returns
    *  the collection itself.
-   *  
+   *
    *  $compatMutate
    *  You are strongly recommended to use '++=' instead.
    *
@@ -257,7 +257,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
   def + (elem1: A, elem2: A, elems: A*): This = {
     this += elem1 += elem2 ++= elems
     repr
-  } 
+  }
 
   /** Creates a new collection containing both the elements of this collection and the provided
    *  traversable object.
@@ -265,10 +265,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *  @param xs     the traversable object.
    *  @return       a new collection consisting of all the elements of this collection and `xs`.
    */
-  @migration(2, 8,
-    "As of 2.8, ++ always creates a new collection, even on Buffers.\n"+
-    "Use ++= instead if you intend to add by side effect to an existing collection.\n"
-  )
+  @migration("`++` creates a new buffer. Use `++=` to add an element from this buffer and return that buffer itself.", "2.8.0")
   def ++(xs: GenTraversableOnce[A]): This = clone() ++= xs.seq
 
   @bridge
@@ -279,10 +276,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *  @param elem  the element to remove.
    *  @return      a new collection consisting of all the elements of this collection except `elem`.
    */
-  @migration(2, 8,
-    "As of 2.8, - always creates a new collection, even on Buffers.\n"+
-    "Use -= instead if you intend to remove by side effect from an existing collection.\n"
-  )
+  @migration("`-` creates a new buffer. Use `-=` to remove an element from this buffer and return that buffer itself.", "2.8.0")
   override def -(elem: A): This = clone() -= elem
 
   /** Creates a new collection with all the elements of this collection except the two
@@ -294,10 +288,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *  @return      a new collection consisting of all the elements of this collection except
    *               `elem1`, `elem2` and those in `elems`.
    */
-  @migration(2, 8,
-    "As of 2.8, - always creates a new collection, even on Buffers.\n"+
-    "Use -= instead if you intend to remove by side effect from an existing collection.\n"
-  )
+  @migration("`-` creates a new buffer. Use `-=` to remove an element from this buffer and return that buffer itself.", "2.8.0")
   override def -(elem1: A, elem2: A, elems: A*): This = clone() -= elem1 -= elem2 --= elems
 
   /** Creates a new collection with all the elements of this collection except those
@@ -307,10 +298,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *  @return         a new collection with all the elements of this collection except
    *                  those in `xs`
    */
-  @migration(2, 8,
-    "As of 2.8, -- always creates a new collection, even on Buffers.\n"+
-    "Use --= instead if you intend to remove by side effect from an existing collection.\n"
-  )
+  @migration("`--` creates a new buffer. Use `--=` to remove an element from this buffer and return that buffer itself.", "2.8.0")
   override def --(xs: GenTraversableOnce[A]): This = clone() --= xs.seq
 
   @bridge def --(xs: TraversableOnce[A]): This = --(xs: GenTraversableOnce[A])

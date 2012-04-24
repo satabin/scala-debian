@@ -22,9 +22,9 @@ import scala.collection.generic.{ CanBuildFrom => CBF }
  */
 case class Tuple3[+T1, +T2, +T3](_1: T1, _2: T2, _3: T3)
   extends Product3[T1, T2, T3]
-{  
-  override def toString() = "(" + _1 + "," + _2 + "," + _3 + ")"  
-  
+{
+  override def toString() = "(" + _1 + "," + _2 + "," + _3 + ")"
+
 
   @deprecated("Use `zipped` instead.", "2.9.0")
   def zip[Repr1, El1, El2, El3, To](implicit w1:   T1 => TLike[El1, Repr1],
@@ -40,7 +40,7 @@ case class Tuple3[+T1, +T2, +T3](_1: T1, _2: T2, _3: T3)
    * {{{
    * scala> val tuple = (List(1,2,3),List('a','b','c'),List("x","y","z"))
    * tuple: (List[Int], List[Char], List[java.lang.String]) = (List(1, 2, 3),List(a, b, c),List(x, y, z))
-   * 
+   *
    * scala> tuple.zipped map { (x,y,z) => x + ":" + y + ":" + z}
    * res8: List[java.lang.String] = List(1:a:x, 2:b:y, 3:c:z)
    * }}}
@@ -94,12 +94,12 @@ case class Tuple3[+T1, +T2, +T3](_1: T1, _2: T2, _3: T3)
       val elems2 = coll2.iterator
       val elems3 = coll3.iterator
       def result = (b1.result, b2.result, b3.result)
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext && elems3.hasNext) {
           val el2 = elems2.next
           val el3 = elems3.next
-          
+
           if (f(el1, el2, el3)) {
             b1 += el1
             b2 += el2
@@ -115,7 +115,7 @@ case class Tuple3[+T1, +T2, +T3](_1: T1, _2: T2, _3: T3)
     def exists(f: (El1, El2, El3) => Boolean): Boolean = {
       val elems2 = coll2.iterator
       val elems3 = coll3.iterator
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext && elems3.hasNext) {
           if (f(el1, elems2.next, elems3.next))
@@ -125,14 +125,14 @@ case class Tuple3[+T1, +T2, +T3](_1: T1, _2: T2, _3: T3)
       }
       false
     }
-    
+
     def forall(f: (El1, El2, El3) => Boolean): Boolean =
       !exists((x, y, z) => !f(x, y, z))
 
     def foreach[U](f: (El1, El2, El3) => U): Unit = {
       val elems2 = coll2.iterator
       val elems3 = coll3.iterator
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext && elems3.hasNext)
           f(el1, elems2.next, elems3.next)

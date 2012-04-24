@@ -21,8 +21,8 @@ import generic._
  */
 trait GenSeq[+A]
 extends GenSeqLike[A, GenSeq[A]]
-   with GenIterable[A] 
-   with Equals 
+   with GenIterable[A]
+   with Equals
    with GenericTraversableTemplate[A, GenSeq]
 {
   def seq: Seq[A]

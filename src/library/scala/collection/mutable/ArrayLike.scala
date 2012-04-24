@@ -14,10 +14,10 @@ import generic._
 
 /** A common supertrait of `ArrayOps` and `WrappedArray` that factors out most
  *  operations on arrays and wrapped arrays.
- *  
+ *
  *  @tparam A     type of the elements contained in the array like object.
  *  @tparam Repr  the type of the actual collection containing the elements.
- *  
+ *
  *  @define Coll ArrayLike
  *  @version 2.8
  *  @since   2.8
@@ -48,7 +48,7 @@ trait ArrayLike[A, +Repr] extends IndexedSeqOptimized[A, Repr] { self =>
   }
 
   @deprecated("use deep.toString instead", "2.8.0")
-  final def deepToString() = 
+  final def deepToString() =
     deep.toString
 
   @deprecated("use deep.mkString instead", "2.8.0")
@@ -56,7 +56,7 @@ trait ArrayLike[A, +Repr] extends IndexedSeqOptimized[A, Repr] { self =>
     deep.mkString(start, sep, end)
 
   @deprecated("use deep.mkString instead", "2.8.0")
-  final def deepMkString(sep: String): String = 
+  final def deepMkString(sep: String): String =
     deepMkString("", sep, "")
 
   @deprecated("use array1.deep.equals(array2.deep) instead", "2.8.0")

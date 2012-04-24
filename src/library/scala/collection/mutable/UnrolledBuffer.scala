@@ -8,24 +8,24 @@ import annotation.tailrec
  *
  *  Unrolled linked lists store elements in linked fixed size
  *  arrays.
- *  
+ *
  *  Unrolled buffers retain locality and low memory overhead
  *  properties of array buffers, but offer much more efficient
  *  element addition, since they never reallocate and copy the
  *  internal array.
- *  
+ *
  *  However, they provide `O(n/m)` complexity random access,
  *  where `n` is the number of elements, and `m` the size of
  *  internal array chunks.
- *  
+ *
  *  Ideal to use when:
  *  - elements are added to the buffer and then all of the
  *    elements are traversed sequentially
  *  - two unrolled buffers need to be concatenated (see `concat`)
- *  
+ *
  *  Better than singly linked lists for random access, but
  *  should still be avoided for such a purpose.
- *  
+ *
  *  @define coll unrolled buffer
  *  @define Coll UnrolledBuffer
  *  @author Aleksandar Prokopec
@@ -40,65 +40,65 @@ extends collection.mutable.Buffer[T]
    with Serializable
 {
   import UnrolledBuffer.Unrolled
-  
+
   @transient private var headptr = newUnrolled
   @transient private var lastptr = headptr
   @transient private var sz = 0
-  
+
   private[collection] def headPtr = headptr
   private[collection] def headPtr_=(head: Unrolled[T]) = headptr = head
   private[collection] def lastPtr = lastptr
   private[collection] def lastPtr_=(last: Unrolled[T]) = lastptr = last
   private[collection] def size_=(s: Int) = sz = s
-  
+
   protected[this] override def newBuilder = new UnrolledBuffer[T]
-  
+
   protected def newUnrolled = new Unrolled[T](this)
-  
+
   private[collection] def calcNextLength(sz: Int) = sz
-  
+
   def classManifestCompanion = UnrolledBuffer
-  
+
   /** Concatenates the targer unrolled buffer to this unrolled buffer.
-   *  
+   *
    *  The specified buffer `that` is cleared after this operation. This is
    *  an O(1) operation.
-   *  
+   *
    *  @param that    the unrolled buffer whose elements are added to this buffer
    */
   def concat(that: UnrolledBuffer[T]) = {
     // bind the two together
     if (!lastptr.bind(that.headptr)) lastptr = that.lastPtr
-    
+
     // update size
     sz += that.sz
-    
+
     // `that` is no longer usable, so clear it
     // here we rely on the fact that `clear` allocates
     // new nodes instead of modifying the previous ones
     that.clear
-    
+
     // return a reference to this
     this
   }
-  
+
   def +=(elem: T) = {
     lastptr = lastptr.append(elem)
     sz += 1
     this
   }
-  
+
   def clear() {
     headptr = newUnrolled
     lastptr = headptr
     sz = 0
   }
-  
+
   def iterator = new Iterator[T] {
     var pos: Int = -1
     var node: Unrolled[T] = headptr
     scan()
-    
+
     private def scan() {
       pos += 1
       while (pos >= node.size) {
@@ -114,51 +114,51 @@ extends collection.mutable.Buffer[T]
       r
     } else Iterator.empty.next
   }
-  
+
   // this should be faster than the iterator
   override def foreach[U](f: T => U) = headptr.foreach(f)
-  
+
   def result = this
-  
+
   def length = sz
-  
+
   def apply(idx: Int) =
     if (idx >= 0 && idx < sz) headptr(idx)
     else throw new IndexOutOfBoundsException(idx.toString)
-  
+
   def update(idx: Int, newelem: T) =
     if (idx >= 0 && idx < sz) headptr(idx) = newelem
     else throw new IndexOutOfBoundsException(idx.toString)
-  
+
   def remove(idx: Int) =
     if (idx >= 0 && idx < sz) {
       sz -= 1
       headptr.remove(idx, this)
     } else throw new IndexOutOfBoundsException(idx.toString)
-  
+
   def +=:(elem: T) = {
     headptr = headptr.prepend(elem)
     sz += 1
     this
   }
-  
+
   def insertAll(idx: Int, elems: collection.Traversable[T]) =
     if (idx >= 0 && idx <= sz) {
       headptr.insertAll(idx, elems, this)
       sz += elems.size
     } else throw new IndexOutOfBoundsException(idx.toString)
-  
+
   private def writeObject(out: java.io.ObjectOutputStream) {
     out.defaultWriteObject
     out.writeInt(sz)
     for (elem <- this) out.writeObject(elem)
   }
-  
+
   private def readObject(in: java.io.ObjectInputStream) {
     in.defaultReadObject
-    
+
     val num = in.readInt
-    
+
     headPtr = newUnrolled
     lastPtr = headPtr
     sz = 0
@@ -168,14 +168,14 @@ extends collection.mutable.Buffer[T]
       i += 1
     }
   }
-  
+
   override def stringPrefix = "UnrolledBuffer"
 }
 
 
 object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
   /** $genericCanBuildFromInfo */
-  implicit def canBuildFrom[T](implicit m: ClassManifest[T]): CanBuildFrom[Coll, T, UnrolledBuffer[T]] = 
+  implicit def canBuildFrom[T](implicit m: ClassManifest[T]): CanBuildFrom[Coll, T, UnrolledBuffer[T]] =
     new GenericCanBuildFrom[T]
   def newBuilder[T](implicit m: ClassManifest[T]): Builder[T, UnrolledBuffer[T]] = new UnrolledBuffer[T]
 
@@ -188,9 +188,9 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
   class Unrolled[T: ClassManifest] private[collection] (var size: Int, var array: Array[T], var next: Unrolled[T], val buff: UnrolledBuffer[T] = null) {
     private[collection] def this() = this(0, new Array[T](unrolledlength), null, null)
     private[collection] def this(b: UnrolledBuffer[T]) = this(0, new Array[T](unrolledlength), null, b)
-    
+
     private def nextlength = if (buff eq null) unrolledlength else buff.calcNextLength(array.length)
-    
+
     // adds and returns itself or the new unrolled if full
     @tailrec final def append(elem: T): Unrolled[T] = if (size < array.length) {
       array(size) = elem
@@ -245,7 +245,7 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
       }
     }
     // returns pointer to new last if changed
-    @tailrec final def remove(idx: Int, buffer: UnrolledBuffer[T]): T = 
+    @tailrec final def remove(idx: Int, buffer: UnrolledBuffer[T]): T =
       if (idx < size) {
         // remove the element
         // then try to merge with the next bucket
@@ -271,7 +271,7 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
       next = next.next
       if (next eq null) true else false // checks if last node was thrown out
     } else false
-    
+
     @tailrec final def insertAll(idx: Int, t: collection.Traversable[T], buffer: UnrolledBuffer[T]): Unit = if (idx < size) {
       // divide this node at the appropriate position and insert all into head
       // update new next
@@ -279,17 +279,17 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
       Array.copy(array, idx, newnextnode.array, 0, size - idx)
       newnextnode.size = size - idx
       newnextnode.next = next
-      
+
       // update this
       nullout(idx, size)
       size = idx
       next = null
-      
+
       // insert everything from iterable to this
       var curr = this
       for (elem <- t) curr = curr append elem
       curr.next = newnextnode
-      
+
       // try to merge the last node of this with the newnextnode
       if (curr.tryMergeWithNext()) buffer.lastPtr = curr
     } else insertAll(idx - size, t, buffer)
@@ -300,7 +300,7 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
         idx += 1
       }
     }
-    
+
     // assumes this is the last node
     // `thathead` and `thatlast` are head and last node
     // of the other unrolled list, respectively
@@ -309,9 +309,9 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
       next = thathead
       tryMergeWithNext()
     }
-    
+
     override def toString = array.take(size).mkString("Unrolled[" + array.length + "](", ", ", ")") + " -> " + (if (next ne null) next.toString else "")
   }
-  
+
 }
 

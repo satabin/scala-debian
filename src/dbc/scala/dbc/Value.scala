@@ -13,15 +13,15 @@ package scala.dbc;
 
 /** A SQL-99 value of any type. */
 @deprecated(DbcIsDeprecated, "2.9.0") abstract class Value {
-  
+
   /** The SQL-99 type of the value. */
   val dataType: DataType;
-  
+
   type NativeType = dataType.type#NativeType;
-  
+
   val nativeValue: NativeType;
-  
+
   /** A SQL-99 compliant string representation of the value. */
   def sqlString: String;
-  
+
 }

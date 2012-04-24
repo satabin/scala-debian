@@ -18,13 +18,13 @@ package result
 
   /** The statement that generated this relation. */
   def statement: scala.dbc.statement.Relation
-  
+
   /** A JDBC result containing this relation. */
   protected def sqlResult: java.sql.ResultSet
-  
+
   /** A JDBC metadata object attached to the relation. */
   protected def sqlMetadata: java.sql.ResultSetMetaData = sqlResult.getMetaData()
-  
+
   /** Metadata about all fields in a tuple of the relation. */
   def metadata: List[FieldMetadata] =
     for (count <- List.range(1, sqlMetadata.getColumnCount()+1)) yield
@@ -36,7 +36,7 @@ package result
         val schema: String = sqlMetadata.getSchemaName(count)
         val table: String = sqlMetadata.getTableName(count)
       }
-  
+
   /** Metadata about the field at the given index. If there is no such
    * field <code>None</code> is returned instead. */
   def metadataFor (index:Int): Option[FieldMetadata] = {
@@ -46,12 +46,12 @@ package result
     else
       None
   }
-  
+
   /** Metadata about the field with the given column name. If there is no
    * such field, <code>None</code> is returned instead. */
-  def metadataFor (name:String): Option[FieldMetadata] = 
+  def metadataFor (name:String): Option[FieldMetadata] =
     metadata.find(f=>(f.name==name));
-  
+
   /** An iterator on the tuples of the relation.
    * <h3>Caution</h3> A Relation only has one single iterator, due to limitations
    * in DBMS. This means that if this method is called multiple times, all returned
@@ -77,6 +77,6 @@ package result
       }
       else sys.error("next on empty iterator")
     }
-  }	
+  }
 
 }

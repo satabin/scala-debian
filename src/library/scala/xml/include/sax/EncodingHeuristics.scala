@@ -18,7 +18,7 @@ import scala.util.matching.Regex
  * (which should be buffered) and attempts to guess
  * what the encoding of the text in the stream is.
  * If it fails to determine the type of the encoding,
- * it returns the default UTF-8. 
+ * it returns the default UTF-8.
  *
  * @author Burak Emir
  * @author Paul Phillips
@@ -41,20 +41,20 @@ object EncodingHeuristics
     * by examining the input stream, as specified at
     * [[http://www.w3.org/TR/xml/#sec-guessing w3]].
     *
-    * @param    in   `InputStream` to read from. 
+    * @param    in   `InputStream` to read from.
     * @throws IOException if the stream cannot be reset
     * @return         the name of the encoding.
-    */    
+    */
   def readEncodingFromStream(in: InputStream): String = {
-    var ret: String = null    
+    var ret: String = null
     val bytesToRead = 1024 // enough to read most XML encoding declarations
     def resetAndRet = { in.reset ; ret }
-    
+
     // This may fail if there are a lot of space characters before the end
     // of the encoding declaration
     in mark bytesToRead
     val bytes = (in.read, in.read, in.read, in.read)
-    
+
     // first look for byte order mark
     ret = bytes match {
       case (0x00, 0x00, 0xFE, 0xFF) => bigUCS4
@@ -68,7 +68,7 @@ object EncodingHeuristics
     }
     if (ret != null)
       return resetAndRet
-    
+
     def readASCIIEncoding: String = {
       val data = new Array[Byte](bytesToRead - 4)
       val length = in.read(data, 0, bytesToRead - 4)
@@ -81,9 +81,9 @@ object EncodingHeuristics
         case Some(md) => md.subgroups(0)
       }
     }
-          
-    // no byte order mark present; first character must be '<' or whitespace        
-    ret = bytes match {    
+
+    // no byte order mark present; first character must be '<' or whitespace
+    ret = bytes match {
       case (0x00, 0x00, 0x00, '<' ) => bigUCS4
       case ('<' , 0x00, 0x00, 0x00) => littleUCS4
       case (0x00, 0x00, '<' , 0x00) => unusualUCS4

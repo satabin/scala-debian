@@ -25,9 +25,9 @@ import annotation.bridge
 trait GenSetLike[A, +Repr]
 extends GenIterableLike[A, Repr]
    with (A => Boolean)
-   with Equals 
+   with Equals
    with Parallelizable[A, parallel.ParSet[A]] {
-  
+
   def iterator: Iterator[A]
   def contains(elem: A): Boolean
   def +(elem: A): Repr
@@ -42,12 +42,12 @@ extends GenIterableLike[A, Repr]
    *  @return  `true` if `elem` is contained in this set, `false` otherwise.
    */
   def apply(elem: A): Boolean = this contains elem
-  
+
   /** Computes the intersection between this set and another set.
    *
    *  @param   that  the set to intersect with.
    *  @return  a new set consisting of all elements that are both in this
-   *  set and in the given set `that`. 
+   *  set and in the given set `that`.
    */
   def intersect(that: GenSet[A]): Repr = this filter that
 
@@ -59,18 +59,18 @@ extends GenIterableLike[A, Repr]
    *  '''Note:'''  Same as `intersect`.
    *  @param   that  the set to intersect with.
    *  @return  a new set consisting of all elements that are both in this
-   *  set and in the given set `that`. 
+   *  set and in the given set `that`.
    */
   def &(that: GenSet[A]): Repr = this intersect that
 
   @bridge
   def &(that: Set[A]): Repr = &(that: GenSet[A])
-  
+
   /** Computes the union between of set and another set.
    *
    *  @param   that  the set to form the union with.
    *  @return  a new set consisting of all elements that are in this
-   *  set or in the given set `that`. 
+   *  set or in the given set `that`.
    */
   def union(that: GenSet[A]): Repr
 
@@ -79,7 +79,7 @@ extends GenIterableLike[A, Repr]
    *  '''Note:'''  Same as `union`.
    *  @param   that  the set to form the union with.
    *  @return  a new set consisting of all elements that are in this
-   *  set or in the given set `that`. 
+   *  set or in the given set `that`.
    */
   def | (that: GenSet[A]): Repr = this union that
 
@@ -116,7 +116,7 @@ extends GenIterableLike[A, Repr]
 
   @bridge
   def subsetOf(that: Set[A]): Boolean = subsetOf(that: GenSet[A])
-  
+
   /** Compares this set with another object for equality.
    *
    *  '''Note:''' This operation contains an unchecked cast: if `that`
@@ -137,7 +137,7 @@ extends GenIterableLike[A, Repr]
     case _ =>
       false
   }
-  
+
   // Careful! Don't write a Set's hashCode like:
   //    override def hashCode() = this map (_.hashCode) sum
   // Calling map on a set drops duplicates: any hashcode collisions would

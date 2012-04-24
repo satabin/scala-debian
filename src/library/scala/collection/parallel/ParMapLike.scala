@@ -26,12 +26,12 @@ import scala.collection.mutable.Builder
 
 /** A template trait for mutable parallel maps. This trait is to be mixed in
  *  with concrete parallel maps to override the representation type.
- *  
+ *
  *  $sideeffects
- *  
+ *
  *  @tparam K    the key type of the map
  *  @tparam V    the value type of the map
- *  
+ *
  *  @author Aleksandar Prokopec
  *  @since 2.9
  */
@@ -43,16 +43,16 @@ extends GenMapLike[K, V, Repr]
    with ParIterableLike[(K, V), Repr, Sequential]
 {
 self =>
-  
+
   def default(key: K): V = throw new NoSuchElementException("key not found: " + key)
-  
+
   def empty: Repr
-  
+
   def apply(key: K) = get(key) match {
     case Some(v) => v
     case None => default(key)
   }
-    
+
   // note - should not override toMap (could be mutable)
 }
 

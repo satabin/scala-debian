@@ -18,7 +18,7 @@ import scala.annotation.tailrec
  *  the implementation of several methods under the assumption of fast random access.
  *
  *  $indexedSeqInfo
- * 
+ *
  *  @define willNotTerminateInf
  *  @define mayNotTerminateInf
  */
@@ -34,10 +34,10 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
     while (i < len) { f(this(i)); i += 1 }
   }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def forall(p: A => Boolean): Boolean = prefixLength(p(_)) == length
 
-  override /*IterableLike*/  
+  override /*IterableLike*/
   def exists(p: A => Boolean): Boolean = prefixLength(!p(_)) != length
 
   override /*IterableLike*/
@@ -57,21 +57,21 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
     else foldr(start, end - 1, op(this(end - 1), z), op)
 
   override /*TraversableLike*/
-  def foldLeft[B](z: B)(op: (B, A) => B): B = 
+  def foldLeft[B](z: B)(op: (B, A) => B): B =
     foldl(0, length, z, op)
 
   override /*IterableLike*/
-  def foldRight[B](z: B)(op: (A, B) => B): B = 
+  def foldRight[B](z: B)(op: (A, B) => B): B =
     foldr(0, length, z, op)
 
   override /*TraversableLike*/
-  def reduceLeft[B >: A](op: (B, A) => B): B = 
+  def reduceLeft[B >: A](op: (B, A) => B): B =
     if (length > 0) foldl(1, length, this(0), op) else super.reduceLeft(op)
 
   override /*IterableLike*/
-  def reduceRight[B >: A](op: (A, B) => B): B = 
+  def reduceRight[B >: A](op: (A, B) => B): B =
     if (length > 0) foldr(0, length - 1, this(length - 1), op) else super.reduceRight(op)
-  
+
   override /*IterableLike*/
   def zip[A1 >: A, B, That](that: GenIterable[B])(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That = that match {
     case that: IndexedSeq[_] =>
@@ -100,7 +100,7 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
     }
     b.result
   }
-  
+
   override /*IterableLike*/
   def slice(from: Int, until: Int): Repr = {
     val lo    = math.max(from, 0)
@@ -164,8 +164,8 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
       }
     case _ =>
       super.sameElements(that)
-  }        
-  
+  }
+
   override /*IterableLike*/
   def copyToArray[B >: A](xs: Array[B], start: Int, len: Int) {
     var i = 0
@@ -179,10 +179,10 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
   }
 
   // Overridden methods from Seq
-  
+
   override /*SeqLike*/
   def lengthCompare(len: Int): Int = length - len
-  
+
   override /*SeqLike*/
   def segmentLength(p: A => Boolean, from: Int): Int = {
     val len = length
@@ -197,7 +197,7 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
   def indexWhere(p: A => Boolean, from: Int): Int = {
     val start = from max 0
     negLength(start + segmentLength(!p(_), start))
-  }	
+  }
 
   override /*SeqLike*/
   def lastIndexWhere(p: A => Boolean, end: Int): Int = {
@@ -222,7 +222,7 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
   def reverseIterator: Iterator[A] = new Iterator[A] {
     private var i = self.length
     def hasNext: Boolean = 0 < i
-    def next: A = 
+    def next: A =
       if (0 < i) {
         i -= 1
         self(i)
@@ -248,7 +248,7 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
       while (i < thisLen && thatElems.hasNext) {
         if (this(i) != thatElems.next())
           return false
-        
+
         i += 1
       }
       !thatElems.hasNext
@@ -259,7 +259,7 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
     case that: IndexedSeq[_] =>
       var i = length - 1
       var j = that.length - 1
-      
+
       (j <= i) && {
         while (j >= 0) {
           if (this(i) != that(j))

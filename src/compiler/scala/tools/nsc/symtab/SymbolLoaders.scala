@@ -5,7 +5,7 @@
 
 package scala.tools.nsc
 package symtab
- 
+
 import java.io.IOException
 import ch.epfl.lamp.compiler.msil.{ Type => MSILType, Attribute => MSILAttribute }
 
@@ -29,7 +29,7 @@ abstract class SymbolLoaders {
     assert(owner.info.decls.lookup(member.name) == NoSymbol, owner.fullName + "." + member.name)
     owner.info.decls enter member
     member
-  }    
+  }
 
   private def realOwner(root: Symbol): Symbol = {
     if (root.isRoot) definitions.EmptyPackageClass else root
@@ -86,7 +86,7 @@ abstract class SymbolLoaders {
 
     /** Load source or class file for `root', return */
     protected def doComplete(root: Symbol): Unit
-    
+
     def sourcefile: Option[AbstractFile] = None
 
     /**
@@ -131,8 +131,8 @@ abstract class SymbolLoaders {
 
     private def markAbsent(sym: Symbol): Unit = {
       val tpe: Type = if (ok) NoType else ErrorType
-      
-      if (sym != NoSymbol) 
+
+      if (sym != NoSymbol)
         sym setInfo tpe
     }
     private def initRoot(root: Symbol) {
@@ -164,14 +164,14 @@ abstract class SymbolLoaders {
           )
         else if (settings.termConflict.value == "package") {
           global.warning(
-            "Resolving package/object name conflict in favor of package " + 
+            "Resolving package/object name conflict in favor of package " +
             preExisting.fullName + ".  The object will be inaccessible."
           )
           root.info.decls.unlink(preExisting)
         }
         else {
           global.warning(
-            "Resolving package/object name conflict in favor of object " + 
+            "Resolving package/object name conflict in favor of object " +
             preExisting.fullName + ".  The package will be inaccessible."
           )
           return
@@ -210,13 +210,13 @@ abstract class SymbolLoaders {
       val sourcepaths = classpath.sourcepaths
       for (classRep <- classpath.classes if doLoad(classRep)) {
         ((classRep.binary, classRep.source) : @unchecked) match {
-          case (Some(bin), Some(src)) if needCompile(bin, src) => 
+          case (Some(bin), Some(src)) if needCompile(bin, src) =>
             if (settings.verbose.value) inform("[symloader] picked up newer source file for " + src.path)
             enterToplevelsFromSource(root, classRep.name, src)
-          case (None, Some(src)) => 
+          case (None, Some(src)) =>
             if (settings.verbose.value) inform("[symloader] no class, picked up source file for " + src.path)
             enterToplevelsFromSource(root, classRep.name, src)
-          case (Some(bin), _) => 
+          case (Some(bin), _) =>
             enterClassAndModule(root, classRep.name, newClassLoader(bin))
         }
       }
@@ -258,7 +258,7 @@ abstract class SymbolLoaders {
     }
   }
 
-  class JavaPackageLoader(classpath: ClassPath[AbstractFile]) extends PackageLoader(classpath) {    
+  class JavaPackageLoader(classpath: ClassPath[AbstractFile]) extends PackageLoader(classpath) {
     protected def needCompile(bin: AbstractFile, src: AbstractFile) =
       (src.lastModified >= bin.lastModified)
 
@@ -300,7 +300,7 @@ abstract class SymbolLoaders {
     private object classfileParser extends ClassfileParser {
       val global: SymbolLoaders.this.global.type = SymbolLoaders.this.global
     }
-    
+
     protected def description = "class file "+ classfile.toString
 
     protected def doComplete(root: Symbol) {

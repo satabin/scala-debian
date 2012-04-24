@@ -11,9 +11,9 @@ package scala.reflect
 
 /** <p>
  *    This annotation indicates that a JavaBean-compliant BeanInfo
- *    class should be generated for this annotated Scala class. 
+ *    class should be generated for this annotated Scala class.
  *    A val becomes a read-only property. A var becomes a read-write
- *    property. A def becomes a method. 
+ *    property. A def becomes a method.
  *  </p>
  *
  *  @author Ross Judson (rjudson@managedobjects.com)

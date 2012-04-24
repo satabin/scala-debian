@@ -13,33 +13,33 @@ import generic._
 import parallel.immutable.ParMap
 import annotation.bridge
 
-/** 
+/**
  *  A generic template for immutable maps from keys of type `A`
  *  to values of type `B`.
  *  To implement a concrete map, you need to provide implementations of the
  *  following methods (where `This` is the type of the actual map implementation):
- *  
+ *
  *  {{{
  *    def get(key: A): Option[B]
  *    def iterator: Iterator[(A, B)]
  *    def + [B1 >: B](kv: (A, B)): Map[A, B1]
  *    def - (key: A): This
  *  }}}
- *  
- *  If you wish that transformer methods like `take`, `drop`, `filter` return the 
+ *
+ *  If you wish that transformer methods like `take`, `drop`, `filter` return the
  *  same kind of map, you should also override:
- *  
+ *
  *  {{{
  *    def empty: This
  *  }}}
- *  
+ *
  *  It is also good idea to override methods `foreach` and
  *  `size` for efficiency.
- *  
+ *
  *  @param A     the type of the keys contained in this collection.
  *  @param B     the type of the values associated with the keys.
  *  @param This  The type of the actual map implementation.
- *  
+ *
  *  @author  Martin Odersky
  *  @version 2.8
  *  @since   2.8
@@ -53,14 +53,14 @@ trait MapLike[A, +B, +This <: MapLike[A, B, This] with Map[A, B]]
 
   protected[this] override def parCombiner = ParMap.newCombiner[A, B]
 
-  /** A new immutable map containing updating this map with a given key/value mapping. 
+  /** A new immutable map containing updating this map with a given key/value mapping.
    *  @param    key the key
    *  @param    value the value
-   *  @return   A new map with the new key/value mapping 
+   *  @return   A new map with the new key/value mapping
    */
   override def updated [B1 >: B](key: A, value: B1): immutable.Map[A, B1] = this + ((key, value))
 
-  /** Add a key/value pair to this map, returning a new map. 
+  /** Add a key/value pair to this map, returning a new map.
    *  @param    kv the key/value pair.
    *  @return   A new map with the new binding added to this map.
    */
@@ -83,7 +83,7 @@ trait MapLike[A, +B, +This <: MapLike[A, B, This] with Map[A, B]]
    *  @param xs      the traversable object consisting of key-value pairs.
    *  @return        a new immutable map with the bindings of this map and those from `xs`.
    */
-  override def ++[B1 >: B](xs: GenTraversableOnce[(A, B1)]): immutable.Map[A, B1] = 
+  override def ++[B1 >: B](xs: GenTraversableOnce[(A, B1)]): immutable.Map[A, B1] =
     ((repr: immutable.Map[A, B1]) /: xs.seq) (_ + _)
 
   @bridge def ++[B1 >: B](xs: TraversableOnce[(A, B1)]): immutable.Map[A, B1] = ++(xs: GenTraversableOnce[(A, B1)])
@@ -98,7 +98,7 @@ trait MapLike[A, +B, +This <: MapLike[A, B, This] with Map[A, B]]
     def iterator = self.iterator.filter(kv => p(kv._1))
     override def contains(key: A) = self.contains(key) && p(key)
     def get(key: A) = if (!p(key)) None else self.get(key)
-  }    
+  }
 
   /** Transforms this map by applying a function to every retrieved value.
    *  @param  f   the function used to transform values of this map.
@@ -112,17 +112,17 @@ trait MapLike[A, +B, +This <: MapLike[A, B, This] with Map[A, B]]
     override def contains(key: A) = self.contains(key)
     def get(key: A) = self.get(key).map(f)
   }
-  
+
   /** Collects all keys of this map in a set.
    *  @return  a set containing all keys of this map.
    */
   override def keySet: immutable.Set[A] = new ImmutableDefaultKeySet
-  
+
   protected class ImmutableDefaultKeySet extends super.DefaultKeySet with immutable.Set[A] {
     override def + (elem: A): immutable.Set[A] =
       if (this(elem)) this
       else immutable.Set[A]() ++ this + elem
-    override def - (elem: A): immutable.Set[A] = 
+    override def - (elem: A): immutable.Set[A] =
       if (this(elem)) immutable.Set[A]() ++ this - elem
       else this
   }

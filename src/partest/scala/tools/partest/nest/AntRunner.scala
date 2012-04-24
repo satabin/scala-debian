@@ -14,7 +14,7 @@ import java.io.File
 import scala.tools.nsc.io.{ Directory }
 
 class AntRunner extends DirectRunner {
-  
+
   val fileManager = new FileManager {
     var JAVACMD: String = "java"
     var JAVAC_CMD: String = "javac"
@@ -23,7 +23,7 @@ class AntRunner extends DirectRunner {
     val testRootPath: String = "test"
     val testRootDir: Directory = Directory(testRootPath)
   }
-  
-  def reflectiveRunTestsForFiles(kindFiles: Array[File], kind: String) = 
+
+  def reflectiveRunTestsForFiles(kindFiles: Array[File], kind: String) =
     runTestsForFiles(kindFiles.toList, kind)
 }

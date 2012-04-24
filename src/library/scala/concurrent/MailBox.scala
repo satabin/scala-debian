@@ -68,7 +68,7 @@ class MailBox extends AnyRef with ListQueueCreator {
   /**
   * First check whether a pending receiver is applicable to the sent
   * message. If yes, the receiver is notified. Otherwise the message
-  * is appended to the linked list of sent messages.  
+  * is appended to the linked list of sent messages.
   */
   def send(msg: Message): Unit = synchronized {
     receiverQueue.extractFirst(receivers, r => r.isDefinedAt(msg)) match {

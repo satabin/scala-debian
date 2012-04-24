@@ -22,10 +22,10 @@ import java.awt.event._
 class EditorPane(contentType0: String, text0: String) extends TextComponent {
 	override lazy val peer: JEditorPane = new JEditorPane(contentType0, text0) with SuperMixin
 	def this() = this("text/plain", "")
-	
+
 	def contentType: String = peer.getContentType
 	def contentType_=(t: String) = peer.setContentType(t)
-	
+
 	def editorKit: EditorKit = peer.getEditorKit
 	def editorKit_=(k: EditorKit) = peer.setEditorKit(k)
 }

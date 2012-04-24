@@ -10,7 +10,7 @@
 
 package scala.actors
 
-/** 
+/**
  *  @author Philipp Haller
  */
 private[actors] class ActorTask(actor: Actor,

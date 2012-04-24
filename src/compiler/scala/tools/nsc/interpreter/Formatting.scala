@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools.nsc
 package interpreter
 
@@ -10,7 +10,7 @@ import util.stringFromWriter
 
 trait Formatting {
   def prompt: String
-  
+
   def spaces(code: String): String = {
     /** Heuristic to avoid indenting and thereby corrupting """-strings and XML literals. */
     val tokens = List("\"\"\"", "</", "/>")

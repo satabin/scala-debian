@@ -110,11 +110,11 @@ object BytePickle {
         case None =>
           val sPrime = refDef.appP(Def(), state.stream)
           val l = pe.nextLoc()
-          
+
           val sPrimePrime = pa.appP(v, new PicklerState(sPrime, pe))
-          
+
           pe.update(v, l)
-          
+
           return sPrimePrime
         case Some(l) =>
           val sPrime = refDef.appP(Ref(), state.stream)

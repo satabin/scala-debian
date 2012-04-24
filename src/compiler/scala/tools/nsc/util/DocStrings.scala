@@ -21,7 +21,7 @@ object DocStrings {
     if (start < str.length && isWhitespace(str charAt start)) skipWhitespace(str, start + 1)
     else start
 
-  /** Returns index of string `str` following `start` skipping 
+  /** Returns index of string `str` following `start` skipping
    *  sequence of identifier characters.
    */
   def skipIdent(str: String, start: Int): Int =
@@ -82,7 +82,7 @@ object DocStrings {
 
   /** Does interval `iv` start with given `tag`?
    */
-  def startsWithTag(str: String, section: (Int, Int), tag: String): Boolean = 
+  def startsWithTag(str: String, section: (Int, Int), tag: String): Boolean =
     startsWithTag(str, section._1, tag)
 
   def startsWithTag(str: String, start: Int, tag: String): Boolean =
@@ -111,11 +111,11 @@ object DocStrings {
   /** Optionally start and end index of return section in `str`, or `None`
    *  if `str` does not have a @return.
    */
-  def returnDoc(str: String, sections: List[(Int, Int)]): Option[(Int, Int)] = 
+  def returnDoc(str: String, sections: List[(Int, Int)]): Option[(Int, Int)] =
     sections find (startsWithTag(str, _, "@return"))
-    
+
   /** Extracts variable name from a string, stripping any pair of surrounding braces */
-  def variableName(str: String): String = 
+  def variableName(str: String): String =
     if (str.length >= 2 && (str charAt 0) == '{' && (str charAt (str.length - 1)) == '}')
       str.substring(1, str.length - 1)
     else

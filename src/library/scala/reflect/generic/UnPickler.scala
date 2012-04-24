@@ -19,7 +19,7 @@ import annotation.switch
  *  @version 1.0
  */
 @deprecated("scala.reflect.generic will be removed", "2.9.1")
-abstract class UnPickler { 
+abstract class UnPickler {
 
   val global: Universe
   import global._
@@ -60,7 +60,7 @@ abstract class UnPickler {
 
     /** A map from entry numbers to symbols, types, or annotations */
     private val entries = new Array[AnyRef](index.length)
-    
+
     /** A map from symbols to their associated `decls' scopes */
     private val symScopes = new HashMap[Symbol, Scope]
 
@@ -124,9 +124,9 @@ abstract class UnPickler {
       val major = readNat()
       val minor = readNat()
       if (major != MajorVersion || minor > MinorVersion)
-        throw new IOException("Scala signature " + classRoot.decodedName + 
-                              " has wrong version\n expected: " + 
-                              MajorVersion + "." + MinorVersion + 
+        throw new IOException("Scala signature " + classRoot.decodedName +
+                              " has wrong version\n expected: " +
+                              MajorVersion + "." + MinorVersion +
                               "\n found: " + major + "." + minor +
                               " in "+filename)
     }
@@ -165,7 +165,7 @@ abstract class UnPickler {
       tag == CHILDREN
     }
 
-    /** Does entry represent a refinement symbol? 
+    /** Does entry represent a refinement symbol?
      *  pre: Entry is a class symbol
      */
     protected def isRefinementSymbolEntry(i: Int): Boolean = {
@@ -173,7 +173,7 @@ abstract class UnPickler {
       readIndex = index(i)
       val tag = readByte().toInt
       assert(tag == CLASSsym)
-      
+
       readNat(); // read length
       val result = readNameRef() == tpnme.REFINE_CLASS_NAME
       readIndex = savedIndex
@@ -217,7 +217,7 @@ abstract class UnPickler {
       def readExtSymbol(): Symbol = {
         val name  = readNameRef()
         val owner = if (atEnd) definitions.RootClass else readSymbolRef()
-        
+
         def fromName(name: Name) = mkTermName(name) match {
           case nme.ROOT     => definitions.RootClass
           case nme.ROOTPKG  => definitions.RootPackage
@@ -250,7 +250,7 @@ abstract class UnPickler {
             // (3) Try as a nested object symbol.
             nestedObjectSymbol orElse {
               // (4) Otherwise, fail.
-              errorMissingRequirement(name, owner)                
+              errorMissingRequirement(name, owner)
             }
           }
         }
@@ -261,14 +261,14 @@ abstract class UnPickler {
         case EXTref | EXTMODCLASSref => return readExtSymbol()
         case _                       => ()
       }
-      
+
       // symbols that were pickled with Pickler.writeSymInfo
       val nameref      = readNat()
       val name         = at(nameref, readName)
       val owner        = readSymbolRef()
       val flags        = pickledToRawFlags(readLongNat())
       var inforef      = readNat()
-      val privateWithin = 
+      val privateWithin =
         if (!isSymbolRef(inforef)) NoSymbol
         else {
           val pw = at(inforef, readSymbol)
@@ -294,13 +294,13 @@ abstract class UnPickler {
             newLazyTypeRefAndAlias(inforef, readNat())
           }
         )
-        if (sym.owner.isClass && sym != classRoot && sym != moduleRoot && 
+        if (sym.owner.isClass && sym != classRoot && sym != moduleRoot &&
             !sym.isModuleClass && !sym.isRefinementClass && !sym.isTypeParameter && !sym.isExistentiallyBound)
           symScope(sym.owner) enter sym
-        
+
         sym
       }
-      
+
       finishSym(tag match {
         case TYPEsym  => owner.newAbstractType(mkTypeName(name))
         case ALIASsym => owner.newAliasType(mkTypeName(name))
@@ -313,7 +313,7 @@ abstract class UnPickler {
           }
           if (!atEnd)
             sym.typeOfThis = newLazyTypeRef(readNat())
-          
+
           sym
         case MODULEsym =>
           val clazz = at(inforef, () => readType()).typeSymbol // after the NMT_TRANSITION period, we can leave off the () => ... ()
@@ -333,10 +333,10 @@ abstract class UnPickler {
       })
     }
 
-    /** Read a type 
+    /** Read a type
      *
      * @param forceProperType is used to ease the transition to NullaryMethodTypes (commentmarker: NMT_TRANSITION)
-     *        the flag say that a type of kind * is expected, so that PolyType(tps, restpe) can be disambiguated to PolyType(tps, NullaryMethodType(restpe)) 
+     *        the flag say that a type of kind * is expected, so that PolyType(tps, restpe) can be disambiguated to PolyType(tps, NullaryMethodType(restpe))
      *        (if restpe is not a ClassInfoType, a MethodType or a NullaryMethodType, which leaves TypeRef/SingletonType -- the latter would make the polytype a type constructor)
      */
     protected def readType(forceProperType: Boolean = false): Type = {
@@ -387,7 +387,7 @@ abstract class UnPickler {
             def transitionNMT(restpe: Type) = {
               val resTpeCls = restpe.getClass.toString // what's uglier than isInstanceOf? right! -- isInstanceOf does not work since the concrete types are defined in the compiler (not in scope here)
               if(forceProperType /*&& pickleformat < 2.9 */ && !(resTpeCls.endsWith("MethodType"))) { assert(!resTpeCls.contains("ClassInfoType"))
-                  NullaryMethodType(restpe) } 
+                  NullaryMethodType(restpe) }
                 else restpe
             }
             PolyType(typeParams, transitionNMT(restpe))
@@ -410,7 +410,7 @@ abstract class UnPickler {
           val tp = at(typeRef, () => readType(forceProperType)) // NMT_TRANSITION
           val annots = until(end, readAnnotationRef)
           if (selfsym == NoSymbol) AnnotatedType(annots, tp, selfsym)
-          else tp 
+          else tp
         case _ =>
           noSuchTypeTag(tag, end)
       }
@@ -527,7 +527,7 @@ abstract class UnPickler {
       val end = readNat() + readIndex
       val tag = readByte()
       val tpe = if (tag == EMPTYtree) NoType else readTypeRef()
-      
+
       // Set by the three functions to follow.  If symbol is non-null
       // after the the new tree 't' has been created, t has its Symbol
       // set to symbol; and it always has its Type set to tpe.
@@ -772,10 +772,10 @@ abstract class UnPickler {
       }
 
       if (symbol == null) t setType tpe
-      else t setSymbol symbol setType tpe      
+      else t setSymbol symbol setType tpe
     }
 
-    def noSuchTreeTag(tag: Int, end: Int) = 
+    def noSuchTreeTag(tag: Int, end: Int) =
       errorBadSignature("unknown tree type (" + tag + ")")
 
     def readModifiers(): Modifiers = {
@@ -839,9 +839,9 @@ abstract class UnPickler {
 
     protected def errorMissingRequirement(msg: String): Nothing =
       if (debug) errorBadSignature(msg)
-      else throw new IOException("class file needed by "+classRoot.name+" is missing.\n"+msg) 
+      else throw new IOException("class file needed by "+classRoot.name+" is missing.\n"+msg)
 
-    protected def errorMissingRequirement(name: Name, owner: Symbol): Nothing = 
+    protected def errorMissingRequirement(name: Name, owner: Symbol): Nothing =
       errorMissingRequirement("reference " + NameTransformer.decode(name.toString) + " of " + owner.tpe + " refers to nonexisting symbol.")
 
     /** pre: `fun` points to a symbol with an overloaded type.

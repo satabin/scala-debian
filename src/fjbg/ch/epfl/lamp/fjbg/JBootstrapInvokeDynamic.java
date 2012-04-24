@@ -12,7 +12,7 @@ import java.util.Iterator;
 
 /**
  * BootstrapInvokeDynamic entry, as described by JSR 292 (invoke dynamic)
- * 
+ *
  * @author Iulian Dragos
  * @version 1.0
  *

@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools.nsc
 
 import java.util.concurrent.{ Future, Callable }
@@ -19,7 +19,7 @@ package object io {
     def apply(name: Attributes.Name)                = "" + attrs.get(name)
     def update(key: Attributes.Name, value: String) = attrs.put(key, value)
   }
-  
+
   private lazy val daemonThreadPool = DaemonThreadFactory.newPool()
 
   def runnable(body: => Unit): Runnable       = new Runnable { override def run() = body }
@@ -29,7 +29,7 @@ package object io {
   def runnableFn(f: () => Unit): Runnable     = runnable(f())
   def callableFn[T](f: () => T): Callable[T]  = callable(f())
   def spawnFn[T](f: () => T): Future[T]       = spawn(f())
-  
+
   // Create, start, and return a daemon thread
   def daemonize(body: => Unit): Thread = {
     val thread = new Thread(runnable(body))

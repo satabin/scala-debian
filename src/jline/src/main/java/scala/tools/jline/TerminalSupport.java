@@ -32,7 +32,7 @@ public abstract class TerminalSupport
     public static final int DEFAULT_HEIGHT = 24;
 
     private Thread shutdownHook;
-    
+
     private boolean shutdownHookEnabled;
 
     private boolean supported;
@@ -67,7 +67,7 @@ public abstract class TerminalSupport
             Log.debug("Not install shutdown hook " + hook + " because they are disabled.");
             return;
         }
-            
+
         assert hook != null;
 
         if (shutdownHook != null) {
@@ -87,7 +87,7 @@ public abstract class TerminalSupport
     protected void removeShutdownHook() {
         if (!shutdownHookEnabled)
             return;
-      
+
         if (shutdownHook != null) {
             try {
                 Runtime.getRuntime().removeShutdownHook(shutdownHook);
@@ -117,7 +117,7 @@ public abstract class TerminalSupport
     }
 
     /**
-     * Subclass to change behavior if needed. 
+     * Subclass to change behavior if needed.
      * @return the passed out
      */
     public OutputStream wrapOutIfNeeded(OutputStream out) {

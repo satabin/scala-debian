@@ -14,7 +14,7 @@ import scala.io.Codec
 
 /** A skeletal only-as-much-as-I-need Socket wrapper.
  */
-object Socket {  
+object Socket {
   def preferringIPv4[T](body: => T): T = exclusively {
     val saved = preferIPv4Stack.value
     try   { preferIPv4Stack.enable() ; body }
@@ -27,7 +27,7 @@ object Socket {
     }
     private val optHandler = handlerFn[Option[T]](_ => None)
     private val eitherHandler = handlerFn[Either[Throwable, T]](x => Left(x))
-    
+
     def getOrElse[T1 >: T](alt: T1): T1 = opt getOrElse alt
     def either: Either[Throwable, T]    = try Right(f()) catch eitherHandler
     def opt: Option[T]                  = try Some(f()) catch optHandler
@@ -45,21 +45,21 @@ class Socket(jsocket: JSocket) extends Streamable.Bytes with Closeable {
   def outputStream() = jsocket.getOutputStream()
   def getPort()      = jsocket.getPort()
   def close()        = jsocket.close()
-  
+
   def printWriter()                         = new PrintWriter(outputStream(), true)
   def bufferedReader(implicit codec: Codec) = new BufferedReader(new InputStreamReader(inputStream()))
   def bufferedOutput(size: Int)             = new BufferedOutputStream(outputStream(), size)
-  
+
   /** Creates an InputStream and applies the closure, automatically closing it on completion.
    */
   def applyReaderAndWriter[T](f: (BufferedReader, PrintWriter) => T): T = {
     val out = printWriter()
     val in  = bufferedReader
-    
+
     try f(in, out)
     finally {
       in.close()
       out.close()
     }
-  }  
+  }
 }

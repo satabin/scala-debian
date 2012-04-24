@@ -16,18 +16,18 @@ import generic._
  * $setNote
  * '''Implementation note:''' If your additions and mutations return the same kind of set as the set
  *       you are defining, you should inherit from `SetLike` as well.
- * $setTags 
+ * $setTags
  *
  * @since 1.0
  * @author Matthias Zenger
  */
-trait Set[A] extends (A => Boolean) 
-                with Iterable[A] 
+trait Set[A] extends (A => Boolean)
+                with Iterable[A]
                 with GenSet[A]
                 with GenericSetTemplate[A, Set]
                 with SetLike[A, Set[A]] {
   override def companion: GenericCompanion[Set] = Set
-  
+
   override def seq: Set[A] = this
 }
 

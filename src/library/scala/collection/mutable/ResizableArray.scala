@@ -15,7 +15,7 @@ import generic._
 
 /** This class is used internally to implement data structures that
  *  are based on resizable arrays.
- *  
+ *
  *  @tparam A    type of the elements contained in this resizable array.
  *
  *  @author  Matthias Zenger, Burak Emir
@@ -23,9 +23,9 @@ import generic._
  *  @version 2.8
  *  @since   1
  */
-trait ResizableArray[A] extends IndexedSeq[A] 
+trait ResizableArray[A] extends IndexedSeq[A]
                            with GenericTraversableTemplate[A, ResizableArray]
-                           with IndexedSeqOptimized[A, ResizableArray[A]] { 
+                           with IndexedSeqOptimized[A, ResizableArray[A]] {
 
   override def companion: GenericCompanion[ResizableArray] = ResizableArray
 
@@ -45,7 +45,7 @@ trait ResizableArray[A] extends IndexedSeq[A]
     array(idx).asInstanceOf[A]
   }
 
-  def update(idx: Int, elem: A) { 
+  def update(idx: Int, elem: A) {
     if (idx >= size0) throw new IndexOutOfBoundsException(idx.toString)
     array(idx) = elem.asInstanceOf[AnyRef]
   }
@@ -78,7 +78,7 @@ trait ResizableArray[A] extends IndexedSeq[A]
 
   //##########################################################################
 
-  /** remove elements of this array at indices after <code>sz</code> 
+  /** remove elements of this array at indices after <code>sz</code>
    */
   def reduceToSize(sz: Int) {
     require(sz <= size0)

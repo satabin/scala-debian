@@ -74,7 +74,7 @@ class FastScalac extends Scalac {
 
       reset.value = resetCaches
       shutdown.value = shutdownServer
-      
+
       /** XXX Since fsc is largely unmaintained, the set of options being individually
        *  assessed here is likely to bear little relationship to the current set of options.
        *  Most likely this manifests in confusing and very difficult to debug behavior in fsc.
@@ -82,22 +82,22 @@ class FastScalac extends Scalac {
        */
       val stringSettings =
         List(s.outdir, s.classpath, s.bootclasspath, s.extdirs, s.encoding) flatMap (x => List(x.name, x.value))
-        
+
       val serverOption =
         serverAddr.toList flatMap (x => List("-server", x))  // '-server' option
-        
+
       val choiceSettings =
         List(s.debuginfo, s.target) map (x => "%s:%s".format(x.name, x.value))
-        
-      val booleanSettings = 
+
+      val booleanSettings =
         List(s.debug, s.deprecation, s.verbose, reset, shutdown) map (x => if (x.value) List(x.name) else Nil) flatten
-        
+
       val phaseSetting = {
         val s = settings.log
         if (s.value.isEmpty) Nil
         else List("%s:%s".format(s.name, s.value.mkString(",")))
       }
-      
+
       val cmdOptions =
         stringSettings ::: serverOption ::: choiceSettings ::: booleanSettings ::: phaseSetting
 
@@ -105,7 +105,7 @@ class FastScalac extends Scalac {
       try {
         if (scala.tools.nsc.CompileClient.process(args) && failonerror)
           buildError("Compile failed; see the compiler error output for details.")
-      } 
+      }
       catch {
         case exception: Throwable if (exception.getMessage ne null) =>
           exception.printStackTrace()

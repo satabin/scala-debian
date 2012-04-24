@@ -38,5 +38,5 @@ package generic
     def unapply(arg: NestedAnnotArg): Option[AnnotationInfo]
   }
 }
-  
-  
+
+

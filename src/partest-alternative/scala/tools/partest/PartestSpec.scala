@@ -20,9 +20,9 @@ trait PartestSpec extends Spec with Meta.StdOpts with Interpolation {
   def programInfo         = Spec.Info("partest", "", "scala.tools.partest.Runner")
   private val kind        = new Spec.Accumulator[String]()
   protected def testKinds = kind.get
-  
+
   private implicit val tokenizeString = FromString.ArgumentsFromString    // String => List[String]
-  
+
   help("""
     |# Pro Tip! Instant bash completion: `partest --bash` (note backticks)
     |Usage: partest [<options>] [<test> <test> ...]
@@ -46,7 +46,7 @@ trait PartestSpec extends Spec with Meta.StdOpts with Interpolation {
   heading             ("""Test "smart" categories:""")
   val grepExpr      = "grep"        / "run all tests with a source file containing <expr>"    --|
   val isFailed      = "failed"      / "run all tests which failed on the last run"            --?
-  
+
   heading             ("Specifying paths and additional flags, ~ means repository root:")
 
   val rootDir       = "rootdir"     / "path from ~ to partest"                        defaultTo "test"
@@ -55,10 +55,10 @@ trait PartestSpec extends Spec with Meta.StdOpts with Interpolation {
   val javaOpts      = "javaopts"    / "flags to java on all runs"                  defaultToEnv "JAVA_OPTS"
   val javacOpts     = "javacopts"   / "flags to javac on all runs"                 defaultToEnv "JAVAC_OPTS"
   val scalacOpts    = "scalacopts"  / "flags to scalac on all tests"               defaultToEnv "SCALAC_OPTS"
-  
+
                       "pack"        / ""                                               expandTo ("--builddir", "build/pack")
                       "quick"       / ""                                               expandTo ("--builddir", "build/quick")
-  
+
   heading             ("Options influencing output:")
   val isTrace       = "trace"       / "show the individual steps taken by each test" --?
   val isShowDiff    = "show-diff"   / "show diff between log and check file"  --?
@@ -68,7 +68,7 @@ trait PartestSpec extends Spec with Meta.StdOpts with Interpolation {
   val isVerbose     = "verbose"     / "be more verbose (additive with --trace)" --?
   val isDebug       = "debug"       / "maximum debugging output" --?
   val isAnsi        = "ansi"        / "print output in color" --?
-  
+
   heading             ("Other options:")
   val timeout       = "timeout"       / "Overall timeout in seconds"                defaultTo 7200
   val testWarning   = "test-warning"  / "Test warning in seconds"                   defaultTo 90
@@ -78,7 +78,7 @@ trait PartestSpec extends Spec with Meta.StdOpts with Interpolation {
   val isStats       = "stats"         / "collect and print statistics about the tests" --?
   val isValidate    = "validate"      / "examine test filesystem for inconsistencies" --?
   val isUpdateCheck = "update-check"  / "overwrite checkFile if diff fails" --?
-  
+
                       "version"       / "print version"   --> runAndExit(println(Properties.versionMsg))
 
   // no help for anything below this line - secret options
@@ -92,13 +92,13 @@ object PartestSpec extends PartestSpec with Property {
   lazy val propMapper = new PropertyMapper(PartestSpec) {
     override def isPassThrough(key: String) = key == "partest.options"
   }
-  
+
   type ThisCommandLine = PartestCommandLine
   class PartestCommandLine(args: List[String]) extends SpecCommandLine(args) {
     override def errorFn(msg: String) = printAndExit("Error: " + msg)
-    
+
     def propertyArgs = PartestSpec.propertyArgs
   }
-  
+
   override def creator(args: List[String]): PartestCommandLine = new PartestCommandLine(args)
 }

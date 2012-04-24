@@ -18,16 +18,16 @@ object ByteCode {
   private lazy val DECODER: Option[AnyRef] =
     for (clazz <- getSystemLoader.tryToLoadClass[AnyRef]("scala.tools.scalap.Decode$")) yield
       clazz.getField("MODULE$").get()
-  
+
   private def decoderMethod(name: String, args: JClass*): Option[reflect.Method] = {
     for (decoder <- DECODER ; m <- Option(decoder.getClass.getMethod(name, args: _*))) yield m
-  }   
+  }
 
   private lazy val aliasMap = {
     for (module <- DECODER ; method <- decoderMethod("typeAliases", classOf[String])) yield
       method.invoke(module, _: String).asInstanceOf[Option[Map[String, String]]]
   }
-  
+
   /** Scala sig bytes.
    */
   def scalaSigBytesForPath(path: String) =
@@ -36,8 +36,8 @@ object ByteCode {
       method <- decoderMethod("scalaSigAnnotationBytes", classOf[String])
       names <- method.invoke(module, path).asInstanceOf[Option[Array[Byte]]]
     }
-    yield names  
-  
+    yield names
+
   /** Attempts to retrieve case parameter names for given class name.
    */
   def caseParamNamesForPath(path: String) =
@@ -49,7 +49,7 @@ object ByteCode {
     yield names
 
   def aliasesForPackage(pkg: String) = aliasMap flatMap (_(pkg))
-  
+
   /** Attempts to find type aliases in package objects.
    */
   def aliasForType(path: String): Option[String] = {

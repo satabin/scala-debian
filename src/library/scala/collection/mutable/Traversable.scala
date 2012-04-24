@@ -17,11 +17,11 @@ import generic._
  *  $traversableInfo
  *  @define mutability mutable
  */
-trait Traversable[A] extends scala.collection.Traversable[A] 
+trait Traversable[A] extends scala.collection.Traversable[A]
 //                        with GenTraversable[A]
-                        with GenericTraversableTemplate[A, Traversable] 
+                        with GenericTraversableTemplate[A, Traversable]
                         with TraversableLike[A, Traversable[A]]
-                        with Mutable { 
+                        with Mutable {
   override def companion: GenericCompanion[Traversable] = Traversable
   override def seq: Traversable[A] = this
 }
@@ -36,4 +36,4 @@ object Traversable extends TraversableFactory[Traversable] {
   def newBuilder[A]: Builder[A, Traversable[A]] = new ArrayBuffer
 }
 
-  
+

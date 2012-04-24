@@ -20,9 +20,9 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     def freshTermName(prefix: String): TermName
     def freshTypeName(prefix: String): TypeName
   }
- 
+
   type CompilationUnit <: CompilationUnitTrait
-  
+
   protected def flagsIntoString(flags: Long, privateWithin: String): String = flagsToString(flags, privateWithin)
 
   // sub-components --------------------------------------------------
@@ -63,7 +63,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
 
     /** Apply `f' to each subtree */
     def foreach(f: Tree => Unit) { new ForeachTreeTraverser(f).traverse(tree) }
-    
+
     /** If 'pf' is defined for a given subtree, call super.traverse(pf(tree)),
      *  otherwise super.traverse(tree).
      */
@@ -77,14 +77,14 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     }
 
     /** Returns optionally first tree (in a preorder traversal) which satisfies predicate `p',
-     *  or None if none exists. 
+     *  or None if none exists.
      */
     def find(p: Tree => Boolean): Option[Tree] = {
       val ft = new FindTreeTraverser(p)
       ft.traverse(tree)
       ft.result
     }
-    
+
     def changeOwner(pairs: (Symbol, Symbol)*): Tree = {
       pairs.foldLeft(tree) { case (t, (oldOwner, newOwner)) =>
         new ChangeOwnerTraverser(oldOwner, newOwner) apply t
@@ -108,7 +108,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
           case _                          =>
             true
         }
-        
+
         (tree.productIterator zip that.productIterator forall { case (x, y) => equals0(x, y) }) && compareOriginals()
       })
 
@@ -143,8 +143,8 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
    *                    and value parameter fields.
    */
   def ClassDef(sym: Symbol, constrMods: Modifiers, vparamss: List[List[ValDef]], argss: List[List[Tree]], body: List[Tree], superPos: Position): ClassDef =
-    ClassDef(sym, 
-      Template(sym.info.parents map TypeTree, 
+    ClassDef(sym,
+      Template(sym.info.parents map TypeTree,
                if (sym.thisSym == sym || phase.erasedTypes) emptyValDef else ValDef(sym.thisSym),
                constrMods, vparamss, argss, body, superPos))
 
@@ -159,8 +159,8 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
 
   def ValDef(sym: Symbol, rhs: Tree): ValDef =
     atPos(sym.pos) {
-      ValDef(Modifiers(sym.flags), sym.name, 
-             TypeTree(sym.tpe) setPos sym.pos.focus, 
+      ValDef(Modifiers(sym.flags), sym.name,
+             TypeTree(sym.tpe) setPos sym.pos.focus,
              rhs) setSymbol sym
     }
 
@@ -185,7 +185,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
 
   def DefDef(sym: Symbol, vparamss: List[List[ValDef]], rhs: Tree): DefDef =
     DefDef(sym, Modifiers(sym.flags), vparamss, rhs)
-  
+
   def DefDef(sym: Symbol, mods: Modifiers, rhs: Tree): DefDef =
     DefDef(sym, mods, sym.paramss map (_.map(ValDef)), rhs)
 
@@ -203,7 +203,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     }
 
   /** A TypeDef node which defines abstract type or type parameter for given `sym' */
-  def TypeDef(sym: Symbol): TypeDef = 
+  def TypeDef(sym: Symbol): TypeDef =
     TypeDef(sym, TypeBoundsTree(TypeTree(sym.info.bounds.lo), TypeTree(sym.info.bounds.hi)))
 
   def LabelDef(sym: Symbol, params: List[Symbol], rhs: Tree): LabelDef =
@@ -211,7 +211,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
       LabelDef(sym.name, params map Ident, rhs) setSymbol sym
     }
 
-  /** Generates a template with constructor corresponding to 
+  /** Generates a template with constructor corresponding to
    *
    *  constrmods (vparams1_) ... (vparams_n) preSuper { presupers }
    *  extends superclass(args_1) ... (args_n) with mixins { self => body }
@@ -221,7 +221,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
    *  extends superclass with mixins { self =>
    *    presupers' // presupers without rhs
    *    vparamss   // abstract fields corresponding to value parameters
-   *    def <init>(vparamss) { 
+   *    def <init>(vparamss) {
    *      presupers
    *      super.<init>(args)
    *    }
@@ -230,9 +230,9 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
    */
   def Template(parents: List[Tree], self: ValDef, constrMods: Modifiers, vparamss: List[List[ValDef]], argss: List[List[Tree]], body: List[Tree], superPos: Position): Template = {
     /* Add constructor to template */
-    
+
     // create parameters for <init> as synthetic trees.
-    var vparamss1 = 
+    var vparamss1 =
       vparamss map (vps => vps.map { vd =>
         atPos(vd.pos.focus) {
           ValDef(
@@ -244,8 +244,8 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     val (lvdefs, gvdefs) = evdefs map {
       case vdef @ ValDef(mods, name, tpt, rhs) =>
         val fld = treeCopy.ValDef(
-          vdef.duplicate, mods, name, 
-          atPos(vdef.pos.focus) { TypeTree() setOriginal tpt setPos tpt.pos.focus }, // atPos in case 
+          vdef.duplicate, mods, name,
+          atPos(vdef.pos.focus) { TypeTree() setOriginal tpt setPos tpt.pos.focus }, // atPos in case
           EmptyTree)
         val local = treeCopy.ValDef(vdef, Modifiers(PRESUPER), name, tpt, rhs)
         (local, fld)
@@ -269,11 +269,11 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
           atPos(wrappingPos(superPos, lvdefs ::: argss.flatten)) (
             DefDef(constrMods, nme.CONSTRUCTOR, List(), vparamss1, TypeTree(), Block(lvdefs ::: List(superCall), Literal(())))))
       }
-    } 
+    }
     // println("typed template, gvdefs = "+gvdefs+", parents = "+parents+", constrs = "+constrs)
     constrs foreach (ensureNonOverlapping(_, parents ::: gvdefs))
     // vparamss2 are used as field definitions for the class. remove defaults
-    val vparamss2 = vparamss map (vps => vps map { vd => 
+    val vparamss2 = vparamss map (vps => vps map { vd =>
       treeCopy.ValDef(vd, vd.mods &~ DEFAULTPARAM, vd.name, vd.tpt, EmptyTree)
     })
     Template(parents, self, gvdefs ::: vparamss2.flatten ::: constrs ::: etdefs ::: rest)
@@ -281,7 +281,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
 
   /** casedef shorthand */
   def CaseDef(pat: Tree, body: Tree): CaseDef = CaseDef(pat, EmptyTree, body)
-  
+
   def Bind(sym: Symbol, body: Tree): Bind =
     Bind(sym.name, body) setSymbol sym
 
@@ -294,7 +294,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     val superRef: Tree = Select(New(tpt), nme.CONSTRUCTOR)
     (superRef /: argss) (Apply)
   }
-  
+
   def Super(sym: Symbol, mix: TypeName): Tree = Super(This(sym), mix)
 
   def This(sym: Symbol): Tree = This(sym.name.toTypeName) setSymbol sym
@@ -305,7 +305,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
   def Ident(sym: Symbol): Ident =
     Ident(sym.name) setSymbol sym
 
-  /** Block factory that flattens directly nested blocks. 
+  /** Block factory that flattens directly nested blocks.
    */
   def Block(stats: Tree*): Block = stats match {
     case Seq(b @ Block(_, _)) => b
@@ -319,17 +319,17 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     * <code>RefCheck</code>, where the arbitrary type trees are all replaced by
     * TypeTree's. */
   case class TypeTree() extends AbsTypeTree {
-    private var orig: Tree = null 
+    private var orig: Tree = null
     private[Trees] var wasEmpty: Boolean = false
 
     def original: Tree = orig
-    def setOriginal(tree: Tree): this.type = { 
+    def setOriginal(tree: Tree): this.type = {
       def followOriginal(t: Tree): Tree = t match {
         case tt: TypeTree => followOriginal(tt.original)
         case t => t
       }
-        
-      orig = followOriginal(tree); setPos(tree.pos); 
+
+      orig = followOriginal(tree); setPos(tree.pos);
       this
     }
 
@@ -342,7 +342,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
   object TypeTree extends TypeTreeExtractor
 
   def TypeTree(tp: Type): TypeTree = TypeTree() setType tp
-  
+
   /** Documented definition, eliminated by analyzer */
   case class DocDef(comment: DocComment, definition: Tree)
        extends Tree {
@@ -366,7 +366,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
 // ----- subconstructors --------------------------------------------
 
   class ApplyToImplicitArgs(fun: Tree, args: List[Tree]) extends Apply(fun, args)
-  
+
   class ApplyImplicitView(fun: Tree, args: List[Tree]) extends Apply(fun, args)
 
 // ----- auxiliary objects and methods ------------------------------
@@ -450,7 +450,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
       new Star(elem).copyAttrs(tree)
     def Bind(tree: Tree, name: Name, body: Tree) =
       new Bind(name, body).copyAttrs(tree)
-    def UnApply(tree: Tree, fun: Tree, args: List[Tree]) = 
+    def UnApply(tree: Tree, fun: Tree, args: List[Tree]) =
       new UnApply(fun, args).copyAttrs(tree)
     def ArrayValue(tree: Tree, elemtpt: Tree, trees: List[Tree]) =
       new ArrayValue(elemtpt, trees).copyAttrs(tree)
@@ -621,7 +621,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
       case _ => treeCopy.AssignOrNamedArg(tree, lhs, rhs)
     }
     def If(tree: Tree, cond: Tree, thenp: Tree, elsep: Tree) = tree match {
-      case t @ If(cond0, thenp0, elsep0) 
+      case t @ If(cond0, thenp0, elsep0)
       if (cond0 == cond) && (thenp0 == thenp) && (elsep0 == elsep) => t
       case _ => treeCopy.If(tree, cond, thenp, elsep)
     }
@@ -756,7 +756,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
         tree
       case PackageDef(pid, stats) =>
         treeCopy.PackageDef(
-          tree, transform(pid).asInstanceOf[RefTree], 
+          tree, transform(pid).asInstanceOf[RefTree],
           atOwner(tree.symbol.moduleClass) {
             transformStats(stats, currentOwner)
           }
@@ -862,7 +862,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
       case AppliedTypeTree(tpt, args) =>
         treeCopy.AppliedTypeTree(tree, transform(tpt), transformTrees(args))
       case TypeBoundsTree(lo, hi) =>
-        treeCopy.TypeBoundsTree(tree, transform(lo), transform(hi)) 
+        treeCopy.TypeBoundsTree(tree, transform(lo), transform(hi))
       case ExistentialTypeTree(tpt, whereClauses) =>
         treeCopy.ExistentialTypeTree(tree, transform(tpt), transformTrees(whereClauses))
       case SelectFromArray(qualifier, selector, erasure) =>
@@ -901,7 +901,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
       result
     }
   }
-  
+
   class Traverser extends super.Traverser {
     /** Compiler specific tree types are handled here: the remainder are in
      *  the library's abstract tree traverser.
@@ -910,12 +910,12 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
       case AssignOrNamedArg(lhs, rhs) =>
         traverse(lhs); traverse(rhs)
       case DocDef(comment, definition) =>
-        traverse(definition) 
+        traverse(definition)
       case Parens(ts) =>
         traverseTrees(ts)
       case TypeTreeWithDeferredRefCheck() => // TODO: should we traverse the wrapped tree?
       // (and rewrap the result? how to update the deferred check? would need to store wrapped tree instead of returning it from check)
-      case Super(qual, _) => 
+      case Super(qual, _) =>
         traverse(qual)  // !!! remove when Super is done
       case _ => super.traverse(tree)
     }
@@ -928,7 +928,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
         else traverse(stat)
       )
     }
-    
+
     /** Leave apply available in the generic traverser to do something else.
      */
     def apply[T <: Tree](tree: T): T = { traverse(tree); tree }
@@ -972,7 +972,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     val typeSubst = new SubstTypeMap(from, to)
     def fromContains = typeSubst.fromContains
     def isEmpty = from.isEmpty && to.isEmpty
-    
+
     override def traverse(tree: Tree) {
       if (tree.tpe ne null) tree.tpe = typeSubst(tree.tpe)
       if (tree.isDef) {
@@ -1005,7 +1005,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
 
   /** Substitute symbols in 'from' with symbols in 'to'. Returns a new
    *  tree using the new symbols and whose Ident and Select nodes are
-   *  name-consistent with the new symbols. 
+   *  name-consistent with the new symbols.
    */
   class TreeSymSubstituter(from: List[Symbol], to: List[Symbol]) extends Transformer {
     val symSubst = new SubstSymMap(from, to)
@@ -1061,7 +1061,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
     posAssigner.traverse(tree)
     tree
   }
-  
+
   class ForeachPartialTreeTraverser(pf: PartialFunction[Tree, Tree]) extends Traverser {
     override def traverse(tree: Tree) {
       val t = if (pf isDefinedAt tree) pf(tree) else tree
@@ -1106,7 +1106,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
    */
   def resetAllAttrs[A<:Tree](x:A): A = { new ResetAttrsTraverser().traverse(x); x }
   def resetLocalAttrs[A<:Tree](x:A): A = { new ResetLocalAttrsTraverser().traverse(x); x }
-  
+
   /** A traverser which resets symbol and tpe fields of all nodes in a given tree
    *  except for (1) TypeTree nodes, whose <code>.tpe</code> field is kept, and
    *  (2) This(pkg) nodes, where pkg refers to a package symbol -- their attributes are kept, and
@@ -1116,7 +1116,7 @@ trait Trees extends reflect.generic.Trees { self: SymbolTable =>
    *  (2) is necessary because some This(pkg) are generated where pkg is not
    *  an enclosing package.n In that case, resetting the symbol would cause the
    *  next type checking run to fail. See #3152.
-   *   
+   *
    *  (bq:) This traverser has mutable state and should be discarded after use
    */
   private class ResetAttrsTraverser extends Traverser {

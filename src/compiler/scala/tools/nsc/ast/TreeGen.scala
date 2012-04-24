@@ -18,7 +18,7 @@ abstract class TreeGen {
 
   import global._
   import definitions._
-  
+
   def rootId(name: Name)          = Select(Ident(nme.ROOTPKG), name)
   def rootScalaDot(name: Name)    = Select(rootId(nme.scala_) setSymbol ScalaPackage, name)
   def scalaDot(name: Name)        = Select(Ident(nme.scala_) setSymbol ScalaPackage, name)
@@ -27,7 +27,7 @@ abstract class TreeGen {
   def scalaScalaObjectConstr      = scalaDot(tpnme.ScalaObject)
   def productConstr               = scalaDot(tpnme.Product)
   def serializableConstr          = scalaDot(tpnme.Serializable)
-  
+
   def scalaFunctionConstr(argtpes: List[Tree], restpe: Tree, abstractFun: Boolean = false): Tree = {
     val cls = if (abstractFun)
       mkAttributedRef(AbstractFunctionClass(argtpes.length))
@@ -110,7 +110,7 @@ abstract class TreeGen {
   def mkAttributedRef(sym: Symbol): Tree =
     if (sym.owner.isClass) mkAttributedRef(sym.owner.thisType, sym)
     else mkAttributedIdent(sym)
-    
+
   /** Builds an untyped reference to given symbol. */
   def mkUnattributedRef(sym: Symbol): Tree =
     if (sym.owner.isClass) Select(This(sym.owner), sym)
@@ -167,13 +167,13 @@ abstract class TreeGen {
           Select(qual, nme.PACKAGEkw) setSymbol obj setType singleType(qual.tpe, obj)
         }
         else qual
-      
+
       val tree = Select(pkgQualifier, sym)
       if (pkgQualifier.tpe == null) tree
       else tree setType (qual.tpe memberType sym)
     }
   }
-  
+
   private def mkTypeApply(value: Tree, tpe: Type, what: Symbol) =
     Apply(
       TypeApply(
@@ -203,7 +203,7 @@ abstract class TreeGen {
           mkAsInstanceOf(tree, pt)
       }
 
-  def mkClassOf(tp: Type): Tree = 
+  def mkClassOf(tp: Type): Tree =
     Literal(Constant(tp)) setType ConstantType(Constant(tp))// ClassType(tp)
 
   def mkCheckInit(tree: Tree): Tree = {
@@ -211,7 +211,7 @@ abstract class TreeGen {
       if (tree.tpe != null || !tree.hasSymbol) tree.tpe
       else tree.symbol.tpe
 
-    if (!global.phase.erasedTypes && settings.warnSelectNullable.value && 
+    if (!global.phase.erasedTypes && settings.warnSelectNullable.value &&
         tpe <:< NotNullClass.tpe && !tpe.isNotNull)
       mkRuntimeCall(nme.checkInitialized, List(tree))
     else
@@ -224,7 +224,7 @@ abstract class TreeGen {
 
   /** Builds a list with given head and tail. */
   def mkNil: Tree = mkAttributedRef(NilModule)
-  
+
   /** Builds a tree representing an undefined local, as in
    *    var x: T = _
    *  which is appropriate to the given Type.
@@ -240,10 +240,10 @@ abstract class TreeGen {
       case IntClass     => Literal(0)
       case LongClass    => Literal(0L)
       case CharClass    => Literal(0.toChar)
-      case _            => 
+      case _            =>
         if (NullClass.tpe <:< tp) Literal(null: Any)
         else abort("Cannot determine zero for " + tp)
-    }    
+    }
     tree setType tp
   }
 
@@ -288,7 +288,7 @@ abstract class TreeGen {
       setInfo accessor.tpe.finalResultType
       setFlag (MODULEVAR)
     )
-    
+
     mval.addAnnotation(AnnotationInfo(VolatileAttr.tpe, Nil, Nil))
     if (mval.owner.isClass) {
       mval setFlag (PRIVATE | LOCAL | SYNTHETIC)
@@ -296,7 +296,7 @@ abstract class TreeGen {
     }
     ValDef(mval)
   }
-  
+
   // def m: T = { if (m$ eq null) m$ = new m$class(...) m$ }
   // where (...) are eventual outer accessors
   def mkCachedModuleAccessDef(accessor: Symbol, mvar: Symbol) =
@@ -306,12 +306,12 @@ abstract class TreeGen {
     DefDef(accessor, Select(This(msym.owner), msym))
 
   def newModule(accessor: Symbol, tpe: Type) =
-    New(TypeTree(tpe), 
-        List(for (pt <- tpe.typeSymbol.primaryConstructor.info.paramTypes) 
+    New(TypeTree(tpe),
+        List(for (pt <- tpe.typeSymbol.primaryConstructor.info.paramTypes)
              yield This(accessor.owner.enclClass)))
 
   // def m: T;
-  def mkModuleAccessDcl(accessor: Symbol) = 
+  def mkModuleAccessDcl(accessor: Symbol) =
     DefDef(accessor setFlag lateDEFERRED, EmptyTree)
 
   def mkRuntimeCall(meth: Name, args: List[Tree]): Tree =
@@ -321,7 +321,7 @@ abstract class TreeGen {
     Apply(TypeApply(Select(mkAttributedRef(ScalaRunTimeModule), meth), targs map TypeTree), args)
 
   /** Make a synchronized block on 'monitor'. */
-  def mkSynchronized(monitor: Tree, body: Tree): Tree =     
+  def mkSynchronized(monitor: Tree, body: Tree): Tree =
     Apply(Select(monitor, Object_synchronized), List(body))
 
   def wildcardStar(tree: Tree) =
@@ -359,7 +359,7 @@ abstract class TreeGen {
     else
       Apply(TypeApply(Select(mkAttributedRef(PredefModule), meth), List(TypeTree(elemtp))), List(tree))
   }
-  
+
   /** Generate a cast for tree Tree representing Array with
    *  elem type elemtp to expected type pt.
    */
@@ -368,7 +368,7 @@ abstract class TreeGen {
       mkCast(mkRuntimeCall("toObjectArray", List(tree)), pt)
     else
       mkCast(tree, pt)
-  
+
   /** Translate names in Select/Ident nodes to type names.
    */
   def convertToTypeName(tree: Tree): Option[RefTree] = tree match {
@@ -434,7 +434,7 @@ abstract class TreeGen {
    */
   def mkDoubleCheckedLocking(clazz: Symbol, cond: Tree, syncBody: List[Tree], stats: List[Tree]): Tree =
     mkDoubleCheckedLocking(mkAttributedThis(clazz), cond, syncBody, stats)
-  
+
   def mkDoubleCheckedLocking(attrThis: Tree, cond: Tree, syncBody: List[Tree], stats: List[Tree]): Tree = {
     If(cond,
        Block(

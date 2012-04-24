@@ -125,18 +125,18 @@ private[scala] class MathCommon {
     else if (x > 0) 1.0
     else x    // NaN
 
-  def signum(x: Float): Float = 
+  def signum(x: Float): Float =
     if (x == 0f) 0f
     else if (x < 0) -1.0f
     else if (x > 0) 1.0f
     else x    // NaN
 
-  def signum(x: Long): Long = 
+  def signum(x: Long): Long =
     if (x == 0l) 0l
     else if (x < 0) -1l
     else 1l
 
-  def signum(x: Int): Int = 
+  def signum(x: Int): Int =
     if (x == 0) 0
     else if (x < 0) -1
     else 1

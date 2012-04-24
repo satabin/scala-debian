@@ -118,7 +118,7 @@ abstract class Models {
           case _ =>
         }
         ret = ret + " : " + textFor(vdef.tpt)
-/* Martin to Sean: Please check whether this can be dropped or does it need to be adapted? 
+/* Martin to Sean: Please check whether this can be dropped or does it need to be adapted?
       case atd: AbsTypeDef =>
         ret = ret + "[" + (for (tparam <- atd.tparams) yield textFor(tparam)) + "]" +
                      ((if(atd.hi ne null) " <: " + textFor(atd.hi) else "") +
@@ -219,7 +219,7 @@ abstract class Models {
             updated = true
             val add = modelFor(mmbr2, this)
             add.update(mmbr2)
-            add.mods0 = mods1(mmbr1) & 
+            add.mods0 = mods1(mmbr1) &
               ~symtab.Flags.ACCESSOR & ~symtab.Flags.SYNTHETIC
             val sz = members.size
             members += (add)
@@ -317,10 +317,10 @@ abstract class Models {
             //val name = nme.getterToSetter(sym0.name)
             //val setter = sym0.owner.info.decl(name);
             val isVar = sym.isVariable;
-            val mods = (ddef.mods | 
+            val mods = (ddef.mods |
               (if (isVar) symtab.Flags.MUTABLE else 0) | symtab.Flags.DEFERRED) &
                 ~symtab.Flags.ACCESSOR & ~symtab.Flags.SYNTHETIC
-            val tree = 
+            val tree =
               ValDef(mods, ddef.name, ddef.tpt, ddef.rhs).setPos(ddef.pos).setSymbol(sym);
             tree :: Nil;
           } else for (member <- members if member.symbol == sym) yield member

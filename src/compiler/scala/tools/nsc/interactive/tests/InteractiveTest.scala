@@ -13,43 +13,43 @@ import scala.tools.nsc.io._
 import scala.collection.{immutable, mutable}
 
 /** A base class for writing interactive compiler tests.
- * 
+ *
  *  This class tries to cover common functionality needed when testing the presentation
- *  compiler: instantiation source files, reloading, creating positions, instantiating 
+ *  compiler: instantiation source files, reloading, creating positions, instantiating
  *  the presentation compiler, random stress testing.
- *  
- *  By default, this class loads all classes found under `src/`. They are found in 
+ *
+ *  By default, this class loads all classes found under `src/`. They are found in
  *  `sourceFiles`. Positions can be created using `pos(file, line, col)`. The presentation
  *  compiler is available through `compiler`.
- *  
+ *
  *  It is easy to test member completion and type at a given position. Source
- *  files are searched for /markers/. By default, the completion marker is `/*!*/` and the 
+ *  files are searched for /markers/. By default, the completion marker is `/*!*/` and the
  *  typedAt marker is `/*?*/`. Place these markers in your source files, and call `completionTests`
  *  and `typedAtTests` to print the results at all these positions. Sources are reloaded by `reloadSources`
  *  (blocking call). All ask operations are placed on the work queue without waiting for each one to
  *  complete before asking the next. After all asks, it waits for each response in turn and prints the result.
  *  The default timout is 5 seconds per operation.
- *  
+ *
  *  The same mechanism can be used for custom operations. Use `askAllSources(marker)(f)(g)`. Give your custom
  *  marker, and provide the two functions: one for creating the request, and the second for processing the
  *  response, if it didn't time out and there was no error.
- *  
+ *
  *  @see   Check existing tests under test/files/presentation
- * 
+ *
  * @author Iulian Dragos
  */
 abstract class InteractiveTest {
-  
+
   val completionMarker = "/*!*/"
   val typedAtMarker = "/*?*/"
   val TIMEOUT = 10000 // timeout in milliseconds
-  
+
   val settings = new Settings
   val reporter= new StoreReporter
-  
+
   /** The root directory for this test suite, usually the test kind ("test/files/presentation"). */
   val outDir = Path(Option(System.getProperty("partest.cwd")).getOrElse("."))
-  
+
   /** The base directory for this test, usually a subdirectory of "test/files/presentation/" */
   val baseDir = Option(System.getProperty("partest.testname")).map(outDir / _).getOrElse(Path("."))
 
@@ -62,10 +62,10 @@ abstract class InteractiveTest {
     str.lines.filter(!_.startsWith("#")).mkString(" ")
   }
 
-  /** Prepare the settings object. Load the .opts file and adjust all paths from the 
+  /** Prepare the settings object. Load the .opts file and adjust all paths from the
    *  Unix-like syntax to the platform specific syntax. This is necessary so that a
    *  single .opts file can be used on all platforms.
-   *  
+   *
    *  @note Bootclasspath is treated specially. If there is a -bootclasspath option in
    *        the file, the 'usejavacp' setting is set to false. This ensures that the
    *        bootclasspath takes precedence over the scala-library used to run the current
@@ -76,12 +76,12 @@ abstract class InteractiveTest {
     def adjustPaths(paths: settings.PathSetting*) {
       for (p <- paths if argsString.contains(p.name)) p.value = p.value.map {
         case '/' => separatorChar
-        case ':' => pathSeparatorChar 
+        case ':' => pathSeparatorChar
         case c => c
       }
     }
-      
-    // need this so that the classpath comes from what partest 
+
+    // need this so that the classpath comes from what partest
     // instead of scala.home
     settings.usejavacp.value = !argsString.contains("-bootclasspath")
 
@@ -101,7 +101,7 @@ abstract class InteractiveTest {
     println("\tbootClassPath: %s".format(settings.bootclasspath.value))
     println("\tverbose: %b".format(settings.verbose.value))
   }
-  
+
   lazy val compiler = {
     prepareSettings()
     new Global(settings, reporter)
@@ -112,27 +112,27 @@ abstract class InteractiveTest {
       source(if (f.startsWith("/")) Path(f) else baseDir / f)
 
   def source(file: Path) = new BatchSourceFile(AbstractFile.getFile(file.toFile))
-  def source(filename: String): SourceFile = new BatchSourceFile(AbstractFile.getFile(filename)) 
-  
-  def pos(file: SourceFile, line: Int, col: Int): Position = 
+  def source(filename: String): SourceFile = new BatchSourceFile(AbstractFile.getFile(filename))
+
+  def pos(file: SourceFile, line: Int, col: Int): Position =
     file.position(line, col)
-  
+
   def filesInDir(dir: Path): Iterator[Path]  = {
     dir.toDirectory.list.filter(_.isFile)
   }
 
   /** Where source files are placed. */
   val sourceDir = "src"
-  
+
   /** All .scala files below "src" directory. */
-  lazy val sourceFiles: Array[SourceFile] = 
+  lazy val sourceFiles: Array[SourceFile] =
     filesInDir(baseDir / sourceDir).filter(_.extension == "scala").map(source).toArray
-  
+
   /** All positions of the given string in all source files. */
   def allPositionsOf(sources: Seq[SourceFile] = sourceFiles, str: String): immutable.Map[SourceFile, Seq[Position]] = {
-    (for (s <- sources; p <- positionsOf(s, str)) yield p).groupBy(_.source) 
+    (for (s <- sources; p <- positionsOf(s, str)) yield p).groupBy(_.source)
   }
-  
+
   /** Return all positions of the given str in the given source file. */
   def positionsOf(source: SourceFile, str: String): Seq[Position] = {
     val buf = new mutable.ListBuffer[Position]
@@ -140,11 +140,11 @@ abstract class InteractiveTest {
     while (pos >= 0) {
 //      buf += compiler.rangePos(source, pos - 1, pos - 1, pos - 1)
       buf += source.position(pos - 1) // we need the position before the first character of this marker
-      pos = source.content.indexOfSlice(str, pos + 1) 
+      pos = source.content.indexOfSlice(str, pos + 1)
     }
     buf.toList
   }
-  
+
   /** Should askAllSources wait for each ask to finish before issueing the next? */
   val synchronousRequests = true
 
@@ -160,19 +160,19 @@ abstract class InteractiveTest {
   }
 
   /** Synchronous version of askAllSources. Each position is treated in turn, waiting for the
-   *  response before going to the next one. 
+   *  response before going to the next one.
    */
   def askAllSourcesSync[T](marker: String)(askAt: Position => Response[T])(f: (Position, T) => Unit) {
     val positions = allPositionsOf(str = marker).valuesIterator.toList.flatten
     for (pos <- positions) withResponse(pos, askAt(pos))(f)
   }
-  
+
   def askAllSources[T] = if (synchronousRequests) askAllSourcesSync[T] _ else askAllSourcesAsync[T] _
-  
+
   /** Return the filename:line:col version of this position. */
-  def showPos(pos: Position): String = 
+  def showPos(pos: Position): String =
     "%s:%d:%d".format(pos.source.file.name, pos.line, pos.column)
-  
+
   protected def withResponse[T](pos: Position, response: Response[T])(f: (Position, T) => Unit) {
     response.get(TIMEOUT) match {
       case Some(Left(t)) =>
@@ -183,12 +183,12 @@ abstract class InteractiveTest {
         println("ERROR: " + r)
     }
   }
-  
+
   /** Ask completion for all marked positions in all sources.
-   *  A completion position is marked with /*!*/. 
+   *  A completion position is marked with /*!*/.
    */
   def completionTests() {
-    askAllSources(completionMarker) { pos => 
+    askAllSources(completionMarker) { pos =>
       println("askTypeCompletion at " + pos.source.file.name + ((pos.line, pos.column)))
       val r = new Response[List[compiler.Member]]
       compiler.askTypeCompletion(pos, r)
@@ -204,7 +204,7 @@ abstract class InteractiveTest {
       }
     }
   }
-  
+
   /** Ask for typedAt for all marker positions in all sources.
    */
   def typeAtTests() {
@@ -228,13 +228,13 @@ abstract class InteractiveTest {
     compiler.askReload(sourceFiles.toList, reload)
     reload.get
   }
-    
+
   def runTest(): Unit = {
     if (runRandomTests) randomTests(20, sourceFiles)
     completionTests()
     typeAtTests()
   }
-  
+
   /** Perform n random tests with random changes. */
   def randomTests(n: Int, files: Array[SourceFile]) {
     val tester = new Tester(n, files, settings)
@@ -242,7 +242,7 @@ abstract class InteractiveTest {
   }
 
   val runRandomTests = false
-  
+
   def main(args: Array[String]) {
     reloadSources()
     runTest

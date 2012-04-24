@@ -21,11 +21,11 @@ import scala.collection.generic.{ CanBuildFrom => CBF }
  */
 case class Tuple2[@specialized(Int, Long, Double) +T1, @specialized(Int, Long, Double) +T2](_1: T1, _2: T2)
   extends Product2[T1, T2]
-{  
-  override def toString() = "(" + _1 + "," + _2 + ")"  
-  
+{
+  override def toString() = "(" + _1 + "," + _2 + ")"
+
   /** Swaps the elements of this `Tuple`.
-   * @return a new Tuple where the first element is the second element of this Tuple and the 
+   * @return a new Tuple where the first element is the second element of this Tuple and the
    * second element is the first element of this Tuple.
    */
   def swap: Tuple2[T2,T1] = Tuple2(_2, _1)
@@ -121,7 +121,7 @@ case class Tuple2[@specialized(Int, Long, Double) +T1, @specialized(Int, Long, D
 
     def foreach[U](f: (El1, El2) => U): Unit = {
       val elems2 = coll2.iterator
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext)
           f(el1, elems2.next)

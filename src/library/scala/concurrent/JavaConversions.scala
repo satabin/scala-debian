@@ -13,7 +13,7 @@ package scala.concurrent
 import java.util.concurrent.{ExecutorService, Executor}
 
 /** The <code>JavaConversions</code> object...
- *  
+ *
  *  @author Philipp Haller
  */
 object JavaConversions {

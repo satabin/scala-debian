@@ -17,9 +17,9 @@ abstract class AbstractReporter extends Reporter {
   val settings: Settings
   def display(pos: Position, msg: String, severity: Severity): Unit
   def displayPrompt(): Unit
-  
+
   private val positions = new HashMap[Position, Severity]
-  
+
   override def reset() {
     super.reset
     positions.clear
@@ -30,10 +30,10 @@ abstract class AbstractReporter extends Reporter {
   private def isPromptSet = settings.prompt.value
 
   protected def info0(pos: Position, msg: String, _severity: Severity, force: Boolean) {
-    val severity = 
+    val severity =
       if (settings.fatalWarnings.value && _severity == WARNING) ERROR
       else _severity
-    
+
     if (severity == INFO) {
       if (isVerbose || force)
         display(pos, msg, severity)
@@ -52,7 +52,7 @@ abstract class AbstractReporter extends Reporter {
    *  @note  Two positions are considered identical for logging if they have the same point.
    */
   private def testAndLog(pos: Position, severity: Severity): Boolean =
-    pos != null && pos.isDefined && { 
+    pos != null && pos.isDefined && {
       val fpos = pos.focus
       (positions get fpos) match {
         case Some(level) if level >= severity => true

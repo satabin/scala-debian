@@ -26,7 +26,7 @@ object Classfiles {
   final val CONSTANT_METHODREF = 10
   final val CONSTANT_INTFMETHODREF = 11
   final val CONSTANT_NAMEANDTYPE = 12
-  
+
   final val constantTagToString = Map(
     CONSTANT_UTF8 -> "UTF8",
     CONSTANT_UNICODE -> "Unicode",

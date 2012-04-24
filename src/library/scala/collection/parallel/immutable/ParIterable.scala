@@ -19,13 +19,13 @@ import scala.collection.GenIterable
 
 
 /** A template trait for immutable parallel iterable collections.
- *  
+ *
  *  $paralleliterableinfo
- *  
+ *
  *  $sideeffects
- *  
+ *
  *  @tparam T    the element type of the collection
- *  
+ *
  *  @author Aleksandar Prokopec
  *  @since 2.9
  */
@@ -36,12 +36,12 @@ extends collection/*.immutable*/.GenIterable[T]
    with ParIterableLike[T, ParIterable[T], collection.immutable.Iterable[T]]
 {
   override def companion: GenericCompanion[ParIterable] with GenericParCompanion[ParIterable] = ParIterable
-  
+
   // if `immutable.ParIterableLike` is introduced, please move these 4 methods there
   override def toIterable: ParIterable[T] = this
-  
+
   override def toSeq: ParSeq[T] = toParCollection[T, ParSeq[T]](() => ParSeq.newCombiner[T])
-  
+
 }
 
 
@@ -50,11 +50,11 @@ extends collection/*.immutable*/.GenIterable[T]
 object ParIterable extends ParFactory[ParIterable] {
   implicit def canBuildFrom[T]: CanCombineFrom[Coll, T, ParIterable[T]] =
     new GenericCanCombineFrom[T]
-  
+
   def newBuilder[T]: Combiner[T, ParIterable[T]] = ParVector.newBuilder[T]
-  
+
   def newCombiner[T]: Combiner[T, ParIterable[T]] = ParVector.newCombiner[T]
-  
+
 }
 
 

@@ -28,7 +28,7 @@ protected[swing] abstract class BufferWrapper[A] extends Buffer[A] { outer =>
     }
   }
   protected def insertAt(n: Int, a: A)
-  
+
   def +=:(a: A): this.type = { insertAt(0, a); this }
   def iterator = Iterator.range(0,length).map(apply(_))
 }

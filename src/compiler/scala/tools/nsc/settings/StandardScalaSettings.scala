@@ -15,7 +15,7 @@ import scala.tools.util.PathResolver.Defaults
  */
 trait StandardScalaSettings {
   self: AbsScalaSettings =>
-  
+
   /** Path related settings.
    */
   val bootclasspath =     PathSetting ("-bootclasspath", "Override location of bootstrap class files.", Defaults.scalaBootClassPath)

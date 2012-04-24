@@ -8,13 +8,13 @@ package object swing {
   type Dimension = java.awt.Dimension
   type Rectangle = java.awt.Rectangle
   type Insets = java.awt.Insets
-  
+
   type Graphics2D = java.awt.Graphics2D
   type Color = java.awt.Color
   type Image = java.awt.Image
   type Font = java.awt.Font
-  
-  protected[swing] def ifNull[A](o: Object, a: A): A = if(o eq null) a else o.asInstanceOf[A]
-  protected[swing] def toOption[A](o: Object): Option[A] = if(o eq null) None else Some(o.asInstanceOf[A])
-  protected[swing] def toAnyRef(x: Any): AnyRef = x.asInstanceOf[AnyRef]
+
+  private[swing] def ifNull[A](o: Object, a: A): A = if(o eq null) a else o.asInstanceOf[A]
+  private[swing] def toOption[A](o: Object): Option[A] = if(o eq null) None else Some(o.asInstanceOf[A])
+  private[swing] def toAnyRef(x: Any): AnyRef = x.asInstanceOf[AnyRef]
 }

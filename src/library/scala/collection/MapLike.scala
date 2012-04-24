@@ -16,7 +16,7 @@ import parallel.ParMap
 
 /** A template trait for maps, which associate keys with values.
  *
- *  $mapNote 
+ *  $mapNote
  *  $mapTags
  *  @since 2.8
  *
@@ -40,7 +40,7 @@ import parallel.ParMap
  *    }}}
  *    It is also good idea to override methods `foreach` and
  *    `size` for efficiency.
- * 
+ *
  *  @define mapTags
  *  @tparam A    the type of the keys.
  *  @tparam B    the type of associated values.
@@ -48,18 +48,18 @@ import parallel.ParMap
  *
  *  @author  Martin Odersky
  *  @version 2.8
- * 
+ *
  *  @define coll map
  *  @define Coll Map
  *  @define willNotTerminateInf
  *  @define mayNotTerminateInf
  */
 trait MapLike[A, +B, +This <: MapLike[A, B, This] with Map[A, B]]
-  extends PartialFunction[A, B] 
-     with IterableLike[(A, B), This] 
+  extends PartialFunction[A, B]
+     with IterableLike[(A, B), This]
      with GenMapLike[A, B, This]
-     with Subtractable[A, This] 
-     with Parallelizable[(A, B), ParMap[A, B]] 
+     with Subtractable[A, This]
+     with Parallelizable[(A, B), ParMap[A, B]]
 {
 self =>
 
@@ -67,7 +67,7 @@ self =>
    *   @return   an empty map of type `This`.
    */
   def empty: This
-  
+
   /** A common implementation of `newBuilder` for all maps in terms of `empty`.
    *  Overridden for mutable maps in `mutable.MapLike`.
    */
@@ -82,14 +82,14 @@ self =>
   def get(key: A): Option[B]
 
   /** Creates a new iterator over all key/value pairs of this map
-   *  
+   *
    *  @return the new iterator
    */
   def iterator: Iterator[(A, B)]
-  
-  /** Adds a key/value pair to this map, returning a new map. 
+
+  /** Adds a key/value pair to this map, returning a new map.
    *  @param    kv the key/value pair
-   *  @tparam   B1 the type of the value in the key/value pair. 
+   *  @tparam   B1 the type of the value in the key/value pair.
    *  @return   a new map with the new binding added to this map
    *  @usecase  def + (kv: (A, B)): Map[A, B]
    */
@@ -108,18 +108,18 @@ self =>
    */
   override def isEmpty: Boolean = size == 0
 
-  /**  Returns the value associated with a key, or a default value if the key is not contained in the map. 
+  /**  Returns the value associated with a key, or a default value if the key is not contained in the map.
    *   @param   key      the key.
    *   @param   default  a computation that yields a default value in case no binding for `key` is
    *                     found in the map.
-   *   @tparam  B1       the result type of the default computation. 
+   *   @tparam  B1       the result type of the default computation.
    *   @return  the value associated with `key` if it exists,
    *            otherwise the result of the `default` computation.
    *   @usecase def getOrElse(key: A, default: => B): B
    */
   def getOrElse[B1 >: B](key: A, default: => B1): B1 = get(key) match {
     case Some(v) => v
-    case None => default 
+    case None => default
   }
 
   /** Retrieves the value which is associated with the given key. This
@@ -181,17 +181,18 @@ self =>
     def next() = iter.next._1
   }
 
-  /** Creates an iterator for all keys.
+  /** Collects all keys of this map in an iterable collection.
    *
-   *  @return an iterator over all keys.
+   *  @return the keys of this map as an iterable.
    */
-  @migration(2, 8, "As of 2.8, keys returns Iterable[A] rather than Iterator[A].")
+  @migration("`keys` returns `Iterable[A]` rather than `Iterator[A]`.", "2.8.0")
   def keys: Iterable[A] = keySet
 
-  /** Collects all values of this map in an iterable collection. 
-   * @return the values of this map as an iterable.
+  /** Collects all values of this map in an iterable collection.
+   *
+   *  @return the values of this map as an iterable.
    */
-  @migration(2, 8, "As of 2.8, values returns Iterable[B] rather than Iterator[B].")
+  @migration("`values` returns `Iterable[B]` rather than `Iterator[B]`.", "2.8.0")
   def values: Iterable[B] = new DefaultValuesIterable
 
   /** The implementation class of the iterable returned by `values`.
@@ -222,7 +223,7 @@ self =>
    */
   def default(key: A): B =
     throw new NoSuchElementException("key not found: " + key)
-    
+
   /** Filters this map by retaining only keys satisfying a predicate.
    *  @param  p   the predicate used to test keys
    *  @return an immutable map consisting only of those key value pairs of this map where the key satisfies
@@ -233,7 +234,7 @@ self =>
     def iterator = self.iterator.filter(kv => p(kv._1))
     override def contains(key: A) = self.contains(key) && p(key)
     def get(key: A) = if (!p(key)) None else self.get(key)
-  }    
+  }
 
   /** Transforms this map by applying a function to every retrieved value.
    *  @param  f   the function used to transform values of this map.
@@ -255,7 +256,7 @@ self =>
   // generic, returning This[B]. We need better covariance support to express that though.
   // So right now we do the brute force approach of code duplication.
 
-  /** Creates a new map obtained by updating this map with a given key/value pair. 
+  /** Creates a new map obtained by updating this map with a given key/value pair.
    *  @param    key the key
    *  @param    value the value
    *  @tparam   B1 the type of the added value
@@ -287,7 +288,7 @@ self =>
    *  @return   a new map with the given bindings added to this map
    *  @usecase  def ++ (xs: Traversable[(A, B)]): Map[A, B]
    */
-  def ++[B1 >: B](xs: GenTraversableOnce[(A, B1)]): Map[A, B1] = 
+  def ++[B1 >: B](xs: GenTraversableOnce[(A, B1)]): Map[A, B1] =
     ((repr: Map[A, B1]) /: xs.seq) (_ + _)
 
   @bridge
@@ -300,7 +301,7 @@ self =>
    *           predicate is false from this set.
    *           If removal is slow, or you expect that most elements of the set
    *           will be removed, you might consider using `filter`
-   *           with a negated predicate instead. 
+   *           with a negated predicate instead.
    *  @param p    A predicate over key-value pairs
    *  @return     A new map containing elements not satisfying the predicate.
    */
@@ -310,7 +311,7 @@ self =>
       if (p(kv)) res = (res - kv._1).asInstanceOf[This] // !!! concrete overrides abstract problem
     res
   }
-  
+
   /** Overridden for efficiency. */
   override def toSeq: Seq[(A, B)] = toBuffer[(A, B)]
   override def toBuffer[C >: (A, B)]: mutable.Buffer[C] = {
@@ -318,14 +319,14 @@ self =>
     copyToBuffer(result)
     result
   }
-  
+
   protected[this] override def parCombiner = ParMap.newCombiner[A, B]
 
   /** Appends all bindings of this map to a string builder using start, end, and separator strings.
    *  The written text begins with the string `start` and ends with the string
    *  `end`. Inside, the string representations of all bindings of this map
    *  in the form of `key -> value` are separated by the string `sep`.
-   *   
+   *
    *  @param b     the builder to which strings are appended.
    *  @param start the starting string.
    *  @param sep   the separator string.
@@ -343,5 +344,5 @@ self =>
 
   override /*PartialFunction*/
   def toString = super[IterableLike].toString
-  
+
 }

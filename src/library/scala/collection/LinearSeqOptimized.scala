@@ -27,7 +27,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
   def tail: Repr
 
   /** The length of the $coll.
-   * 
+   *
    *  $willNotTerminateInf
    *
    *  Note: the execution of `length` may take time proportial to the length of the sequence.
@@ -52,7 +52,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     rest.head
   }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def foreach[B](f: A => B) {
     var these = this
     while (!these.isEmpty) {
@@ -61,8 +61,8 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     }
   }
 
-                                                                                   
-  override /*IterableLike*/ 
+
+  override /*IterableLike*/
   def forall(p: A => Boolean): Boolean = {
     var these = this
     while (!these.isEmpty) {
@@ -72,7 +72,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     true
   }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def exists(p: A => Boolean): Boolean = {
     var these = this
     while (!these.isEmpty) {
@@ -82,7 +82,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     false
   }
 
-  override /*TraversableLike*/ 
+  override /*TraversableLike*/
   def count(p: A => Boolean): Int = {
     var these = this
     var cnt = 0
@@ -93,7 +93,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     cnt
   }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def find(p: A => Boolean): Option[A] = {
     var these = this
     while (!these.isEmpty) {
@@ -103,7 +103,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     None
   }
 
-  override /*TraversableLike*/ 
+  override /*TraversableLike*/
   def foldLeft[B](z: B)(f: (B, A) => B): B = {
     var acc = z
     var these = this
@@ -114,23 +114,23 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     acc
   }
 
-  override /*IterableLike*/ 
-  def foldRight[B](z: B)(f: (A, B) => B): B = 
+  override /*IterableLike*/
+  def foldRight[B](z: B)(f: (A, B) => B): B =
     if (this.isEmpty) z
     else f(head, tail.foldRight(z)(f))
 
-  override /*TraversableLike*/ 
-  def reduceLeft[B >: A](f: (B, A) => B): B = 
+  override /*TraversableLike*/
+  def reduceLeft[B >: A](f: (B, A) => B): B =
     if (isEmpty) throw new UnsupportedOperationException("empty.reduceLeft")
     else tail.foldLeft[B](head)(f)
 
-  override /*IterableLike*/ 
-  def reduceRight[B >: A](op: (A, B) => B): B = 
+  override /*IterableLike*/
+  def reduceRight[B >: A](op: (A, B) => B): B =
     if (isEmpty) throw new UnsupportedOperationException("Nil.reduceRight")
     else if (tail.isEmpty) head
     else op(head, tail.reduceRight(op))
-  
-  override /*TraversableLike*/ 
+
+  override /*TraversableLike*/
   def last: A = {
     if (isEmpty) throw new NoSuchElementException
     var these = this
@@ -141,8 +141,8 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     }
     these.head
   }
-  
-  override /*IterableLike*/ 
+
+  override /*IterableLike*/
   def take(n: Int): Repr = {
     val b = newBuilder
     var i = 0
@@ -154,8 +154,8 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     }
     b.result
   }
-  
-  override /*TraversableLike*/ 
+
+  override /*TraversableLike*/
   def drop(n: Int): Repr = {
     var these: Repr = repr
     var count = n
@@ -177,7 +177,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     these
   }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def dropRight(n: Int): Repr = {
     val b = newBuilder
     var these = this
@@ -190,7 +190,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     b.result
   }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def slice(from: Int, until: Int): Repr = {
     var these: Repr = repr
     var count = from max 0
@@ -208,10 +208,10 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
       b += these.head
       these = these.tail
     }
-    b.result    
+    b.result
   }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def takeWhile(p: A => Boolean): Repr = {
     val b = newBuilder
     var these = this
@@ -222,7 +222,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     b.result
   }
 
-  override /*TraversableLike*/ 
+  override /*TraversableLike*/
   def span(p: A => Boolean): (Repr, Repr) = {
     var these: Repr = repr
     val b = newBuilder
@@ -231,9 +231,9 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
       these = these.tail
     }
     (b.result, these)
-  }  
+  }
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def sameElements[B >: A](that: GenIterable[B]): Boolean = that match {
     case that1: LinearSeq[_] =>
       var these = this
@@ -246,7 +246,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     case _ =>
       super.sameElements(that)
   }
-  
+
   override /*SeqLike*/
   def lengthCompare(len: Int): Int =  {
     var i = 0
@@ -279,7 +279,7 @@ trait LinearSeqOptimized[+A, +Repr <: LinearSeqOptimized[A, Repr]] extends Linea
     while (these.nonEmpty) {
       if (p(these.head))
         return i
-      
+
       i += 1
       these = these.tail
     }

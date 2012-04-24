@@ -18,7 +18,7 @@ trait ConsoleReaderHelper extends ConsoleReader {
   def height      = terminal.getHeight()
   def paginate    = isPaginationEnabled()
   def paginate_=(value: Boolean) = setPaginationEnabled(value)
-  
+
   def goBack(num: Int): Unit
   def readOneKey(prompt: String): Int
   def eraseLine(): Unit
@@ -46,7 +46,7 @@ trait ConsoleReaderHelper extends ConsoleReader {
 
   override def printColumns(items: JCollection[_ <: CharSequence]): Unit =
     printColumns(items: List[String])
-    
+
   def printColumns(items: List[String]): Unit = {
     if (items forall (_ == ""))
       return
@@ -56,7 +56,7 @@ trait ConsoleReaderHelper extends ConsoleReader {
     val columnSize = longest + marginSize
     val padded     = items map ("%-" + columnSize + "s" format _)
     val groupSize  = 1 max (width / columnSize)   // make sure it doesn't divide to 0
-    
+
     padded grouped groupSize foreach { xs =>
       println(xs.mkString)
       linesLeft -= 1

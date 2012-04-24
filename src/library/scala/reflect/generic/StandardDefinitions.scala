@@ -9,7 +9,7 @@ package generic
 @deprecated("scala.reflect.generic will be removed", "2.9.1") trait StandardDefinitions { self: Universe =>
 
   val definitions: AbsDefinitions
- 
+
   abstract class AbsDefinitions {
 
     // outer packages and their classes
@@ -30,7 +30,7 @@ package generic
     // bottom types
     def NullClass   : Symbol
     def NothingClass: Symbol
-    
+
     // the scala value classes
     def UnitClass   : Symbol
     def ByteClass   : Symbol
@@ -41,7 +41,7 @@ package generic
     def FloatClass  : Symbol
     def DoubleClass : Symbol
     def BooleanClass: Symbol
-    
+
     // fundamental reference classes
     def SymbolClass : Symbol
     def StringClass : Symbol

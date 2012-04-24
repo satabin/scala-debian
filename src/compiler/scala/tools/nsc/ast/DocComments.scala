@@ -40,7 +40,7 @@ trait DocComments { self: SymbolTable =>
    */
   def docCommentPos(sym: Symbol): Position =
     getDocComment(sym) map (_.pos) getOrElse NoPosition
-    
+
   /** A version which doesn't consider self types, as a temporary measure:
    *  an infinite loop has broken out between superComment and cookedDocComment
    *  since r23926.
@@ -271,7 +271,7 @@ trait DocComments { self: SymbolTable =>
               lookupVariable(vname, site) match {
                 case Some(replacement) => replaceWith(replacement)
                 case None              => reporter.warning(sym.pos, "Variable " + vname + " undefined in comment for " + sym)
-              }            
+              }
             }
         }
       }
@@ -281,7 +281,7 @@ trait DocComments { self: SymbolTable =>
         expandInternal(out.toString, depth + 1)
       }
     }
-    
+
     // We suppressed expanding \$ throughout the recursion, and now we
     // need to replace \$ with $ so it looks as intended.
     expandInternal(initialStr, 0).replaceAllLiterally("""\$""", "$")
@@ -316,7 +316,7 @@ trait DocComments { self: SymbolTable =>
       val commentStart = skipLineLead(raw, codeEnd + 1) min end
       val comment      = "/** " + raw.substring(commentStart, end) + "*/"
       val commentPos   = subPos(commentStart, end)
-      
+
       UseCase(DocComment(comment, commentPos), code, codePos)
     }
 
@@ -380,7 +380,7 @@ trait DocComments { self: SymbolTable =>
         val partnames = (parts.init map newTermName) :+ newTypeName(parts.last)
         val (start, rest) = parts match {
           case "this" :: _      => (site.thisType, partnames.tail)
-          case _ :: "this" :: _ => 
+          case _ :: "this" :: _ =>
             site.ownerChain.find(_.name == partnames.head) match {
               case Some(clazz)  => (clazz.thisType, partnames drop 2)
               case _            => (NoType, Nil)

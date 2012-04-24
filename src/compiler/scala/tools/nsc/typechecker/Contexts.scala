@@ -13,7 +13,7 @@ import annotation.tailrec
 /** This trait ...
  *
  *  @author  Martin Odersky
- *  @version 1.0 
+ *  @version 1.0
  */
 trait Contexts { self: Analyzer =>
   import global._
@@ -142,14 +142,14 @@ trait Contexts { self: Analyzer =>
       undetparams = List()
       tparams
     }
-    
+
     def withoutReportingErrors[T](op: => T): T = {
       val saved = reportGeneralErrors
       reportGeneralErrors = false
       try op
       finally reportGeneralErrors = saved
     }
-    
+
     def withImplicitsDisabled[T](op: => T): T = {
       val saved = implicitsEnabled
       implicitsEnabled = false
@@ -172,9 +172,9 @@ trait Contexts { self: Analyzer =>
       c.tree = tree
       c.owner = owner
       c.scope = scope
-      
+
       c.outer = this
-      
+
       tree match {
         case Template(_, _, _) | PackageDef(_, _) =>
           c.enclClass = c
@@ -230,7 +230,7 @@ trait Contexts { self: Analyzer =>
 
     def makeNewScope(tree: Tree, owner: Symbol): Context =
       make(tree, owner, new Scope(scope))
-    // IDE stuff: distinguish between scopes created for typing and scopes created for naming. 
+    // IDE stuff: distinguish between scopes created for typing and scopes created for naming.
 
     def make(tree: Tree, owner: Symbol): Context =
       make0(tree, owner, scope)
@@ -285,7 +285,7 @@ trait Contexts { self: Analyzer =>
       if (msg endsWith ds) msg else msg + ds
     }
 
-    private def unitError(pos: Position, msg: String) = 
+    private def unitError(pos: Position, msg: String) =
       unit.error(pos, if (checking) "\n**** ERROR DURING INTERNAL CHECKING ****\n" + msg else msg)
 
     def error(pos: Position, err: Throwable) =
@@ -301,7 +301,7 @@ trait Contexts { self: Analyzer =>
     def warning(pos:  Position, msg: String) = {
       if (reportGeneralErrors) unit.warning(pos, msg)
     }
- 
+
     /**
      *  @param pos  ...
      *  @param pre  ...
@@ -313,7 +313,7 @@ trait Contexts { self: Analyzer =>
       val (reportPos, msg) = (
         if (sym1.hasDefaultFlag && sym2.hasDefaultFlag && sym1.enclClass == sym2.enclClass) {
           val methodName = nme.defaultGetterToMethod(sym1.name)
-          (sym1.enclClass.pos,            
+          (sym1.enclClass.pos,
            "in "+ sym1.enclClass +", multiple overloaded alternatives of " + methodName +
                      " define default arguments")
         }
@@ -354,7 +354,7 @@ trait Contexts { self: Analyzer =>
       val scopingCtx =
         if (owner.isConstructor) nextEnclosing(c => !c.tree.isInstanceOf[Block])
         else this
-      
+
       scopingCtx.outer
     }
 
@@ -368,15 +368,15 @@ trait Contexts { self: Analyzer =>
 
     /** Is `sub' a subclass of `base' or a companion object of such a subclass?
      */
-    def isSubClassOrCompanion(sub: Symbol, base: Symbol) = 
+    def isSubClassOrCompanion(sub: Symbol, base: Symbol) =
       sub.isNonBottomSubClass(base) ||
       sub.isModuleClass && sub.linkedClassOfClass.isNonBottomSubClass(base)
 
-    /** Return closest enclosing context that defines a superclass of `clazz', or a 
+    /** Return closest enclosing context that defines a superclass of `clazz', or a
      *  companion module of a superclass of `clazz', or NoContext if none exists */
     def enclosingSuperClassContext(clazz: Symbol): Context = {
       var c = this.enclClass
-      while (c != NoContext && 
+      while (c != NoContext &&
              !clazz.isNonBottomSubClass(c.owner) &&
              !(c.owner.isModuleClass && clazz.isNonBottomSubClass(c.owner.companionClass)))
         c = c.outer.enclClass
@@ -447,18 +447,18 @@ trait Contexts { self: Analyzer =>
       /** Is protected access to target symbol permitted */
       def isProtectedAccessOK(target: Symbol) = {
         val c = enclosingSubClassContext(sym.owner)
-        if (c == NoContext) 
-          lastAccessCheckDetails = 
+        if (c == NoContext)
+          lastAccessCheckDetails =
             "\n Access to protected "+target+" not permitted because"+
             "\n "+"enclosing class "+this.enclClass.owner+this.enclClass.owner.locationString+" is not a subclass of "+
             "\n "+sym.owner+sym.owner.locationString+" where target is defined"
         c != NoContext && {
-          val res = 
+          val res =
             isSubClassOrCompanion(pre.widen.typeSymbol, c.owner) ||
-            c.owner.isModuleClass && 
+            c.owner.isModuleClass &&
             isSubClassOrCompanion(pre.widen.typeSymbol, c.owner.linkedClassOfClass)
-          if (!res) 
-            lastAccessCheckDetails = 
+          if (!res)
+            lastAccessCheckDetails =
               "\n Access to protected "+target+" not permitted because"+
               "\n prefix type "+pre.widen+" does not conform to"+
               "\n "+c.owner+c.owner.locationString+" where the access take place"
@@ -478,7 +478,7 @@ trait Contexts { self: Analyzer =>
         || sym.isProtected &&
              (  superAccess
              || pre.isInstanceOf[ThisType]
-             || phase.erasedTypes 
+             || phase.erasedTypes
              || isProtectedAccessOK(sym)
              || (sym.allOverriddenSymbols exists isProtectedAccessOK)
                 // that last condition makes protected access via self types work.
@@ -501,7 +501,7 @@ trait Contexts { self: Analyzer =>
         sym.info match {
           case TypeBounds(lo, hi) if (hi <:< lo && lo <:< hi) =>
             current = current.instantiateTypeParams(List(sym), List(lo))
-//@M TODO: when higher-kinded types are inferred, probably need a case PolyType(_, TypeBounds(...)) if ... =>            
+//@M TODO: when higher-kinded types are inferred, probably need a case PolyType(_, TypeBounds(...)) if ... =>
           case _ =>
         }
         sym.setInfo(info)
@@ -512,7 +512,7 @@ trait Contexts { self: Analyzer =>
 
     private var implicitsCache: List[List[ImplicitInfo]] = null
     private var implicitsRunId = NoRunId
-    
+
     def resetCache() {
       implicitsRunId = NoRunId
       implicitsCache = null
@@ -525,7 +525,7 @@ trait Contexts { self: Analyzer =>
      */
     private def isQualifyingImplicit(sym: Symbol, pre: Type, imported: Boolean) =
       sym.isImplicit &&
-      isAccessible(sym, pre) && 
+      isAccessible(sym, pre) &&
       !(imported && {
         val e = scope.lookupEntry(sym.name)
         (e ne null) && (e.owner == scope)
@@ -538,11 +538,11 @@ trait Contexts { self: Analyzer =>
     private def collectImplicitImports(imp: ImportInfo): List[ImplicitInfo] = {
       val pre = imp.qual.tpe
       def collect(sels: List[ImportSelector]): List[ImplicitInfo] = sels match {
-        case List() => 
+        case List() =>
           List()
-        case List(ImportSelector(nme.WILDCARD, _, _, _)) => 
+        case List(ImportSelector(nme.WILDCARD, _, _, _)) =>
           collectImplicits(pre.implicitMembers, pre, imported = true)
-        case ImportSelector(from, _, to, _) :: sels1 => 
+        case ImportSelector(from, _, to, _) :: sels1 =>
           var impls = collect(sels1) filter (info => info.name != from)
           if (to != nme.WILDCARD) {
             for (sym <- imp.importedSymbol(to).alternatives)
@@ -556,7 +556,7 @@ trait Contexts { self: Analyzer =>
     }
 
     def implicitss: List[List[ImplicitInfo]] = {
-      
+
       if (implicitsRunId != currentRunId) {
         implicitsRunId = currentRunId
         implicitsCache = List()
@@ -575,7 +575,7 @@ trait Contexts { self: Analyzer =>
           } else if (imports != nextOuter.imports) {
             assert(imports.tail == nextOuter.imports)
             collectImplicitImports(imports.head)
-          } else if (owner.isPackageClass) { 
+          } else if (owner.isPackageClass) {
             // the corresponding package object may contain implicit members.
             collectImplicits(owner.tpe.implicitMembers, owner.tpe)
           } else List()
@@ -639,13 +639,13 @@ trait Contexts { self: Analyzer =>
       result
     }
 
-    def allImportedSymbols: List[Symbol] = 
+    def allImportedSymbols: List[Symbol] =
       qual.tpe.members flatMap (transformImport(tree.selectors, _))
 
     private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
       case List() => List()
       case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
-      case ImportSelector(from, _, to, _) :: _ if (from == sym.name) => 
+      case ImportSelector(from, _, to, _) :: _ if (from == sym.name) =>
         if (to == nme.WILDCARD) List()
         else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
       case _ :: rest => transformImport(rest, sym)

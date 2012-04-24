@@ -10,7 +10,7 @@
 package scala.xml
 package dtd
 
-/** Scanner for regexps (content models in DTD element declarations) 
+/** Scanner for regexps (content models in DTD element declarations)
  *  todo: cleanup
  */
 class Scanner extends Tokens with parsing.TokenTests {
@@ -19,7 +19,7 @@ class Scanner extends Tokens with parsing.TokenTests {
 
   var token:Int = END
   var value:String = _
-  
+
   private var it: Iterator[Char] = null
   private var c: Char = 'z'
 
@@ -38,18 +38,18 @@ class Scanner extends Tokens with parsing.TokenTests {
   }
 
   // todo: see XML specification... probably isLetter,isDigit is fine
-  final def isIdentChar = ( ('a' <= c && c <= 'z') 
+  final def isIdentChar = ( ('a' <= c && c <= 'z')
                            || ('A' <= c && c <= 'Z'));
-  
+
   final def next() = if (it.hasNext) c = it.next else c = ENDCH
 
-  final def acc(d: Char) { 
+  final def acc(d: Char) {
     if (c == d) next else sys.error("expected '"+d+"' found '"+c+"' !");
   }
 
   final def accS(ds: Seq[Char]) { ds foreach acc }
 
-  final def readToken: Int = 
+  final def readToken: Int =
     if (isSpace(c)) {
       while (isSpace(c)) c = it.next
       S
@@ -63,11 +63,11 @@ class Scanner extends Tokens with parsing.TokenTests {
       case '|'   => next; CHOICE
       case '#'   => next; accS( "PCDATA" ); TOKEN_PCDATA
       case ENDCH => END
-      case _     => 
-        if (isNameStart(c)) name; // NAME 
+      case _     =>
+        if (isNameStart(c)) name; // NAME
         else sys.error("unexpected character:" + c)
     }
-  
+
   final def name = {
     val sb = new StringBuilder()
     do { sb.append(c); next } while (isNameChar(c));

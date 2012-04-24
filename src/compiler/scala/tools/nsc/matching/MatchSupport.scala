@@ -15,28 +15,28 @@ import annotation.elidable
  *  out of the way.
  */
 trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
-  
+
   import global.{ typer => _, _ }
   import CODE._
-  
+
   /** Debugging support: enable with -Ypmat-debug **/
   private final def trace = settings.Ypmatdebug.value
-  
+
   def impossible:           Nothing = abort("this never happens")
-  
+
   def treeCollect[T](tree: Tree, pf: PartialFunction[Tree, T]): List[T] =
     tree filter (pf isDefinedAt _) map (x => pf(x))
-  
+
   object Types {
     import definitions._
     implicit def enrichType(x: Type): RichType = new RichType(x)
-    
+
     val subrangeTypes = Set(ByteClass, ShortClass, CharClass, IntClass)
 
     class RichType(undecodedTpe: Type) {
       def tpe = decodedEqualsType(undecodedTpe)
       def isAnyRef = tpe <:< AnyRefClass.tpe
-      
+
       // These tests for final classes can inspect the typeSymbol
       private def is(s: Symbol) = tpe.typeSymbol eq s
       def      isByte = is(ByteClass)
@@ -48,7 +48,7 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
       def     isArray = is(ArrayClass)
     }
   }
-  
+
   object Debug {
     def typeToString(t: Type): String = t match {
       case NoType => "x"
@@ -65,7 +65,7 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
       case Typed(expr, tpt)     => "%s: %s".format(treeToString(expr), treeToString(tpt))
       case x                    =>  x.toString + " (" + x.getClass + ")"
     }
-    
+
     // Formatting for some error messages
     private val NPAD = 15
     def pad(s: String): String = "%%%ds" format (NPAD-1) format s
@@ -73,15 +73,15 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
       case x: Tree    => treeToString(x)
       case x          => x.toString
     })
-    
+
     // pretty print for debugging
     def pp(x: Any): String = pp(x, false)
     def pp(x: Any, newlines: Boolean): String = {
       val stripStrings = List("""java\.lang\.""", """\$iw\.""")
-      
+
       def clean(s: String): String =
         stripStrings.foldLeft(s)((s, x) => s.replaceAll(x, ""))
-      
+
       def pplist(xs: List[Any]): String =
         if (newlines) (xs map ("    " + _ + "\n")).mkString("\n", "", "")
         else xs.mkString("(", ", ", ")")
@@ -94,7 +94,7 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
         case x              => x.toString
       })
     }
-    
+
     @elidable(elidable.FINE) def ifDebug(body: => Unit): Unit     = { if (settings.debug.value) body }
     @elidable(elidable.FINE) def DBG(msg: => String): Unit        = { ifDebug(println(msg)) }
     @elidable(elidable.FINE) def TRACE(f: String, xs: Any*): Unit = {
@@ -121,14 +121,14 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
     def indent(s: Any) = s.toString() split "\n" map ("  " + _) mkString "\n"
     def indentAll(s: Seq[Any]) = s map ("  " + _.toString() + "\n") mkString
   }
-  
+
   /** Drops the 'i'th element of a list.
    */
   def dropIndex[T](xs: List[T], n: Int) = {
     val (l1, l2) = xs splitAt n
     l1 ::: (l2 drop 1)
   }
-  
+
   /** Extract the nth element of a list and return it and the remainder.
    */
   def extractIndex[T](xs: List[T], n: Int): (T, List[T]) =

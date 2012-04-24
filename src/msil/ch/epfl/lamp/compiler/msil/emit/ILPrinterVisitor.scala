@@ -496,7 +496,7 @@ abstract class ILPrinterVisitor extends Visitor {
           print("\t// "); printSignature(loc.LocalType)
           print(" \'"); print(loc.name); print("\'")
     } else if (opCode == OpCode.Readonly) {
-      // nothing to do 
+      // nothing to do
     } else if (opCode == OpCode.Constrained) {
       printReference(argument.asInstanceOf[Type])
     } else if (opCode == OpCode.Ldelema) {
@@ -678,10 +678,10 @@ abstract class ILPrinterVisitor extends Visitor {
         print(if (cm.isReqd) "modreq( " else "modopt( ")
         printReference(cm.marker)
         print(" ) ")
-      } 
+      }
     }
   }
-  
+
   def printSignature(`type`: Type) {
       val sigOpt = primitive.get(`type`)
       if (sigOpt.isDefined) {
@@ -779,7 +779,7 @@ object ILPrinterVisitor {
     }
     return false
     }
-        
+
     final val EMPTY: String = ""
     def msilString(s: String): String = {
     if (hasControlChars(s)) {
@@ -788,7 +788,7 @@ object ILPrinterVisitor {
         } catch {
           case e : java.io.UnsupportedEncodingException => throw new RuntimeException(e)
         }
-    }   
+    }
     var str = new StringBuffer(s)
     var ss = EMPTY
     var i = 0

@@ -27,38 +27,38 @@ object Tokens {
   )
   private val tokensInfo = Simple.scalaProgramInfo("tokens", tokensUsage)
   private lazy val TokensSpec = Simple(tokensInfo, tokensUnary, tokensBinary, null)
-  
+
   def sanitize(x: Any): String = sanitize(x.toString)
   def sanitize(str: String): String = str flatMap (x => if (x.isControl) char2uescape(x) else x.toString)
-  
-  def main(args0: Array[String]): Unit = {    
+
+  def main(args0: Array[String]): Unit = {
     if (args0.isEmpty)
       return println(TokensSpec.helpMsg)
-    
+
     val runner = TokensSpec instance args0
     import runner._
-    
+
     val files = (residualArgs flatMap walk).distinct
     if (parsed isSet "--verbose")
       println("Tokenizing: " + (files map (_.name) mkString " "))
-    
+
     if (parsed isSet "--stats")
       println("Stats not yet implemented.")
-    
+
     def raw = files flatMap fromScalaSource
     def tokens: List[Any] =
       if (parsed isSet "--sliding") raw sliding parsed("--sliding").toInt map (_ map sanitize mkString " ") toList
       else raw
-    
+
     def output =
       if (parsed isSet "--freq")
         (tokens groupBy (x => x) mapValues (_.length)).toList sortBy (-_._2) map (x => x._2 + " " + x._1)
       else
         tokens
-    
+
     output foreach println
   }
-  
+
   def fromPaths(paths: String*): List[Any] =
     (paths.toList flatMap walk).distinct flatMap fromScalaSource
 
@@ -66,16 +66,16 @@ object Tokens {
    */
   private def walk(arg: String): List[File] = {
     def traverse = Path(arg) ifDirectory (_.deepList()) getOrElse Iterator(File(arg))
-    
+
     Path onlyFiles traverse filter (_ hasExtension "scala") toList
   }
-  
+
   def fromScalaString(code: String): List[Any] = {
     val f = File.makeTemp("tokens")
     f writeAll code
     fromScalaSource(f)
   }
-  
+
   /** Tokenizes a single scala file.
    */
   def fromScalaSource(file: Path): List[Any] = fromScalaSource(file.path)
@@ -83,7 +83,7 @@ object Tokens {
     val global = new Global(new Settings())
     import global._
     import syntaxAnalyzer.{ UnitScanner, token2string }
-    
+
     val in = new UnitScanner(new CompilationUnit(getSourceFile(file)))
     in.init()
 

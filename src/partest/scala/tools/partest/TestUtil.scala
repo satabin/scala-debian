@@ -8,7 +8,7 @@ trait TestUtil {
     val start = System.nanoTime
     val result = body
     val end = System.nanoTime
-  
+
     f(end - start)
     result
   }
@@ -17,20 +17,20 @@ trait TestUtil {
   def alsoNanos[T](body: => T): (Long, T) = {
     var nanos = 0L
     val result = timed(nanos = _)(body)
-  
+
     (nanos, result)
   }
   def nanos(body: => Unit): Long = alsoNanos(body)._1
-  
+
   def verifySpeed(body1: => Unit, body2: => Unit, acceptableMultiple: Double) = {
     val t1 = nanos(body1).toDouble
     val t2 = nanos(body2).toDouble
     val mult = if (t1 > t2) t1 / t2 else t2 / t1
-    
+
     assert(mult <= acceptableMultiple, "Performance difference too great: multiple = " + mult)
   }
 }
 
 object TestUtil extends TestUtil {
-  
+
 }

@@ -14,9 +14,9 @@ import javax.swing.{JScrollBar, BoundedRangeModel}
 import java.awt.event.{AdjustmentListener}
 
 object ScrollBar {
-  def wrap(c: JScrollBar): ScrollBar = { 
+  def wrap(c: JScrollBar): ScrollBar = {
     val w = UIElement.cachedWrapper[ScrollBar](c)
-    if (w != null) w 
+    if (w != null) w
     else new ScrollBar { override lazy val peer = c }
   }
 }
@@ -28,11 +28,11 @@ class ScrollBar extends Component with Orientable.Wrapper with Adjustable.Wrappe
 	def valueIsAjusting_=(b : Boolean) = peer.setValueIsAdjusting(b)
 
 	// TODO: can we find a better interface?
-	//def setValues(value: Int = this.value, visible: Int = visibleAmount, 
-	//             min: Int = minimum, max: Int = maximum) =    
+	//def setValues(value: Int = this.value, visible: Int = visibleAmount,
+	//             min: Int = minimum, max: Int = maximum) =
 	//  peer.setValues(value, visible, min, max)
 
-// Not currently needed, requires wrapper for BoundedRangeModel 
+// Not currently needed, requires wrapper for BoundedRangeModel
 //
 //    	    def model = peer.getModel
 //    	    def model_=(m : BoundedRangeModel) = peer.setModel(m)

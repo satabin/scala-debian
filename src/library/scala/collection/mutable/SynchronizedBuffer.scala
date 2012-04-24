@@ -15,9 +15,9 @@ import script._
 
 /** This class should be used as a mixin. It synchronizes the `Buffer`
  *  methods of the class into which it is mixed in.
- *  
+ *
  *  @tparam A    type of the elements contained in this buffer.
- *  
+ *
  *  @author  Matthias Zenger
  *  @version 1.0, 08/07/2003
  *  @since   1

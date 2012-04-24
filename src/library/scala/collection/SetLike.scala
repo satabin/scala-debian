@@ -23,7 +23,7 @@ import parallel.ParSet
  *  @define setNote
  *
  *  A set is a collection that contains no duplicate elements.
- *  
+ *
  *    '''Implementation note:'''
  *    This trait provides most of the operations of a `Set` independently of its representation.
  *    It is typically inherited by concrete implementations of sets.
@@ -43,20 +43,20 @@ import parallel.ParSet
  *    }}}
  *    It is also good idea to override methods `foreach` and
  *    `size` for efficiency.
- * 
+ *
  * @define setTags
  *  @tparam A    the type of the elements of the set
  *  @tparam This the type of the set itself.
  *
  *  @author  Martin Odersky
  *  @version 2.8
- * 
+ *
  *  @define coll set
  *  @define Coll Set
  *  @define willNotTerminateInf
  *  @define mayNotTerminateInf
  */
-trait SetLike[A, +This <: SetLike[A, This] with Set[A]] 
+trait SetLike[A, +This <: SetLike[A, This] with Set[A]]
 extends IterableLike[A, This]
    with GenSetLike[A, This]
    with Subtractable[A, This]
@@ -75,7 +75,7 @@ self =>
    *  `mutable.SetLike`</a>.
    */
   override protected[this] def newBuilder: Builder[A, This] = new SetBuilder[A, This](empty)
-  
+
   protected[this] override def parCombiner = ParSet.newCombiner[A]
 
   /** Overridden for efficiency. */
@@ -85,11 +85,11 @@ self =>
     copyToBuffer(result)
     result
   }
-  
+
   // note: this is only overridden here to add the migration annotation,
   // which I hope to turn into an Xlint style warning as the migration aspect
   // is not central to its importance.
-  @migration(2, 8, "Set.map now returns a Set, so it will discard duplicate values.")
+  @migration("Set.map now returns a Set, so it will discard duplicate values.", "2.8.0")
   override def map[B, That](f: A => B)(implicit bf: CanBuildFrom[This, B, That]): That = super.map(f)(bf)
 
   /** Tests if some element is contained in this set.
@@ -107,8 +107,8 @@ self =>
    *          contains `elem`.
    */
   def + (elem: A): This
-  
-  /** Creates a new $coll with additional elements. 
+
+  /** Creates a new $coll with additional elements.
    *
    *  This method takes two or more elements to be added. Another overloaded
    *  variant of this method handles the case where a single element is added.
@@ -119,7 +119,7 @@ self =>
    *  @return   a new $coll with the given elements added.
    */
   def + (elem1: A, elem2: A, elems: A*): This = this + elem1 + elem2 ++ elems
-  
+
   /** Creates a new $coll by adding all elements contained in another collection to this $coll.
    *
    *  @param elems     the collection containing the added elements.
@@ -144,7 +144,7 @@ self =>
    */
   override def isEmpty: Boolean = size == 0
 
-  /**  This method is an alias for `intersect`. 
+  /**  This method is an alias for `intersect`.
    *  It computes an intersection with set `that`.
    *  It removes all the elements that are not present in `that`.
    *
@@ -157,7 +157,7 @@ self =>
    *
    *  @param   that  the set to form the union with.
    *  @return  a new set consisting of all elements that are in this
-   *  set or in the given set `that`. 
+   *  set or in the given set `that`.
    */
   def union(that: GenSet[A]): This = this ++ that
 
@@ -171,7 +171,7 @@ self =>
    *              set that are not also contained in the given set `that`.
    */
   def diff(that: GenSet[A]): This = this -- that
-  
+
   @bridge
   def diff(that: Set[A]): This = diff(that: GenSet[A])
 
@@ -204,11 +204,11 @@ self =>
           len += 1
         }
       }
-      
+
       itr.next
     }
   }
-    
+
   /** An Iterator include all subsets containing exactly len elements.
    *  If the elements in 'This' type is ordered, then the subsets will also be in the same order.
    *  ListSet(1,2,3).subsets => {1},{2},{3},{1,2},{1,3},{2,3},{1,2,3}}
@@ -238,7 +238,7 @@ self =>
         for (j <- (i+1) until len)
           idxs(j) = idxs(j-1) + 1
       }
-      
+
       result
     }
   }
@@ -249,5 +249,5 @@ self =>
    */
   override def stringPrefix: String = "Set"
   override def toString = super[IterableLike].toString
-  
+
 }

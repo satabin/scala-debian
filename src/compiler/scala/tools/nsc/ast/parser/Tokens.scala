@@ -36,8 +36,8 @@ abstract class Tokens {
   def isLiteral(code: Int): Boolean
   def isKeyword(code: Int): Boolean
   def isSymbol(code: Int): Boolean
-  
-  final def isSpace(at: Char)         = at == ' ' || at == '\t'  
+
+  final def isSpace(at: Char)         = at == ' ' || at == '\t'
   final def isNewLine(at: Char)       = at == CR || at == LF || at == FF
   final def isBrace(code : Int)       = code >= LPAREN && code <= RBRACE
   final def isOpenBrace(code : Int)   = isBrace(code) && (code % 2 == 0)
@@ -62,7 +62,7 @@ object Tokens extends Tokens {
     case NULL|THIS|TRUE|FALSE                     => true
     case code                                     => isLiteral(code)
   }
-    
+
   /** keywords */
   final val IF = 20
   final val FOR = 21
@@ -109,7 +109,7 @@ object Tokens extends Tokens {
 
   def isKeyword(code : Int) =
     code >= IF && code <= LAZY
-  
+
   @switch def isDefinition(code : Int) = code match {
     case CLASS|TRAIT|OBJECT => true
     case CASECLASS|CASEOBJECT => true
@@ -134,7 +134,7 @@ object Tokens extends Tokens {
   final val HASH = 82
   final val AT = 83
   final val VIEWBOUND = 84
-  
+
   def isSymbol(code : Int) =
     code >= COMMA && code <= VIEWBOUND
 
@@ -148,10 +148,10 @@ object Tokens extends Tokens {
 
   /** XML mode */
   final val XMLSTART = 96
-  
+
   /** for IDE only */
   final val COMMENT = 97
-  
+
   final val WHITESPACE = 105
   final val IGNORE = 106
   final val ESCAPE = 109

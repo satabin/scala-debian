@@ -16,10 +16,10 @@ import scala.util.control.ControlThrowable
  */
 trait CodeHandlers[T] {
   self =>
-  
+
   // Expressions are composed of operators and operands.
   def expr(code: String): T
-  
+
   // A declaration introduces names and assigns them types.
   // It can form part of a class definition (§5.1) or of a refinement in a compound type (§3.2.7).
   // (Ed: aka abstract members.)
@@ -34,16 +34,16 @@ trait CodeHandlers[T] {
   // ‘val’ PatDef | ‘var’ VarDef | ‘def’ FunDef | ‘type’ {nl} TypeDef |
   // [‘case’] ‘class’ ClassDef | [‘case’] ‘object’ ObjectDef | ‘trait’ TraitDef
   def defn(code: String): T
-  
+
   // An import clause has the form import p.I where p is a stable identifier (§3.1) and I is an import expression.
   def impt(code: String): T
-  
+
   // Statements occur as parts of blocks and templates.
   // A statement can be an import, a definition or an expression, or it can be empty.
   // Statements used in the template of a class definition can also be declarations.
   def stmt(code: String): T
   def stmts(code: String): Seq[T]
-  
+
   object opt extends CodeHandlers[Option[T]] {
     val handler: PartialFunction[Throwable, Option[T]] = {
       case _: NoSuccess => None
@@ -51,7 +51,7 @@ trait CodeHandlers[T] {
     val handlerSeq: PartialFunction[Throwable, Seq[Option[T]]] = {
       case _: NoSuccess => Nil
     }
-    
+
     def expr(code: String)   = try Some(self.expr(code)) catch handler
     def decl(code: String)   = try Some(self.decl(code)) catch handler
     def defn(code: String)   = try Some(self.defn(code)) catch handler
@@ -64,7 +64,7 @@ trait CodeHandlers[T] {
 object CodeHandlers {
   def incomplete() = throw CodeIncomplete
   def fail(msg: String) = throw new CodeException(msg)
-  
+
   trait NoSuccess extends ControlThrowable
   class CodeException(msg: String) extends RuntimeException(msg) with NoSuccess { }
   object CodeIncomplete extends CodeException("CodeIncomplete")

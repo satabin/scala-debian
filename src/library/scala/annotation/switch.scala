@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 package scala.annotation
- 
+
 /** An annotation to be applied to a match expression.  If present,
  *  the compiler will verify that the match has been compiled to a
  *  [[http://java.sun.com/docs/books/jvms/second_edition/html/Instructions2.doc14.html tableswitch]]

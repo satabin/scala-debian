@@ -88,7 +88,7 @@ trait TemplateEntity extends Entity {
 
   /** The self-type of this template, if it differs from the template type. */
   def selfType : Option[TypeEntity]
-  
+
 }
 
 
@@ -126,6 +126,9 @@ trait MemberEntity extends Entity {
 
   /** Some deprecation message if this member is deprecated, or none otherwise. */
   def deprecation: Option[Body]
+
+  /** Some migration warning if this member has a migration annotation, or none otherwise. */
+  def migration: Option[Body]
 
   @deprecated("Use `inDefinitionTemplates` instead", "2.9.0")
   def inheritedFrom: List[TemplateEntity]
@@ -262,7 +265,7 @@ trait Class extends Trait with HigherKinded {
   /** The value parameters of this case class, or an empty list if this class is not a case class. As case class value
     * parameters cannot be curried, the outer list has exactly one element. */
   def valueParams: List[List[ValueParam]]
-  
+
 }
 
 
@@ -288,7 +291,7 @@ trait Package extends Object {
 
 /** The root package, which contains directly or indirectly all members in the universe. A universe
   * contains exactly one root package. */
-trait RootPackage extends Package 
+trait RootPackage extends Package
 
 
 /** A non-template member (method, value, lazy value, variable, constructor, alias type, and abstract type). */
@@ -297,6 +300,10 @@ trait NonTemplateMemberEntity extends MemberEntity {
   /** Whether this member is a use case. A use case is a member which does not exist in the documented code.
     * It corresponds to a real member, and provides a simplified, yet compatible signature for that member. */
   def isUseCase: Boolean
+
+  /** Whether this member is a bridge member. A bridge member does only exist for binary compatibility reasons
+    * and should not appear in ScalaDoc. */
+  def isBridge: Boolean
 
 }
 
@@ -358,7 +365,7 @@ trait ParameterEntity extends Entity {
 
   /** Whether this parameter is a value parameter. */
   def isValueParam: Boolean
-  
+
 }
 
 
@@ -400,5 +407,5 @@ trait Annotation extends Entity {
 
   /** The arguments passed to the constructor of the annotation class. */
   def arguments: List[ValueArgument]
-  
+
 }

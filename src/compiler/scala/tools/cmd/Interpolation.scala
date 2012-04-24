@@ -13,17 +13,17 @@ package cmd
  */
 trait Interpolation {
   self: Spec =>
-  
+
   private lazy val reference = referenceSpec
   import reference._
-  
+
   object interpolate {
     def mapper: Map[String, () => String] = Map(
       "PROGRAM"       -> (() => programInfo.runner),
       "ALLOPTIONS"    -> (() => options.all mkString " "),
       "MAINCLASS"     -> (() => programInfo.mainClass)
     )
-    
+
     private def mark(key: String) = "@@" + key + "@@"
     def apply(template: String) = mapper.foldLeft(template) { case (s, (key, f)) => s.replaceAll(mark(key), f()) }
   }
@@ -39,13 +39,13 @@ object Interpolation {
     |  COMPREPLY=()
     |  cur="${COMP_WORDS[COMP_CWORD]}"
     |  opts="@@ALLOPTIONS@@"
-    |  
+    |
     |  COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
     |  _filedir
     |  return 0
     |} && complete -F _@@PROGRAM@@ @@PROGRAM@@
   """.stripMargin
-  
+
   /** A simple template for generating a runner script.
    */
   val runnerTemplate = """

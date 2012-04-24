@@ -20,7 +20,7 @@ import scala.collection.GenSet
 
 
 /** A mutable variant of `ParSet`.
- *  
+ *
  *  @define Coll mutable.ParSet
  *  @define coll mutable parallel set
  *
@@ -46,9 +46,9 @@ self =>
  */
 object ParSet extends ParSetFactory[ParSet] {
   implicit def canBuildFrom[T]: CanCombineFrom[Coll, T, ParSet[T]] = new GenericCanCombineFrom[T]
-  
+
   override def newBuilder[T]: Combiner[T, ParSet[T]] = ParHashSet.newBuilder
-  
+
   override def newCombiner[T]: Combiner[T, ParSet[T]] = ParHashSet.newCombiner
 }
 

@@ -26,7 +26,7 @@ import mutable.Builder
  *  @define bitsetCanBuildFrom
  *    The standard `CanBuildFrom` instance for bitsets.
  */
-trait BitSetFactory[Coll <: BitSet with BitSetLike[Coll]] { 
+trait BitSetFactory[Coll <: BitSet with BitSetLike[Coll]] {
   def empty: Coll
   def newBuilder: Builder[Int, Coll]
   def apply(elems: Int*): Coll = (empty /: elems) (_ + _)

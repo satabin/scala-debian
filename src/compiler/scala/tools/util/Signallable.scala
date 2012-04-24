@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools
 package util
 
@@ -17,16 +17,16 @@ abstract class Signallable[T] private (val signal: String, val description: Stri
     case Some(x)    => "" + x
     case _          => ""
   }
-  
+
   /** The most recent result from the signal handler. */
   def lastResult: Option[T] = last
-  
+
   /** Method to be executed when the associated signal is received. */
   def onSignal(): T
-  
+
   // todo:
   // def unregister(): Boolean
-  
+
   override def toString =  "  SIG(%s) => %s%s".format(
     signal, description, if (lastString == "") "" else " (" + lastString + ")"
   )
@@ -38,7 +38,7 @@ object Signallable {
   def apply[T](description: String)(body: => T): Signallable[T] = wrap {
     apply(SignalManager.findOpenSignal().name, description)(body)
   }
-    
+
   /** Given a signal name, a description, and a handler body, this
    *  registers a signal handler and returns the Signallable instance.
    *  The signal handler registry is thereafter available by calling

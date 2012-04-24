@@ -16,15 +16,15 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
 
   def newTransformer(unit: CompilationUnit): Transformer =
     new LazyValues(unit)
-  
+
   private def lazyUnit(sym: Symbol) = sym.tpe.resultType.typeSymbol == UnitClass
 
   object LocalLazyValFinder extends Traverser {
     var result: Boolean  = _
-      
+
     def find(t: Tree) = {result = false; traverse(t); result}
-    def find(ts: List[Tree]) = {result = false; traverseTrees(ts); result}  
-    
+    def find(ts: List[Tree]) = {result = false; traverseTrees(ts); result}
+
     override def traverse(t: Tree) {
       if (!result)
         t match {
@@ -34,26 +34,24 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
           case d@DefDef(_, _, _, _, _, _) if d.symbol.isLazy && lazyUnit(d.symbol) =>
             d.symbol.resetFlag(symtab.Flags.LAZY)
             result = true
-              
+
           case ClassDef(_, _, _, _) | DefDef(_, _, _, _, _, _) | ModuleDef(_, _, _) =>
-              
+
           case LabelDef(name, _, _) if nme.isLoopHeaderLabel(name) =>
-              
+
           case _ =>
             super.traverse(t)
         }
     }
   }
-  
+
   /**
    * Transform local lazy accessors to check for the initialized bit.
    */
-  class LazyValues(unit: CompilationUnit) extends TypingTransformer(unit) {    
+  class LazyValues(unit: CompilationUnit) extends TypingTransformer(unit) {
     /** map from method symbols to the number of lazy values it defines. */
-    private val lazyVals = new mutable.HashMap[Symbol, Int] {
-      override def default(meth: Symbol) = 0
-    }
-    
+    private val lazyVals = perRunCaches.newMap[Symbol, Int]() withDefaultValue 0
+
     import symtab.Flags._
     import lazyVals._
 
@@ -62,19 +60,19 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
      *  - for all methods, add enough int vars to allow one flag per lazy local value
      *  - blocks in template bodies behave almost like methods. A single bitmaps section is
      *      added in the first block, for all lazy values defined in such blocks.
-     *  - remove ACCESSOR flags: accessors in traits are not statically implemented,  
+     *  - remove ACCESSOR flags: accessors in traits are not statically implemented,
      *    but moved to the host class. local lazy values should be statically implemented.
      */
     override def transform(tree: Tree): Tree = {
       val sym = tree.symbol
       curTree = tree
-      
+
       tree match {
         case DefDef(mods, name, tparams, vparams, tpt, rhs) => atOwner(tree.symbol) {
           val res = if (!sym.owner.isClass && sym.isLazy) {
             val enclosingClassOrDummyOrMethod = {
               val enclMethod = sym.enclMethod
-              
+
               if (enclMethod != NoSymbol ) {
                 val enclClass = sym.enclClass
                 if (enclClass != NoSymbol && enclMethod == enclClass.enclMethod)
@@ -99,7 +97,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
         case Template(parents, self, body) => atOwner(currentOwner) {
           val body1 = super.transformTrees(body)
           var added = false
-          val stats = 
+          val stats =
             for (stat <- body1) yield stat match {
               case Block(_, _) | Apply(_, _) | If(_, _, _) if !added =>
                 // Avoid adding bitmaps when they are fully overshadowed by those
@@ -110,7 +108,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
                 } else stat
               case ValDef(mods, name, tpt, rhs) =>
                 typed(treeCopy.ValDef(stat, mods, name, tpt, addBitmapDefs(stat.symbol, rhs)))
-              case _ => 
+              case _ =>
                 stat
             }
           val innerClassBitmaps = if (!added && currentOwner.isClass && bitmaps.contains(currentOwner)) {
@@ -134,7 +132,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
 
         case l@LabelDef(name0, params0, ifp0@If(_, _, _)) if name0.startsWith(nme.WHILE_PREFIX) =>
           val ifp1 = super.transform(ifp0)
-          val If(cond0, thenp0, elsep0) = ifp1 
+          val If(cond0, thenp0, elsep0) = ifp1
           if (LocalLazyValFinder.find(thenp0))
             treeCopy.LabelDef(l, name0, params0,
                     treeCopy.If(ifp1, cond0, typed(addBitmapDefs(sym.owner, thenp0)), elsep0))
@@ -178,16 +176,16 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
         case _ => prependStats(bmps, rhs)
       }
     }
-    
+
     /** return a 'lazified' version of rhs. Rhs should conform to the
      *  following schema:
      *  {
-     *    l$ = <rhs> 
+     *    l$ = <rhs>
      *    l$
      *  } or
      *  <rhs> when the lazy value has type Unit (for which there is no field
      *  to cache it's value.
-     * 
+     *
      *  The result will be a tree of the form
      *  {
      *    if ((bitmap$n & MASK) == 0) {
@@ -207,7 +205,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
      *    ()
      *  }
      */
-    private def mkLazyDef(methOrClass: Symbol, tree: Tree, offset: Int, lazyVal: Symbol): Tree = {      
+    private def mkLazyDef(methOrClass: Symbol, tree: Tree, offset: Int, lazyVal: Symbol): Tree = {
       val bitmapSym           = getBitmapFor(methOrClass, offset)
       val mask                = LIT(1 << (offset % FLAGS_PER_WORD))
       val bitmapRef = if (methOrClass.isClass) Select(This(methOrClass), bitmapSym) else Ident(bitmapSym)
@@ -221,7 +219,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
         case rhs                          =>
           (mkBlock(rhs),         UNIT)
       }
-      
+
       val cond = (bitmapRef INT_& mask) INT_== ZERO
 
       atPos(tree.pos)(localTyper.typed {
@@ -229,28 +227,26 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
         BLOCK(body, res)
       })
     }
-     
+
     private def mkSetFlag(bmp: Symbol, mask: Tree, bmpRef: Tree): Tree =
       bmpRef === (bmpRef INT_| mask)
-    
-    val bitmaps = new mutable.HashMap[Symbol, List[Symbol]] {
-      override def default(meth: Symbol) = Nil
-    }
-    
+
+    val bitmaps = mutable.Map[Symbol, List[Symbol]]() withDefaultValue Nil
+
     /** Return the symbol corresponding of the right bitmap int inside meth,
      *  given offset.
      */
     private def getBitmapFor(meth: Symbol, offset: Int): Symbol = {
       val n = offset / FLAGS_PER_WORD
       val bmps = bitmaps(meth)
-      if (bmps.length > n) 
+      if (bmps.length > n)
         bmps(n)
       else {
         val sym = meth.newVariable(meth.pos, nme.bitmapName(n)).setInfo(IntClass.tpe)
         atPhase(currentRun.typerPhase) {
           sym addAnnotation AnnotationInfo(VolatileAttr.tpe, Nil, Nil)
         }
-        
+
         bitmaps(meth) = (sym :: bmps).reverse
         sym
       }

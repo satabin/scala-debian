@@ -17,13 +17,13 @@ import parallel.immutable.ParIterable
 
 /** A base trait for iterable collections that are guaranteed immutable.
  *  $iterableInfo
- *  
+ *
  *  @define Coll immutable.Iterable
  *  @define coll immutable iterable collection
  */
-trait Iterable[+A] extends Traversable[A] 
+trait Iterable[+A] extends Traversable[A]
 //                      with GenIterable[A]
-                      with scala.collection.Iterable[A] 
+                      with scala.collection.Iterable[A]
                       with GenericTraversableTemplate[A, Iterable]
                       with IterableLike[A, Iterable[A]]
                       with Parallelizable[A, ParIterable[A]]
@@ -31,7 +31,7 @@ trait Iterable[+A] extends Traversable[A]
   override def companion: GenericCompanion[Iterable] = Iterable
   protected[this] override def parCombiner = ParIterable.newCombiner[A] // if `immutable.IterableLike` gets introduced, please move this there!
   override def seq: Iterable[A] = this
-}	
+}
 
 /** $factoryInfo
  *  @define Coll immutable.Iterable

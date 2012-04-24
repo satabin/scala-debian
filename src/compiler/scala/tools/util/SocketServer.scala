@@ -29,7 +29,7 @@ trait CompileOutputCommon {
  */
 abstract class SocketServer extends CompileOutputCommon {
   def shutdown: Boolean
-  def session(): Unit  
+  def session(): Unit
   def timeout(): Unit = ()  // called after a timeout is detected for subclasses to cleanup
   // a hook for subclasses
   protected def createServerSocket(): ServerSocket = new ServerSocket(0)
@@ -69,7 +69,7 @@ abstract class SocketServer extends CompileOutputCommon {
       this.in    = in
       this.out   = out
       val bufout = clientSocket.bufferedOutput(BufferSize)
-  
+
       try scala.Console.withOut(bufout)(session())
       finally bufout.close()
     }
@@ -83,7 +83,7 @@ abstract class SocketServer extends CompileOutputCommon {
         case Right(clientSocket) =>
           try doSession(clientSocket)
           finally clientSocket.close()
-        case Left(_: SocketTimeoutException) => 
+        case Left(_: SocketTimeoutException) =>
           warn("Idle timeout exceeded on port %d; exiting" format port)
           timeout()
           return

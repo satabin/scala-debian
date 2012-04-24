@@ -25,7 +25,7 @@ import scala.collection.GenSeq
 
 
 /** A mutable variant of `ParSeq`.
- *  
+ *
  *  @define Coll mutable.ParSeq
  *  @define coll mutable parallel sequence
  */
@@ -37,11 +37,11 @@ trait ParSeq[T] extends collection/*.mutable*/.GenSeq[T] // was: collection.muta
 self =>
   override def companion: GenericCompanion[ParSeq] with GenericParCompanion[ParSeq] = ParSeq
   //protected[this] override def newBuilder = ParSeq.newBuilder[T]
-  
+
   def update(i: Int, elem: T): Unit
-  
+
   def seq: collection.mutable.Seq[T]
-  
+
   override def toSeq: ParSeq[T] = this
 }
 
@@ -52,9 +52,9 @@ self =>
  */
 object ParSeq extends ParFactory[ParSeq] {
   implicit def canBuildFrom[T]: CanCombineFrom[Coll, T, ParSeq[T]] = new GenericCanCombineFrom[T]
-  
+
   def newBuilder[T]: Combiner[T, ParSeq[T]] = ParArrayCombiner[T]
-  
+
   def newCombiner[T]: Combiner[T, ParSeq[T]] = ParArrayCombiner[T]
 }
 

@@ -107,7 +107,7 @@ abstract class TreeInfo {
     def sym       = tree.symbol
     def isVar     = sym.isVariable
     def isGetter  = mayBeVarGetter(sym) && sym.owner.info.member(nme.getterToSetter(sym.name)) != NoSymbol
-    
+
     tree match {
       case Ident(_)         => isVar
       case Select(_, _)     => isVar || isGetter
@@ -122,7 +122,7 @@ abstract class TreeInfo {
   /** Is tree a self constructor call?
    */
   def isSelfConstrCall(tree: Tree): Boolean = methPart(tree) match {
-    case Ident(nme.CONSTRUCTOR) 
+    case Ident(nme.CONSTRUCTOR)
        | Select(This(_), nme.CONSTRUCTOR) => true
     case _ => false
   }
@@ -147,7 +147,7 @@ abstract class TreeInfo {
     case x: DefDef  => nme.isConstructorName(x.name)
     case _          => false
   } getOrElse EmptyTree
-  
+
   /** The arguments to the first constructor in `stats'. */
   def firstConstructorArgs(stats: List[Tree]): List[Tree] = firstConstructor(stats) match {
     case DefDef(_, _, _, args :: _, _, _) => args
@@ -155,7 +155,7 @@ abstract class TreeInfo {
   }
 
   /** The value definitions marked PRESUPER in this statement sequence */
-  def preSuperFields(stats: List[Tree]): List[ValDef] = 
+  def preSuperFields(stats: List[Tree]): List[ValDef] =
     stats collect { case vd: ValDef if isEarlyValDef(vd) => vd }
 
   def isEarlyDef(tree: Tree) = tree match {
@@ -228,7 +228,7 @@ abstract class TreeInfo {
   }
   def isWildcardStarArgList(trees: List[Tree]) =
     trees.nonEmpty && isWildcardStarArg(trees.last)
-  
+
   /** Is the argument a (possibly bound) _ arg?
    */
   def isWildcardArg(tree: Tree): Boolean = unbind(tree) match {
@@ -241,10 +241,10 @@ abstract class TreeInfo {
     case CaseDef(pat, EmptyTree, _) => isWildcardArg(pat)
     case _                          => false
   }
-  
+
   /** Does this CaseDef catch Throwable? */
   def catchesThrowable(cdef: CaseDef) = catchesAllOf(cdef, ThrowableClass.tpe)
-  
+
   /** Does this CaseDef catch everything of a certain Type? */
   def catchesAllOf(cdef: CaseDef, threshold: Type) =
     isDefaultCase(cdef) || (cdef.guard.isEmpty && (unbind(cdef.pat) match {
@@ -254,11 +254,11 @@ abstract class TreeInfo {
 
   /** Is this pattern node a catch-all or type-test pattern? */
   def isCatchCase(cdef: CaseDef) = cdef match {
-    case CaseDef(Typed(Ident(nme.WILDCARD), tpt), EmptyTree, _) => 
+    case CaseDef(Typed(Ident(nme.WILDCARD), tpt), EmptyTree, _) =>
       isSimpleThrowable(tpt.tpe)
-    case CaseDef(Bind(_, Typed(Ident(nme.WILDCARD), tpt)), EmptyTree, _) => 
+    case CaseDef(Bind(_, Typed(Ident(nme.WILDCARD), tpt)), EmptyTree, _) =>
       isSimpleThrowable(tpt.tpe)
-    case _ => 
+    case _ =>
       isDefaultCase(cdef)
   }
 
@@ -270,7 +270,7 @@ abstract class TreeInfo {
       false
   }
 
-  /* If we have run-time types, and these are used for pattern matching, 
+  /* If we have run-time types, and these are used for pattern matching,
      we should replace this  by something like:
 
       tp match {
@@ -289,15 +289,15 @@ abstract class TreeInfo {
     case ArrayValue(_, _) | Star(_) => true
     case _                          => false
   }
-  
+
   /** The underlying pattern ignoring any bindings */
   def unbind(x: Tree): Tree = x match {
     case Bind(_, y) => unbind(y)
     case y          => y
   }
-  
+
   /** Is this tree a Star(_) after removing bindings? */
-  def isStar(x: Tree) = unbind(x) match { 
+  def isStar(x: Tree) = unbind(x) match {
     case Star(_)  => true
     case _        => false
   }
@@ -312,7 +312,7 @@ abstract class TreeInfo {
   }
 
   def firstArgument(tree: Tree): Tree = tree match {
-    case Apply(fn, args) => 
+    case Apply(fn, args) =>
       val f = firstArgument(fn)
       if (f == EmptyTree && !args.isEmpty) args.head else f
     case _ =>
@@ -323,7 +323,7 @@ abstract class TreeInfo {
    *  <code>Predef</code> or <code>scala.Predef</code>.
    */
   def containsLeadingPredefImport(defs: List[Tree]): Boolean = defs match {
-    case List(PackageDef(_, defs1)) => 
+    case List(PackageDef(_, defs1)) =>
       containsLeadingPredefImport(defs1)
     case Import(Ident(nme.Predef), _) :: _ =>
       true
@@ -361,7 +361,7 @@ abstract class TreeInfo {
     case TypeDef(_, _, _, _) => !isAbsTypeDef(tree)
     case _ => false
   }
-  
+
   /** Some handy extractors for spotting trees through the
    *  the haze of irrelevant braces: i.e. Block(Nil, SomeTree)
    *  should not keep us from seeing SomeTree.

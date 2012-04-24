@@ -15,26 +15,26 @@ import Spec.Info
  *  (trait Reference) and providing well typed vals for every configurable
  *  option in response to any given set of arguments (trait Instance).
  */
-object Opt {  
+object Opt {
   trait Error {
     self: Implicit =>
-    
+
     protected def fail(msg: String) = runAndExit(println(programInfo.runner + ": " + msg))
-    protected def failOption(arg: String, why: String) = fail("%s: '%s' is %s".format(opt, arg, why))    
+    protected def failOption(arg: String, why: String) = fail("%s: '%s' is %s".format(opt, arg, why))
   }
 
   trait Implicit {
     def name: String
     def programInfo: Info
     protected def opt = toOpt(name)
-    
+
     def --? : Boolean                       // --opt is set
-    def --> (body: => Unit): Unit           // if --opt is set, execute body    
+    def --> (body: => Unit): Unit           // if --opt is set, execute body
     def --| : Option[String]                // --opt <arg: String> is optional, result is Option[String]
     def --^[T: FromString] : Option[T]      // --opt <arg: T> is optional, result is Option[T]
-    
+
     def optMap[T](f: String => T) = --| map f
-  
+
     /** Names.
      */
     def defaultTo[T: FromString](default: T): T
@@ -54,7 +54,7 @@ object Opt {
     def --> (body: => Unit)             = { addUnary(opt) }
     def --|                             = { addBinary(opt) ; None }
     def --^[T: FromString]              = { addBinary(opt) ; None }
-    
+
     def defaultTo[T: FromString](default: T)  = { addBinary(opt) ; addHelpDefault(() => default.toString) ; default }
     def defaultToEnv(envVar: String)          = { addBinary(opt) ; addHelpEnvDefault(envVar) ; "" }
     def choiceOf[T: FromString](choices: T*)  = { addBinary(opt) ; None }
@@ -73,13 +73,13 @@ object Opt {
         if (fs isDefinedAt arg) fs(arg)
         else failOption(arg, "not a " + fs.targetString)
       }
-    }    
-    
+    }
+
     def defaultTo[T: FromString](default: T)  = --^[T] getOrElse default
     def defaultToEnv(envVar: String)          = --| getOrElse envOrElse(envVar, "")
     def expandTo(args: String*)               = ()
-          
-    def choiceOf[T: FromString](choices: T*) = {      
+
+    def choiceOf[T: FromString](choices: T*) = {
       --^[T] map { arg =>
         if (choices contains arg) arg
         else failOption(arg.toString, "not a valid choice from " + choices)

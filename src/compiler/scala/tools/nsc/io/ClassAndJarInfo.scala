@@ -15,12 +15,12 @@ import collection.JavaConverters._
 class ClassAndJarInfo[T: ClassManifest] {
   val man   = classManifest[T]
   def clazz = man.erasure
-  
+
   def baseOfPath(path: String) = path indexOf '!' match {
     case -1   => path stripSuffix internalClassName
     case idx  => path take idx
   }
-  
+
   def classUrl             = clazz getResource simpleClassName + ".class"
   def codeSource           = protectionDomain.getCodeSource()
   def internalClassName    = internalName + ".class"

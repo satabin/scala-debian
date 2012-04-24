@@ -13,7 +13,7 @@ import collection.JavaConverters._
 
 /** The package object `scala.sys` contains methods for reading
  *  and altering core aspects of the virtual machine as well as the
- *  world outside of it. 
+ *  world outside of it.
  *
  *  @author Paul Phillips
  *  @version 2.9
@@ -40,26 +40,26 @@ package object sys {
     java.lang.System.exit(status)
     throw new Throwable()
   }
-  
+
   /** A convenience method to get the current Runtime instance.
    *
    *  @return   the result of `java.lang.Runtime.getRuntime()`
    */
   def runtime: Runtime = Runtime.getRuntime
-  
+
   /** A bidirectional, mutable Map representing the current system Properties.
    *
    *  @return   a SystemProperties.
    *  @see      `scala.sys.SystemProperties`
    */
   def props: SystemProperties = new SystemProperties
-  
+
   /** An immutable Map representing the current system environment.
    *
    *  @return   a Map containing the system environment variables.
    */
   def env: immutable.Map[String, String] = immutable.Map(System.getenv().asScala.toSeq: _*)
-  
+
   /** Register a shutdown hook to be run when the VM exits.
    *  The newly created thread is marked as a daemon so it will not
    *  interfere with VM shutdown.  The hook is automatically registered:
@@ -73,7 +73,7 @@ package object sys {
    *  @return   the Thread which will run the shutdown hook.
    */
   def addShutdownHook(body: => Unit): ShutdownHookThread = ShutdownHookThread(body)
-  
+
   /** Returns all active thread in the current thread's thread group and subgroups.
    *
    *  @return   an IndexedSeq containing the threads.
@@ -82,7 +82,7 @@ package object sys {
     val num    = Thread.activeCount()
     val tarray = new Array[Thread](num)
     val got    = Thread.enumerate(tarray)
-    
+
     tarray take got
   }
 }

@@ -15,7 +15,7 @@ import backend.icode.analysis.ProgramPoint
 
 trait BasicBlocks {
   self: ICodes =>
-  
+
   import opcodes._
   import global.{ settings, log, nme }
   import nme.isExceptionResultName
@@ -31,37 +31,37 @@ trait BasicBlocks {
         with Seq[Instruction] {
 
     import BBFlags._
-    
+
     def code = method.code
-    
+
     /** Flags of this basic block. */
     private var flags: Int = 0
 
     /** Does this block have the given flag? */
     def hasFlag(flag: Int): Boolean = (flags & flag) != 0
-    
+
     /** Set the given flag. */
     private def setFlag(flag: Int): Unit = flags |= flag
     private def resetFlag(flag: Int) {
       flags &= ~flag
     }
-    
+
     /** Is this block closed? */
     def closed: Boolean = hasFlag(CLOSED)
     def closed_=(b: Boolean) = if (b) setFlag(CLOSED) else resetFlag(CLOSED)
-    
+
     /** When set, the <code>emit</code> methods will be ignored. */
     def ignore: Boolean = hasFlag(IGNORING)
     def ignore_=(b: Boolean) = if (b) setFlag(IGNORING) else resetFlag(IGNORING)
 
     /** Is this block the head of a while? */
     def loopHeader = hasFlag(LOOP_HEADER)
-    def loopHeader_=(b: Boolean) = 
+    def loopHeader_=(b: Boolean) =
       if (b) setFlag(LOOP_HEADER) else resetFlag(LOOP_HEADER)
-    
+
     /** Is this block the start block of an exception handler? */
     def exceptionHandlerStart = hasFlag(EX_HEADER)
-    def exceptionHandlerStart_=(b: Boolean) = 
+    def exceptionHandlerStart_=(b: Boolean) =
       if (b) setFlag(EX_HEADER) else resetFlag(EX_HEADER)
 
     /** Has this basic block been modified since the last call to 'successors'? */
@@ -77,12 +77,12 @@ trait BasicBlocks {
 
     /** Cached predecessors. */
     var preds: List[BasicBlock] = null
-    
+
     /** Local variables that are in scope at entry of this basic block. Used
      *  for debugging information.
      */
     var varsInScope: mutable.Set[Local] = new mutable.LinkedHashSet()
-    
+
     /** ICode instructions, used as temporary storage while emitting code.
      * Once closed is called, only the `instrs' array should be used.
      */
@@ -92,11 +92,11 @@ trait BasicBlocks {
 
     override def toList: List[Instruction] =
       if (closed) instrs.toList else instructionList.reverse
-    
+
     /** Return an iterator over the instructions in this basic block. */
     def iterator: Iterator[Instruction] =
       if (closed) instrs.iterator else instructionList.reverse.iterator
-    
+
     /** return the underlying array of instructions */
     def getArray: Array[Instruction] = {
       assert(closed)
@@ -148,13 +148,13 @@ trait BasicBlocks {
     }
 
     /**
-     * Replace the given instruction with the new one. 
-     * Returns `true' if it actually changed something. 
+     * Replace the given instruction with the new one.
+     * Returns `true' if it actually changed something.
      * It retains the position of the previous instruction.
      */
     def replaceInstruction(oldInstr: Instruction, newInstr: Instruction): Boolean = {
       assert(closed, "Instructions can be replaced only after the basic block is closed")
-      
+
       indexOf(oldInstr) match {
         case -1   => false
         case idx  =>
@@ -175,7 +175,7 @@ trait BasicBlocks {
      */
     def replaceInstruction(oldInstr: Instruction, is: List[Instruction]): Boolean = {
       assert(closed, "Instructions can be replaced only after the basic block is closed")
-      
+
       indexOf(oldInstr) match {
         case -1   => false
         case idx  =>
@@ -184,11 +184,11 @@ trait BasicBlocks {
           true
       }
     }
-    
+
     /** Insert instructions in 'is' immediately after index 'idx'. */
     def insertAfter(idx: Int, is: List[Instruction]) {
       assert(closed, "Instructions can be replaced only after the basic block is closed")
-      
+
       instrs = instrs.patch(idx + 1, is, 0)
       code.touched = true
     }
@@ -202,12 +202,12 @@ trait BasicBlocks {
       instrs = instrs.indices.toArray filterNot positions.toSet map instrs
       code.touched = true
     }
-    
+
     /** Remove the last instruction of this basic block. It is
      *  fast for an open block, but slower when the block is closed.
      */
     def removeLastInstruction() {
-      if (closed) 
+      if (closed)
         removeInstructionsAt(size)
       else {
         instructionList = instructionList.tail
@@ -267,11 +267,11 @@ trait BasicBlocks {
         instructionList ::= instr
       }
     }
-    
+
     def emit(instrs: Seq[Instruction]) {
       instrs foreach (i => emit(i, i.pos))
     }
-    
+
     /** The semantics of this are a little odd but it's designed to work
      *  seamlessly with the existing code.  It emits each supplied instruction,
      *  then closes the block.  The odd part is that if the instruction has
@@ -347,20 +347,20 @@ trait BasicBlocks {
     def firstInstruction =
       if (closed) instrs(0)
       else instructionList.last
-    
+
     def exceptionSuccessorsForBlock(block: BasicBlock): List[BasicBlock] =
       method.exh collect { case x if x covers block => x.startBlock }
 
     /** Cached value of successors. Must be recomputed whenever a block in the current method is changed. */
     private var succs: List[BasicBlock] = Nil
     private def updateSuccs() {
-      resetFlag(DIRTYSUCCS)      
+      resetFlag(DIRTYSUCCS)
       succs =
         if (isEmpty) Nil
         else exceptionSuccessors ++ directSuccessors ++ indirectExceptionSuccessors
     }
 
-    def successors : List[BasicBlock] = {    
+    def successors : List[BasicBlock] = {
       if (touched) updateSuccs()
       succs
     }
@@ -380,13 +380,13 @@ trait BasicBlocks {
           }
           else Nil
       }
-    
+
     def exceptionSuccessors: List[BasicBlock] =
       exceptionSuccessorsForBlock(this)
 
     /** Return a list of successors for 'b' that come from exception handlers
-     *  covering b's (non-exceptional) successors. These exception handlers 
-     *  might not cover 'b' itself. This situation corresponds to an 
+     *  covering b's (non-exceptional) successors. These exception handlers
+     *  might not cover 'b' itself. This situation corresponds to an
      *  exception being thrown as the first thing of one of b's successors.
      */
     def indirectExceptionSuccessors: List[BasicBlock] =
@@ -407,7 +407,7 @@ trait BasicBlocks {
     }
 
     override def hashCode = label * 41 + code.hashCode
-    
+
     // Instead of it, rather use a printer
     def print() { print(java.lang.System.out) }
 
@@ -432,7 +432,7 @@ trait BasicBlocks {
     def predContents = predecessors.map(_.blockContents).mkString(predecessors.size + " preds:\n", "\n", "\n")
     def succContents = successors.map(_.blockContents).mkString(successors.size + " succs:\n", "\n", "\n")
 
-    def fullString: String = List("Block", label, succString, predString, flagsString) mkString " "    
+    def fullString: String = List("Block", label, succString, predString, flagsString) mkString " "
     def flagsString: String = BBFlags.flagsToString(flags)
   }
 }
@@ -452,13 +452,13 @@ object BBFlags {
 
   /** This block is a loop header (was translated from a while). */
   final val LOOP_HEADER = (1 << 0)
-  
+
   /** Ignoring mode: emit instructions are dropped. */
   final val IGNORING    = (1 << 1)
-  
+
   /** This block is the header of an exception handler. */
   final val EX_HEADER   = (1 << 2)
-  
+
   /** This block is closed. No new instructions can be added. */
   final val CLOSED      = (1 << 3)
 

@@ -14,7 +14,7 @@ import java.io.{ PipedInputStream, PipedOutputStream }
 
 private[process] trait ProcessImpl {
   self: Process.type =>
-  
+
   /** Runs provided code in a new Thread and returns the Thread instance. */
   private[process] object Spawn {
     def apply(f: => Unit): Thread = apply(f, false)
@@ -31,12 +31,12 @@ private[process] trait ProcessImpl {
       def run(): Unit =
         try result set Right(f)
         catch { case e: Exception => result set Left(e) }
-      
+
       Spawn(run)
 
       () => result.get match {
         case Right(value)    => value
-        case Left(exception) => throw exception      
+        case Left(exception) => throw exception
       }
     }
   }
@@ -65,7 +65,7 @@ private[process] trait ProcessImpl {
     io: ProcessIO,
     evaluateSecondProcess: Int => Boolean
   ) extends CompoundProcess {
-  
+
     protected[this] override def runAndExitValue() = {
       val first = a.run(io)
       runInterruptible(first.exitValue)(first.destroy()) flatMap { codeA =>
@@ -113,7 +113,7 @@ private[process] trait ProcessImpl {
       val pipeOut       = new PipedOutputStream
       val source        = new PipeSource(currentSource, pipeOut, a.toString)
       source.start()
-    
+
       val pipeIn      = new PipedInputStream(pipeOut)
       val currentSink = new SyncVar[Option[OutputStream]]
       val sink        = new PipeSink(pipeIn, currentSink, b.toString)
@@ -127,7 +127,7 @@ private[process] trait ProcessImpl {
         else
           defaultIO.withOutput(handleOutOrError)
       val secondIO = defaultIO.withInput(toInput => currentSink put Some(toInput))
-    
+
       val second = b.run(secondIO)
       val first = a.run(firstIO)
       try {
@@ -153,7 +153,7 @@ private[process] trait ProcessImpl {
 
   private[process] abstract class PipeThread(isSink: Boolean, labelFn: () => String) extends Thread {
     def run(): Unit
-  
+
     private[process] def runloop(src: InputStream, dst: OutputStream): Unit = {
       try     BasicIO.transferFully(src, dst)
       catch   ioFailure(ioHandler)
@@ -194,7 +194,7 @@ private[process] trait ProcessImpl {
       case Some(sink) =>
         try runloop(pipe, sink)
         finally currentSink.unset()
-      
+
         run()
       case None =>
         currentSink.unset()

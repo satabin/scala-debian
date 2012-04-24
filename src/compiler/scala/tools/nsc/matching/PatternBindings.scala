@@ -11,32 +11,32 @@ import collection.immutable.TreeMap
 import PartialFunction._
 
 trait PatternBindings extends ast.TreeDSL
-{ 
+{
   self: ExplicitOuter with ParallelMatching =>
-  
+
   import global.{ typer => _, _ }
   import definitions.{ EqualsPatternClass }
   import CODE._
   import Debug._
-  
+
   /** EqualsPattern **/
   def isEquals(tpe: Type)             = cond(tpe) { case TypeRef(_, EqualsPatternClass, _) => true }
   def mkEqualsRef(tpe: Type)          = typeRef(NoPrefix, EqualsPatternClass, List(tpe))
   def decodedEqualsType(tpe: Type)    = condOpt(tpe) { case TypeRef(_, EqualsPatternClass, List(arg)) => arg } getOrElse (tpe)
-  
+
   // A subtype test which creates fresh existentials for type
   // parameters on the right hand side.
   def matches(arg1: Type, arg2: Type) = decodedEqualsType(arg1) matchesPattern decodedEqualsType(arg2)
 
   // For spotting duplicate unapplies
   def isEquivalentTree(t1: Tree, t2: Tree) = (t1.symbol == t2.symbol) && (t1 equalsStructure t2)
-  
+
   // Reproduce the Bind trees wrapping oldTree around newTree
   def moveBindings(oldTree: Tree, newTree: Tree): Tree = oldTree match {
     case b @ Bind(x, body)  => Bind(b.symbol, moveBindings(body, newTree))
     case _                  => newTree
   }
-  
+
   // used as argument to `EqualsPatternClass'
   case class PseudoType(o: Tree) extends SimpleTypeProxy {
     override def underlying: Type = o.tpe
@@ -47,7 +47,7 @@ trait PatternBindings extends ast.TreeDSL
   // Makes typed copies of any bindings found so all alternatives point to final state.
   def extractBindings(p: Pattern): List[Pattern] =
     toPats(_extractBindings(p.boundTree, identity))
-  
+
   private def _extractBindings(p: Tree, prevBindings: Tree => Tree): List[Tree] = {
     def newPrev(b: Bind) = (x: Tree) => treeCopy.Bind(b, b.name, x) setType x.tpe
 
@@ -56,10 +56,10 @@ trait PatternBindings extends ast.TreeDSL
       case Alternative(ps)    => ps map prevBindings
     }
   }
-  
+
   trait PatternBindingLogic {
     self: Pattern =>
-    
+
     // This is for traversing the pattern tree - pattern types which might have
     // bound variables beneath them return a list of said patterns for flatMapping.
     def subpatternsForVars: List[Pattern] = Nil
@@ -72,7 +72,7 @@ trait PatternBindings extends ast.TreeDSL
       this
     }
     def boundVariables = strip(boundTree)
-    
+
     // If a tree has bindings, boundTree looks something like
     //   Bind(v3, Bind(v2, Bind(v1, tree)))
     // This takes the given tree and creates a new pattern
@@ -84,21 +84,21 @@ trait PatternBindings extends ast.TreeDSL
       val aType = if (ascription == null) tpe else ascription
       rebindTo(Typed(WILD(tpe), TypeTree(aType)) setType tpe)
     }
-    
+
     // Wrap them around _
     def rebindToEmpty(tpe: Type): Pattern =
       rebindTo(Typed(EmptyTree, TypeTree(tpe)) setType tpe)
-    
+
     // Wrap them around a singleton type for an EqualsPattern check.
     def rebindToEqualsCheck(): Pattern =
       rebindToType(equalsCheck)
-    
+
     // Like rebindToEqualsCheck, but subtly different.  Not trying to be
     // mysterious -- I haven't sorted it all out yet.
     def rebindToObjectCheck(): Pattern =
       rebindToType(mkEqualsRef(sufficientType), sufficientType)
-       
-    /** Helpers **/    
+
+    /** Helpers **/
     private def wrapBindings(vs: List[Symbol], pat: Tree): Tree = vs match {
       case Nil      => pat
       case x :: xs  => Bind(x, wrapBindings(xs, pat)) setType pat.tpe
@@ -121,13 +121,13 @@ trait PatternBindings extends ast.TreeDSL
 
     def get() = vlist
     def toMap = vlist map (x => (x.pvar, x.tvar)) toMap
-    
+
     def add(vs: Iterable[Symbol], tvar: Symbol): Bindings = {
       val newBindings = vs.toList map (v => Binding(v, tvar))
       new Bindings(newBindings ++ vlist)
     }
 
-    override def toString() = 
+    override def toString() =
       if (vlist.isEmpty) "<none>"
       else vlist.mkString(", ")
   }

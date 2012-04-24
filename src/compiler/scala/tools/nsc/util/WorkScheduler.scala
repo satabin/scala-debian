@@ -13,17 +13,17 @@ class WorkScheduler {
 
   /** Called from server: block until one of todo list, throwables or interruptReqs is nonempty */
   def waitForMoreWork() = synchronized {
-    while (todo.isEmpty && throwables.isEmpty && interruptReqs.isEmpty) { wait() } 
+    while (todo.isEmpty && throwables.isEmpty && interruptReqs.isEmpty) { wait() }
   }
 
   /** called from Server: test whether one of todo list, throwables, or InterruptReqs is nonempty */
   def moreWork: Boolean = synchronized {
     todo.nonEmpty || throwables.nonEmpty || interruptReqs.nonEmpty
   }
-  
+
   /** Called from server: get first action in todo list, and pop it off */
   def nextWorkItem(): Option[Action] = synchronized {
-    if (todo.isEmpty) None else Some(todo.dequeue()) 
+    if (todo.isEmpty) None else Some(todo.dequeue())
   }
 
   def dequeueAll[T](f: Action => Option[T]): Seq[T] = synchronized {
@@ -34,7 +34,7 @@ class WorkScheduler {
    *  Reset to no exception.
    */
   def pollThrowable(): Option[Throwable] = synchronized {
-    if (throwables.isEmpty) 
+    if (throwables.isEmpty)
       None
     else {
       val result = Some(throwables.dequeue())
@@ -66,7 +66,7 @@ class WorkScheduler {
     todo enqueue action
     notify()
   }
-  
+
   /** Called from client: cancel all queued actions */
   def cancelQueued() = synchronized {
     todo.clear()

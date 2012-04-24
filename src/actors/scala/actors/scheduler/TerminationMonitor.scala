@@ -28,7 +28,7 @@ private[scheduler] trait TerminationMonitor {
 
   /** Registers a closure to be executed when the specified
    *  actor terminates.
-   * 
+   *
    *  @param  a  the actor
    *  @param  f  the closure to be registered
    */
@@ -64,7 +64,7 @@ private[scheduler] trait TerminationMonitor {
   private[actors] def allActorsTerminated: Boolean = synchronized {
     started && activeActors <= 0
   }
-  
+
   /** Deprecated non-actor-private version */
   @deprecated("this method is going to be removed in a future release", "2.7.7")
   def allTerminated: Boolean = allActorsTerminated

@@ -26,7 +26,7 @@ abstract class Future[+T] extends Responder[T] with Function0[T] {
   @volatile
   private[actors] var fvalue: Option[Any] = None
   private[actors] def fvalueTyped = fvalue.get.asInstanceOf[T]
-  
+
   @deprecated("this member is going to be removed in a future release", "2.8.0")
   def ch: InputChannel[Any] = inputChannel
 
@@ -167,11 +167,11 @@ object Futures {
    *  options. The result of a future that resolved during the
    *  time span is its value wrapped in `Some`. The result of a
    *  future that did not resolve during the time span is `None`.
-   *  
+   *
    *  Note that some of the futures might already have been awaited,
    *  in which case their value is returned wrapped in `Some`.
    *  Passing a timeout of 0 causes `awaitAll` to return immediately.
-   *  
+   *
    *  @param  timeout the time span in ms after which waiting is
    *                  aborted
    *  @param  fts     the futures to be awaited

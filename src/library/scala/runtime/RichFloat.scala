@@ -10,7 +10,7 @@ package scala.runtime
 
 final class RichFloat(val self: Float) extends FractionalProxy[Float] {
   protected val integralNum = Numeric.FloatAsIfIntegral
-  
+
   def round: Int   = math.round(self)
   def ceil: Float  = math.ceil(self).toFloat
   def floor: Float = math.floor(self).toFloat

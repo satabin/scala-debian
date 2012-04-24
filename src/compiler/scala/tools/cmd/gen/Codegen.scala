@@ -13,18 +13,18 @@ class Codegen(args: List[String]) extends {
 object Codegen {
   def echo(msg: String) = Console println msg
 
-  def main(args0: Array[String]): Unit = {    
+  def main(args0: Array[String]): Unit = {
     val runner = new Codegen(args0.toList)
     import runner._
-    
+
     if (args0.isEmpty)
       return println (CodegenSpec.helpMsg)
 
     val out = outDir getOrElse { return println("--out is required.") }
     val all = genall || (!anyvals && !products)
-    
+
     echo("Generating sources into " + out)
-    
+
     if (anyvals || all) {
       val av = new AnyVals { }
 
