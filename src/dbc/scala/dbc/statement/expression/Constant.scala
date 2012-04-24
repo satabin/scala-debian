@@ -17,7 +17,7 @@ package expression;
   /** A SQL-99 compliant string representation of the relation sub-
     * statement. This only has a meaning inside another statement. */
   def sqlInnerString: String = constantValue.sqlString;
-  
+
   /** The value of the constant. */
   def constantValue: Value;
 }

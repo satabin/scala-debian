@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools
 package reflect
 
@@ -11,7 +11,7 @@ import java.{ lang => jl }
 
 /** For certain reflection tasks it is convenient to treat all methods
  *  as having the same signature: (Seq[AnyRef]) => AnyRef
- *   
+ *
  *  That is the "universal signature" and UniversalFn exists to provide
  *  it without abandoning the information we had before we needed it.
  *  One place this is used: closures can pose as arbitrary interfaces,
@@ -37,12 +37,12 @@ class UniversalFn private (val closure: AnyRef, val method: Method) extends (Seq
     proxy.asInstanceOf[T]
   }
 
-  def apply(xs: Seq[AnyRef]): AnyRef = 
+  def apply(xs: Seq[AnyRef]): AnyRef =
     try method.invoke(closure, xs: _*)
     catch { case x: InvocationTargetException => throw x.getCause() }
 }
 
-object UniversalFn { 
+object UniversalFn {
   /** We use a private constructor so we can enforce some rules: we don't want
    *  universal functions to stack up, and right now we will only allow objects
    *  which appear to be closures (there's no reason not to eventually lift

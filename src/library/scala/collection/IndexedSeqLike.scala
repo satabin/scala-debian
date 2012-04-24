@@ -20,17 +20,17 @@ import scala.annotation.tailrec
  *
  *  This trait just implements `iterator` in terms of `apply` and `length`.
  *  However, see `IndexedSeqOptimized` for an implementation trait that overrides operations
- *  to make them run faster under the assumption of fast random access with `apply`. 
+ *  to make them run faster under the assumption of fast random access with `apply`.
  *
  *  @define  Coll  IndexedSeq
  *  @define indexedSeqInfo
  *  Indexed sequences support constant-time or near constant-time element
  *  access and length computation. They are defined in terms of abstract methods
  *  `apply` for indexing and `length`.
- * 
+ *
  *  Indexed sequences do not add any new methods wrt `Seq`, but promise
  *  efficient implementations of random access patterns.
- * 
+ *
  *  @tparam A    the element type of the $coll
  *  @tparam Repr the type of the actual $coll containing the elements.
  *  @author Martin Odersky
@@ -64,16 +64,16 @@ trait IndexedSeqLike[+A, +Repr] extends SeqLike[A, Repr] {
 
       val x = self(index)
       index += 1
-      x      
+      x
     }
 
     def head = {
       if (index >= end)
         Iterator.empty.next
-      
+
       self(index)
     }
-    
+
     override def drop(n: Int): Iterator[A] =
       if (n <= 0) new Elements(index, end)
       else if (index + n >= end) new Elements(end, end)
@@ -88,7 +88,7 @@ trait IndexedSeqLike[+A, +Repr] extends SeqLike[A, Repr] {
 
   override /*IterableLike*/
   def iterator: Iterator[A] = new Elements(0, length)
-  
+
   /** Overridden for efficiency */
   override def toBuffer[A1 >: A]: mutable.Buffer[A1] = {
     val result = new mutable.ArrayBuffer[A1](size)

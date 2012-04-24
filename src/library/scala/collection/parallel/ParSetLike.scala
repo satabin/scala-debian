@@ -26,11 +26,11 @@ import scala.collection.mutable.Builder
 
 /** A template trait for parallel sets. This trait is mixed in with concrete
  *  parallel sets to override the representation type.
- *  
+ *
  *  $sideeffects
- *  
+ *
  *  @tparam T    the element type of the set
- *  
+ *
  *  @author Aleksandar Prokopec
  *  @since 2.9
  */
@@ -40,19 +40,19 @@ trait ParSetLike[T,
 extends GenSetLike[T, Repr]
    with ParIterableLike[T, Repr, Sequential]
 { self =>
-  
+
   def empty: Repr
-  
+
   // note: should not override toSet (could be mutable)
-  
+
   def union(that: GenSet[T]): Repr = sequentially {
     _ union that
   }
-  
+
   def diff(that: GenSet[T]): Repr = sequentially {
     _ diff that
   }
-  
+
 }
 
 

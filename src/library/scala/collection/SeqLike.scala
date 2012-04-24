@@ -36,7 +36,7 @@ import scala.math.Ordering
  *  Sequences have two principal subtraits, `IndexedSeq` and `LinearSeq`, which give different guarantees for performance.
  *  An `IndexedSeq` provides fast random-access of elements and a fast `length` operation.
  *  A `LinearSeq` provides fast access only to the first element via `head`, but also
- *  has a fast `tail` operation. 
+ *  has a fast `tail` operation.
  *
  *  @tparam A    the element type of the collection
  *  @tparam Repr the type of the actual collection containing the elements.
@@ -45,17 +45,17 @@ import scala.math.Ordering
  *  @author  Matthias Zenger
  *  @version 1.0, 16/07/2003
  *  @since   2.8
- * 
+ *
  *  @define Coll Seq
  *  @define coll sequence
- *  @define thatinfo the class of the returned collection. Where possible, `That` is 
+ *  @define thatinfo the class of the returned collection. Where possible, `That` is
  *    the same class as the current collection class `Repr`, but this
  *    depends on the element type `B` being admissible for that class,
  *    which means that an implicit instance of type `CanBuildFrom[Repr, B, That]`
  *    is found.
  *  @define bfinfo an implicit value of class `CanBuildFrom` which determines the
  *    result class `That` from the current representation type `Repr`
- *    and the new element type `B`. 
+ *    and the new element type `B`.
  *  @define orderDependent
  *  @define orderDependentFold
  */
@@ -94,7 +94,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
   }
 
   /** The size of this $coll, equivalent to `length`.
-   * 
+   *
    *  $willNotTerminateInf
    */
   override def size = length
@@ -135,10 +135,10 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *  @return   An Iterator which traverses the distinct permutations of this $coll.
    *  @example  `"abb".permutations = Iterator(abb, bab, bba)`
    */
-  def permutations: Iterator[Repr] = 
+  def permutations: Iterator[Repr] =
     if (isEmpty) Iterator(repr)
     else new PermutationsItr
-  
+
   /** Iterates over combinations.
    *
    *  @return   An Iterator which traverses the possible n-element combinations of this $coll.
@@ -147,11 +147,11 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
   def combinations(n: Int): Iterator[Repr] =
     if (n < 0 || n > size) Iterator.empty
     else new CombinationsItr(n)
-  
+
   private class PermutationsItr extends Iterator[Repr] {
     private[this] val (elms, idxs) = init()
     private var _hasNext = true
-    
+
     def hasNext = _hasNext
     def next: Repr = {
       if (!hasNext)
@@ -161,7 +161,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
       var i = idxs.length - 2
       while(i >= 0 && idxs(i) >= idxs(i+1))
         i -= 1
-        
+
       if (i < 0)
         _hasNext = false
       else {
@@ -186,7 +186,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
       elms(i) = elms(j)
       elms(j) = tmpE
     }
-    
+
     private[this] def init() = {
       val m = mutable.HashMap[A, Int]()
       val (es, is) = thisCollection map (e => (e, m.getOrElseUpdate(e, m.size))) sortBy (_._2) unzip
@@ -194,7 +194,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
       (es.toBuffer, is.toArray)
     }
   }
-    
+
   private class CombinationsItr(n: Int) extends Iterator[Repr] {
     // generating all nums such that:
     // (1) nums(0) + .. + nums(length-1) = n
@@ -207,20 +207,20 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
     def next: Repr = {
       if (!hasNext)
         Iterator.empty.next
-      
+
       /** Calculate this result. */
       val buf = self.newBuilder
       for(k <- 0 until nums.length; j <- 0 until nums(k))
         buf += elms(offs(k)+j)
       val res = buf.result
-      
+
       /** Prepare for the next call to next. */
       var idx = nums.length - 1
       while (idx >= 0 && nums(idx) == cnts(idx))
         idx -= 1
 
       idx = nums.lastIndexWhere(_ > 0, idx - 1)
-      
+
       if (idx < 0)
         _hasNext = false
       else {
@@ -231,10 +231,10 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
           sum -= nums(k)
         }
       }
-      
+
       res
     }
-    
+
     /** Rearrange seq to newSeq a0a0..a0a1..a1...ak..ak such that
      *  seq.count(_ == aj) == cnts(j)
      *
@@ -248,7 +248,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
       val cs = new Array[Int](m.size)
       is foreach (i => cs(i) += 1)
       val ns = new Array[Int](cs.length)
-      
+
       var r = n
       0 until ns.length foreach { k =>
         ns(k) = r min cs(k)
@@ -260,7 +260,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
 
   def reverse: Repr = {
     var xs: List[A] = List()
-    for (x <- this) 
+    for (x <- this)
       xs = x :: xs
     val b = newBuilder
     b.sizeHint(this)
@@ -268,10 +268,10 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
       b += x
     b.result
   }
-  
+
   def reverseMap[B, That](f: A => B)(implicit bf: CanBuildFrom[Repr, B, That]): That = {
     var xs: List[A] = List()
-    for (x <- this.seq) 
+    for (x <- this.seq)
       xs = x :: xs
     val b = bf(repr)
     for (x <- xs)
@@ -293,7 +293,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
   @deprecated("use `reverseIterator' instead", "2.8.0")
   def reversedElements = reverseIterator
 
-  def startsWith[B](that: GenSeq[B], offset: Int): Boolean = {  
+  def startsWith[B](that: GenSeq[B], offset: Int): Boolean = {
     val i = this.iterator drop offset
     val j = that.iterator
     while (j.hasNext && i.hasNext)
@@ -312,7 +312,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
     while (i.hasNext && j.hasNext)
       if (i.next != j.next)
         return false
-    
+
     !j.hasNext
   }
 
@@ -324,21 +324,21 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *  $mayNotTerminateInf
    *  @param  that    the sequence to test
    *  @return  the first index such that the elements of this $coll starting at this index
-   *           match the elements of sequence `that`, or `-1` of no such subsequence exists. 
+   *           match the elements of sequence `that`, or `-1` of no such subsequence exists.
    */
   def indexOfSlice[B >: A](that: GenSeq[B]): Int = indexOfSlice(that, 0)
 
   @bridge
   def indexOfSlice[B >: A](that: Seq[B]): Int = indexOfSlice(that: GenSeq[B])
-  
+
   /** Finds first index after or at a start index where this $coll contains a given sequence as a slice.
    *  $mayNotTerminateInf
    *  @param  that    the sequence to test
-   *  @param  from    the start index  
+   *  @param  from    the start index
    *  @return  the first index `>= from` such that the elements of this $coll starting at this index
-   *           match the elements of sequence `that`, or `-1` of no such subsequence exists. 
+   *           match the elements of sequence `that`, or `-1` of no such subsequence exists.
    */
-  def indexOfSlice[B >: A](that: GenSeq[B], from: Int): Int = 
+  def indexOfSlice[B >: A](that: GenSeq[B], from: Int): Int =
     if (this.hasDefiniteSize && that.hasDefiniteSize)
       SeqLike.indexOf(thisCollection, 0, length, that.seq, 0, that.length, from)
     else {
@@ -347,7 +347,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
       while (!s.isEmpty) {
         if (s startsWith that)
           return i
-        
+
         i += 1
         s = s.tail
       }
@@ -361,7 +361,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *  $willNotTerminateInf
    *  @param  that    the sequence to test
    *  @return  the last index such that the elements of this $coll starting a this index
-   *           match the elements of sequence `that`, or `-1` of no such subsequence exists. 
+   *           match the elements of sequence `that`, or `-1` of no such subsequence exists.
    */
   def lastIndexOfSlice[B >: A](that: GenSeq[B]): Int = lastIndexOfSlice(that, length)
 
@@ -372,9 +372,9 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *  @param  that    the sequence to test
    *  @param  end     the end index
    *  @return  the last index `<= end` such that the elements of this $coll starting at this index
-   *           match the elements of sequence `that`, or `-1` of no such subsequence exists. 
+   *           match the elements of sequence `that`, or `-1` of no such subsequence exists.
    */
-  def lastIndexOfSlice[B >: A](that: GenSeq[B], end: Int): Int = 
+  def lastIndexOfSlice[B >: A](that: GenSeq[B], end: Int): Int =
     SeqLike.lastIndexOf(thisCollection, 0, length, that.seq, 0, that.length, end)
 
   @bridge
@@ -386,7 +386,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *  @return  `true` if this $coll contains a slice with the same elements
    *           as `that`, otherwise `false`.
    */
-  def containsSlice[B](that: GenSeq[B]): Boolean = indexOfSlice(that) != -1 
+  def containsSlice[B](that: GenSeq[B]): Boolean = indexOfSlice(that) != -1
 
   @bridge
   def containsSlice[B](that: Seq[B]): Boolean = containsSlice(that: GenSeq[B])
@@ -420,13 +420,13 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *  @return       a new $coll which contains all elements of this $coll
    *                followed by all elements of `that`.
    */
-  override def union[B >: A, That](that: GenSeq[B])(implicit bf: CanBuildFrom[Repr, B, That]): That = 
+  override def union[B >: A, That](that: GenSeq[B])(implicit bf: CanBuildFrom[Repr, B, That]): That =
     this ++ that
 
   /** Computes the multiset difference between this $coll and another sequence.
    *  $willNotTerminateInf
    *
-   *  @param that   the sequence of elements to remove 
+   *  @param that   the sequence of elements to remove
    *  @tparam B     the element type of the returned $coll.
    *  @tparam That  $thatinfo
    *  @param bf     $bfinfo
@@ -447,7 +447,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
     val b = newBuilder
     for (x <- this)
       if (occ(x) == 0) b += x
-      else occ(x) -= 1 
+      else occ(x) -= 1
     b.result
   }
 
@@ -485,7 +485,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
   }
 
   @bridge
-  def intersect[B >: A](that: Seq[B]): Repr = intersect(that: GenSeq[B])    
+  def intersect[B >: A](that: Seq[B]): Repr = intersect(that: GenSeq[B])
 
   private def occCounts[B](sq: Seq[B]): mutable.Map[B, Int] = {
     val occ = new mutable.HashMap[B, Int] { override def default(k: B) = 0 }
@@ -553,7 +553,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
     b ++= thisCollection
     while (diff > 0) {
       b += elem
-      diff -= 1 
+      diff -= 1
     }
     b.result
   }
@@ -564,17 +564,17 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
     while (i.hasNext && j.hasNext)
       if (!p(i.next, j.next))
         return false
-    
+
     !i.hasNext && !j.hasNext
   }
 
   @bridge
-  def corresponds[B](that: Seq[B])(p: (A,B) => Boolean): Boolean = 
+  def corresponds[B](that: Seq[B])(p: (A,B) => Boolean): Boolean =
     corresponds(that: GenSeq[B])(p)
-  
+
   /** Sorts this $coll according to a comparison function.
    *  $willNotTerminateInf
-   * 
+   *
    *  The sort is stable. That is, elements that are equal wrt `lt` appear in the
    *  same order in the sorted sequence as in the original.
    *
@@ -584,12 +584,12 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *  @return     a $coll consisting of the elements of this $coll
    *              sorted according to the comparison function `lt`.
    *  @example {{{
-   *    List("Steve", "Tom", "John", "Bob").sortWith(_.compareTo(_) < 0) = 
+   *    List("Steve", "Tom", "John", "Bob").sortWith(_.compareTo(_) < 0) =
    *    List("Bob", "John", "Steve", "Tom")
    *  }}}
    */
   def sortWith(lt: (A, A) => Boolean): Repr = sorted(Ordering fromLessThan lt)
-  
+
   /** Sorts this $Coll according to the Ordering which results from transforming
    *  an implicitly given Ordering with a transformation function.
    *  @see scala.math.Ordering
@@ -609,16 +609,16 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
    *    words.sortBy(x => (x.length, x.head))
    *    res0: Array[String] = Array(The, dog, fox, the, lazy, over, brown, quick, jumped)
    *  }}}
-   */  
+   */
   def sortBy[B](f: A => B)(implicit ord: Ordering[B]): Repr = sorted(ord on f)
 
   /** Sorts this $coll according to an Ordering.
-   * 
+   *
    *  The sort is stable. That is, elements that are equal wrt `lt` appear in the
    *  same order in the sorted sequence as in the original.
    *
    *  @see scala.math.Ordering
-   * 
+   *
    *  @param  ord the ordering to be used to compare elements.
    *  @return     a $coll consisting of the elements of this $coll
    *              sorted according to the ordering `ord`.
@@ -682,7 +682,7 @@ trait SeqLike[+A, +Repr] extends IterableLike[A, Repr] with GenSeqLike[A, Repr] 
   @deprecated("use `corresponds` instead", "2.8.0")
   def equalsWith[B](that: Seq[B])(f: (A,B) => Boolean): Boolean = corresponds(that)(f)
 
- /** 
+ /**
    * returns a projection that can be used to call non-strict <code>filter</code>,
    * <code>map</code>, and <code>flatMap</code> methods that build projections
    * of the collection.
@@ -706,7 +706,7 @@ object SeqLike {
       case -1 => None
       case x  => Some(x)
     }
-    
+
     val T: Array[Int] = {
       val arr = new Array[Int](W.length)
       var pos = 2
@@ -729,10 +729,10 @@ object SeqLike {
       }
       arr
     }
-    
+
     var m, i = 0
     def mi = m + i
-    
+
     while (mi < S.length) {
       if (W(i) == S(mi)) {
         i += 1
@@ -755,7 +755,7 @@ object SeqLike {
    *  way that all library sequence searches can use it.  It is unlikely you
    *  have cause to call it directly: prefer functions such as StringBuilder#indexOf
    *  and Seq#lastIndexOf.
-   *   
+   *
    *  @param  source        the sequence to search in
    *  @param  sourceOffset  the starting offset in source
    *  @param  sourceCount   the length beyond sourceOffset to search
@@ -782,7 +782,7 @@ object SeqLike {
 
   /** Finds a particular index at which one sequence occurs in another sequence.
    *  Like indexOf, but finds the latest occurrence rather than earliest.
-   *  
+   *
    *  @see  SeqLike#indexOf
    */
   def lastIndexOf[B](

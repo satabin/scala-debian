@@ -20,7 +20,7 @@ package mutable
  *  @author  Matthias Zenger
  *  @version 1.0, 08/07/2003
  *  @since   1
- *  
+ *
  *  @tparam Evt   Type of events.
  *  @tparam Pub   Type of publishers.
  */
@@ -31,21 +31,21 @@ class History[Evt, Pub] extends Subscriber[Evt, Pub] with Iterable[(Pub, Evt)] w
   val maxHistory: Int = 1000
 
   /** Notifies this listener with an event by enqueuing it in the log.
-   *  
+   *
    *  @param pub   the publisher.
    *  @param event the event.
    */
   def notify(pub: Pub, event: Evt) {
     if (log.length >= maxHistory)
       log.dequeue
-      
+
     log.enqueue((pub, event))
   }
 
   override def size: Int = log.length
   def iterator: Iterator[(Pub, Evt)] = log.iterator
   def events: Iterator[Evt] = log.iterator map (_._2)
-  
+
   def clear() { log.clear }
 
   /** Checks if two history objects are structurally identical.

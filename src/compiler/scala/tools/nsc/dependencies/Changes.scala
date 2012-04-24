@@ -5,7 +5,7 @@ import symtab.Flags
 
 import collection._
 
-/** A component that describes the possible changes between successive 
+/** A component that describes the possible changes between successive
  *  compilations of a class.
  */
 abstract class Changes {
@@ -20,8 +20,8 @@ abstract class Changes {
 
   private lazy val annotationsChecked =
       List(definitions.getClass("scala.specialized")) // Any others that should be checked?
-      
-  private val flagsToCheck = IMPLICIT | FINAL | PRIVATE | PROTECTED | SEALED | 
+
+  private val flagsToCheck = IMPLICIT | FINAL | PRIVATE | PROTECTED | SEALED |
                              OVERRIDE | CASE | ABSTRACT | DEFERRED | METHOD |
                              MODULE | INTERFACE | PARAM | BYNAMEPARAM | CONTRAVARIANT |
                              DEFAULTPARAM | ACCESSOR | LAZY | SPECIALIZED
@@ -30,7 +30,7 @@ abstract class Changes {
   private def moreRestrictive(from: Long, to: Long): Boolean =
     ((((to & PRIVATE) != 0L) && (from & PRIVATE) == 0L)
      || (((to & PROTECTED) != 0L) && (from & PROTECTED) == 0L))
-    
+
   /** Check if flags have changed **/
   private def modifiedFlags(from: Long, to: Long): Boolean =
     (from & IMPLICIT) != (to & IMPLICIT)
@@ -41,14 +41,14 @@ abstract class Changes {
   abstract class Entity
   case class Class(name: String) extends Entity
   case class Definition(name: String) extends Entity
-  
+
   case class Added(e: Entity) extends Change
   case class Removed(e: Entity) extends Change
   case class Changed(e: Entity)(implicit val reason: String) extends Change {
     override def toString = "Changed(" + e + ")[" + reason + "]"
   }
   case class ParentChanged(e: Entity) extends Change
-  
+
   private val changedTypeParams = new mutable.HashSet[String]
 
   private def sameParameterSymbolNames(sym1: Symbol, sym2: Symbol): Boolean =
@@ -56,7 +56,7 @@ abstract class Changes {
   private def sameSymbol(sym1: Symbol, sym2: Symbol, simple: Boolean = false): Boolean =
     if (simple) sym1.encodedName == sym2.encodedName else sym1.fullName == sym2.fullName
   private def sameFlags(sym1: Symbol, sym2: Symbol): Boolean =
-    	(sym1.flags & flagsToCheck) == (sym2.flags & flagsToCheck) 
+    	(sym1.flags & flagsToCheck) == (sym2.flags & flagsToCheck)
   private def sameAnnotations(sym1: Symbol, sym2: Symbol): Boolean =
     annotationsChecked.forall(a =>
       (sym1.hasAnnotation(a) == sym2.hasAnnotation(a)))
@@ -67,7 +67,7 @@ abstract class Changes {
     //if (!res) println("\t different types: " + typeOf(tp1) + " : " + typeOf(tp2))
     res
   }
-  
+
   private def sameType0(tp1: Type, tp2: Type)(implicit strict: Boolean): Boolean = ((tp1, tp2) match {
     /*case (ErrorType, _) => false
     case (WildcardType, _) => false
@@ -87,7 +87,7 @@ abstract class Changes {
     case (ConstantType(value1), ConstantType(value2)) =>
       value1 == value2
     case (TypeRef(pre1, sym1, args1), TypeRef(pre2, sym2, args2)) =>
-      val testSymbols = 
+      val testSymbols =
         if (!sameSymbol(sym1, sym2)) {
           val v = (!strict && sym1.isType && sym2.isType && sameType(sym1.info, sym2.info))
           if (v) changedTypeParams += sym1.fullName
@@ -95,9 +95,9 @@ abstract class Changes {
         } else
           !sym1.isTypeParameter || !changedTypeParams.contains(sym1.fullName)
 
-      testSymbols && sameType(pre1, pre2) && 
+      testSymbols && sameType(pre1, pre2) &&
         (sym1.variance == sym2.variance) &&
-        ((tp1.isHigherKinded && tp2.isHigherKinded && tp1.normalize =:= tp2.normalize) || 
+        ((tp1.isHigherKinded && tp2.isHigherKinded && tp1.normalize =:= tp2.normalize) ||
            sameTypes(args1, args2))
          // @M! normalize reduces higher-kinded case to PolyType's
 
@@ -107,7 +107,7 @@ abstract class Changes {
           var e1 = s1.lookupEntry(sym2.name)
           (e1 ne null) && {
             var isEqual = false
-            while (!isEqual && (e1 ne null)) { 
+            while (!isEqual && (e1 ne null)) {
               isEqual = sameType(e1.sym.info, sym2.info)
               e1 = s1.lookupNextEntry(e1)
             }
@@ -172,7 +172,7 @@ abstract class Changes {
   def changeSet(from: Type, toSym: Symbol): List[Change] = {
     implicit val defaultReason = "types"
     implicit val defaultStrictTypeRefTest = true
-    
+
     val to = toSym.info
     changedTypeParams.clear
     def omitSymbols(s: Symbol): Boolean = !s.hasFlag(LOCAL | LIFTED | PRIVATE | SYNTHETIC)

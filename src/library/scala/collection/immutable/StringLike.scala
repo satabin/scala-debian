@@ -31,9 +31,9 @@ object StringLike {
 import StringLike._
 
 /** A trait describing stringlike collections.
- *  
+ *
  *  @tparam Repr   The type of the actual collection inheriting `StringLike`.
- *  
+ *
  *  @since 2.8
  *  @define Coll String
  *  @define coll string
@@ -49,18 +49,18 @@ self =>
   protected[this] def newBuilder: Builder[Char, Repr]
 
   /** Return element at index `n`
-   *  @throws   IndexOutofBoundsException if the index is not valid
+   *  @throws   IndexOutOfBoundsException if the index is not valid
    */
   def apply(n: Int): Char = toString charAt n
 
   def length: Int = toString.length
 
   override def mkString = toString
-  
+
   override def slice(from: Int, until: Int): Repr = {
     val start = from max 0
     val end   = until min length
-    
+
     if (start >= end) newBuilder.result
     else newBuilder ++= toString.substring(start, end) result
   }
@@ -76,10 +76,10 @@ self =>
   override def compare(other: String) = toString compareTo other
 
   private def isLineBreak(c: Char) = c == LF || c == FF
-  
+
   /**
    *  Strip trailing line end character from this string if it has one.
-   *  
+   *
    *  A line end character is one of
    *  <ul style="list-style-type: none;">
    *    <li>LF - line feed   (0x0A hex)</li>
@@ -95,19 +95,19 @@ self =>
       val last = apply(len - 1)
       if (isLineBreak(last))
         toString.substring(0, if (last == LF && len >= 2 && apply(len - 2) == CR) len - 2 else len - 1)
-      else 
+      else
         toString
     }
   }
-  
+
   /**
    *    Return all lines in this string in an iterator, including trailing
    *    line end characters.
-   * 
+   *
    *    The number of strings returned is one greater than the number of line
    *    end characters in this string. For an empty string, a single empty
    *    line is returned. A line end character is one of
-   * 
+   *
    *    <ul style="list-style-type: none;">
    *      <li>LF - line feed   (0x0A hex)</li>
    *      <li>FF - form feed   (0x0C hex)</li>
@@ -131,14 +131,14 @@ self =>
    *  end characters, i.e. apply `.stripLineEnd` to all lines
    *  returned by `linesWithSeparators`.
    */
-  def lines: Iterator[String] = 
+  def lines: Iterator[String] =
     linesWithSeparators map (line => new WrappedString(line).stripLineEnd)
 
   /** Return all lines in this string in an iterator, excluding trailing line
    *  end characters, i.e. apply `.stripLineEnd` to all lines
    *  returned by `linesWithSeparators`.
    */
-  def linesIterator: Iterator[String] = 
+  def linesIterator: Iterator[String] =
     linesWithSeparators map (line => new WrappedString(line).stripLineEnd)
 
   /** Returns this string with first character converted to upper case */
@@ -161,7 +161,7 @@ self =>
   def stripSuffix(suffix: String) =
     if (toString.endsWith(suffix)) toString.substring(0, toString.length() - suffix.length)
     else toString
-  
+
   /** Replace all literal occurrences of `literal` with the string `replacement`.
    *  This is equivalent to [[java.lang.String#replaceAll]] except that both arguments
    *  are appropriately quoted to avoid being interpreted as metacharacters.
@@ -173,13 +173,13 @@ self =>
   def replaceAllLiterally(literal: String, replacement: String): String = {
     val arg1 = java.util.regex.Pattern.quote(literal)
     val arg2 = java.util.regex.Matcher.quoteReplacement(replacement)
-    
+
     toString.replaceAll(arg1, arg2)
   }
 
-  /** 
+  /**
    *    For every line in this string:
-   * 
+   *
    *    <blockquote>
    *       Strip a leading prefix consisting of blanks or control characters
    *       followed by `marginChar` from the line.
@@ -197,9 +197,9 @@ self =>
     buf.toString
   }
 
-  /** 
+  /**
    *    For every line in this string:
-   *  
+   *
    *    <blockquote>
    *       Strip a leading prefix consisting of blanks or control characters
    *       followed by `|` from the line.
@@ -224,7 +224,7 @@ self =>
    *  """A\w*""".r   is the regular expression for identifiers starting with `A'.
    */
   def r: Regex = new Regex(toString)
-  
+
   def toBoolean: Boolean = parseBoolean(toString)
   def toByte: Byte       = java.lang.Byte.parseByte(toString)
   def toShort: Short     = java.lang.Short.parseShort(toString)
@@ -269,18 +269,18 @@ self =>
   def format(args : Any*): String =
     java.lang.String.format(toString, args map unwrapArg: _*)
 
-  /** 
+  /**
    *  Like `format(args*)` but takes an initial `Locale` parameter
    *  which influences formatting as in `java.lang.String`'s format.
-   *  
-   *  
+   *
+   *
    *    The interpretation of the formatting patterns is described in
    *    <a href="" target="contentFrame" class="java/util/Formatter">
    *    `java.util.Formatter`</a>, with the addition that
    *    classes deriving from `ScalaNumber` (such as `scala.BigInt` and
    *    `scala.BigDecimal`) are unwrapped to pass a type which `Formatter`
    *    understands.
-   *  
+   *
    *
    *  @param locale an instance of `java.util.Locale`
    *  @param args the arguments used to instantiating the pattern.

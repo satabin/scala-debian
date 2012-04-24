@@ -26,27 +26,27 @@ extends LazyCombiner[T, ParArray[T], ExposedArrayBuffer[T]]
 {
 //self: EnvironmentPassingCombiner[T, ParArray[T]] =>
   import collection.parallel.tasksupport._
-  
+
   override def sizeHint(sz: Int) = if (chain.length == 1) chain(0).sizeHint(sz)
-  
+
   def newLazyCombiner(c: ArrayBuffer[ExposedArrayBuffer[T]]) = ResizableParArrayCombiner(c)
-  
+
   def allocateAndCopy = if (chain.size > 1) {
     val arrayseq = new ArraySeq[T](size)
     val array = arrayseq.array.asInstanceOf[Array[Any]]
-    
+
     executeAndWaitResult(new CopyChainToArray(array, 0, size))
-    
+
     new ParArray(arrayseq)
   } else { // optimisation if there is only 1 array
     val pa = new ParArray(new ExposedArraySeq[T](chain(0).internalArray, size))
     pa
   }
-  
+
   override def toString = "ResizableParArrayCombiner(" + size + "): " //+ chain
-  
+
   /* tasks */
-  
+
   class CopyChainToArray(array: Array[Any], offset: Int, howmany: Int) extends Task[Unit, CopyChainToArray] {
     var result = ()
     def leaf(prev: Option[Unit]) = if (howmany > 0) {
@@ -59,11 +59,11 @@ extends LazyCombiner[T, ParArray[T], ExposedArrayBuffer[T]]
         val currbuff = chain(buffind)
         val chunksize = if (totalleft < (currbuff.size - ind)) totalleft else currbuff.size - ind
         val until = ind + chunksize
-        
+
         copyChunk(currbuff.internalArray, ind, array, arrayIndex, until)
         arrayIndex += chunksize
         ind += chunksize
-        
+
         totalleft -= chunksize
         buffind += 1
         ind = 0
@@ -87,7 +87,7 @@ extends LazyCombiner[T, ParArray[T], ExposedArrayBuffer[T]]
     }
     def shouldSplitFurther = howmany > collection.parallel.thresholdFromSize(size, parallelismLevel)
   }
-  
+
 }
 
 

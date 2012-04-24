@@ -25,10 +25,10 @@ case class DocType(name: String, extID: ExternalID, intSubset: Seq[dtd.Decl])
 
   /** returns "&lt;!DOCTYPE + name + extID? + ("["+intSubSet+"]")? >" */
   final override def toString() = {
-    def intString = 
+    def intString =
       if (intSubset.isEmpty) ""
       else intSubset.mkString("[", "", "]")
-      
+
     """<!DOCTYPE %s %s%s>""".format(name, extID.toString, intString)
   }
 }

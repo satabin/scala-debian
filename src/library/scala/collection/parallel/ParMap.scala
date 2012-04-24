@@ -26,12 +26,12 @@ import scala.collection.generic.CanCombineFrom
 
 
 /** A template trait for parallel maps.
- *  
+ *
  *  $sideeffects
- *  
+ *
  *  @tparam K    the key type of the map
  *  @tparam V    the value type of the map
- *  
+ *
  *  @author Aleksandar Prokopec
  *  @since 2.9
  */
@@ -42,13 +42,13 @@ extends GenMap[K, V]
    with ParMapLike[K, V, ParMap[K, V], Map[K, V]]
 {
 self =>
-  
+
   def mapCompanion: GenericParMapCompanion[ParMap] = ParMap
-  
+
   //protected[this] override def newCombiner: Combiner[(K, V), ParMap[K, V]] = ParMap.newCombiner[K, V]
-  
+
   def empty: ParMap[K, V] = new mutable.ParHashMap[K, V]
-  
+
   override def stringPrefix = "ParMap"
 }
 
@@ -56,11 +56,11 @@ self =>
 
 object ParMap extends ParMapFactory[ParMap] {
   def empty[K, V]: ParMap[K, V] = new mutable.ParHashMap[K, V]
-  
+
   def newCombiner[K, V]: Combiner[(K, V), ParMap[K, V]] = mutable.ParHashMapCombiner[K, V]
-  
+
   implicit def canBuildFrom[K, V]: CanCombineFrom[Coll, (K, V), ParMap[K, V]] = new CanCombineFromMap[K, V]
-  
+
 }
 
 

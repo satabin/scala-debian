@@ -35,11 +35,11 @@ import mutable.StringBuilder
 trait BitSetLike[+This <: BitSetLike[This] with Set[Int]] extends SetLike[Int, This] { self =>
 
   def empty: This
- 
+
   /** The number of words (each with 64 bits) making up the set */
   protected def nwords: Int
 
-  /** The words at index `idx', or 0L if outside the range of the set
+  /** The words at index `idx`, or 0L if outside the range of the set
    *  '''Note:''' requires `idx >= 0`
    */
   protected def word(idx: Int): Long
@@ -65,8 +65,8 @@ trait BitSetLike[+This <: BitSetLike[This] with Set[Int]] extends SetLike[Int, T
       while (current < end && !self.contains(current)) current += 1
       current < end
     }
-    def next(): Int = 
-      if (hasNext) { val r = current; current += 1; r } 
+    def next(): Int =
+      if (hasNext) { val r = current; current += 1; r }
       else Iterator.empty.next
   }
 
@@ -84,7 +84,7 @@ trait BitSetLike[+This <: BitSetLike[This] with Set[Int]] extends SetLike[Int, T
    *
    *  @param   other  the bitset to form the union with.
    *  @return  a new bitset consisting of all bits that are in this
-   *           bitset or in the given bitset `other`. 
+   *           bitset or in the given bitset `other`.
    */
   def | (other: BitSet): This = {
     val len = this.nwords max other.nwords
@@ -94,11 +94,11 @@ trait BitSetLike[+This <: BitSetLike[This] with Set[Int]] extends SetLike[Int, T
     fromArray(words)
   }
 
-  /** Computes the intersection between this bitset and another bitset by performing 
+  /** Computes the intersection between this bitset and another bitset by performing
    *  a bitwise "and".
    *  @param   that  the bitset to intersect with.
    *  @return  a new bitset consisting of all elements that are both in this
-   *  bitset and in the given bitset `other`. 
+   *  bitset and in the given bitset `other`.
    */
   def & (other: BitSet): This = {
     val len = this.nwords min other.nwords
@@ -108,9 +108,9 @@ trait BitSetLike[+This <: BitSetLike[This] with Set[Int]] extends SetLike[Int, T
     fromArray(words)
   }
 
-  /** Computes the difference of this bitset and another bitset by performing 
+  /** Computes the difference of this bitset and another bitset by performing
    *  a bitwise "and-not".
-   * 
+   *
    *  @param that the set of bits to exclude.
    *  @return     a bitset containing those bits of this
    *              bitset that are not also contained in the given bitset `other`.
@@ -123,10 +123,10 @@ trait BitSetLike[+This <: BitSetLike[This] with Set[Int]] extends SetLike[Int, T
     fromArray(words)
   }
 
-  /** Computes the symmetric difference of this bitset and another bitset by performing 
+  /** Computes the symmetric difference of this bitset and another bitset by performing
    *  a bitwise "exclusive-or".
-   * 
-   *  @param that the other bitset to take part in the symmetric difference. 
+   *
+   *  @param that the other bitset to take part in the symmetric difference.
    *  @return     a bitset containing those bits of this
    *              bitset or the other bitset that are not contained in both bitsets.
    */
@@ -161,7 +161,7 @@ trait BitSetLike[+This <: BitSetLike[This] with Set[Int]] extends SetLike[Int, T
     sb append end
   }
 
-  override def stringPrefix = "BitSet"                                                                                      
+  override def stringPrefix = "BitSet"
 }
 
 /** Companion object for BitSets. Contains private data only */

@@ -10,14 +10,14 @@ import scala.collection.{ mutable, immutable }
 
 trait Imports {
   self: IMain =>
-  
+
   import global._
   import definitions.{ ScalaPackage, JavaLangPackage, PredefModule }
   import memberHandlers._
-  
+
   def isNoImports = settings.noimports.value
   def isNoPredef  = false   // settings.nopredef.value
-  
+
   /** Synthetic import handlers for the language defined imports. */
   private def makeWildcardImportHandler(sym: Symbol): ImportHandler = {
     val hd :: tl = sym.fullName.split('.').toList map newTermName
@@ -28,15 +28,15 @@ trait Imports {
     tree setSymbol sym
     new ImportHandler(tree)
   }
-  
+
   /** Symbols whose contents are language-defined to be imported. */
   def languageWildcardSyms: List[Symbol] = List(JavaLangPackage, ScalaPackage, PredefModule)
   def languageWildcards: List[Type] = languageWildcardSyms map (_.tpe)
   def languageWildcardHandlers = languageWildcardSyms map makeWildcardImportHandler
-  
+
   def importedTerms  = onlyTerms(importHandlers flatMap (_.importedNames))
   def importedTypes  = onlyTypes(importHandlers flatMap (_.importedNames))
-  
+
   /** Types which have been wildcard imported, such as:
    *    val x = "abc" ; import x._  // type java.lang.String
    *    import java.lang.String._   // object java.lang.String
@@ -55,14 +55,14 @@ trait Imports {
     } distinct
   }
   def wildcardTypes = languageWildcards ++ sessionWildcards
-  
+
   def languageSymbols        = languageWildcardSyms flatMap membersAtPickler
   def sessionImportedSymbols = importHandlers flatMap (_.importedSymbols)
   def importedSymbols        = languageSymbols ++ sessionImportedSymbols
   def importedTermSymbols    = importedSymbols collect { case x: TermSymbol => x }
   def importedTypeSymbols    = importedSymbols collect { case x: TypeSymbol => x }
   def implicitSymbols        = importedSymbols filter (_.isImplicit)
-  
+
   def importedTermNamed(name: String) = importedTermSymbols find (_.name.toString == name)
 
   /** Tuples of (source, imported symbols) in the order they were imported.
@@ -72,7 +72,7 @@ trait Imports {
     val session = importHandlers filter (_.targetType.isDefined) map { mh =>
       (mh.targetType.get.typeSymbol, mh.importedSymbols)
     }
-    
+
     lang ++ session
   }
   def implicitSymbolsBySource: List[(Symbol, List[Symbol])] = {
@@ -80,7 +80,7 @@ trait Imports {
       case (k, vs) => (k, vs filter (_.isImplicit))
     } filterNot (_._2.isEmpty)
   }
-  
+
   /** Compute imports that allow definitions from previous
    *  requests to be visible in a new request.  Returns
    *  three pieces of related code:
@@ -106,13 +106,13 @@ trait Imports {
    */
   case class ComputedImports(prepend: String, append: String, access: String)
   protected def importsCode(wanted: Set[Name]): ComputedImports = {
-    /** Narrow down the list of requests from which imports 
+    /** Narrow down the list of requests from which imports
      *  should be taken.  Removes requests which cannot contribute
      *  useful imports for the specified set of wanted names.
      */
     case class ReqAndHandler(req: Request, handler: MemberHandler) { }
-    
-    def reqsToUse: List[ReqAndHandler] = {      
+
+    def reqsToUse: List[ReqAndHandler] = {
       /** Loop through a list of MemberHandlers and select which ones to keep.
         * 'wanted' is the set of names that need to be imported.
        */
@@ -123,7 +123,7 @@ trait Imports {
           case _: ImportHandler => true
           case x                => x.definesImplicit || (x.definedNames exists wanted)
         }
-                   
+
         reqs match {
           case Nil                                    => Nil
           case rh :: rest if !keepHandler(rh.handler) => select(rest, wanted)
@@ -133,7 +133,7 @@ trait Imports {
             rh :: select(rest, newWanted)
         }
       }
-      
+
       /** Flatten the handlers out and pair each with the original request */
       select(allReqAndHandlers reverseMap { case (r, h) => ReqAndHandler(r, h) }, wanted).reverse
     }
@@ -147,7 +147,7 @@ trait Imports {
       code append "object %s {\n".format(impname)
       trailingBraces append "}\n"
       accessPath append ("." + impname)
-      
+
       currentImps.clear
     }
 
@@ -161,22 +161,22 @@ trait Imports {
         case x: ImportHandler =>
           if (x.importsWildcard || currentImps.exists(x.importedNames contains _))
             addWrapper()
-          
+
           code append (x.member + "\n")
-          
+
           // give wildcard imports a import wrapper all to their own
           if (x.importsWildcard) addWrapper()
           else currentImps ++= x.importedNames
 
         // For other requests, import each defined name.
         // import them explicitly instead of with _, so that
-        // ambiguity errors will not be generated. Also, quote 
-        // the name of the variable, so that we don't need to 
-        // handle quoting keywords separately. 
+        // ambiguity errors will not be generated. Also, quote
+        // the name of the variable, so that we don't need to
+        // handle quoting keywords separately.
         case x =>
           for (imv <- x.definedNames) {
             if (currentImps contains imv) addWrapper()
-        
+
             code append ("import " + (req fullPath imv) + "\n")
             currentImps += imv
           }
@@ -187,7 +187,7 @@ trait Imports {
     addWrapper()
     ComputedImports(code.toString, trailingBraces.toString, accessPath.toString)
   }
-  
+
   private def allReqAndHandlers =
     prevRequestList flatMap (req => req.handlers map (req -> _))
 

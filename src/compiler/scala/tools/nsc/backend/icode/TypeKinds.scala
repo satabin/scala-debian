@@ -9,17 +9,17 @@ package icode
 
 /* A type case
 
-    case UNIT            => 
-    case BOOL            => 
-    case BYTE            => 
-    case SHORT           => 
-    case CHAR            => 
-    case INT             => 
-    case LONG            => 
-    case FLOAT           => 
-    case DOUBLE          => 
-    case REFERENCE(cls)  => 
-    case ARRAY(elem)     => 
+    case UNIT            =>
+    case BOOL            =>
+    case BYTE            =>
+    case SHORT           =>
+    case CHAR            =>
+    case INT             =>
+    case LONG            =>
+    case FLOAT           =>
+    case DOUBLE          =>
+    case REFERENCE(cls)  =>
+    case ARRAY(elem)     =>
 
 */
 
@@ -27,7 +27,7 @@ trait TypeKinds { self: ICodes =>
   import global._
   import definitions.{ ArrayClass, AnyRefClass, ObjectClass, NullClass, NothingClass, arrayType }
   import icodes.{ checkerDebug, NothingReference, NullReference }
-  
+
   /** A map from scala primitive Types to ICode TypeKinds */
   lazy val primitiveTypeMap: Map[Symbol, TypeKind] = {
     import definitions._
@@ -42,20 +42,20 @@ trait TypeKinds { self: ICodes =>
       FloatClass    -> FLOAT,
       DoubleClass   -> DOUBLE
     )
-  }    
+  }
   /** Reverse map for toType */
-  private lazy val reversePrimitiveMap: Map[TypeKind, Symbol] = 
+  private lazy val reversePrimitiveMap: Map[TypeKind, Symbol] =
     primitiveTypeMap map (_.swap) toMap
 
   /** This class represents a type kind. Type kinds
-   * represent the types that the VM know (or the ICode 
+   * represent the types that the VM know (or the ICode
    * view of what VMs know).
    */
   sealed abstract class TypeKind {
     def maxType(other: TypeKind): TypeKind
 
     def toType: Type = reversePrimitiveMap get this map (_.tpe) getOrElse {
-      this match {  
+      this match {
         case REFERENCE(cls) => cls.tpe
         case ARRAY(elem)    => arrayType(elem.toType)
         case _              => abort("Unknown type kind.")
@@ -97,19 +97,19 @@ trait TypeKinds { self: ICodes =>
       case BOOL | BYTE | SHORT | CHAR => other == INT || other == LONG
       case _                          => this eq other
     })
-                     
+
     /** Is this type a category 2 type in JVM terms? */
     def isWideType: Boolean = this match {
       case DOUBLE | LONG  => true
       case _              => false
     }
-    
+
     /** The number of dimensions for array types. */
-    def dimensions: Int = 0    
-    
+    def dimensions: Int = 0
+
     protected def uncomparable(thisKind: String, other: TypeKind): Nothing =
       abort("Uncomparable type kinds: " + thisKind + " with " + other)
-      
+
     protected def uncomparable(other: TypeKind): Nothing =
       uncomparable(this.toString, other)
   }
@@ -163,7 +163,7 @@ trait TypeKinds { self: ICodes =>
       (a == INT && b.isIntSizedType) ||
       (b == INT && a.isIntSizedType)
     )
-     
+
     if (a == b) a
     else if (a.isNothingType) b
     else if (b.isNothingType) a
@@ -181,7 +181,7 @@ trait TypeKinds { self: ICodes =>
   case object UNIT extends ValueTypeKind {
     def maxType(other: TypeKind) = other match {
       case UNIT | REFERENCE(NothingClass)   => UNIT
-      case _                                => uncomparable(other)      
+      case _                                => uncomparable(other)
     }
   }
 
@@ -247,7 +247,7 @@ trait TypeKinds { self: ICodes =>
 
   /** A 4-byte floating point number */
   case object FLOAT extends ValueTypeKind {
-    override def maxType(other: TypeKind): TypeKind = 
+    override def maxType(other: TypeKind): TypeKind =
       if (other == DOUBLE) DOUBLE
       else if (other.isNumericType || other.isNothingType) FLOAT
       else uncomparable(other)
@@ -305,7 +305,7 @@ trait TypeKinds { self: ICodes =>
       case a @ ARRAY(_) => a.elementKind
       case k            => k
     }
-    
+
     /**
      * Approximate `lub'. The common type of two references is
      * always AnyRef. For 'real' least upper bound wrt to subclassing
@@ -317,7 +317,7 @@ trait TypeKinds { self: ICodes =>
       case _                              => uncomparable("ARRAY", other)
     }
 
-    /** Array subtyping is covariant, as in Java. Necessary for checking 
+    /** Array subtyping is covariant, as in Java. Necessary for checking
      *  code that interacts with Java. */
     override def <:<(other: TypeKind) = other match {
       case ARRAY(elem2)                         => elem <:< elem2
@@ -325,7 +325,7 @@ trait TypeKinds { self: ICodes =>
       case _                                    => false
     }
   }
-  
+
   /** A boxed value. */
   case class BOXED(kind: TypeKind) extends TypeKind {
     override def isBoxedType = true
@@ -351,7 +351,7 @@ trait TypeKinds { self: ICodes =>
   case object ConcatClass extends TypeKind {
     override def toString = "ConcatClass"
 
-    /** 
+    /**
      * Approximate `lub'. The common type of two references is
      * always AnyRef. For 'real' least upper bound wrt to subclassing
      * use method 'lub'.
@@ -391,15 +391,15 @@ trait TypeKinds { self: ICodes =>
       "Unknown type: %s, %s [%s, %s] TypeRef? %s".format(
         t, norm, t.getClass, norm.getClass, t.isInstanceOf[TypeRef]
       )
-    )      
+    )
   }
-  
+
   /** Return the type kind of a class, possibly an array type.
    */
   private def arrayOrClassType(sym: Symbol, targs: List[Type]) = sym match {
     case ArrayClass       => ARRAY(toTypeKind(targs.head))
     case _ if sym.isClass => newReference(sym)
-    case _                => 
+    case _                =>
       assert(sym.isType, sym) // it must be compiling Array[a]
       ObjectReference
   }
@@ -427,7 +427,7 @@ trait TypeKinds { self: ICodes =>
 
   def msil_mgdptr(tk: TypeKind): TypeKind = (tk: @unchecked) match {
     case REFERENCE(cls)  => REFERENCE(loaders.clrTypes.mdgptrcls4clssym(cls))
-    // TODO have ready class-symbols for the by-ref versions of built-in valuetypes 
+    // TODO have ready class-symbols for the by-ref versions of built-in valuetypes
     case _ => abort("cannot obtain a managed pointer for " + tk)
   }
 

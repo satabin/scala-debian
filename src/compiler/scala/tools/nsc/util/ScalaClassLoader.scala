@@ -12,10 +12,10 @@ import java.net.URL
 import ScalaClassLoader._
 import scala.util.control.Exception.{ catching }
 
-trait ScalaClassLoader extends JavaClassLoader {  
+trait ScalaClassLoader extends JavaClassLoader {
   /** Override to see classloader activity traced */
   protected def trace: Boolean = false
-  
+
   /** Executing an action with this classloader as context classloader */
   def asContext[T](action: => T): T = {
     val oldLoader = getContextLoader
@@ -26,35 +26,35 @@ trait ScalaClassLoader extends JavaClassLoader {
     finally setContextLoader(oldLoader)
   }
   def setAsContext() { setContextLoader(this) }
-  
-  /** Load and link a class with this classloader */  
+
+  /** Load and link a class with this classloader */
   def tryToLoadClass[T <: AnyRef](path: String): Option[Class[T]] = tryClass(path, false)
   /** Load, link and initialize a class with this classloader */
   def tryToInitializeClass[T <: AnyRef](path: String): Option[Class[T]] = tryClass(path, true)
-  
+
   private def tryClass[T <: AnyRef](path: String, initialize: Boolean): Option[Class[T]] =
-    catching(classOf[ClassNotFoundException], classOf[SecurityException]) opt 
+    catching(classOf[ClassNotFoundException], classOf[SecurityException]) opt
       Class.forName(path, initialize, this).asInstanceOf[Class[T]]
 
   /** Create an instance of a class with this classloader */
   def create(path: String): AnyRef =
     tryToInitializeClass[AnyRef](path) map (_.newInstance()) orNull
-  
+
   override def findClass(name: String) = {
     val result = super.findClass(name)
     if (trace) println("findClass(%s) = %s".format(name, result))
     result
   }
-  
+
   override def loadClass(name: String, resolve: Boolean) = {
     val result = super.loadClass(name, resolve)
     if (trace) println("loadClass(%s, %s) = %s".format(name, resolve, result))
     result
   }
-  
+
   def constructorsOf[T <: AnyRef : Manifest]: List[Constructor[T]] =
     manifest[T].erasure.getConstructors.toList map (_.asInstanceOf[Constructor[T]])
-  
+
   /** The actual bytes for a class file, or an empty array if it can't be found. */
   def classBytes(className: String): Array[Byte] = classAsStream(className) match {
     case null   => Array()
@@ -64,13 +64,13 @@ trait ScalaClassLoader extends JavaClassLoader {
   /** An InputStream representing the given class name, or null if not found. */
   def classAsStream(className: String) =
     getResourceAsStream(className.replaceAll("""\.""", "/") + ".class")
-  
+
   /** Run the main method of a class to be loaded by this classloader */
   def run(objectName: String, arguments: Seq[String]) {
-    val clsToRun = tryToInitializeClass(objectName) getOrElse ( 
+    val clsToRun = tryToInitializeClass(objectName) getOrElse (
       throw new ClassNotFoundException(objectName)
     )
-      
+
     val method = clsToRun.getMethod("main", classOf[Array[String]])
     if (!Modifier.isStatic(method.getModifiers))
       throw new NoSuchMethodException(objectName + ".main is not static")
@@ -84,14 +84,14 @@ object ScalaClassLoader {
     val loader = if (cl == null) JavaClassLoader.getSystemClassLoader() else cl
     new JavaClassLoader(loader) with ScalaClassLoader
   }
-  
-  class URLClassLoader(urls: Seq[URL], parent: JavaClassLoader) 
-      extends java.net.URLClassLoader(urls.toArray, parent) 
+
+  class URLClassLoader(urls: Seq[URL], parent: JavaClassLoader)
+      extends java.net.URLClassLoader(urls.toArray, parent)
       with ScalaClassLoader {
 
     private var classloaderURLs = urls.toList
     private def classpathString = ClassPath.fromURLs(urls: _*)
-    
+
     /** Override to widen to public */
     override def addURL(url: URL) = {
       classloaderURLs +:= url
@@ -100,25 +100,25 @@ object ScalaClassLoader {
     override def run(objectName: String, arguments: Seq[String]) {
       try super.run(objectName, arguments)
       catch { case x: ClassNotFoundException  =>
-        throw new ClassNotFoundException(objectName + 
+        throw new ClassNotFoundException(objectName +
           " (args = %s, classpath = %s)".format(arguments mkString ", ", classpathString))
       }
     }
     override def toString = urls.mkString("URLClassLoader(\n  ", "\n  ", "\n)\n")
   }
-  
+
   def setContextLoader(cl: JavaClassLoader) = Thread.currentThread.setContextClassLoader(cl)
   def getContextLoader() = Thread.currentThread.getContextClassLoader()
   def getSystemLoader(): ScalaClassLoader = ScalaClassLoader(null)
   def defaultParentClassLoader() = findExtClassLoader()
-  
+
   def fromURLs(urls: Seq[URL], parent: ClassLoader = defaultParentClassLoader()): URLClassLoader =
     new URLClassLoader(urls.toList, parent)
-  
+
   /** True if supplied class exists in supplied path */
   def classExists(urls: Seq[URL], name: String): Boolean =
-    (fromURLs(urls) tryToLoadClass name).isDefined  
-  
+    (fromURLs(urls) tryToLoadClass name).isDefined
+
   // we cannot use the app classloader here or we get what looks to
   // be classloader deadlock, but if we pass null we bypass the extension
   // classloader and our extensions, so we search the hierarchy to find
@@ -129,12 +129,12 @@ object ScalaClassLoader {
       else if (cl.getParent == null) cl
       else search(cl.getParent)
     }
-    
+
     search(getContextLoader())
   }
 
   /** Finding what jar a clazz or instance came from */
-  def origin(x: Any): Option[URL] = originOfClass(x.asInstanceOf[AnyRef].getClass)  
+  def origin(x: Any): Option[URL] = originOfClass(x.asInstanceOf[AnyRef].getClass)
   def originOfClass(x: Class[_]): Option[URL] =
     Option(x.getProtectionDomain.getCodeSource) flatMap (x => Option(x.getLocation))
 }

@@ -43,7 +43,7 @@ abstract class Binder(val preserveWS: Boolean) extends ValidatingMarkupHandler {
       result &+ text(0, x.data)
     case x:EntityRef =>
       result &+ entityRef(0, x.entityName)
-    case _ => 
+    case _ =>
       elemStart(0, n.prefix, n.label, n.attributes, n.scope)
       val old = result
       result = new NodeBuffer()
@@ -51,7 +51,7 @@ abstract class Binder(val preserveWS: Boolean) extends ValidatingMarkupHandler {
       result = old &+ elem(0, n.prefix, n.label, n.attributes, n.scope, NodeSeq.fromSeq(result)).toList;
       elemEnd(0, n.prefix, n.label)
   }
-  
+
   final def validate(n: Node): Node = {
     this.rootLabel = n.label
     traverse(n)

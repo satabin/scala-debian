@@ -15,11 +15,11 @@ import generic._
 
 /** A subtrait of `collection.IndexedSeq` which represents sequences
  *  that can be mutated.
- *  
+ *
  *  $indexedSeqInfo
  */
-trait IndexedSeq[A] extends Seq[A] 
-                   with scala.collection.IndexedSeq[A] 
+trait IndexedSeq[A] extends Seq[A]
+                   with scala.collection.IndexedSeq[A]
                    with GenericTraversableTemplate[A, IndexedSeq]
                    with IndexedSeqLike[A, IndexedSeq[A]] {
   override def companion: GenericCompanion[IndexedSeq]  = IndexedSeq

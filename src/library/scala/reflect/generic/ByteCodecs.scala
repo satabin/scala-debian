@@ -7,7 +7,7 @@
 \*                                                                      */
 package scala.reflect.generic
 
-object ByteCodecs { 
+object ByteCodecs {
 
   def avoidZero(src: Array[Byte]): Array[Byte] = {
     var i = 0

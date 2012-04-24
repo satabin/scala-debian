@@ -8,7 +8,7 @@
 
 package scala
 
-/** Class `Any` is the root of the Scala class hierarchy.  Every class in a Scala 
+/** Class `Any` is the root of the Scala class hierarchy.  Every class in a Scala
  *  execution environment inherits directly or indirectly from this class.
  */
 abstract class Any {
@@ -45,21 +45,21 @@ abstract class Any {
    *  @return   the hash code value for this object.
    */
   def hashCode: Int
-  
-  /** Returns a string representation of the object.  
+
+  /** Returns a string representation of the object.
    *
    *  The default representation is platform dependent.
    *
    *  @return a string representation of the object.
    */
   def toString: String
-  
+
   /** Returns the runtime class representation of the object.
    *
    *  @return a class object corresponding to the static type of the receiver
    */
   def getClass(): Class[_]
-  
+
   /** Test two objects for equality.
    *
    *  @param  that  the object to compare against this object for equality.
@@ -73,7 +73,7 @@ abstract class Any {
    *  @return       `true` if !(this == that), false otherwise.
    */
   final def != (that: Any): Boolean = !(this == that)
-  
+
   /** Equivalent to `x.hashCode` except for boxed numeric types.
    *  For numerics, it returns a hash value which is consistent
    *  with value equality: if two value type instances compare
@@ -83,7 +83,7 @@ abstract class Any {
    *  @return   a hash value consistent with ==
    */
   final def ## : Int = sys.error("##")
-  
+
   /** Test whether the dynamic type of the receiver object is `T0`.
    *
    *  Note that the result of the test is modulo Scala's erasure semantics.

@@ -9,17 +9,17 @@
 package scala.annotation
 
 import java.util.logging.Level
- 
+
 /** An annotation for methods for which invocations might
  *  be removed in the generated code.
- * 
+ *
  *  Behavior is influenced by passing -Xelide-below <arg>
  *  to scalac.  Methods marked elidable will be omitted from
  *  generated code if the priority given the annotation is lower
  *  than to the command line argument.  Examples:
  *  {{{
  *  import annotation.elidable._
- * 
+ *
  *    @elidable(WARNING) def foo = log("foo")
  *    @elidable(FINE) def bar = log("bar")
  *
@@ -47,7 +47,7 @@ object elidable {
    *
    *  With no simple remedy at hand, the issue is now at least documented,
    *  and aliases MAXIMUM and MINIMUM are offered.
-   */  
+   */
   final val ALL     = Int.MinValue  // Level.ALL.intValue()
   final val FINEST  = 300           // Level.FINEST.intValue()
   final val FINER   = 400           // Level.FINER.intValue()
@@ -61,10 +61,10 @@ object elidable {
   // a couple aliases for the confusing ALL and OFF
   final val MAXIMUM = OFF
   final val MINIMUM = ALL
-  
+
   // and we can add a few of our own
   final val ASSERTION = 2000    // we should make this more granular
-  
+
   // for command line parsing so we can use names or ints
   val byName: Map[String, Int] = Map(
     "FINEST" -> FINEST,

@@ -116,7 +116,7 @@ public class JExtendedCode extends JCode {
     public void emitPUSH(boolean value) { emitPUSH(value ? 1 : 0); }
     public void emitPUSH(Boolean value) { emitPUSH(value.booleanValue()); }
 
-    public void emitPUSH(byte value) { 
+    public void emitPUSH(byte value) {
       switch (value) {
         case -1: emitICONST_M1(); break;
         case 0: emitICONST_0(); break;
@@ -126,12 +126,12 @@ public class JExtendedCode extends JCode {
         case 4: emitICONST_4(); break;
         case 5: emitICONST_5(); break;
         default:
-          emitBIPUSH(value); 
+          emitBIPUSH(value);
       }
     }
     public void emitPUSH(Byte value) { emitPUSH(value.byteValue()); }
 
-    public void emitPUSH(short value) { 
+    public void emitPUSH(short value) {
       switch (value) {
         case -1: emitICONST_M1(); break;
         case 0: emitICONST_0(); break;
@@ -174,7 +174,7 @@ public class JExtendedCode extends JCode {
     }
     public void emitPUSH(Integer value) { emitPUSH(value.intValue()); }
 
-    public void emitPUSH(long value) {      
+    public void emitPUSH(long value) {
         if (value == 0L)
             emitLCONST_0();
         else if (value == 1L)

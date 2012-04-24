@@ -24,7 +24,7 @@ import annotation.bridge
  *  @define   Coll Addable
  */
 @deprecated("Will be removed after scala 2.9", "2.8.0")
-trait Addable[A, +Repr <: Addable[A, Repr]] { self => 
+trait Addable[A, +Repr <: Addable[A, Repr]] { self =>
 
   /** The representation object of type `Repr` which contains the collection's elements
    */
@@ -36,7 +36,7 @@ trait Addable[A, +Repr <: Addable[A, Repr]] { self =>
    */
   def +(elem: A): Repr
 
-  /** Creates a new $coll with additional elements. 
+  /** Creates a new $coll with additional elements.
    *
    *  This method takes two or more elements to be added. Another overloaded
    *  variant of this method handles the case where a single element is

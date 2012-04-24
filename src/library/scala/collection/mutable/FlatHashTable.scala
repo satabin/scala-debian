@@ -12,10 +12,10 @@ package mutable
 
 
 /** An implementation class backing a `HashSet`.
- *  
+ *
  *  This trait is used internally. It can be mixed in with various collections relying on
  *  hash table as an implementation.
- *  
+ *
  *  @define coll flat hash table
  *  @define cannotStoreNull '''Note''': A $coll cannot store `null` elements.
  *  @since 2.3
@@ -25,7 +25,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
   import FlatHashTable._
 
   private final val tableDebug = false
-  
+
   @transient private[collection] var _loadFactor = defaultLoadFactor
 
   /** The actual hash table.
@@ -39,38 +39,38 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
   /** The next size value at which to resize (capacity * load factor).
    */
   @transient protected var threshold: Int = newThreshold(_loadFactor, initialCapacity)
-  
+
   /** The array keeping track of number of elements in 32 element blocks.
    */
   @transient protected var sizemap: Array[Int] = null
-  
+
   import HashTable.powerOfTwo
   protected def capacity(expectedSize: Int) = if (expectedSize == 0) 1 else powerOfTwo(expectedSize)
   private def initialCapacity = capacity(initialSize)
-  
+
   /**
    * Initializes the collection from the input stream. `f` will be called for each element
    * read from the input stream in the order determined by the stream. This is useful for
    * structures where iteration order is important (e.g. LinkedHashSet).
-   * 
+   *
    * The serialization format expected is the one produced by `serializeTo`.
    */
   private[collection] def init(in: java.io.ObjectInputStream, f: A => Unit) {
     in.defaultReadObject
-    
+
     _loadFactor = in.readInt
     assert(_loadFactor > 0)
-    
+
     val size = in.readInt
     tableSize = 0
     assert(size >= 0)
-    
+
     table = new Array(capacity(sizeForThreshold(size, _loadFactor)))
     threshold = newThreshold(_loadFactor, table.size)
-    
+
     val smDefined = in.readBoolean
     if (smDefined) sizeMapInit(table.length) else sizemap = null
-    
+
     var index = 0
     while (index < size) {
       val elem = in.readObject.asInstanceOf[A]
@@ -79,7 +79,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
       index += 1
     }
   }
-  
+
   /**
    * Serializes the collection to the output stream by saving the load factor, collection
    * size and collection elements. `foreach` determines the order in which the elements are saved
@@ -92,7 +92,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     out.writeBoolean(isSizeMapDefined)
     iterator.foreach(out.writeObject)
   }
-  
+
   /** Finds an entry in the hash table if such an element exists. */
   def findEntry(elem: A): Option[A] = {
     var h = index(elemHashCode(elem))
@@ -154,7 +154,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
             //Console.println("shift "+h1+" to "+h0+"!")
             table(h0) = table(h1)
             h0 = h1
-          } 
+          }
           h1 = (h1 + 1) % table.length
         }
         table(h0) = null
@@ -200,13 +200,13 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
       if (table(i) != null && !containsEntry(table(i).asInstanceOf[A]))
         assert(false, i+" "+table(i)+" "+table.mkString)
   }
-  
+
   /* Size map handling code */
-  
-  /* 
+
+  /*
    * The following three methods (nn*) modify a size map only if it has been
    * initialized, that is, if it's not set to null.
-   * 
+   *
    * The size map logically divides the hash table into `sizeMapBucketSize` element buckets
    * by keeping an integer entry for each such bucket. Each integer entry simply denotes
    * the number of elements in the corresponding bucket.
@@ -214,37 +214,37 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
    * table   = [/, 1, /, 6, 90, /, -3, 5]    (8 entries)
    * sizemap = [     2     |     3      ]    (2 entries)
    * where sizeMapBucketSize == 4.
-   * 
+   *
    */
   protected def nnSizeMapAdd(h: Int) = if (sizemap ne null) {
     val p = h >> sizeMapBucketBitSize
     sizemap(p) += 1
   }
-  
+
   protected def nnSizeMapRemove(h: Int) = if (sizemap ne null) {
     sizemap(h >> sizeMapBucketBitSize) -= 1
   }
-  
+
   protected def nnSizeMapReset(tableLength: Int) = if (sizemap ne null) {
     val nsize = calcSizeMapSize(tableLength)
     if (sizemap.length != nsize) sizemap = new Array[Int](nsize)
     else java.util.Arrays.fill(sizemap, 0)
   }
-  
-  private[collection] final def totalSizeMapBuckets = if (sizeMapBucketSize < table.length) 1 else table.length / sizeMapBucketSize
+
+  private[collection] final def totalSizeMapBuckets = (table.length - 1) / sizeMapBucketSize + 1
 
   protected def calcSizeMapSize(tableLength: Int) = (tableLength >> sizeMapBucketBitSize) + 1
-  
+
   // discards the previous sizemap and only allocates a new one
   protected def sizeMapInit(tableLength: Int) {
     sizemap = new Array[Int](calcSizeMapSize(tableLength))
   }
-  
+
   // discards the previous sizemap and populates the new one
   protected def sizeMapInitAndRebuild() {
     // first allocate
     sizeMapInit(table.length)
-    
+
     // rebuild
     val totalbuckets = totalSizeMapBuckets
     var bucketidx = 0
@@ -262,17 +262,17 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
       bucketidx += 1
     }
   }
-    
+
   private[collection] def printSizeMap() {
-    println(sizemap.toList)
+    println(sizemap.mkString("szmap: [", ", ", "]"))
   }
-  
+
   protected def sizeMapDisable() = sizemap = null
-  
+
   protected def isSizeMapDefined = sizemap ne null
-  
+
   protected def alwaysInitSizeMap = false
-  
+
   /* End of size map handling code */
 
   protected final def index(hcode: Int) = {
@@ -288,7 +288,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     tableSize = 0
     nnSizeMapReset(table.length)
   }
-  
+
   private[collection] def hashTableContents = new FlatHashTable.Contents[A](
     _loadFactor,
     table,
@@ -296,7 +296,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     threshold,
     sizemap
   )
-  
+
   protected def initWithContents(c: FlatHashTable.Contents[A]) = {
     if (c != null) {
       _loadFactor = c.loadFactor
@@ -307,30 +307,30 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     }
     if (alwaysInitSizeMap && sizemap == null) sizeMapInitAndRebuild
   }
-  
+
 }
 
 
 
 private[collection] object FlatHashTable {
-  
+
   /** The load factor for the hash table; must be < 500 (0.5)
    */
   private[collection] def defaultLoadFactor: Int = 450
   private[collection] final def loadFactorDenum = 1000
-  
+
   /** The initial size of the hash table.
    */
   private[collection] def initialSize: Int = 16
-  
+
   private[collection] def sizeForThreshold(size: Int, _loadFactor: Int) = (size.toLong * loadFactorDenum / _loadFactor).toInt
-  
+
   private[collection] def newThreshold(_loadFactor: Int, size: Int) = {
     val lf = _loadFactor
     assert(lf < (loadFactorDenum / 2), "loadFactor too large; must be < 0.5")
     (size.toLong * lf / loadFactorDenum ).toInt
   }
-  
+
   class Contents[A](
     val loadFactor: Int,
     val table: Array[AnyRef],
@@ -338,16 +338,16 @@ private[collection] object FlatHashTable {
     val threshold: Int,
     val sizemap: Array[Int]
   )
-  
+
   trait HashUtils[A] {
     protected final def sizeMapBucketBitSize = 5
     // so that:
     protected final def sizeMapBucketSize = 1 << sizeMapBucketBitSize
-    
+
     protected def elemHashCode(elem: A) =
       if (elem == null) throw new IllegalArgumentException("Flat hash tables cannot contain null elements.")
       else elem.hashCode()
-    
+
     protected final def improve(hcode: Int) = {
       // var h: Int = hcode + ~(hcode << 9)
       // h = h ^ (h >>> 14)
@@ -358,6 +358,6 @@ private[collection] object FlatHashTable {
       i * 0x9e3775cd
     }
   }
-  
+
 }
 

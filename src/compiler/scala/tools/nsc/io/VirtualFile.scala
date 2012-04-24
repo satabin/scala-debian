@@ -23,7 +23,7 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
    * @return     the created virtual file
    */
   def this(name: String) = this(name, name)
-  
+
   override def hashCode = path.hashCode
   override def equals(that: Any) = that match {
     case x: VirtualFile => x.path == path
@@ -33,18 +33,18 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
   //########################################################################
   // Private data
   private var content = new Array[Byte](0)
-    
+
   //########################################################################
   // Public Methods
   def absolute = this
 
   /** Returns null. */
   final def file: JFile = null
-  
+
   override def sizeOption: Option[Int] = Some(content.size)
-  
+
   def input : InputStream = new ByteArrayInputStream(content);
-  
+
   override def output: OutputStream = {
     new ByteArrayOutputStream() {
       override def close() {
@@ -53,7 +53,7 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
       }
     }
   }
-  
+
   def container: AbstractFile =  unsupported
 
   /** Is this abstract file a directory? */
@@ -68,7 +68,7 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
   def iterator: Iterator[AbstractFile] = {
     assert(isDirectory, "not a directory '" + this + "'")
     Iterator.empty
-  }	
+  }
 
   /** Does this abstract file denote an existing file? */
   def create() { unsupported }

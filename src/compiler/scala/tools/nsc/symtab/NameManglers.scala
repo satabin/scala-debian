@@ -16,7 +16,7 @@ import util.Chars.isOperatorPart
  */
 trait NameManglers {
   self: SymbolTable =>
-  
+
   trait NameManglingCommon {
     self: CompilerCommonNames =>
 
@@ -53,18 +53,18 @@ trait NameManglers {
       prefix + marker + md5chars + marker + suffix
     }
     private def compactedString(s: String) =
-      if (s.length <= MaxNameLength) s 
+      if (s.length <= MaxNameLength) s
       else toMD5(s, MaxNameLength / 4)
   }
 
   trait TypeNameMangling extends NameManglingCommon {
     self: tpnme.type =>
-    
+
   }
 
   trait TermNameMangling extends NameManglingCommon {
-    self: nme.type =>    
-    
+    self: nme.type =>
+
     val IMPL_CLASS_SUFFIX             = "$class"
     val SINGLETON_SUFFIX              = ".type"
     val LOCALDUMMY_PREFIX             = "<local "   // owner of local blocks
@@ -73,9 +73,9 @@ trait NameManglers {
     val SELECTOR_DUMMY                = "<unapply-selector>"
     val SETTER_SUFFIX                 = encode("_=")
     val SUPER_PREFIX_STRING           = "super$"
-    val TRAIT_SETTER_SEPARATOR_STRING = "$_setter_$"  
-  
-    def isConstructorName(name: Name)       = name == CONSTRUCTOR || name == MIXIN_CONSTRUCTOR    
+    val TRAIT_SETTER_SEPARATOR_STRING = "$_setter_$"
+
+    def isConstructorName(name: Name)       = name == CONSTRUCTOR || name == MIXIN_CONSTRUCTOR
     def isExceptionResultName(name: Name)   = name startsWith EXCEPTION_RESULT_PREFIX
     /** !!! Foo$class$1 is an implClassName, I think.  */
     def isImplClassName(name: Name)         = name endsWith IMPL_CLASS_SUFFIX
@@ -89,16 +89,16 @@ trait NameManglers {
 
     def isOpAssignmentName(name: Name) = name match {
       case raw.NE | raw.LE | raw.GE | EMPTY => false
-      case _                                => 
+      case _                                =>
         name.endChar == '=' && name.startChar != '=' && isOperatorPart(name.startChar)
     }
 
-    /** The expanded setter name of `name' relative to this class `base` 
+    /** The expanded setter name of `name' relative to this class `base`
      */
     def expandedSetterName(name: TermName, base: Symbol): TermName =
       expandedName(name, base, separator = TRAIT_SETTER_SEPARATOR_STRING)
 
-    /** If `name' is an expandedName name, the original name. 
+    /** If `name' is an expandedName name, the original name.
      *  Otherwise `name' itself.
      */
     def originalName(name: Name): Name = {
@@ -143,7 +143,7 @@ trait NameManglers {
       else
         name stripEnd SETTER_SUFFIX toTermName
     }
-  
+
     def defaultGetterName(name: Name, pos: Int): TermName = {
       val prefix = if (isConstructorName(name)) "init" else name
       newTermName(prefix + DEFAULT_GETTER_STRING + pos)
@@ -158,10 +158,10 @@ trait NameManglers {
     def singletonName(name: Name): TypeName     = name append SINGLETON_SUFFIX toTypeName
     def implClassName(name: Name): TypeName     = name append IMPL_CLASS_SUFFIX toTypeName
     def interfaceName(implname: Name): TypeName = implname stripEnd IMPL_CLASS_SUFFIX toTypeName
-    def localDummyName(clazz: Symbol): TermName = newTermName(LOCALDUMMY_PREFIX + clazz.name + ">") 
+    def localDummyName(clazz: Symbol): TermName = newTermName(LOCALDUMMY_PREFIX + clazz.name + ">")
     def productAccessorName(i: Int): TermName   = newTermName("_" + i)
     def superName(name: Name): TermName         = newTermName(SUPER_PREFIX_STRING + name)
-    
+
     /** The name of an accessor for protected symbols. */
     def protName(name: Name): TermName = newTermName(PROTECTED_PREFIX + name)
 

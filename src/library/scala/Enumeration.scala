@@ -18,15 +18,15 @@ import java.lang.reflect.{ Modifier, Method => JMethod, Field => JField }
  *    lightweight alternative to case classes.
  *
  *    Each call to a `Value` method adds a new unique value to the
- *    enumeration. To be accessible, these values are usually defined as 
+ *    enumeration. To be accessible, these values are usually defined as
  *    `val` members of the evaluation.
  *
- *    All values in an enumeration share a common, unique type defined as the 
+ *    All values in an enumeration share a common, unique type defined as the
  *    `Value` type member of the enumeration (`Value`
  *    selected on the stable identifier path of the enumeration instance).
  *
  * @example {{{
- *  object Main extends Application {
+ *  object Main extends App {
  *
  *    object WeekDay extends Enumeration {
  *      type WeekDay = Value
@@ -35,7 +35,7 @@ import java.lang.reflect.{ Modifier, Method => JMethod, Field => JField }
  *    import WeekDay._
  *
  *    def isWorkingDay(d: WeekDay) = ! (d == Sat || d == Sun)
- * 
+ *
  *    WeekDay.values filter isWorkingDay foreach println
  *  }
  *  // output:
@@ -55,7 +55,7 @@ import java.lang.reflect.{ Modifier, Method => JMethod, Field => JField }
 @SerialVersionUID(8476000850333817230L)
 abstract class Enumeration(initial: Int, names: String*) extends Serializable {
   thisenum =>
-    
+
   def this() = this(0)
   def this(names: String*) = this(0, names: _*)
 
@@ -63,10 +63,10 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
      the JVM does not invoke it when deserializing subclasses. */
   protected def readResolve(): AnyRef = thisenum.getClass.getField("MODULE$").get()
 
-  /** The name of this enumeration.  
+  /** The name of this enumeration.
    */
   override def toString = (getClass.getName stripSuffix "$" split '.' last) split '$' last
-  
+
   /** The mapping from the integer used to identify values to the actual
     * values. */
   private val vmap: mutable.Map[Int, Value] = new mutable.HashMap
@@ -91,7 +91,7 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
 
   /** The integer to use to identify the next created value. */
   protected var nextId = initial
-  
+
   /** The string to use to name the next created value. */
   protected var nextName = names.iterator
   private def nextNameOrNull =
@@ -109,7 +109,7 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
    */
   final def apply(x: Int): Value = vmap(x)
 
-  /** Returns a Value from this Enumeration whose name matches 
+  /** Returns a Value from this Enumeration whose name matches
    * the argument <var>s</var>.
    *
    * You can pass a String* set of names to the constructor, or
@@ -129,7 +129,7 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
 
   /** Creates a fresh value, part of this enumeration. */
   protected final def Value: Value = Value(nextId)
-  
+
   /** Creates a fresh value, part of this enumeration, identified by the integer
    *  `i`.
    *
@@ -138,14 +138,14 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
    *  @return  Fresh value identified by `i`.
    */
   protected final def Value(i: Int): Value = Value(i, nextNameOrNull)
-  
+
   /** Creates a fresh value, part of this enumeration, called `name`.
    *
    *  @param name A human-readable name for that value.
    *  @return  Fresh value called `name`.
    */
   protected final def Value(name: String): Value = Value(nextId, name)
-  
+
   /** Creates a fresh value, part of this enumeration, called `name`
    *  and identified by the integer `i`.
    *
@@ -197,7 +197,7 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
     }
     override def hashCode: Int = id.##
   }
-  
+
   /** A class implementing the <a href="Enumeration.Value.html"
    *  target="contentFrame">`Value`</a> type. This class can be
    *  overridden to change the enumeration's naming and integer identification
@@ -229,7 +229,7 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
 
   /** A class for sets of values
    *  Iterating through this set will yield values in increasing order of their ids.
-   *  @param   ids   The set of ids of values, organized as a SortedSet. 
+   *  @param   ids   The set of ids of values, organized as a SortedSet.
    */
   class ValueSet private[Enumeration] (val ids: immutable.SortedSet[Int]) extends Set[Value] with SetLike[Value, ValueSet] {
     override def empty = ValueSet.empty
@@ -247,15 +247,15 @@ abstract class Enumeration(initial: Int, names: String*) extends Serializable {
 
     /** The empty value set */
     val empty = new ValueSet(immutable.SortedSet.empty)
-    /** A value set consisting of given elements */ 
+    /** A value set consisting of given elements */
     def apply(elems: Value*): ValueSet = empty ++ elems
     /** A builder object for value sets */
     def newBuilder: Builder[Value, ValueSet] = new SetBuilder(empty)
     /** The implicit builder for value sets */
-    implicit def canBuildFrom: CanBuildFrom[ValueSet, Value, ValueSet] = 
-      new CanBuildFrom[ValueSet, Value, ValueSet] { 
-        def apply(from: ValueSet) = newBuilder 
-        def apply() = newBuilder 
+    implicit def canBuildFrom: CanBuildFrom[ValueSet, Value, ValueSet] =
+      new CanBuildFrom[ValueSet, Value, ValueSet] {
+        def apply(from: ValueSet) = newBuilder
+        def apply() = newBuilder
       }
   }
 }

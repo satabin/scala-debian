@@ -18,7 +18,7 @@ import org.xml.sax.helpers.XMLReaderFactory
 object Main {
   private val namespacePrefixes = "http://xml.org/sax/features/namespace-prefixes"
   private val lexicalHandler = "http://xml.org/sax/properties/lexical-handler"
-  
+
   /**
   * The driver method for xinc
   * Output is written to System.out via Conolse
@@ -30,7 +30,7 @@ object Main {
   def main(args: Array[String]) {
     def saxe[T](body: => T) = catching[T](classOf[SAXException]) opt body
     def fail(msg: String) = System.err.println(msg)
-    
+
     val parser: XMLReader =
       saxe[XMLReader](XMLReaderFactory.createXMLReader()) getOrElse (
         saxe[XMLReader](XMLReaderFactory.createXMLReader(XercesClassName)) getOrElse (
@@ -38,13 +38,13 @@ object Main {
         )
       )
 
-    // Need better namespace handling    
+    // Need better namespace handling
     try parser.setFeature(namespacePrefixes, true)
     catch { case e: SAXException => return System.err.println(e) }
-    
+
     if (args.isEmpty)
       return
-    
+
     def dashR = args.size >= 2 && args(0) == "-r"
     val args2 = if (dashR) args drop 2 else args
     val resolver: Option[EntityResolver] =
@@ -54,14 +54,14 @@ object Main {
           parser setEntityResolver r
           r
         } orElse (return fail("Could not load requested EntityResolver"))
-    
+
     for (arg <- args2) {
       try {
         val includer = new XIncludeFilter()
         includer setParent parser
         val s = new XIncluder(System.out, "UTF-8")
         includer setContentHandler s
-        
+
         resolver map (includer setEntityResolver _)
         // SAXException here means will not support comments
         ignoring(classOf[SAXException]) {

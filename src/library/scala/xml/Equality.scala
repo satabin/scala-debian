@@ -43,7 +43,7 @@ package scala.xml
 
 object Equality {
   def asRef(x: Any): AnyRef = x.asInstanceOf[AnyRef]
-  
+
   /** Note - these functions assume strict equality has already failed.
    */
   def compareBlithely(x1: AnyRef, x2: String): Boolean = x1 match {
@@ -103,7 +103,7 @@ trait Equality extends scala.Equals {
       case x: Equality            => (x canEqual this) && (this strict_== x)
       case _                      => false
     }
-    
+
     strictlyEqual || (blithe && compareBlithely(this, asRef(other)))
   }
 }

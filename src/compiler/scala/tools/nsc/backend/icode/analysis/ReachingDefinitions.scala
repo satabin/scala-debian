@@ -29,7 +29,7 @@ abstract class ReachingDefinitions {
     type Elem = IState[Set[Definition], Stack]
     type StackPos = Set[(BasicBlock, Int)]
     type Stack = List[StackPos]
-    
+
     private def referenceEqualSet(name: String) = new ListSet[Definition] with ReferenceEquality {
       override def toString = "<" + name + ">"
     }
@@ -38,7 +38,7 @@ abstract class ReachingDefinitions {
     val bottom: Elem = IState(referenceEqualSet("bottom"), Nil)
 
     /** The least upper bound is set inclusion for locals, and pairwise set inclusion for stacks. */
-    def lub2(exceptional: Boolean)(a: Elem, b: Elem): Elem = 
+    def lub2(exceptional: Boolean)(a: Elem, b: Elem): Elem =
       if (bottom == a) b
       else if (bottom == b) a
       else {
@@ -47,9 +47,9 @@ abstract class ReachingDefinitions {
           if (a.stack.isEmpty) b.stack
           else if (b.stack.isEmpty) a.stack
           else (a.stack, b.stack).zipped map (_ ++ _)
-        
+
         IState(locals, stack)
-        
+
         // val res = IState(locals, stack)
         // Console.println("\tlub2: " + a + ", " + b)
         // Console.println("\tis: " + res)
@@ -92,33 +92,33 @@ abstract class ReachingDefinitions {
         m.code.blocks.foreach { b =>
           in(b)  = lattice.bottom
           out(b) = lattice.bottom
-        } 
+        }
         m.exh foreach { e =>
           in(e.startBlock) = lattice.IState(new ListSet[Definition], List(new ListSet[(BasicBlock, Int)]))
         }
-        
+
       }
     }
-    
+
     import opcodes._
-    
+
     def genAndKill(b: BasicBlock): (Set[Definition], Set[Local]) = {
       var genSet: Set[Definition] = new immutable.HashSet
       var killSet: Set[Local] = new immutable.HashSet
       for ((i, idx) <- b.toList.zipWithIndex) i match {
-        case STORE_LOCAL(local) => 
+        case STORE_LOCAL(local) =>
           killSet = killSet + local
           genSet  = updateReachingDefinition(b, idx, genSet)
         case _ => ()
       }
       (genSet, killSet)
     }
-    
+
     private def dropsAndGen(b: BasicBlock): (Int, List[Set[(BasicBlock, Int)]]) = {
       var depth = 0
       var drops = 0
       var stackOut: List[Set[(BasicBlock, Int)]] = Nil
-      
+
       for ((instr, idx) <- b.toList.zipWithIndex) {
         instr match {
           case LOAD_EXCEPTION(_)            => ()
@@ -141,7 +141,7 @@ abstract class ReachingDefinitions {
 //      Console.println("stackout(" + b + ") = " + stackOut)
       (drops, stackOut)
     }
-    
+
     override def run() {
       forwardAnalysis(blockTransfer)
       if (settings.debug.value) {
@@ -161,13 +161,13 @@ abstract class ReachingDefinitions {
       var tmp = local
       (rd filter { case (l, _, _) => l != tmp }) + ((tmp, b, idx))
     }
-    
+
     private def blockTransfer(b: BasicBlock, in: lattice.Elem): lattice.Elem = {
       var locals: Set[Definition] = (in.vars filter { case (l, _, _) => !kill(b)(l) }) ++ gen(b)
       if (locals eq lattice.bottom.vars) locals = new ListSet[Definition]
       IState(locals, outStack(b) ::: in.stack.drop(drops(b)))
     }
-    
+
     /** Return the reaching definitions corresponding to the point after idx. */
     def interpret(b: BasicBlock, idx: Int, in: lattice.Elem): Elem = {
       var locals = in.vars
@@ -194,7 +194,7 @@ abstract class ReachingDefinitions {
 
     /** Return the instructions that produced the 'm' elements on the stack, below given 'depth'.
      *  for instance, findefs(bb, idx, 1, 1) returns the instructions that might have produced the
-     *  value found below the topmost element of the stack. 
+     *  value found below the topmost element of the stack.
      */
     def findDefs(bb: BasicBlock, idx: Int, m: Int, depth: Int): List[(BasicBlock, Int)] = if (idx > 0) {
       assert(bb.closed)
@@ -219,8 +219,8 @@ abstract class ReachingDefinitions {
           d += instrs(i).consumed
         }
       }
-      
-      if (n > 0) { 
+
+      if (n > 0) {
         val stack = this.in(bb).stack
         assert(stack.length >= n, "entry stack is too small, expected: " + n + " found: " + stack)
         stack.drop(d).take(n) foreach { defs =>
@@ -237,7 +237,7 @@ abstract class ReachingDefinitions {
     /** Return the definitions that produced the topmost 'm' elements on the stack,
      *  and that reach the instruction at index 'idx' in basic block 'bb'.
      */
-    def findDefs(bb: BasicBlock, idx: Int, m: Int): List[(BasicBlock, Int)] = 
+    def findDefs(bb: BasicBlock, idx: Int, m: Int): List[(BasicBlock, Int)] =
       findDefs(bb, idx, m, 0)
 
     override def toString: String = {

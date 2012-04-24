@@ -34,7 +34,7 @@ object MsilClassPath {
     }
     res
   }
-  
+
   /** On the java side this logic is in PathResolver, but as I'm not really
    *  up to folding MSIL into that, I am encapsulating it here.
    */
@@ -42,16 +42,16 @@ object MsilClassPath {
     val context =
       if (settings.inline.value) new MsilContext
       else new MsilContext { override def isValidName(name: String) = !isTraitImplementation(name) }
-    
+
     import settings._
     new MsilClassPath(assemextdirs.value, assemrefs.value, sourcepath.value, context)
-  }  
-  
+  }
+
   class MsilContext extends ClassPathContext[MSILType] {
     def toBinaryName(rep: MSILType) = rep.Name
     def newClassPath(assemFile: AbstractFile) = new AssemblyClassPath(MsilClassPath collectTypes assemFile, "", this)
   }
-  
+
   private def assembleEntries(ext: String, user: String, source: String, context: MsilContext): List[ClassPath[MSILType]] = {
     import ClassPath._
     val etr = new ListBuffer[ClassPath[MSILType]]
@@ -154,12 +154,12 @@ class AssemblyClassPath(types: Array[MSILType], namespace: String, val context: 
     }
     val xs = for (ns <- nsSet.toList)
       yield new AssemblyClassPath(types, ns, context)
-      
+
     xs.toIndexedSeq
   }
 
   val sourcepaths: IndexedSeq[AbstractFile] = IndexedSeq()
-  
+
   override def toString() = "assembly classpath "+ namespace
 }
 

@@ -6,7 +6,7 @@
 package scala.tools.nsc
 package transform
 
-/** 
+/**
  * An InfoTransform contains a compiler phase that transforms trees and symbol infos -- making sure they stay consistent.
  * The symbol info is transformed assuming it is consistent right before this phase.
  * The info transformation is triggered by Symbol::rawInfo, which caches the results in the symbol's type history.

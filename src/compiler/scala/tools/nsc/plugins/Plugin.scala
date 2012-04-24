@@ -72,7 +72,7 @@ object Plugin {
   private def loaderFor(jarfiles: Seq[Path]): ClassLoader = {
     val compilerLoader = classOf[Plugin].getClassLoader
     val jarurls = jarfiles map (_.toURL)
-    
+
     new URLClassLoader(jarurls.toArray, compilerLoader)
   }
 
@@ -111,7 +111,7 @@ object Plugin {
    */
   def loadFrom(jarfile: Path, loader: ClassLoader): Option[AnyClass] =
     loadDescription(jarfile) match {
-      case None => 
+      case None =>
         println("Warning: could not load descriptor for plugin %s".format(jarfile))
         None
       case Some(pdesc) =>
@@ -128,8 +128,8 @@ object Plugin {
    *  A single classloader is created and used to load all of them.
    */
   def loadAllFrom(
-    jars: List[Path], 
-    dirs: List[Path], 
+    jars: List[Path],
+    dirs: List[Path],
     ignoring: List[String]): List[AnyClass] =
   {
     val alljars = (jars ::: (for {
@@ -139,7 +139,7 @@ object Plugin {
       pdesc <- loadDescription(entry)
       if !(ignoring contains pdesc.name)
     } yield entry)).distinct
- 
+
     val loader = loaderFor(alljars)
     alljars map (loadFrom(_, loader)) flatten
   }

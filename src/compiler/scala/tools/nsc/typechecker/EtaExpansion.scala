@@ -23,9 +23,9 @@ trait EtaExpansion { self: Analyzer =>
       case Ident(name)  => vparam.name == name
       case _            => false
     }
-      
+
     def unapply(tree: Tree): Option[(List[ValDef], Tree, List[Tree])] = tree match {
-      case Function(vparams, Apply(fn, args)) if (vparams corresponds args)(isMatch) => 
+      case Function(vparams, Apply(fn, args)) if (vparams corresponds args)(isMatch) =>
         Some((vparams, fn, args))
       case _ =>
         None
@@ -67,7 +67,7 @@ trait EtaExpansion { self: Analyzer =>
         if (treeInfo.isPureExpr(tree)) tree
         else {
           val vname: Name = freshName()
-          // Problem with ticket #2351 here 
+          // Problem with ticket #2351 here
           defs += atPos(tree.pos) {
             ValDef(Modifiers(SYNTHETIC), vname.toTermName, TypeTree(), tree)
           }
@@ -94,7 +94,7 @@ trait EtaExpansion { self: Analyzer =>
           tree
       }
       if (tree1 ne tree) tree1 setPos tree1.pos.makeTransparent
-      tree1 
+      tree1
     }
 
     /** Eta-expand lifted tree.
@@ -102,7 +102,7 @@ trait EtaExpansion { self: Analyzer =>
     def expand(tree: Tree, tpe: Type): Tree = tpe match {
       case mt @ MethodType(paramSyms, restpe) if !mt.isImplicit =>
         val params = paramSyms map (sym =>
-          ValDef(Modifiers(SYNTHETIC | PARAM), 
+          ValDef(Modifiers(SYNTHETIC | PARAM),
                  sym.name.toTermName, TypeTree(sym.tpe) , EmptyTree))
         atPos(tree.pos.makeTransparent) {
           Function(params, expand(Apply(tree, params map gen.paramToArg), restpe))

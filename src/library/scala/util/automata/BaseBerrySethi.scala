@@ -35,7 +35,7 @@ abstract class BaseBerrySethi {
   // constants --------------------------
 
   final val emptySet: Set[Int] = Set()
-  
+
   private def doComp(r: RegExp, compFunction: RegExp => Set[Int]) = r match {
     case x: Alt   => (x.rs map compFirst).foldLeft(emptySet)(_ ++ _)
     case Eps      => emptySet
@@ -65,15 +65,15 @@ abstract class BaseBerrySethi {
       if (rs.isEmpty) emptySet
       else rs.foldRight(Set(pos))((p, fol) => {
         val first = compFollow1(fol, p)
-        
+
         if (p.isNullable) fol ++ first
         else first
       })
-      
+
     follow(0)
   }
 
-  /** returns the first set of an expression, setting the follow set along 
+  /** returns the first set of an expression, setting the follow set along
    *  the way.
    *
    *  @param fol1 ...
@@ -84,7 +84,7 @@ abstract class BaseBerrySethi {
     case x: Alt     => Set(x.rs reverseMap (compFollow1(fol1, _)) flatten: _*)
     case x: Meta    => compFollow1(fol1, x.r)
     case x: Star    => compFollow1(fol1 ++ compFirst(x.r), x.r)
-    case x: Sequ    => 
+    case x: Sequ    =>
       x.rs.foldRight(fol1) { (p, fol) =>
         val first = compFollow1(fol, p)
 

@@ -134,7 +134,7 @@ public class MemoryHistory
     }
 
     public Iterator<Entry> iterator() {
-        return entries();    
+        return entries();
     }
 
     private static class EntryImpl

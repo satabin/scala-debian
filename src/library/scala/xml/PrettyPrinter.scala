@@ -84,7 +84,7 @@ class PrettyPrinter(width: Int, step: Int) {
     if (cur + s.length > width) {            // fits in this line
       items ::= Box(ind, s)
       cur += s.length
-    } 
+    }
     else try cut(s, ind) foreach (items ::= _)            // break it up
     catch { case _: BrokenException => makePara(ind, s) } // give up, para
 
@@ -127,7 +127,7 @@ class PrettyPrinter(width: Int, step: Int) {
     (sbToString(mkStart), i)
   }
 
-  protected def endTag(n: Node) = {  
+  protected def endTag(n: Node) = {
     def mkEnd(sb: StringBuilder) {
       sb append "</"
       n nameToString sb
@@ -149,13 +149,13 @@ class PrettyPrinter(width: Int, step: Int) {
 
   private def doPreserve(node: Node) =
     node.attribute(XML.namespace, XML.space).map(_.toString == XML.preserve) getOrElse false
-      
+
   /** @param tail: what we'd like to sqeeze in */
   protected def traverse(node: Node, pscope: NamespaceBinding, ind: Int): Unit =  node match {
 
       case Text(s) if s.trim() == "" =>
         ;
-      case _:Atom[_] | _:Comment | _:EntityRef | _:ProcInstr => 
+      case _:Atom[_] | _:Comment | _:EntityRef | _:ProcInstr =>
         makeBox( ind, node.toString().trim() )
       case g @ Group(xs) =>
         traverse(xs.iterator, pscope, ind)
@@ -228,8 +228,8 @@ class PrettyPrinter(width: Int, step: Int) {
         lastwasbreak = true
         cur = 0
 //        while( cur < last ) {
-//          sb.append(' '); 
-//          cur = cur + 1; 
+//          sb.append(' ');
+//          cur = cur + 1;
 //        }
 
       case Box(i, s) =>
@@ -247,7 +247,7 @@ class PrettyPrinter(width: Int, step: Int) {
 
   // public convenience methods
 
-  /** Returns a formatted string containing well-formed XML with 
+  /** Returns a formatted string containing well-formed XML with
    *  given namespace to prefix mapping.
    *
    *  @param n    the node to be serialized
@@ -262,7 +262,7 @@ class PrettyPrinter(width: Int, step: Int) {
    *  @param nodes  the sequence of nodes to be serialized
    *  @param pscope the namespace to prefix mapping
    */
-  def formatNodes(nodes: Seq[Node], pscope: NamespaceBinding = null): String = 
+  def formatNodes(nodes: Seq[Node], pscope: NamespaceBinding = null): String =
     sbToString(formatNodes(nodes, pscope, _))
 
   /** Appends a formatted string containing well-formed XML with

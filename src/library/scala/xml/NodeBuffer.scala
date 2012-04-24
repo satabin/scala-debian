@@ -27,8 +27,8 @@ package scala.xml
 class NodeBuffer extends scala.collection.mutable.ArrayBuffer[Node] {
 
   /**
-   * Append given object to this buffer, returns reference on this NodeBuffer 
-   * for convenience. Some rules apply: If o is null, it is ignored. If it is 
+   * Append given object to this buffer, returns reference on this NodeBuffer
+   * for convenience. Some rules apply: If o is null, it is ignored. If it is
    * an Iterator or Iterable, its elements will be added. If o is a node, it is
    * added as it is. If it is anything else, it gets wrapped in an Atom.
    *

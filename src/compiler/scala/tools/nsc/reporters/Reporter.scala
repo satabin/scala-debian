@@ -16,7 +16,7 @@ import StringOps._
  */
 abstract class Reporter {
   protected def info0(pos: Position, msg: String, severity: Severity, force: Boolean): Unit
-  
+
   object severity extends Enumeration
   class Severity(val id: Int) extends severity.Value {
     var count: Int = 0
@@ -24,7 +24,7 @@ abstract class Reporter {
   val INFO    = new Severity(0)
   val WARNING = new Severity(1)
   val ERROR   = new Severity(2)
-  
+
   /** Whether very long lines can be truncated.  This exists so important
    *  debugging information (like printing the classpath) is not rendered
    *  invisible due to the max message length.
@@ -60,14 +60,14 @@ abstract class Reporter {
   }
 
   def comment(pos: Position, msg: String) { }
-  def flush() { }  
+  def flush() { }
   def reset() {
     INFO.count        = 0
     ERROR.count       = 0
     WARNING.count     = 0
     cancelled         = false
   }
-  
+
   // sbt compat
   @deprecated("Moved to scala.tools.util.StringOps", "2.10.0")
   def countElementsAsString(n: Int, elements: String): String = StringOps.countElementsAsString(n, elements)

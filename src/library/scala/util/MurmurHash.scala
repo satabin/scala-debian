@@ -29,7 +29,7 @@ import scala.collection.Iterator
  */
 class MurmurHash[@specialized(Int,Long,Float,Double) T](seed: Int) extends (T => Unit) {
   import MurmurHash._
-  
+
   private var h = startHash(seed)
   private var c = hiddenMagicA
   private var k = hiddenMagicB
@@ -43,7 +43,7 @@ class MurmurHash[@specialized(Int,Long,Float,Double) T](seed: Int) extends (T =>
     k = hiddenMagicB
     hashed = false
   }
-  
+
   /** Incorporate the hash value of one item. */
   def apply(t: T) {
     h = extendHash(h,t.##,c,k)
@@ -51,7 +51,7 @@ class MurmurHash[@specialized(Int,Long,Float,Double) T](seed: Int) extends (T =>
     k = nextMagicB(k)
     hashed = false
   }
-  
+
   /** Incorporate a known hash value. */
   def append(i: Int) {
     h = extendHash(h,i,c,k)
@@ -59,7 +59,7 @@ class MurmurHash[@specialized(Int,Long,Float,Double) T](seed: Int) extends (T =>
     k = nextMagicB(k)
     hashed = false
   }
-  
+
   /** Retrieve the hash value */
   def hash = {
     if (!hashed) {
@@ -101,7 +101,7 @@ object MurmurHash {
     Iterator.iterate(hiddenMagicA)(nextMagicA).take(23).toArray
 
   /** The first 23 magic integers from the second stream are stored here */
-  val storedMagicB = 
+  val storedMagicB =
     Iterator.iterate(hiddenMagicB)(nextMagicB).take(23).toArray
 
   /** Begin a new hash with a seed value. */

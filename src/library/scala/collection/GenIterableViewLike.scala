@@ -15,12 +15,12 @@ import TraversableView.NoBuilder
 
 
 
-trait GenIterableViewLike[+A, 
-                          +Coll, 
+trait GenIterableViewLike[+A,
+                          +Coll,
                           +This <: GenIterableView[A, Coll] with GenIterableViewLike[A, Coll, This]]
 extends GenIterable[A] with GenIterableLike[A, This] with GenTraversableView[A, Coll] with GenTraversableViewLike[A, Coll, This] {
 self =>
-  
+
   trait Transformed[+B] extends GenIterableView[B, Coll] with super.Transformed[B] {
     def iterator: Iterator[B]
     override def foreach[U](f: B => U): Unit = iterator foreach f
@@ -46,7 +46,7 @@ self =>
   trait FlatMapped[B] extends super.FlatMapped[B] with Transformed[B] {
     def iterator: Iterator[B] = self.iterator flatMap mapping
   }
-    
+
   trait Appended[B >: A] extends super.Appended[B] with Transformed[B] {
     def iterator = self.iterator ++ rest
   }
@@ -54,7 +54,7 @@ self =>
   trait Filtered extends super.Filtered with Transformed[A] {
     def iterator = self.iterator filter pred
   }
-    
+
   trait TakenWhile extends super.TakenWhile with Transformed[A] {
     def iterator = self.iterator takeWhile pred
   }
@@ -68,13 +68,13 @@ self =>
     def iterator: Iterator[(A, B)] = self.iterator zip other.iterator
     final override protected[this] def viewIdentifier = "Z"
   }
-  
+
   trait ZippedAll[A1 >: A, B] extends Transformed[(A1, B)] {
     protected[this] val other: GenIterable[B]
     protected[this] val thisElem: A1
     protected[this] val thatElem: B
     final override protected[this] def viewIdentifier = "Z"
-    def iterator: Iterator[(A1, B)] = 
+    def iterator: Iterator[(A1, B)] =
       self.iterator.zipAll(other.iterator, thisElem, thatElem)
   }
 

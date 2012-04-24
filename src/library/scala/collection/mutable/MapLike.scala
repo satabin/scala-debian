@@ -21,7 +21,7 @@ import parallel.mutable.ParMap
  */
 trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
   extends scala.collection.MapLike[A, B, This]
-     with Builder[(A, B), This] 
+     with Builder[(A, B), This]
      with Growable[(A, B)]
      with Shrinkable[A]
      with Cloneable[This]
@@ -32,7 +32,7 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
 
   /** A common implementation of `newBuilder` for all mutable maps
    *    in terms of `empty`.
-   * 
+   *
    *    Overrides `MapLike` implementation for better efficiency.
    */
   override protected[this] def newBuilder: Builder[(A, B), This] = empty
@@ -61,7 +61,7 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
    *
    *  @param key    The key to update
    *  @param value  The new value
-   */    
+   */
   def update(key: A, value: B) { this += ((key, value)) }
 
   /** Adds a new key/value pair to this map.
@@ -90,41 +90,32 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
    *  @param kv    the key/value mapping to be added
    *  @return      a new map containing mappings of this map and the mapping `kv`.
    */
-  @migration(2, 8,
-    "As of 2.8, this operation creates a new map.  To add an element as a\n"+
-    "side effect to an existing map and return that map itself, use +=."
-  )
+  @migration("`+` creates a new map. Use `+=` to add an element to this map and return that map itself.", "2.8.0")
   def + [B1 >: B] (kv: (A, B1)): Map[A, B1] = clone().asInstanceOf[Map[A, B1]] += kv
 
   /** Creates a new map containing two or more key/value mappings and all the key/value
    *  mappings of this map.
-   *  
+   *
    *  Specified mappings will override existing mappings from this map with the same keys.
-   *  
+   *
    *  @param elem1 the first element to add.
    *  @param elem2 the second element to add.
    *  @param elems the remaining elements to add.
    *  @return      a new map containing mappings of this map and two or more specified mappings.
    */
-  @migration(2, 8,
-    "As of 2.8, this operation creates a new map.  To add an element as a\n"+
-    "side effect to an existing map and return that map itself, use +=."
-  )
+  @migration("`+` creates a new map. Use `+=` to add an element to this map and return that map itself.", "2.8.0")
   override def + [B1 >: B] (elem1: (A, B1), elem2: (A, B1), elems: (A, B1) *): Map[A, B1] =
     clone().asInstanceOf[Map[A, B1]] += elem1 += elem2 ++= elems
 
   /** Creates a new map containing the key/value mappings provided by the specified traversable object
    *  and all the key/value mappings of this map.
-   *  
+   *
    *  Note that existing mappings from this map with the same key as those in `xs` will be overriden.
-   *  
+   *
    *  @param xs     the traversable object.
    *  @return       a new map containing mappings of this map and those provided by `xs`.
    */
-  @migration(2, 8,
-    "As of 2.8, this operation creates a new map.  To add the elements as a\n"+
-    "side effect to an existing map and return that map itself, use ++=."
-  )
+  @migration("`++` creates a new map. Use `++=` to add an element to this map and return that map itself.", "2.8.0")
   override def ++[B1 >: B](xs: GenTraversableOnce[(A, B1)]): Map[A, B1] =
     clone().asInstanceOf[Map[A, B1]] ++= xs.seq
 
@@ -150,14 +141,11 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
 
   /** Creates a new map with all the key/value mappings of this map except the key/value mapping
    *  with the specified key.
-   *  
+   *
    *  @param    key the key to be removed
    *  @return   a new map with all the mappings of this map except that with a key `key`.
    */
-  @migration(2, 8,
-    "As of 2.8, this operation creates a new map.  To remove an element as a\n"+
-    "side effect to an existing map and return that map itself, use -=."
-  )
+  @migration("`-` creates a new map. Use `-=` to remove an element from this map and return that map itself.", "2.8.0")
   override def -(key: A): This = clone() -= key
 
   /** If given key is defined in this map, remove it and return associated value as an Option.
@@ -171,9 +159,9 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
    *  the map will be empty.
    */
   def clear() { keysIterator foreach -= }
-  
+
   /** If given key is already in this map, returns associated value.
-   *  
+   *
    *  Otherwise, computes value from given expression `op`, stores with key
    *  in map and returns that value.
    *  @param  key the key to test
@@ -181,7 +169,7 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
    *              `key` is previously unbound.
    *  @return     the value associated with key (either previously or as a result
    *              of executing the method).
-   */  
+   */
   def getOrElseUpdate(key: A, op: => B): B =
     get(key) match {
       case Some(v) => v
@@ -191,7 +179,7 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
   /** Applies a transformation function to all values contained in this map.
    *  The transformation function produces new values from existing keys
    *  associated values.
-   * 
+   *
    * @param f  the transformation to apply
    * @return   the map itself.
    */
@@ -205,7 +193,7 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
   /** Retains only those mappings for which the predicate
    *  `p` returns `true`.
    *
-   * @param p  The test predicate  
+   * @param p  The test predicate
    */
   def retain(p: (A, B) => Boolean): this.type = {
     for ((k, v) <- this.seq ; if !p(k, v))
@@ -230,24 +218,18 @@ trait MapLike[A, B, +This <: MapLike[A, B, This] with Map[A, B]]
    *  @return      a new map containing all the mappings of this map except mappings
    *               with a key equal to `elem1`, `elem2` or any of `elems`.
    */
-  @migration(2, 8,
-    "As of 2.8, this operation creates a new map.  To remove an element as a\n"+
-    "side effect to an existing map and return that map itself, use -=."
-  )
+  @migration("`-` creates a new map. Use `-=` to remove an element from this map and return that map itself.", "2.8.0")
   override def -(elem1: A, elem2: A, elems: A*): This =
     clone() -= elem1 -= elem2 --= elems
 
   /** Creates a new map with all the key/value mappings of this map except mappings with keys
    *  equal to any of those provided by the specified traversable object.
-   *  
+   *
    *  @param xs       the traversable object.
    *  @return         a new map with all the key/value mappings of this map except mappings
    *                  with a key equal to a key from `xs`.
    */
-  @migration(2, 8,
-    "As of 2.8, this operation creates a new map.  To remove the elements as a\n"+
-    "side effect to an existing map and return that map itself, use --=."
-  )  
+  @migration("`--` creates a new map. Use `--=` to remove an element from this map and return that map itself.", "2.8.0")
   override def --(xs: GenTraversableOnce[A]): This = clone() --= xs.seq
 
   @bridge def --(xs: TraversableOnce[A]): This =  --(xs: GenTraversableOnce[A])

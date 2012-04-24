@@ -20,27 +20,27 @@ object Properties extends PropertiesTrait {
 private[scala] trait PropertiesTrait {
   protected def propCategory: String      // specializes the remainder of the values
   protected def pickJarBasedOn: Class[_]  // props file comes from jar containing this
-  
+
   /** The name of the properties file */
   protected val propFilename = "/" + propCategory + ".properties"
-  
+
   /** The loaded properties */
   protected lazy val scalaProps: java.util.Properties = {
     val props = new java.util.Properties
     val stream = pickJarBasedOn getResourceAsStream propFilename
     if (stream ne null)
       quietlyDispose(props load stream, stream.close)
-    
+
     props
-  }    
-  
+  }
+
   private def quietlyDispose(action: => Unit, disposal: => Unit) =
     try     { action }
-    finally { 
+    finally {
         try     { disposal }
         catch   { case _: IOException => }
     }
-  
+
   def propIsSet(name: String)                   = System.getProperty(name) != null
   def propIsSetTo(name: String, value: String)  = propOrNull(name) == value
   def propOrElse(name: String, alt: String)     = System.getProperty(name, alt)
@@ -53,7 +53,7 @@ private[scala] trait PropertiesTrait {
 
   def envOrElse(name: String, alt: String)      = Option(System getenv name) getOrElse alt
   def envOrNone(name: String)                   = Option(System getenv name)
-  
+
   // for values based on propFilename
   def scalaPropOrElse(name: String, alt: String): String = scalaProps.getProperty(name, alt)
   def scalaPropOrEmpty(name: String): String             = scalaPropOrElse(name, "")
@@ -67,10 +67,11 @@ private[scala] trait PropertiesTrait {
    *  it is an RC, Beta, etc. or was built from source, or if the version
    *  cannot be read.
    */
-  val releaseVersion = scalaPropOrNone("version.number") flatMap { s =>
-    val segments = s split '.'
-    if (segments.size == 4 && segments.last == "final") Some(segments take 3 mkString ".") else None
-  }
+  val releaseVersion = 
+    for {
+      v <- scalaPropOrNone("maven.version.number")
+      if !(v endsWith "-SNAPSHOT")
+    } yield v
 
   /** The development scala version, if this is not a final release.
    *  The precise contents are not guaranteed, but it aims to provide a
@@ -80,37 +81,34 @@ private[scala] trait PropertiesTrait {
    *  @return Some(version) if this is a non-final version, None if this
    *  is a final release or the version cannot be read.
    */
-  val developmentVersion = scalaPropOrNone("version.number") flatMap { s =>
-    val segments = s split '.'
-    if (segments.isEmpty || segments.last == "final")
-      None
-    else if (segments.last startsWith "r")
-      Some(s takeWhile (ch => ch != '-'))    // Cutting e.g. 2.10.0.r24774-b20110417125606 to 2.10.0.r24774
-    else
-      Some(s)
-  }
+  val developmentVersion = 
+    for {
+      v <- scalaPropOrNone("maven.version.number")
+      if v endsWith "-SNAPSHOT"
+      ov <- scalaPropOrNone("version.number")
+    } yield ov
 
   /** The version number of the jar this was loaded from plus "version " prefix,
    *  or "version (unknown)" if it cannot be determined.
    */
   val versionString         = "version " + scalaPropOrElse("version.number", "(unknown)")
   val copyrightString       = scalaPropOrElse("copyright.string", "(c) 2002-2011 LAMP/EPFL")
-  
+
   /** This is the encoding to use reading in source files, overridden with -encoding
    *  Note that it uses "prop" i.e. looks in the scala jar, not the system properties.
    */
   def sourceEncoding        = scalaPropOrElse("file.encoding", "UTF-8")
   def sourceReader          = scalaPropOrElse("source.reader", "scala.tools.nsc.io.SourceReader")
-  
+
   /** This is the default text encoding, overridden (unreliably) with
    *  JAVA_OPTS="-Dfile.encoding=Foo"
    */
   def encodingString        = propOrElse("file.encoding", "UTF-8")
-  
+
   /** The default end of line character.
-   */  
+   */
   def lineSeparator         = propOrElse("line.separator", "\n")
-  
+
   /** Various well-known properties.
    */
   def javaClassPath         = propOrEmpty("java.class.path")
@@ -127,16 +125,16 @@ private[scala] trait PropertiesTrait {
   def userDir               = propOrEmpty("user.dir")
   def userHome              = propOrEmpty("user.home")
   def userName              = propOrEmpty("user.name")
-  
+
   /** Some derived values.
    */
   def isWin                 = osName startsWith "Windows"
   def isMac                 = javaVendor startsWith "Apple"
-  
+
   def versionMsg            = "Scala %s %s -- %s".format(propCategory, versionString, copyrightString)
   def scalaCmd              = if (isWin) "scala.bat" else "scala"
   def scalacCmd             = if (isWin) "scalac.bat" else "scalac"
-  
+
   /** Can the java version be determined to be at least as high as the argument?
    *  Hard to properly future proof this but at the rate 1.7 is going we can leave
    *  the issue for our cyborg grandchildren to solve.
@@ -156,4 +154,4 @@ private[scala] trait PropertiesTrait {
     val writer = new PrintWriter(Console.err, true)
     writer println versionMsg
   }
-}  
+}

@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools
 package reflect
 
@@ -18,11 +18,11 @@ class SigParser {
     catch { case t => null }
 
   def make() = makeMethod.invoke(null).asInstanceOf[SignatureParserInterface]
-  
+
   private def wrap(op: => Any) =
     try   { op ; true }
     catch { case _: GenericSignatureFormatError => false }
-  
+
   def isParserAvailable = makeMethod != null
   def verifyClass(s: String)  = isParserAvailable && wrap(make() parseClassSig s)
   def verifyMethod(s: String) = isParserAvailable && wrap(make() parseMethodSig s)
@@ -31,7 +31,7 @@ class SigParser {
   type ClassSignature <: AnyRef
   type MethodTypeSignature <: AnyRef
   type TypeSignature <: AnyRef
-  
+
   type SignatureParserInterface = {
     def isParserAvailable: Boolean
     def parseClassSig(s: String): ClassSignature

@@ -23,5 +23,5 @@ abstract class TreeEntity {
 
   /** The human-readable representation of this abstract syntax tree. */
   override def toString = expression
-  
+
 }

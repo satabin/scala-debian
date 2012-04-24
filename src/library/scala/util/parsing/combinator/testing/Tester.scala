@@ -38,7 +38,7 @@ abstract class Tester {
 
   /** Scans a String (using a `syntactic.lexical.Scanner'), parses it
    *  using <code>phrase(parser)</code>, and  prints the input and the
-   *  parsed result to the console. 
+   *  parsed result to the console.
    */
   def test(in: String) {
     Console.println("\nin : "+in)

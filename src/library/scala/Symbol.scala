@@ -13,7 +13,7 @@ package scala
 /** <p>
  *    This class provides a simple way to get unique objects for
  *    equal strings. Since symbols are interned, they can be compared using
- *    reference equality. Instances of 
+ *    reference equality. Instances of
  *    <code>Symbol</code> can be created easily with Scala's built-in
 *     quote mechanism.
  *  </p>
@@ -23,7 +23,7 @@ package scala
  *    <code>Symbol</code> class in the following way:
  *    <code>Symbol("mysym")</code>.
  *  </p>
- *  
+ *
  *  @author  Martin Odersky, Iulian Dragos
  *  @version 1.8
  */
@@ -49,15 +49,15 @@ private[scala] abstract class UniquenessCache[K, V >: Null]
   import java.lang.ref.WeakReference
   import java.util.WeakHashMap
   import java.util.concurrent.locks.ReentrantReadWriteLock
-  
+
   private val rwl = new ReentrantReadWriteLock()
   private val rlock = rwl.readLock
   private val wlock = rwl.writeLock
   private val map = new WeakHashMap[K, WeakReference[V]]
-  
+
   protected def valueFromKey(k: K): V
   protected def keyFromValue(v: V): Option[K]
-  
+
   def apply(name: K): V = {
     def cached(): V = {
       rlock.lock
@@ -73,7 +73,7 @@ private[scala] abstract class UniquenessCache[K, V >: Null]
       try {
         val res = cached()
         if (res != null) res
-        else {        
+        else {
           val sym = valueFromKey(name)
           map.put(name, new WeakReference(sym))
           sym
@@ -81,7 +81,7 @@ private[scala] abstract class UniquenessCache[K, V >: Null]
       }
       finally wlock.unlock
     }
-    
+
     val res = cached()
     if (res == null) updateCache()
     else res

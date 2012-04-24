@@ -97,7 +97,7 @@ abstract class TypeParser {
     // since I retired the deprecated code which allowed for that bug.
     //
     // if (addToboxMethodMap) definitions.boxMethod(clazz) = vmsym
-    
+
     if (isAddressOf) clrTypes.addressOfViews += vmsym
     vmsym
   }
@@ -279,7 +279,7 @@ abstract class TypeParser {
       val flags = translateAttributes(field);
       val name = newTermName(field.Name);
       val fieldType =
-        if (field.IsLiteral && !field.FieldType.IsEnum && isDefinedAtgetConstant(getCLRType(field.FieldType))) 
+        if (field.IsLiteral && !field.FieldType.IsEnum && isDefinedAtgetConstant(getCLRType(field.FieldType)))
 	      ConstantType(getConstant(getCLRType(field.FieldType), field.getValue))
 	    else
 	      getCLRType(field.FieldType)
@@ -484,7 +484,7 @@ abstract class TypeParser {
                 else mtype(methodSym)
 /* END CLR generics (snippet 4) */
 /* START CLR non-generics (snippet 4)
-    val mInfo = mtype(methodSym) 
+    val mInfo = mtype(methodSym)
    END CLR non-generics (snippet 4) */
     methodSym.setInfo(mInfo)
     (if (method.IsStatic()) staticDefs else instanceDefs).enter(methodSym);
@@ -641,7 +641,7 @@ abstract class TypeParser {
   /** Return a method type for the provided argument types and return type. */
   private def methodType(argtypes: Array[MSILType], rettype: Type): Symbol => Type = {
     def paramType(typ: MSILType): Type =
-      if (typ eq clrTypes.OBJECT) definitions.AnyClass.tpe // TODO a hack to compile scalalib, should be definitions.AnyRefClass.tpe  
+      if (typ eq clrTypes.OBJECT) definitions.AnyClass.tpe // TODO a hack to compile scalalib, should be definitions.AnyRefClass.tpe
       else getCLSType(typ);
     val ptypes = argtypes.map(paramType).toList;
     if (ptypes.contains(null)) null
@@ -674,7 +674,7 @@ abstract class TypeParser {
           ||  typ.IsPointer()
           || (typ.IsArray() && getCLRType(typ.GetElementType()) == null)  /* TODO hack: getCLR instead of getCLS */
           || (typ.IsByRef() && !typ.GetElementType().CanBeTakenAddressOf()))
-      null 
+      null
     else
       getCLRType(typ)
   }
@@ -727,7 +727,7 @@ abstract class TypeParser {
              else methodTParams(tVarNumber).typeConstructor // shouldn't fail, just return definitions.AnyClass.tpe at worst
         /* END CLR generics (snippet 7) */
        /* START CLR non-generics (snippet 7)
-        null // definitions.ObjectClass.tpe 
+        null // definitions.ObjectClass.tpe
           END CLR non-generics (snippet 7) */
      } else if (tMSIL.IsArray()) {
         var elemtp = getCLRType(tMSIL.GetElementType())
@@ -735,7 +735,7 @@ abstract class TypeParser {
         // make unbounded Array[T] where T is a type variable into Array[T with Object]
         // (this is necessary because such arrays have a representation which is incompatible
         // with arrays of primitive types).
-        // TODO does that incompatibility also apply to .NET?   
+        // TODO does that incompatibility also apply to .NET?
         if (elemtp.typeSymbol.isAbstractType && !(elemtp <:< definitions.ObjectClass.tpe))
           elemtp = intersectionType(List(elemtp, definitions.ObjectClass.tpe))
         appliedType(definitions.ArrayClass.tpe, List(elemtp))

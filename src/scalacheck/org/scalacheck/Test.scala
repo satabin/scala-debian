@@ -65,7 +65,7 @@ object Test {
 
   trait TestCallback { self =>
     /** Called each time a property is evaluated */
-    def onPropEval(name: String, threadIdx: Int, succeeded: Int, 
+    def onPropEval(name: String, threadIdx: Int, succeeded: Int,
       discarded: Int): Unit = ()
 
     /** Called whenever a property has finished testing */
@@ -227,9 +227,9 @@ object Test {
   def checkProperties(prms: Params, ps: Properties): Seq[(String,Result)] =
     ps.properties.map { case (name,p) =>
       val testCallback = new TestCallback {
-        override def onPropEval(n: String, t: Int, s: Int, d: Int) = 
+        override def onPropEval(n: String, t: Int, s: Int, d: Int) =
           prms.testCallback.onPropEval(name,t,s,d)
-        override def onTestResult(n: String, r: Result) = 
+        override def onTestResult(n: String, r: Result) =
           prms.testCallback.onTestResult(name,r)
       }
       val res = check(prms copy (testCallback = testCallback), p)
@@ -262,7 +262,7 @@ object Test {
   @deprecated("(v1.8) Use check(prms.copy(testCallback = myCallback), p) instead")
   def check(prms: Params, p: Prop, propCallb: PropEvalCallback): Result = {
     val testCallback = new TestCallback {
-      override def onPropEval(n: String, t: Int, s: Int, d: Int) = propCallb(s,d) 
+      override def onPropEval(n: String, t: Int, s: Int, d: Int) = propCallb(s,d)
     }
     check(prms copy (testCallback = testCallback), p)
   }
@@ -290,7 +290,7 @@ object Test {
     propCallb: NamedPropEvalCallback, testCallb: TestResCallback
   ): Seq[(String,Result)] = {
     val testCallback = new TestCallback {
-      override def onPropEval(n: String, t: Int, s: Int, d: Int) = propCallb(n,s,d) 
+      override def onPropEval(n: String, t: Int, s: Int, d: Int) = propCallb(n,s,d)
       override def onTestResult(n: String, r: Result) = testCallb(n,r)
     }
     checkProperties(prms copy (testCallback = testCallback), ps)

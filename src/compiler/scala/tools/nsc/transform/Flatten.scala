@@ -50,7 +50,7 @@ abstract class Flatten extends InfoTransform {
           for (sym <- decls.toList) {
             if (sym.isTerm && !sym.isStaticModule) {
               decls1 enter sym
-              if (sym.isModule) sym.moduleClass setFlag LIFTED 
+              if (sym.isModule) sym.moduleClass setFlag LIFTED
             } else if (sym.isClass) {
               liftClass(sym)
               if (sym.needsImplClass) liftClass(erasure.implClass(sym))
@@ -75,8 +75,8 @@ abstract class Flatten extends InfoTransform {
 
   class Flattener extends Transformer {
 
-    /** Buffers for lifted out classes */ 
-    private val liftedDefs = new mutable.HashMap[Symbol, ListBuffer[Tree]]
+    /** Buffers for lifted out classes */
+    private val liftedDefs = perRunCaches.newMap[Symbol, ListBuffer[Tree]]()
 
     override def transform(tree: Tree): Tree = {
       tree match {

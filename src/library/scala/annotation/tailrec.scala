@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 package scala.annotation
- 
+
 /** <p>
  *    A method annotation which verifies that the method will be compiled
  *    with tail call optimization.  If it is present, the compiler will

@@ -33,7 +33,7 @@ abstract class CharArrayReader { self =>
 
   /** Is last character a unicode escape \\uxxxx? */
   def isUnicodeEscape = charOffset == lastUnicodeOffset
-  
+
   /** Advance one character; reducing CR;LF pairs to just LF */
   final def nextChar() {
     if (charOffset >= buf.length) {
@@ -47,7 +47,10 @@ abstract class CharArrayReader { self =>
     }
   }
 
-  /** Advance one character, leaving CR;LF pairs intact */
+  /** Advance one character, leaving CR;LF pairs intact.
+   *  This is for use in multi-line strings, so there are no
+   *  "potential line ends" here.
+   */
   final def nextRawChar() {
     if (charOffset >= buf.length) {
       ch = SU
@@ -56,7 +59,6 @@ abstract class CharArrayReader { self =>
       ch = c
       charOffset += 1
       if (c == '\\') potentialUnicode()
-      else if (c < ' ') potentialLineEnd()
     }
   }
 
@@ -98,7 +100,7 @@ abstract class CharArrayReader { self =>
         charOffset += 1
         ch = LF
       }
-  }    
+  }
 
   /** Handle line ends */
   private def potentialLineEnd() {
@@ -107,7 +109,7 @@ abstract class CharArrayReader { self =>
       lineStartOffset = charOffset
     }
   }
-  
+
   /** A new reader that takes off at the current character position */
   def lookaheadReader = new CharArrayLookaheadReader
 

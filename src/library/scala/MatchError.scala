@@ -13,7 +13,7 @@ package scala
 /** This class implements errors which are thrown whenever an
  *  object doesn't match any pattern of a pattern matching
  *  expression.
- *  
+ *
  *  @author  Matthias Zenger
  *  @author  Martin Odersky
  *  @version 1.1, 05/03/2004

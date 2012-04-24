@@ -21,7 +21,7 @@ import scala.tools.nsc.util.ScalaClassLoader
 class ScalacFork extends ScalaMatchingTask with ScalacShared with TaskArgs {
   private def originOfThis: String =
     ScalaClassLoader.originOfClass(classOf[ScalacFork]) map (_.toString) getOrElse "<unknown>"
-  
+
   def setSrcdir(input: File) {
     sourceDir = Some(input)
   }
@@ -47,38 +47,38 @@ class ScalacFork extends ScalaMatchingTask with ScalacShared with TaskArgs {
   private var timeout: Option[Long] = None
   private var jvmArgs: Option[String] = None
   private var argfile: Option[File] = None
-  
+
   private def createMapper() = {
     val mapper = new GlobPatternMapper()
     val extension = if (isMSIL) "*.msil" else "*.class"
     mapper setTo extension
     mapper setFrom "*.scala"
-    
+
     mapper
   }
 
   override def execute() {
     def plural(x: Int) = if (x > 1) "s" else ""
-    
+
     log("Executing ant task scalacfork, origin: %s".format(originOfThis), Project.MSG_VERBOSE)
 
     val compilerPath = this.compilerPath getOrElse sys.error("Mandatory attribute 'compilerpath' is not set.")
     val sourceDir = this.sourceDir getOrElse sys.error("Mandatory attribute 'srcdir' is not set.")
     val destinationDir = this.destinationDir getOrElse sys.error("Mandatory attribute 'destdir' is not set.")
-    
+
     val settings = new Settings
     settings.d = destinationDir
-    
+
     compTarget foreach (settings.target = _)
     compilationPath foreach (settings.classpath = _)
     sourcePath foreach (settings.sourcepath = _)
     params foreach (settings.more = _)
-    
+
     if (isMSIL)
       settings.sourcedir = sourceDir
-    
+
     val mapper = createMapper()
-    
+
     val includedFiles: Array[File] =
       new SourceFileScanner(this).restrict(
         getDirectoryScanner(sourceDir).getIncludedFiles,
@@ -86,22 +86,22 @@ class ScalacFork extends ScalaMatchingTask with ScalacShared with TaskArgs {
         destinationDir,
         mapper
       ) map (x => new File(sourceDir, x))
-    
+
     /** Nothing to do. */
     if (includedFiles.isEmpty && argfile.isEmpty)
       return
-      
+
     if (includedFiles.nonEmpty)
       log("Compiling %d file%s to %s".format(includedFiles.size, plural(includedFiles.size), destinationDir))
-    
+
     argfile foreach (x => log("Using argfile file: @" + x))
-    
+
     val java = new Java(this)  // set this as owner
     java setFork true
     // using 'setLine' creates multiple arguments out of a space-separated string
     jvmArgs foreach (java.createJvmarg() setLine _)
     timeout foreach (java setTimeout _)
-    
+
     java setClasspath compilerPath
     java setClassname MainClass
 
@@ -109,7 +109,7 @@ class ScalacFork extends ScalaMatchingTask with ScalacShared with TaskArgs {
     val tempArgFile = io.File.makeTemp("scalacfork")
     val tokens = settings.toArgs ++ (includedFiles map (_.getPath))
     tempArgFile writeAll (tokens mkString " ")
-    
+
     val paths = List(Some(tempArgFile.toAbsolute.path), argfile).flatten map (_.toString)
     val res = execWithArgFiles(java, paths)
 

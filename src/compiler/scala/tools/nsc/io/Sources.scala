@@ -22,13 +22,13 @@ class Sources(val path: String) {
   val jars   = partitioned._2 filter Jar.isJarOrZip map (_.toFile)
   val (isDone, force) = {
     val f1  = spawn(calculateDirs())
-    val f2  = spawn(calculateJars())    
+    val f2  = spawn(calculateJars())
     val fn1 = () => { f1.isDone() && f2.isDone() }
     val fn2 = () => { f1.get() ; f2.get() ; () }
 
     (fn1, fn2)
   }
-  
+
   private def catchZip(body: => Unit): Unit = {
     try body
     catch { case x: ZipException => dbg("Caught: " + x) }
@@ -37,9 +37,9 @@ class Sources(val path: String) {
   private def calculateDirs() =
     dirs foreach { d => dbg(d) ; catchZip(addSources(d.deepFiles map (x => Fileish(x)))) }
 
-  private def calculateJars() = 
+  private def calculateJars() =
     jars foreach { j => dbg(j) ; catchZip(addSources(new Jar(j).fileishIterator)) }
-  
+
   private def addSources(fs: TraversableOnce[Fileish]) =
     fs foreach { f => if (f.isSourceFile) add(f.name, f) }
 
@@ -65,9 +65,9 @@ object Sources extends LowPrioritySourcesImplicits {
   private def libraryInits      = ClassPath.scalaLibrary.toList flatMap (_.toAbsolute.parents)
   private def librarySourceDir  = libraryInits map (_ / "src") find (_.isDirectory)
   private def expandedSourceDir = librarySourceDir.toList flatMap (ClassPath expandDir _.path)
-  
+
   val sourcePathProp = sys.props.traceSourcePath.value
   val defaultSources = apply(expandedSourceDir :+ sourcePathProp: _*)
-    
+
   def apply(paths: String*): Sources = new Sources(ClassPath.join(paths: _*))
 }

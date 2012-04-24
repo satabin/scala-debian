@@ -66,7 +66,7 @@ object SUnit {
     def main(args: Array[String]) {
       val r = new TestResult()
       suite.run(r)
-      for (tf <- r.failures()) 
+      for (tf <- r.failures())
         println(tf.toString())
     }
   }
@@ -246,7 +246,7 @@ object SUnit {
     def assertEqualsXML(msg: String, expected: Seq[Node], actual: Seq[Node]) {
       assertEqualsXML(msg, expected: NodeSeq, actual: NodeSeq)
     }
-    
+
     def assertEqualsXML(expected: NodeSeq, actual: NodeSeq) {
       assertEqualsXML("(no message)", expected, actual)
     }

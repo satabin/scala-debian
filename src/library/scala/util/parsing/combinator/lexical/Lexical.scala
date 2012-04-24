@@ -31,12 +31,12 @@ abstract class Lexical extends Scanners with Tokens {
   /** A character-parser that matches a letter (and returns it)*/
   def letter = elem("letter", _.isLetter)
 
-  /** A character-parser that matches a digit (and returns it)*/  
+  /** A character-parser that matches a digit (and returns it)*/
   def digit = elem("digit", _.isDigit)
 
-  /** A character-parser that matches any character except the ones given in `cs' (and returns it)*/  
+  /** A character-parser that matches any character except the ones given in `cs' (and returns it)*/
   def chrExcept(cs: Char*) = elem("", ch => (cs forall (ch !=)))
 
-  /** A character-parser that matches a white-space character (and returns it)*/  
+  /** A character-parser that matches a white-space character (and returns it)*/
   def whitespaceChar = elem("space char", ch => ch <= ' ' && ch != EofCh)
 }

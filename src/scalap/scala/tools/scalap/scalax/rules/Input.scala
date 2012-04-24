@@ -14,7 +14,7 @@ package scala.tools.scalap
 package scalax
 package rules
 
-trait Input[+A] extends Iterable[A] { 
+trait Input[+A] extends Iterable[A] {
 
   def next : Result[Input[A], A, Nothing]
   def index : Int
@@ -39,7 +39,7 @@ class ArrayInput[A](val array : Array[A], val index : Int) extends Input[A] {
 
   lazy val next : Result[ArrayInput[A], A, Nothing] = if (index >= array.length) Failure
       else Success(new ArrayInput[A](array, index + 1), array(index))
- 
+
   override lazy val toString = this.iterator.mkString("\"", "", "\"")
 }
 

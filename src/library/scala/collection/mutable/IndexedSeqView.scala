@@ -9,7 +9,7 @@
 
 
 package scala.collection
-package mutable 
+package mutable
 
 import generic._
 
@@ -27,8 +27,8 @@ import TraversableView.NoBuilder
  *  @tparam Coll the type of the underlying collection containing the elements.
  */
 trait IndexedSeqView[A, +Coll] extends IndexedSeq[A]
-                                  with IndexedSeqOptimized[A, IndexedSeqView[A, Coll]] 
-                                  with SeqView[A, Coll] 
+                                  with IndexedSeqOptimized[A, IndexedSeqView[A, Coll]]
+                                  with SeqView[A, Coll]
                                   with SeqViewLike[A, Coll, IndexedSeqView[A, Coll]] {
 self =>
 
@@ -52,7 +52,7 @@ self =>
   trait Filtered extends super.Filtered with Transformed[A] {
     def update(idx: Int, elem: A) = self.update(index(idx), elem)
   }
-    
+
   trait TakenWhile extends super.TakenWhile with Transformed[A] {
     def update(idx: Int, elem: A) =
       if (idx < len) self.update(idx, elem)
@@ -94,7 +94,7 @@ self =>
 
 /** An object containing the necessary implicit definitions to make
  *  `SeqView`s work. Its definitions are generally not accessed directly by clients.
- * 
+ *
  * Note that the `canBuildFrom` factories yield `SeqView`s, not `IndexedSeqView`s.
  * This is intentional, because not all operations yield again a `mutable.IndexedSeqView`.
  * For instance, `map` just gives a `SeqView`, which reflects the fact that
@@ -102,14 +102,14 @@ self =>
  */
 object IndexedSeqView {
   type Coll = TraversableView[_, C] forSome {type C <: Traversable[_]}
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, SeqView[A, Seq[_]]] = 
-    new CanBuildFrom[Coll, A, SeqView[A, Seq[_]]] { 
-      def apply(from: Coll) = new NoBuilder 
-      def apply() = new NoBuilder 
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, SeqView[A, Seq[_]]] =
+    new CanBuildFrom[Coll, A, SeqView[A, Seq[_]]] {
+      def apply(from: Coll) = new NoBuilder
+      def apply() = new NoBuilder
     }
-  implicit def arrCanBuildFrom[A]: CanBuildFrom[TraversableView[_, Array[_]], A, SeqView[A, Array[A]]] = 
-    new CanBuildFrom[TraversableView[_, Array[_]], A, SeqView[A, Array[A]]] { 
-      def apply(from: TraversableView[_, Array[_]]) = new NoBuilder 
-      def apply() = new NoBuilder 
+  implicit def arrCanBuildFrom[A]: CanBuildFrom[TraversableView[_, Array[_]], A, SeqView[A, Array[A]]] =
+    new CanBuildFrom[TraversableView[_, Array[_]], A, SeqView[A, Array[A]]] {
+      def apply(from: TraversableView[_, Array[_]]) = new NoBuilder
+      def apply() = new NoBuilder
     }
 }

@@ -17,7 +17,7 @@ import org.xml.sax.{ ContentHandler, XMLReader, Locator, Attributes }
 import org.xml.sax.ext.LexicalHandler
 import java.io.{ File, OutputStream, OutputStreamWriter, Writer, IOException }
 
-/** XIncluder is a SAX <code>ContentHandler</code> 
+/** XIncluder is a SAX <code>ContentHandler</code>
  * that writes its XML document onto an output stream after resolving
  * all <code>xinclude:include</code> elements.
  *
@@ -30,38 +30,38 @@ class XIncluder(outs: OutputStream, encoding: String) extends ContentHandler wit
   var out = new OutputStreamWriter(outs, encoding)
 
   def setDocumentLocator(locator: Locator) {}
-    
+
   def startDocument() {
     try {
-      out.write("<?xml version='1.0' encoding='" 
+      out.write("<?xml version='1.0' encoding='"
                 + encoding + "'?>\r\n");
     }
     catch {
       case e:IOException =>
         throw new SAXException("Write failed", e)
-    }        
+    }
   }
 
   def endDocument() {
     try {
       out.flush()
     }
-    catch { 
+    catch {
       case e:IOException =>
         throw new SAXException("Flush failed", e)
     }
   }
-    
+
   def startPrefixMapping(prefix: String , uri: String) {}
-    
+
   def endPrefixMapping(prefix: String) {}
 
   def startElement(namespaceURI: String, localName: String, qualifiedName: String, atts: Attributes) = {
     try {
       out.write("<" + qualifiedName);
       var i = 0; while (i < atts.getLength()) {
-        out.write(" ");   
-        out.write(atts.getQName(i));   
+        out.write(" ");
+        out.write(atts.getQName(i));
         out.write("='");
         val value = atts.getValue(i);
         // @todo Need to use character references if the encoding
@@ -72,12 +72,12 @@ class XIncluder(outs: OutputStream, encoding: String) extends ContentHandler wit
       }
       out.write(">")
     }
-    catch { 
+    catch {
       case e:IOException =>
         throw new SAXException("Write failed", e)
-    }        
+    }
   }
-  
+
   def endElement(namespaceURI: String, localName:String, qualifiedName: String) {
     try {
       out.write("</" + qualifiedName + ">")
@@ -88,7 +88,7 @@ class XIncluder(outs: OutputStream, encoding: String) extends ContentHandler wit
     }
   }
 
-  // need to escape characters that are not in the given 
+  // need to escape characters that are not in the given
   // encoding using character references????
   def characters(ch: Array[Char], start: Int, length: Int) {
     try {
@@ -104,27 +104,27 @@ class XIncluder(outs: OutputStream, encoding: String) extends ContentHandler wit
         i = i+1;
       }
     }
-    catch { 
-      case e: IOException => 
-        throw new SAXException("Write failed", e);      
+    catch {
+      case e: IOException =>
+        throw new SAXException("Write failed", e);
     }
   }
 
   def  ignorableWhitespace(ch: Array[Char], start: Int , length: Int) {
     this.characters(ch, start, length)
   }
-  
+
   // do I need to escape text in PI????
   def processingInstruction(target: String, data: String) {
     try {
       out.write("<?" + target + " " + data + "?>")
     }
-    catch { 
+    catch {
       case e:IOException =>
         throw new SAXException("Write failed", e)
     }
   }
-  
+
   def skippedEntity(name: String) {
     try {
       out.write("&" + name + ";")
@@ -149,14 +149,14 @@ class XIncluder(outs: OutputStream, encoding: String) extends ContentHandler wit
       try {
         out.write("<!DOCTYPE " + name + id + ">\r\n")
       }
-      catch { 
+      catch {
         case e:IOException =>
           throw new SAXException("Error while writing DOCTYPE", e)
       }
     }
   }
   def endDTD() {}
-    
+
   def startEntity(name: String) {
     entities push name
   }
@@ -168,10 +168,10 @@ class XIncluder(outs: OutputStream, encoding: String) extends ContentHandler wit
   def startCDATA() {}
   def endCDATA() {}
 
-  // Just need this reference so we can ask if a comment is 
+  // Just need this reference so we can ask if a comment is
   // inside an include element or not
   private var filter: XIncludeFilter = null
-  
+
   def setFilter(filter: XIncludeFilter) {
     this.filter = filter
   }
@@ -183,7 +183,7 @@ class XIncluder(outs: OutputStream, encoding: String) extends ContentHandler wit
         out.write(ch, start, length)
         out.write("-->")
       }
-      catch { 
+      catch {
         case e: IOException =>
           throw new SAXException("Write failed", e)
       }

@@ -15,11 +15,11 @@ import annotation.migration
 
 trait ViewMkString[+A] {
   self: Traversable[A] =>
-  
+
   // It is necessary to use thisSeq rather than toSeq to avoid cycles in the
   // eager evaluation of vals in transformed view subclasses, see #4558.
   protected[this] def thisSeq: Seq[A] = new ArrayBuffer[A] ++= self result
-  
+
   // Have to overload all three to work around #4299.  The overload
   // is because mkString should force a view but toString should not.
   override def mkString: String = mkString("")
@@ -41,7 +41,7 @@ trait ViewMkString[+A] {
  *  superclass of it) as its result parameter. If that assumption is broken, cast errors might result.
  *
  * @define viewInfo
- *  A view is a lazy version of some collection. Collection transformers such as 
+ *  A view is a lazy version of some collection. Collection transformers such as
  *  `map` or `filter` or `++` do not traverse any elements when applied on a view.
  *  Instead they create a new view which simply records that fact that the operation
  *  needs to be applied. The collection elements are accessed, and the view operations are applied,
@@ -58,14 +58,14 @@ trait ViewMkString[+A] {
  *  @tparam Coll the type of the underlying collection containing the elements.
  *  @tparam This the type of the view itself
  */
-trait TraversableViewLike[+A, 
-                          +Coll, 
+trait TraversableViewLike[+A,
+                          +Coll,
                           +This <: TraversableView[A, Coll] with TraversableViewLike[A, Coll, This]]
   extends Traversable[A] with TraversableLike[A, This] with ViewMkString[A] with GenTraversableViewLike[A, Coll, This]
 {
   self =>
 
-  override protected[this] def newBuilder: Builder[A, This] =    
+  override protected[this] def newBuilder: Builder[A, This] =
     throw new UnsupportedOperationException(this+".newBuilder")
 
   protected def underlying: Coll
@@ -78,17 +78,17 @@ trait TraversableViewLike[+A,
     b ++= this
     b.result()
   }
-  
+
   trait Transformed[+B] extends TraversableView[B, Coll] with super.Transformed[B] {
     def foreach[U](f: B => U): Unit
-    
+
     // Methods whose standard implementations use "isEmpty" need to be rewritten
     // for views, else they will end up traversing twice in a situation like:
     //   xs.view.flatMap(f).headOption
     override def headOption: Option[B] = {
       for (x <- this)
         return Some(x)
-      
+
       None
     }
     override def lastOption: Option[B] = {
@@ -106,12 +106,12 @@ trait TraversableViewLike[+A,
     override def stringPrefix = self.stringPrefix
     override def toString = viewToString
   }
-  
+
   trait EmptyView extends Transformed[Nothing] with super.EmptyView
-  
+
   /** A fall back which forces everything into a vector and then applies an operation
    *  on it. Used for those operations which do not naturally lend themselves to a view
-   */ 
+   */
   trait Forced[B] extends Transformed[B] with super.Forced[B]
 
   trait Sliced extends Transformed[A] with super.Sliced
@@ -131,14 +131,14 @@ trait TraversableViewLike[+A,
   override def ++[B >: A, That](xs: GenTraversableOnce[B])(implicit bf: CanBuildFrom[This, B, That]): That = {
     newAppended(xs.seq.toTraversable).asInstanceOf[That]
 // was:    if (bf.isInstanceOf[ByPassCanBuildFrom]) newAppended(that).asInstanceOf[That]
-//         else super.++[B, That](that)(bf) 
+//         else super.++[B, That](that)(bf)
   }
 
   override def map[B, That](f: A => B)(implicit bf: CanBuildFrom[This, B, That]): That = {
     newMapped(f).asInstanceOf[That]
 //    val b = bf(repr)
 //          if (b.isInstanceOf[NoBuilder[_]]) newMapped(f).asInstanceOf[That]
-//    else super.map[B, That](f)(bf) 
+//    else super.map[B, That](f)(bf)
   }
 
   override def collect[B, That](pf: PartialFunction[A, B])(implicit bf: CanBuildFrom[This, B, That]): That =
@@ -149,9 +149,9 @@ trait TraversableViewLike[+A,
 // was:    val b = bf(repr)
 //     if (b.isInstanceOf[NoBuilder[_]]) newFlatMapped(f).asInstanceOf[That]
 //    else super.flatMap[B, That](f)(bf)
-  }  
+  }
   private[this] implicit def asThis(xs: Transformed[A]): This = xs.asInstanceOf[This]
-  
+
   /** Boilerplate method, to override in each subclass
    *  This method could be eliminated if Scala had virtual classes
    */
@@ -181,17 +181,14 @@ trait TraversableViewLike[+A,
 
   override def scanLeft[B, That](z: B)(op: (B, A) => B)(implicit bf: CanBuildFrom[This, B, That]): That =
     newForced(thisSeq.scanLeft(z)(op)).asInstanceOf[That]
-  
-  @migration(2, 9,
-    "This scanRight definition has changed in 2.9.\n" +
-    "The previous behavior can be reproduced with scanRight.reverse."
-  )
+
+  @migration("The behavior of `scanRight` has changed. The previous behavior can be reproduced with scanRight.reverse.", "2.9.0")
   override def scanRight[B, That](z: B)(op: (A, B) => B)(implicit bf: CanBuildFrom[This, B, That]): That =
     newForced(thisSeq.scanRight(z)(op)).asInstanceOf[That]
 
   override def groupBy[K](f: A => K): immutable.Map[K, This] =
     thisSeq groupBy f mapValues (xs => newForced(xs))
-  
+
   override def toString = viewToString
 }
 

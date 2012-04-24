@@ -23,7 +23,7 @@ import script._
  *  @since   1
  */
 trait ObservableSet[A] extends Set[A] with Publisher[Message[A] with Undoable]
-{ 
+{
 
   type Pub <: ObservableSet[A]
 
@@ -45,8 +45,8 @@ trait ObservableSet[A] extends Set[A] with Publisher[Message[A] with Undoable]
 
   abstract override def clear(): Unit = {
     super.clear
-    publish(new Reset with Undoable { 
-      def undo(): Unit = throw new UnsupportedOperationException("cannot undo") 
+    publish(new Reset with Undoable {
+      def undo(): Unit = throw new UnsupportedOperationException("cannot undo")
     })
   }
 }

@@ -17,7 +17,7 @@ package scala.xml
  * @param text the text contained in this node, may not contain "--"
  */
 case class Comment(commentText: String) extends SpecialNode
-{  
+{
   def label = "#REM"
   override def text = ""
   final override def doCollectNamespaces = false

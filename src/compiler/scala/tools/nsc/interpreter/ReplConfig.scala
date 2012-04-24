@@ -2,13 +2,13 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools.nsc
 package interpreter
 
 trait ReplConfig {
   lazy val replProps = new ReplProps
-  
+
   class TapMaker[T](x: T) {
     def tapInfo(msg: => String): T  = tap(x => replinfo(parens(x)))
     def tapDebug(msg: => String): T = tap(x => repldbg(parens(x)))
@@ -20,10 +20,10 @@ trait ReplConfig {
   }
 
   private def parens(x: Any) = "(" + x + ")"
-  private def echo(msg: => String) = 
+  private def echo(msg: => String) =
     try Console println msg
     catch { case x: AssertionError => Console.println("Assertion error printing debugging output: " + x) }
-    
+
   private[nsc] def repldbg(msg: => String)    = if (isReplDebug) echo(msg)
   private[nsc] def repltrace(msg: => String)  = if (isReplTrace) echo(msg)
   private[nsc] def replinfo(msg: => String)   = if (isReplInfo)  echo(msg)

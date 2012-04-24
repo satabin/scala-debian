@@ -16,6 +16,6 @@ package scala
  *  {{{
  *     class Tuple1[@specialized(Unit, Int, Double) T]
  *  }}}
- * 
+ *
  */
 private[scala] trait AnyValCompanion extends SpecializableCompanion { }

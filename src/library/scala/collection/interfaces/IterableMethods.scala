@@ -19,7 +19,7 @@ import annotation.unchecked.uncheckedVariance
  */
 trait IterableMethods[+A, +This <: IterableLike[A, This] with Iterable[A]] extends TraversableMethods[A, This] {
   self: Iterable[A] =>
-  
+
   // abstract
   def iterator: Iterator[A]
 
@@ -33,7 +33,7 @@ trait IterableMethods[+A, +This <: IterableLike[A, This] with Iterable[A]] exten
   def zipAll[B, A1 >: A, That](that: GenIterable[B], e1: A1, e2: B)(implicit bf: CanBuildFrom[This, (A1, B), That]): That
   def zipWithIndex[A1 >: A, That](implicit bf: CanBuildFrom[This, (A1, Int), That]): That
   def zip[A1 >: A, B, That](that: GenIterable[B])(implicit bf: CanBuildFrom[This, (A1, B), That]): That
-  
+
   override def view: IterableView[A, This]
   override def view(from: Int, until: Int): IterableView[A, This]
 }

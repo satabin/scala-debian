@@ -17,7 +17,7 @@ import annotation.bridge
 
 /** A trait for traversable collections.
  *  All operations are guaranteed to be performed in a single-threaded manner.
- *  
+ *
  *  $traversableInfo
  */
 trait Traversable[+A] extends TraversableLike[A, Traversable[A]]
@@ -28,14 +28,14 @@ trait Traversable[+A] extends TraversableLike[A, Traversable[A]]
 
   override def seq: Traversable[A] = this
 
-  @bridge 
+  @bridge
   def flatten[B](implicit asTraversable: A => /*<:<!!!*/ TraversableOnce[B]): Traversable[B] = super.flatten(asTraversable)
 
-  @bridge 
+  @bridge
   def transpose[B](implicit asTraversable: A => /*<:<!!!*/ TraversableOnce[B]): Traversable[Traversable[B]] = super.transpose(asTraversable)
 
   /* The following methods are inherited from TraversableLike
-   * 
+   *
   override def isEmpty: Boolean
   override def size: Int
   override def hasDefiniteSize
@@ -101,7 +101,7 @@ object Traversable extends TraversableFactory[Traversable] { self =>
 
   /** Provides break functionality separate from client code */
   private[collection] val breaks: Breaks = new Breaks
-  
+
   /** $genericCanBuildFromInfo */
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Traversable[A]] = new GenericCanBuildFrom[A]
 

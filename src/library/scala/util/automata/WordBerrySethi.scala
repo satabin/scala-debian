@@ -53,7 +53,7 @@ abstract class WordBerrySethi extends BaseBerrySethi {
     case _          => super.compLast(r)
   }
 
-  /** Returns the first set of an expression, setting the follow set along 
+  /** Returns the first set of an expression, setting the follow set along
    *  the way.
    *
    *  @param fol1 ...
@@ -104,7 +104,7 @@ abstract class WordBerrySethi extends BaseBerrySethi {
 
     // determine "Sethi-length" of the regexp
     subexpr foreach traverse
-    
+
     this.initials = Set(0)
   }
 
@@ -112,7 +112,7 @@ abstract class WordBerrySethi extends BaseBerrySethi {
     finals   = immutable.Map.empty[Int, Int]                    // final states
     deltaq   = new Array[HashMap[_labelT, List[Int]]](pos) // delta
     defaultq = new Array[List[Int]](pos)                        // default transitions
-    
+
     for (j <- 0 until pos) {
       deltaq(j) = HashMap[_labelT, List[Int]]()
       defaultq(j) = Nil
@@ -141,7 +141,7 @@ abstract class WordBerrySethi extends BaseBerrySethi {
 
         if (x.isNullable) // initial state is final
           finals = finals.updated(0, finalTag)
-          
+
         val delta1      = immutable.Map(deltaq.zipWithIndex map (_.swap): _*)
         val finalsArr   = 0 until pos map (k => finals.getOrElse(k, 0)) toArray  // 0 == not final
         val initialsArr = initials.toArray

@@ -15,4 +15,4 @@ package scala
  *
  * @since 2.8
  */
-trait Mutable 
+trait Mutable

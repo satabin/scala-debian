@@ -116,9 +116,9 @@ abstract class LiftCode extends Transform with Reifiers {
 
 // case EmptyTree =>
 // case LiftPoint(tree) =>
-// case PackageDef(pid, stats) => 
-// case ClassDef(mods, name, tparams, impl) => 
-// case ValDef(mods, name, tpt, rhs) => 
+// case PackageDef(pid, stats) =>
+// case ClassDef(mods, name, tparams, impl) =>
+// case ValDef(mods, name, tpt, rhs) =>
 // case DefDef(mods, name, tparams, vparamss, tpt, rhs) =>
 // case TypeDef(mods, name, tparams, rhs) =>
 // case LabelDef(name, params, rhs) =>
@@ -127,8 +127,8 @@ abstract class LiftCode extends Transform with Reifiers {
 // case ArrayValue(elemtpt, trees) =>
 // case Assign(lhs, rhs) =>
 // case If(cond, thenp, elsep) =>
-// case Match(selector, cases) => 
-// case Return(expr) =>          
+// case Match(selector, cases) =>
+// case Return(expr) =>
 // case Try(block, catches, finalizer) =>
 // case Throw(expr) =>
 // case New(tpt) =>

@@ -8,7 +8,7 @@ package settings
 
 trait AdvancedScalaSettings {
   self: AbsScalaSettings =>
-  
+
   abstract class X extends SettingGroup("-X") {
     val assemextdirs: StringSetting
     val assemname: StringSetting
@@ -41,8 +41,8 @@ trait AdvancedScalaSettings {
     val showphases: BooleanSetting
     val sourcedir: StringSetting
     val sourcereader: StringSetting
-  }  
-  // def Xexperimental = X.experimental  
+  }
+  // def Xexperimental = X.experimental
   // def Xmigration28 = X.migration
   // def Xnojline = X.nojline
   // def Xprint = X.print

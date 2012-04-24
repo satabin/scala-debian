@@ -11,8 +11,8 @@ import session.NoHistory
 
 /** Reads using standard JDK API */
 class SimpleReader(
-  in: BufferedReader, 
-  out: JPrintWriter, 
+  in: BufferedReader,
+  out: JPrintWriter,
   val interactive: Boolean)
 extends InteractiveReader
 {
@@ -38,7 +38,7 @@ extends InteractiveReader
 object SimpleReader {
   def defaultIn  = Console.in
   def defaultOut = new JPrintWriter(Console.out)
-  
+
   def apply(in: BufferedReader = defaultIn, out: JPrintWriter = defaultOut, interactive: Boolean = true): SimpleReader =
     new SimpleReader(in, out, interactive)
 }

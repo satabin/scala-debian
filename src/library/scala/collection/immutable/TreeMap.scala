@@ -27,15 +27,18 @@ object TreeMap extends ImmutableSortedMapFactory[TreeMap] {
 }
 
 /** This class implements immutable maps using a tree.
- *  
+ *
  *  @tparam A         the type of the keys contained in this tree map.
  *  @tparam B         the type of the values associated with the keys.
  *  @param ordering   the implicit ordering used to compare objects of type `A`.
- *  
+ *
  *  @author  Erik Stenman
  *  @author  Matthias Zenger
  *  @version 1.1, 03/05/2004
  *  @since   1
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-immutable-collection-classes.html#redblack_trees "Scala's Collection Library overview"]]
+ *  section on `Red-Black Trees` for more information.
+ *
  *  @define Coll immutable.TreeMap
  *  @define coll immutable tree map
  *  @define orderDependent
@@ -44,19 +47,19 @@ object TreeMap extends ImmutableSortedMapFactory[TreeMap] {
  *  @define willNotTerminateInf
  */
 class TreeMap[A, +B](override val size: Int, t: RedBlack[A]#Tree[B])(implicit val ordering: Ordering[A])
-  extends RedBlack[A] 
-     with SortedMap[A, B] 
-     with SortedMapLike[A, B, TreeMap[A, B]] 
+  extends RedBlack[A]
+     with SortedMap[A, B]
+     with SortedMapLike[A, B, TreeMap[A, B]]
      with MapLike[A, B, TreeMap[A, B]]
      with Serializable {
-       
+
   def isSmaller(x: A, y: A) = ordering.lt(x, y)
 
-  override protected[this] def newBuilder : Builder[(A, B), TreeMap[A, B]] = 
+  override protected[this] def newBuilder : Builder[(A, B), TreeMap[A, B]] =
     TreeMap.newBuilder[A, B]
 
   def this()(implicit ordering: Ordering[A]) = this(0, null)(ordering)
-  
+
   protected val tree: RedBlack[A]#Tree[B] = if (size == 0) Empty else t
 
   override def rangeImpl(from : Option[A], until : Option[A]): TreeMap[A,B] = {
@@ -86,7 +89,7 @@ class TreeMap[A, +B](override val size: Int, t: RedBlack[A]#Tree[B])(implicit va
     TreeMap.make(newsize, tree.update(key, value))
   }
 
-  /** Add a key/value pair to this map. 
+  /** Add a key/value pair to this map.
    *  @tparam   B1   type of the value of the new binding, a supertype of `B`
    *  @param    kv   the key/value pair
    *  @return        A new $coll with the new binding added to this map
@@ -96,7 +99,7 @@ class TreeMap[A, +B](override val size: Int, t: RedBlack[A]#Tree[B])(implicit va
   /** Adds two or more elements to this collection and returns
    *  either the collection itself (if it is mutable), or a new collection
    *  with the added elements.
-   *  
+   *
    *  @tparam B1   type of the values of the new bindings, a supertype of `B`
    *  @param elem1 the first element to add.
    *  @param elem2 the second element to add.
@@ -111,14 +114,14 @@ class TreeMap[A, +B](override val size: Int, t: RedBlack[A]#Tree[B])(implicit va
    *
    *  @param xs     the traversable object.
    */
-  override def ++[B1 >: B] (xs: GenTraversableOnce[(A, B1)]): TreeMap[A, B1] = 
+  override def ++[B1 >: B] (xs: GenTraversableOnce[(A, B1)]): TreeMap[A, B1] =
     ((repr: TreeMap[A, B1]) /: xs.seq) (_ + _)
 
   @bridge def ++[B1 >: B] (xs: TraversableOnce[(A, B1)]): TreeMap[A, B1] = ++(xs: GenTraversableOnce[(A, B1)])
 
   /** A new TreeMap with the entry added is returned,
    *  assuming that key is <em>not</em> in the TreeMap.
-   *  
+   *
    *  @tparam B1    type of the values of the new bindings, a supertype of `B`
    *  @param key    the key to be inserted
    *  @param value  the value to be associated with `key`
@@ -129,7 +132,7 @@ class TreeMap[A, +B](override val size: Int, t: RedBlack[A]#Tree[B])(implicit va
     TreeMap.make(size + 1, tree.update(key, value))
   }
 
-  def - (key:A): TreeMap[A, B] = 
+  def - (key:A): TreeMap[A, B] =
     if (tree.lookup(key).isEmpty) this
     else if (size == 1) empty
     else TreeMap.make(size - 1, tree.delete(key))
@@ -153,10 +156,10 @@ class TreeMap[A, +B](override val size: Int, t: RedBlack[A]#Tree[B])(implicit va
   def iterator: Iterator[(A, B)] = tree.toStream.iterator
 
   override def toStream: Stream[(A, B)] = tree.toStream
-  
+
   override def foreach[U](f : ((A,B)) =>  U) = tree foreach { case (x, y) => f(x, y) }
-}        
-      
+}
+
 
 
 

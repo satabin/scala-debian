@@ -16,15 +16,15 @@ import event._
 /**
  * Lets users select a value from a given range. Visually, this is represented
  * as a draggable knob on a horizontal or vertical bar.
- * 
- * Fires a ValueChanged event whenever the slider's value changes and 
+ *
+ * Fires a ValueChanged event whenever the slider's value changes and
  * when the knob is released.
- * 
+ *
  * @see javax.swing.JSlider
  */
 class Slider extends Component with Orientable.Wrapper with Publisher {
   override lazy val peer: JSlider = new JSlider with SuperMixin
-  
+
   def min: Int = peer.getMinimum
   def min_=(v: Int) { peer.setMinimum(v) }
   def max: Int = peer.getMaximum
@@ -33,24 +33,24 @@ class Slider extends Component with Orientable.Wrapper with Publisher {
   def value_=(v: Int) { peer.setValue(v) }
   def extent: Int = peer.getExtent
   def extent_=(v: Int) { peer.setExtent(v) }
-  
+
   def paintLabels: Boolean = peer.getPaintLabels
   def paintLabels_=(v: Boolean) { peer.setPaintLabels(v) }
   def paintTicks: Boolean = peer.getPaintTicks
   def paintTicks_=(v: Boolean) { peer.setPaintTicks(v) }
   def paintTrack: Boolean = peer.getPaintTrack
   def paintTrack_=(v: Boolean) { peer.setPaintTrack(v) }
-  
+
   def snapToTicks: Boolean = peer.getSnapToTicks
   def snapToTicks_=(v: Boolean) { peer.setSnapToTicks(v) }
-  
+
   def minorTickSpacing: Int = peer.getMinorTickSpacing
   def minorTickSpacing_=(v: Int) { peer.setMinorTickSpacing(v) }
   def majorTickSpacing: Int = peer.getMajorTickSpacing
   def majorTickSpacing_=(v: Int) { peer.setMajorTickSpacing(v) }
-  
+
   def adjusting = peer.getValueIsAdjusting
-  
+
   def labels: scala.collection.Map[Int, Label] = {
     val labelTable = peer.getLabelTable.asInstanceOf[java.util.Hashtable[Int, JLabel]]
     new scala.collection.JavaConversions.JMapWrapper(labelTable)
@@ -62,10 +62,10 @@ class Slider extends Component with Orientable.Wrapper with Publisher {
     for ((k,v) <- l) table.put(k, v.peer)
     peer.setLabelTable(table)
   }
-  
+
   peer.addChangeListener(new javax.swing.event.ChangeListener {
-    def stateChanged(e: javax.swing.event.ChangeEvent) { 
-      publish(new ValueChanged(Slider.this)) 
+    def stateChanged(e: javax.swing.event.ChangeEvent) {
+      publish(new ValueChanged(Slider.this))
     }
   })
 }

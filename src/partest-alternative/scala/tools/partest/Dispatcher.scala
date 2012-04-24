@@ -18,26 +18,26 @@ import scala.util.control.Exception.ultimately
  */
 trait Dispatcher {
   partest: Universe =>
-  
+
   /** The public entry point.  The given filter narrows down the list of
    *  tests to run.
    */
   def runSelection(categories: List[TestCategory], filt: TestEntity => Boolean = _ => true): CombinedTestResults = {
     // Setting scala.home informs tests where to obtain their jars.
     setProp("scala.home", testBuildDir.path)
-    
+
     val allTests  = allCategories flatMap (_.enumerate)
     val selected  = allTests filter filt
     val groups    = selected groupBy (_.category)
     val count     = selected.size
-    
+
     if (count == 0) return CombinedTestResults(0, 0, 0, Nil)
     else if (count == allTests.size) verbose("Running all %d tests." format count)
     else verbose("Running %d/%d tests: %s".format(count, allTests.size, toStringTrunc(selected map (_.label) mkString ", ")))
 
     allCategories collect { case x if groups contains x => runCategory(x, groups(x)) } reduceLeft (_ ++ _)
   }
-  
+
   private def parallelizeTests(tests: List[TestEntity]): immutable.Map[TestEntity, TestResult] = {
     // propagate verbosity
     if (isDebug) scala.actors.Debug.level = 3
@@ -73,7 +73,7 @@ trait Dispatcher {
   private def runCategory(category: TestCategory, tests: List[TestEntity]): CombinedTestResults = {
     val kind = category.kind
     normal("%s (%s tests in %s)\n".format(category.startMessage, tests.size, category))
-    
+
     val (milliSeconds, resultMap) = timed2(parallelizeTests(tests))
     val (passed, failed)          = resultsToStatistics(resultMap mapValues (_.state))
     val failures                  = resultMap.values filterNot (_.passed) toList
@@ -83,7 +83,7 @@ trait Dispatcher {
 
   /** A Worker is given a bundle of tests and runs them all sequentially.
    */
-  class Worker(val workerNum: Int) extends Actor {    
+  class Worker(val workerNum: Int) extends Actor {
     def act() {
       react { case TestsToRun(tests) =>
         val master = sender
@@ -99,12 +99,12 @@ trait Dispatcher {
       val testIterator  = tests.iterator
       def processed     = results.size
       def isComplete    = testIterator.isEmpty
-      
+
       def atThreshold(num: Double) = {
         require(num >= 0 && num <= 1.0)
         ((processed - 1).toDouble / numberOfTests <= num) && (processed.toDouble / numberOfTests >= num)
       }
-      
+
       def extraMessage = {
         // for now quiet for normal people
         if (isVerbose || isTrace || isDebug) {
@@ -115,13 +115,13 @@ trait Dispatcher {
         }
         else ""
       }
-      
+
       def countAndReport(result: TestResult) {
         val TestResult(test, state) = result
         // refuse to count an entity twice
         if (results contains test)
           return warning("Received duplicate result for %s: was %s, now %s".format(test, results(test), state))
-          
+
         // increment the counter for this result state
         results += (test -> result)
 
@@ -135,11 +135,11 @@ trait Dispatcher {
 
         // Respond to master if this Worker is complete
         if (isComplete)
-          onCompletion(results)        
+          onCompletion(results)
       }
-      
+
       Actor.loopWhile(testIterator.hasNext) {
-        val parent = self        
+        val parent = self
         // pick a test and set some alarms
         val test    = testIterator.next
         val alarmer = test startAlarms (parent ! new Timeout(test))

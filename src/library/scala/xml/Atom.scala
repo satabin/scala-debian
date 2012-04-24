@@ -16,7 +16,7 @@ package scala.xml
  *  @param text the text contained in this node, may not be <code>null</code>.
  */
 class Atom[+A](val data: A) extends SpecialNode with Serializable
-{  
+{
   if (data == null)
     throw new IllegalArgumentException("cannot construct Atom(null)")
 
@@ -32,7 +32,7 @@ class Atom[+A](val data: A) extends SpecialNode with Serializable
 
   final override def doCollectNamespaces = false
   final override def doTransform         = false
-  
+
   def label = "#PCDATA"
 
   /** Returns text, with some characters escaped according to the XML

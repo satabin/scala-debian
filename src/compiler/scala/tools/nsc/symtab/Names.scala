@@ -43,7 +43,7 @@ trait Names extends reflect.generic.Names {
   private def hashValue(cs: Array[Char], offset: Int, len: Int): Int =
     if (len > 0)
       (len * (41 * 41 * 41) +
-       cs(offset) * (41 * 41) +      
+       cs(offset) * (41 * 41) +
        cs(offset + len - 1) * 41 +
        cs(offset + (len >> 1)))
     else 0;
@@ -88,7 +88,7 @@ trait Names extends reflect.generic.Names {
     }
     n
   }
-  
+
   /** create a term name from string
    */
   def newTermName(s: String): TermName =
@@ -168,7 +168,7 @@ trait Names extends reflect.generic.Names {
 
     /** Write to UTF8 representation of this name to given character array.
      *  Start copying to index `to'. Return index of next free byte in array.
-     *  Array must have enough remaining space for all bytes 
+     *  Array must have enough remaining space for all bytes
      *  (i.e. maximally 3*length bytes).
      */
     final def copyUTF8(bs: Array[Byte], offset: Int): Int = {
@@ -187,19 +187,19 @@ trait Names extends reflect.generic.Names {
       val cmp = this eq other.asInstanceOf[AnyRef]
       if (cmp || !nameDebug)
         return cmp
-      
+
       other match {
         case x: String  =>
           Console.println("Compared " + debugString + " and String '" + x + "'")
         case x: Name    =>
           if (this.isTermName != x.isTermName) {
             val panic = this.toTermName == x.toTermName
-            Console.println("Compared '%s' and '%s', one term, one type.%s".format(this, x, 
+            Console.println("Compared '%s' and '%s', one term, one type.%s".format(this, x,
               if (panic) "  And they contain the same name string!"
               else ""
             ))
           }
-        case _ => 
+        case _ =>
       }
       false
     }
@@ -280,7 +280,7 @@ trait Names extends reflect.generic.Names {
     final def lastPos(s: String, start: Int): Int = {
       var i = lastPos(s.charAt(0), start)
       while (i >= 0) {
-        var j = 1; 
+        var j = 1;
         while (s.charAt(j) == chrs(index + i + j)) {
           j += 1
           if (j == s.length()) return i;
@@ -312,7 +312,7 @@ trait Names extends reflect.generic.Names {
      */
     final def endsWith(suffix: Name, end: Int): Boolean = {
       var i = 1
-      while (i <= suffix.length && i <= end && 
+      while (i <= suffix.length && i <= end &&
              chrs(index + end - i) == chrs(suffix.start + suffix.length - i))
         i += 1;
       i > suffix.length
@@ -325,7 +325,7 @@ trait Names extends reflect.generic.Names {
       while (start <= last && !startsWith(subname, start)) start += 1
       start <= last
     }
-    
+
     /** Some thoroughly self-explanatory convenience functions.  They
      *  assume that what they're being asked to do is known to be valid.
      */
@@ -339,7 +339,7 @@ trait Names extends reflect.generic.Names {
     final def stripStart(prefix: String): Name  = subName(prefix.length, len)
     final def stripEnd(suffix: Name): Name      = subName(0, len - suffix.length)
     final def stripEnd(suffix: String): Name    = subName(0, len - suffix.length)
-    
+
     def lastIndexOf(ch: Char) = toChars lastIndexOf ch
 
     /** Return the subname with characters from start to end-1.
@@ -369,7 +369,7 @@ trait Names extends reflect.generic.Names {
       else if (isTypeName) newTypeName(res)
       else newTermName(res)
     }
-    
+
     def append(suffix: String): Name
     def append(suffix: Name): Name
 
@@ -378,7 +378,7 @@ trait Names extends reflect.generic.Names {
     def decode: String = (
       NameTransformer.decode(toString()) +
       (if (nameDebug && isTypeName) "!" else ""))//debug
-    
+
     def isOperatorName: Boolean = decode != toString
     def nameKind: String = if (isTypeName) "type" else "term"
     def longString: String = nameKind + " " + NameTransformer.decode(toString)
@@ -421,7 +421,7 @@ trait Names extends reflect.generic.Names {
       n
     }
     def toTypeName: TypeName = this
-    
+
     def append(suffix: String): TypeName = newTypeName(this + suffix)
     def append(suffix: Name): TypeName = append(suffix.toString)
     def companionName: TermName = toTermName

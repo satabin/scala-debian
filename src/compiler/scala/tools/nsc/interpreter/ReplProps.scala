@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools.nsc
 package interpreter
 
@@ -10,7 +10,7 @@ import scala.sys._
 
 class ReplProps {
   private def bool(name: String) = BooleanProp.keyExists(name)
-  
+
   val jlineDebug = bool("scala.tools.jline.internal.Log.debug")
   val jlineTrace = bool("scala.tools.jline.internal.Log.trace")
   val noThreads  = bool("scala.repl.no-threads")

@@ -7,7 +7,7 @@ abstract class InterruptReq {
   /** The result type of the operation
    */
   type R
-  
+
   /** The operation to be performed */
   protected val todo: () => R
 

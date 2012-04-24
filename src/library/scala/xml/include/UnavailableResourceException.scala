@@ -17,7 +17,7 @@ package include
  * </p>
  *
  */
-class UnavailableResourceException(message: String) 
+class UnavailableResourceException(message: String)
 extends XIncludeException(message) {
   def this() = this(null)
 }

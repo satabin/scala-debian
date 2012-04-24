@@ -14,7 +14,7 @@ trait Variances {
 
   val global: Global
   import global._
-  
+
   /** Flip between covariant and contravariant */
   private def flip(v: Int): Int = {
     if (v == COVARIANT) CONTRAVARIANT
@@ -31,8 +31,8 @@ trait Variances {
     (VARIANCES /: syms) ((v, sym) => v & varianceInSym(sym)(tparam))
 
   /** Compute variance of type parameter `tparam' in type of symbol `sym'. */
-  def varianceInSym(sym: Symbol)(tparam: Symbol): Int = 
-    if (sym.isAliasType) cut(varianceInType(sym.info)(tparam)) 
+  def varianceInSym(sym: Symbol)(tparam: Symbol): Int =
+    if (sym.isAliasType) cut(varianceInType(sym.info)(tparam))
     else varianceInType(sym.info)(tparam)
 
   /** Compute variance of type parameter `tparam' in all types `tps'. */

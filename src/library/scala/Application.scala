@@ -37,21 +37,21 @@ import scala.compat.Platform.currentTime
  *    pitfalls:
  *  </p>
  *  <ul>
- *    <li> Threaded code that references the object will block until static 
- *    initialization is complete.  However, because the entire execution of an 
+ *    <li> Threaded code that references the object will block until static
+ *    initialization is complete.  However, because the entire execution of an
  *    <code>object</code> extending <code>Application</code> takes place during
- *    static initialization, concurrent code will <em>always</em> deadlock if 
+ *    static initialization, concurrent code will <em>always</em> deadlock if
  *    it must synchronize with the enclosing object.</li>
- *    <li>As described above, there is no way to obtain the 
+ *    <li>As described above, there is no way to obtain the
  *    command-line arguments because all code in body of an <code>object</code>
  *    extending <code>Application</code> is run as part of the static initialization
- *    which occurs before <code>Application</code>'s <code>main</code> method 
- *    even begins execution.</li>  
- *    <li>Static initializers are run only once during program execution, and 
- *    JVM authors usually assume their execution to be relatively short.  
+ *    which occurs before <code>Application</code>'s <code>main</code> method
+ *    even begins execution.</li>
+ *    <li>Static initializers are run only once during program execution, and
+ *    JVM authors usually assume their execution to be relatively short.
  *    Therefore, certain JVM configurations may become confused, or simply fail to
- *    optimize or JIT the code in the body of an <code>object</code> extending 
- *    <code>Application</code>.  This can lead to a significant 
+ *    optimize or JIT the code in the body of an <code>object</code> extending
+ *    <code>Application</code>.  This can lead to a significant
  *    performance degradation.</li>
  *  </ul>
  *

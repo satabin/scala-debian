@@ -109,7 +109,7 @@ sealed abstract class Option[+A] extends Product with Serializable {
 
   /** Returns the option's value if it is nonempty,
    * or `null` if it is empty.
-   * Although the use of null is discouraged, code written to use 
+   * Although the use of null is discouraged, code written to use
    * $option must often interface with code that expects and returns nulls.
    * @example {{{
    * val initalText: Option[String] = getInitialText
@@ -152,7 +152,7 @@ sealed abstract class Option[+A] extends Product with Serializable {
    */
   @inline final def filter(p: A => Boolean): Option[A] =
     if (isEmpty || p(this.get)) this else None
-  
+
   /** Returns this $option if it is nonempty '''and''' applying the predicate $p to
    * this $option's value returns false. Otherwise, return $none.
    *
@@ -208,7 +208,7 @@ sealed abstract class Option[+A] extends Product with Serializable {
    *  value (if possible), or $none.
    */
   def collect[B](pf: PartialFunction[A, B]): Option[B] =
-    if (!isEmpty && pf.isDefinedAt(this.get)) Some(pf(this.get)) else None  
+    if (!isEmpty && pf.isDefinedAt(this.get)) Some(pf(this.get)) else None
 
   /** Returns this $option if it is nonempty,
    *  otherwise return the result of evaluating `alternative`.
@@ -220,13 +220,13 @@ sealed abstract class Option[+A] extends Product with Serializable {
   /** Returns a singleton iterator returning the $option's value
    * if it is nonempty, or an empty iterator if the option is empty.
    */
-  def iterator: Iterator[A] = 
+  def iterator: Iterator[A] =
     if (isEmpty) collection.Iterator.empty else collection.Iterator.single(this.get)
 
   /** Returns a singleton list containing the $option's value
    * if it is nonempty, or the empty list if the $option is empty.
    */
-  def toList: List[A] = 
+  def toList: List[A] =
     if (isEmpty) List() else List(this.get)
 
   /** Returns a [[scala.Left]] containing the given

@@ -16,10 +16,10 @@ import scala.collection.mutable.Map
 /** <p>
  *    A container that associates layout constraints of member type
  *    <code>Constraints</code> with its children. See <code>GridBagPanel</code>
- *    for an example container with custom constraints. 
+ *    for an example container with custom constraints.
  *  </p>
  *
- *  @note [Java Swing] In scala.swing, panels and layout managers are 
+ *  @note [Java Swing] In scala.swing, panels and layout managers are
  *  combined into subclasses of this base class. This approach allows for typed
  *  component constraints.
  */
@@ -28,7 +28,7 @@ trait LayoutContainer extends Container.Wrapper {
    * The type of component constraints for this container.
    */
   type Constraints <: AnyRef
-  
+
   /**
    * Obtains the constraints for the given component from the underlying
    * Swing layout manager.
@@ -40,21 +40,21 @@ trait LayoutContainer extends Container.Wrapper {
    */
   protected def areValid(c: Constraints): (Boolean, String)
   /**
-   * Adds a component with the given constraints to the underlying layout 
-   * manager and the component peer. This method needs to interact properly 
+   * Adds a component with the given constraints to the underlying layout
+   * manager and the component peer. This method needs to interact properly
    * with method `constraintsFor`, i.e., it might need to remove previously
    * held components in order to maintain layout consistency. See `BorderPanel`
    * for an example.
    */
   protected def add(comp: Component, c: Constraints)
-  
+
   /**
    * A map of components to the associated layout constraints.
-   * Any element in this map is automatically added to the contents of this 
-   * panel. Therefore, specifying the layout of a component via 
-   * 
+   * Any element in this map is automatically added to the contents of this
+   * panel. Therefore, specifying the layout of a component via
+   *
    * layout(myComponent) = myConstraints
-   * 
+   *
    * also ensures that myComponent is properly added to this container.
    */
   def layout: Map[Component, Constraints] = new Map[Component, Constraints] {
@@ -68,8 +68,8 @@ trait LayoutContainer extends Container.Wrapper {
     }
     def get(c: Component) = Option(constraintsFor(c))
     override def size = peer.getComponentCount
-    def iterator: Iterator[(Component, Constraints)] = 
-      peer.getComponents.iterator.map { c => 
+    def iterator: Iterator[(Component, Constraints)] =
+      peer.getComponents.iterator.map { c =>
         val comp = UIElement.cachedWrapper[Component](c.asInstanceOf[JComponent])
         (comp, constraintsFor(comp))
       }

@@ -18,7 +18,7 @@ trait GenericSeqCompanion[CC[X] <: Traversable[X]]
   @bridge
   override def empty[A]: CC[A] = super.empty[A]
 
-  @bridge 
+  @bridge
   override def apply[A](elems: A*): CC[A] = super.apply(elems: _*)
 
 }

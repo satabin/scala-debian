@@ -16,7 +16,7 @@ import java.math.BigInteger;
 import java.math.BigDecimal;
 
 @deprecated(DbcIsDeprecated, "2.9.0") object Factory {
-  
+
   def create (result: java.sql.ResultSet, index: Int, expectedDataType: DataType): Value = {
     expectedDataType.nativeTypeId match {
       case DataType.OBJECT =>
@@ -88,8 +88,8 @@ import java.math.BigDecimal;
           val dataType = expectedDataType.asInstanceOf[datatype.ExactNumeric[BigDecimal]];
           val nativeValue: BigDecimal = result.getBigDecimal(index);
         }
-      
+
     }
   }
-  
+
 }

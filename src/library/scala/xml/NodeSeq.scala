@@ -25,10 +25,10 @@ object NodeSeq {
     def theSeq = s
   }
   type Coll = NodeSeq
-  implicit def canBuildFrom: CanBuildFrom[Coll, Node, NodeSeq] = 
-    new CanBuildFrom[Coll, Node, NodeSeq] { 
-      def apply(from: Coll) = newBuilder 
-      def apply() = newBuilder 
+  implicit def canBuildFrom: CanBuildFrom[Coll, Node, NodeSeq] =
+    new CanBuildFrom[Coll, Node, NodeSeq] {
+      def apply(from: Coll) = newBuilder
+      def apply() = newBuilder
     }
   def newBuilder: Builder[Node, NodeSeq] = new ListBuffer[Node] mapResult fromSeq
   implicit def seqToNodeSeq(s: Seq[Node]): NodeSeq = fromSeq(s)
@@ -49,7 +49,7 @@ abstract class NodeSeq extends immutable.Seq[Node] with SeqLike[Node, NodeSeq] w
   def theSeq: Seq[Node]
   def length = theSeq.length
   override def iterator = theSeq.iterator
-  
+
   def apply(i: Int): Node = theSeq(i)
   def apply(f: Node => Boolean): NodeSeq = filter(f)
 
@@ -93,26 +93,26 @@ abstract class NodeSeq extends immutable.Seq[Node] with SeqLike[Node, NodeSeq] w
     def fail = throw new IllegalArgumentException(that)
     def atResult = {
       lazy val y = this(0)
-      val attr = 
+      val attr =
         if (that.length == 1) fail
         else if (that(1) == '{') {
           val i = that indexOf '}'
-          if (i == -1) fail                  
+          if (i == -1) fail
           val (uri, key) = (that.substring(2,i), that.substring(i+1, that.length()))
           if (uri == "" || key == "") fail
           else y.attribute(uri, key)
         }
         else y.attribute(that drop 1)
-        
+
       attr match {
         case Some(x)  => Group(x)
         case _        => NodeSeq.Empty
       }
     }
-    
+
     def makeSeq(cond: (Node) => Boolean) =
       NodeSeq fromSeq (this flatMap (_.child) filter cond)
-      
+
     that match {
       case ""                                         => fail
       case "_"                                        => makeSeq(!_.isAtom)

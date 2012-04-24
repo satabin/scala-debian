@@ -25,7 +25,7 @@ trait BytecodeWriters {
     settings.outputDirs.outputDirFor {
       atPhase(currentRun.flattenPhase.prev)(sym.sourceFile)
     }
-  )  
+  )
   private def getFile(base: AbstractFile, cls: JClass, suffix: String): AbstractFile = {
     var dir = base
     val pathParts = cls.getName().split("[./]").toList
@@ -36,12 +36,12 @@ trait BytecodeWriters {
   }
   private def getFile(sym: Symbol, cls: JClass, suffix: String): AbstractFile =
     getFile(outputDirectory(sym), cls, suffix)
-  
+
   trait BytecodeWriter {
     def writeClass(label: String, jclass: JClass, sym: Symbol): Unit
     def close(): Unit = ()
   }
-  
+
   class DirectToJarfileWriter(val jarFile: AbstractFile) extends BytecodeWriter {
     private val out = new JarOutputStream(jarFile.bufferedOutput)
     def writeClass(label: String, jclass: JClass, sym: Symbol) {
@@ -70,7 +70,7 @@ trait BytecodeWriters {
     abstract override def writeClass(label: String, jclass: JClass, sym: Symbol) {
       super.writeClass(label, jclass, sym)
 
-      val bytes     = getFile(sym, jclass, ".class").toByteArray      
+      val bytes     = getFile(sym, jclass, ".class").toByteArray
       val segments  = jclass.getName().split("[./]")
       val javapFile = segments.foldLeft(baseDir)(_ / _) changeExtension "javap" toFile
 

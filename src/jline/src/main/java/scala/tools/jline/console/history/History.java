@@ -37,7 +37,7 @@ public interface History
     //
     // Entries
     //
-    
+
     interface Entry
     {
         int index();

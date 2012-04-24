@@ -25,10 +25,10 @@ object MakeValidationException {
   def fromNonEmptyElement() =
     new ValidationException("element should be *empty*")
 
-  def fromUndefinedElement(label: String) = 
+  def fromUndefinedElement(label: String) =
     new ValidationException("element \""+ label +"\" not allowed here")
 
-  def fromUndefinedAttribute(key: String) = 
+  def fromUndefinedAttribute(key: String) =
     new ValidationException("attribute " + key +" not allowed here")
 
   def fromMissingAttribute(allKeys: Set[String]) = {

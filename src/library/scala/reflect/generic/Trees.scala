@@ -14,15 +14,15 @@ import Flags._
   def newTreePrinter(out: PrintWriter): AbsTreePrinter
 
   private[scala] var nodeCount = 0
-  
+
   protected def flagsIntoString(flags: Long, privateWithin: String): String
 
   /** @param privateWithin the qualifier for a private (a type name)
    *    or tpnme.EMPTY, if none is given.
    *  @param annotations the annotations for the definition.
    *    <strong>Note:</strong> the typechecker drops these annotations,
-   *    use the AnnotationInfo's (Symbol.annotations) in later phases. 
-   */  
+   *    use the AnnotationInfo's (Symbol.annotations) in later phases.
+   */
   case class Modifiers(flags: Long, privateWithin: Name, annotations: List[Tree], positions: Map[Long, Position]) extends HasFlags {
     /* Abstract types from HasFlags. */
     type FlagsType          = Long
@@ -56,7 +56,7 @@ import Flags._
       else copy(annotations = annotations ::: annots)
     def withPosition(flag: Long, position: Position) =
       copy(positions = positions + (flag -> position))
-    
+
     override def toString = "Modifiers(%s, %s, %s)".format(hasFlagsToString(-1L), annotations mkString ", ", positions)
   }
 
@@ -82,21 +82,21 @@ import Flags._
 
     /** Set tpe to give `tp` and return this.
      */
-    def setType(tp: Type): this.type = { rawtpe = tp; this } 
+    def setType(tp: Type): this.type = { rawtpe = tp; this }
 
     /** Like `setType`, but if this is a previously empty TypeTree
      *  that fact is remembered so that resetType will snap back.
      */
     def defineType(tp: Type): this.type = setType(tp)
-    
+
     def symbol: Symbol = null
     def symbol_=(sym: Symbol) { throw new UnsupportedOperationException("symbol_= inapplicable for " + this) }
     def setSymbol(sym: Symbol): this.type = { symbol = sym; this }
-    
+
     def hasSymbol = false
     def isDef = false
     def isEmpty = false
-    
+
     def hasSymbolWhich(f: Symbol => Boolean) = hasSymbol && f(symbol)
 
     /** The direct child trees of this tree
@@ -117,7 +117,7 @@ import Flags._
      *  in this tree will be found when searching by position).
      *  If not in compiler may also return tree unchanged.
      */
-    private[scala] def duplicate: this.type = 
+    private[scala] def duplicate: this.type =
       duplicateTree(this).asInstanceOf[this.type]
 
     private[scala] def copyAttrs(tree: Tree): this.type = {
@@ -132,7 +132,7 @@ import Flags._
       val printer = newTreePrinter(new PrintWriter(buffer))
       printer.print(this)
       printer.flush()
-      buffer.toString     
+      buffer.toString
     }
 
     override def hashCode(): Int = System.identityHashCode(this)
@@ -155,18 +155,18 @@ import Flags._
     override def isDef = true
   }
 
-  trait TermTree extends Tree 
+  trait TermTree extends Tree
 
   /** A tree for a type.  Note that not all type trees implement
     * this trait; in particular, Ident's are an exception. */
-  trait TypTree extends Tree 
+  trait TypTree extends Tree
 
 // ----- tree node alternatives --------------------------------------
 
   /** The empty tree */
   case object EmptyTree extends TermTree {
     super.tpe_=(NoType)
-    override def tpe_=(t: Type) = 
+    override def tpe_=(t: Type) =
       if (t != NoType) throw new UnsupportedOperationException("tpe_=("+t+") inapplicable for <empty>")
     override def isEmpty = true
   }
@@ -222,12 +222,12 @@ import Flags._
                     vparamss: List[List[ValDef]], tpt: Tree, rhs: Tree) extends ValOrDefDef
 
   /** Abstract type, type parameter, or type alias */
-  case class TypeDef(mods: Modifiers, name: TypeName, tparams: List[TypeDef], rhs: Tree) 
-       extends MemberDef 
+  case class TypeDef(mods: Modifiers, name: TypeName, tparams: List[TypeDef], rhs: Tree)
+       extends MemberDef
 
   /** <p>
-   *    Labelled expression - the symbols in the array (must be Idents!) 
-   *    are those the label takes as argument 
+   *    Labelled expression - the symbols in the array (must be Idents!)
+   *    are those the label takes as argument
    *  </p>
    *  <p>
    *    The symbol that is given to the labeldef should have a MethodType
@@ -243,27 +243,27 @@ import Flags._
    *  </p>
    */
   case class LabelDef(name: TermName, params: List[Ident], rhs: Tree)
-       extends DefTree with TermTree 
+       extends DefTree with TermTree
 
 
   /** Import selector
    *
    * Representation of an imported name its optional rename and their optional positions
-   * 
+   *
    * @param name      the imported name
    * @param namePos   its position or -1 if undefined
    * @param rename    the name the import is renamed to (== name if no renaming)
    * @param renamePos the position of the rename or -1 if undefined
    */
   case class ImportSelector(name: Name, namePos: Int, rename: Name, renamePos: Int)
-  
+
   /** Import clause
    *
    *  @param expr
    *  @param selectors
    */
   case class Import(expr: Tree, selectors: List[ImportSelector])
-       extends SymTree 
+       extends SymTree
     // The symbol of an Import is an import symbol @see Symbol.newImport
     // It's used primarily as a marker to check that the import has been typechecked.
 
@@ -279,9 +279,9 @@ import Flags._
     // the local dummy is itself the owner of any local blocks
     // For example:
     //
-    // class C { 
-    //   def foo // owner is C 
-    //   { 
+    // class C {
+    //   def foo // owner is C
+    //   {
     //      def bar  // owner is local dummy
     //   }
     // System.err.println("TEMPLATE: " + parents)
@@ -313,9 +313,9 @@ import Flags._
    *  @param body
    */
   case class Bind(name: Name, body: Tree)
-       extends DefTree 
+       extends DefTree
 
-  case class UnApply(fun: Tree, args: List[Tree]) 
+  case class UnApply(fun: Tree, args: List[Tree])
        extends TermTree
 
   /** Array of expressions, needs to be translated in backend,
@@ -325,7 +325,7 @@ import Flags._
 
   /** Anonymous function, eliminated by analyzer */
   case class Function(vparams: List[ValDef], body: Tree)
-       extends TermTree with SymTree 
+       extends TermTree with SymTree
     // The symbol of a Function is a synthetic value of name nme.ANON_FUN_NAME
     // It is the owner of the function's parameters.
 
@@ -337,20 +337,16 @@ import Flags._
   case class If(cond: Tree, thenp: Tree, elsep: Tree)
        extends TermTree
 
-  /** <p>
-   *    Pattern matching expression  (before explicitouter)
-   *    Switch statements            (after explicitouter)
-   *  </p>
-   *  <p>
-   *    After explicitouter, cases will satisfy the following constraints:
-   *  </p>
-   *  <ul>
-   *    <li>all guards are EmptyTree,</li>
-   *    <li>all patterns will be either <code>Literal(Constant(x:Int))</code>
-   *      or <code>Alternative(lit|...|lit)</code></li>
-   *    <li>except for an "otherwise" branch, which has pattern
-   *      <code>Ident(nme.WILDCARD)</code></li>
-   *  </ul>
+  /** - Pattern matching expression  (before explicitouter)
+   *  - Switch statements            (after explicitouter)
+   *
+   *  After explicitouter, cases will satisfy the following constraints:
+   *
+   *  - all guards are `EmptyTree`,
+   *  - all patterns will be either `Literal(Constant(x:Int))`
+   *    or `Alternative(lit|...|lit)`
+   *  - except for an "otherwise" branch, which has pattern
+   *    `Ident(nme.WILDCARD)`
    */
   case class Match(selector: Tree, cases: List[CaseDef])
        extends TermTree
@@ -372,13 +368,13 @@ import Flags._
    *
    *  @param tpt    a class type
    */
-  case class New(tpt: Tree) extends TermTree 
+  case class New(tpt: Tree) extends TermTree
 
   /** Type annotation, eliminated by explicit outer */
   case class Typed(expr: Tree, tpt: Tree)
        extends TermTree
 
-  // Martin to Sean: Should GenericApply/TypeApply/Apply not be SymTree's? After all, 
+  // Martin to Sean: Should GenericApply/TypeApply/Apply not be SymTree's? After all,
   // ApplyDynamic is a SymTree.
   abstract class GenericApply extends TermTree {
     val fun: Tree
@@ -399,13 +395,13 @@ import Flags._
     override def symbol_=(sym: Symbol) { fun.symbol = sym }
   }
 
-  /** Dynamic value application. 
+  /** Dynamic value application.
    *  In a dynamic application   q.f(as)
    *   - q is stored in qual
    *   - as is stored in args
    *   - f is stored as the node's symbol field.
    */
-  case class ApplyDynamic(qual: Tree, args: List[Tree]) 
+  case class ApplyDynamic(qual: Tree, args: List[Tree])
        extends TermTree with SymTree
     // The symbol of an ApplyDynamic is the function symbol of `qual', or NoSymbol, if there is none.
 
@@ -425,7 +421,7 @@ import Flags._
 
   /** Designator <qualifier> . <name> */
   case class Select(qualifier: Tree, name: Name)
-       extends RefTree 
+       extends RefTree
 
   /** Identifier <name> */
   case class Ident(name: Name) extends RefTree { }
@@ -448,7 +444,7 @@ import Flags._
     def apply(): TypeTree
     def unapply(tree: TypeTree): Boolean
   }
-  
+
   class Traverser {
     protected var currentOwner: Symbol = definitions.RootClass
     def traverse(tree: Tree): Unit = tree match {
@@ -593,7 +589,7 @@ import Flags._
    *  Eliminated by typechecker (typedAnnotated), the annotations are then stored in
    *  an AnnotatedType.
    */
-  case class Annotated(annot: Tree, arg: Tree) extends Tree 
+  case class Annotated(annot: Tree, arg: Tree) extends Tree
 
   /** Singleton type, eliminated by RefCheck */
   case class SingletonTypeTree(ref: Tree)
@@ -624,7 +620,7 @@ import Flags._
   case class SelectFromArray(qualifier: Tree, name: Name, erasure: Type)
        extends TermTree with RefTree { }
 
-/* A standard pattern match 
+/* A standard pattern match
   case EmptyTree =>
   case PackageDef(pid, stats) =>
      // package pid { stats }
@@ -633,14 +629,14 @@ import Flags._
   case ModuleDef(mods, name, impl) =>                             (eliminated by refcheck)
      // mods object name impl  where impl = extends parents { defs }
   case ValDef(mods, name, tpt, rhs) =>
-     // mods val name: tpt = rhs   
+     // mods val name: tpt = rhs
      // note missing type information is expressed by tpt = TypeTree()
   case DefDef(mods, name, tparams, vparamss, tpt, rhs) =>
      // mods def name[tparams](vparams_1)...(vparams_n): tpt = rhs
      // note missing type information is expressed by tpt = TypeTree()
   case TypeDef(mods, name, tparams, rhs) =>                       (eliminated by erasure)
      // mods type name[tparams] = rhs
-     // mods type name[tparams] >: lo <: hi,  where lo, hi are in a TypeBoundsTree, 
+     // mods type name[tparams] >: lo <: hi,  where lo, hi are in a TypeBoundsTree,
                                               and DEFERRED is set in mods
   case LabelDef(name, params, rhs) =>
      // used for tailcalls and like
@@ -673,8 +669,8 @@ import Flags._
     // used to pass arguments to vararg arguments
     // for instance, printf("%s%d", foo, 42) is translated to after uncurry to:
     // Apply(
-    //   Ident("printf"), 
-    //   Literal("%s%d"), 
+    //   Ident("printf"),
+    //   Literal("%s%d"),
     //   ArrayValue(<Any>, List(Ident("foo"), Literal(42))))
   case Function(vparams, body) =>                                 (eliminated by lambdaLift)
     // vparams => body  where vparams:List[ValDef]

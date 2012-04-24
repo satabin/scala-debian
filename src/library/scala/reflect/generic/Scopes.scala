@@ -11,5 +11,5 @@ package generic
 
   def newScope(): Scope
 }
-  
-  
+
+

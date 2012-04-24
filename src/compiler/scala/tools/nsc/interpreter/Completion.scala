@@ -29,14 +29,14 @@ object Completion {
 
   case class Candidates(cursor: Int, candidates: List[String]) { }
   val NoCandidates = Candidates(-1, Nil)
-  
+
   object NullCompleter extends ScalaCompleter {
     def complete(buffer: String, cursor: Int): Candidates = NoCandidates
   }
   trait ScalaCompleter {
     def complete(buffer: String, cursor: Int): Candidates
   }
-  
+
   def looksLikeInvocation(code: String) = (
         (code != null)
     &&  (code startsWith ".")

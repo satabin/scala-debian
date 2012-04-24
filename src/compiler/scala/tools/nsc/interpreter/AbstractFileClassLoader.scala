@@ -11,7 +11,7 @@ import java.net.URL
 
 /**
  * A class loader that loads files from a {@link scala.tools.nsc.io.AbstractFile}.
- * 
+ *
  * @author Lex Spoon
  */
 class AbstractFileClassLoader(root: AbstractFile, parent: ClassLoader)
@@ -31,7 +31,7 @@ class AbstractFileClassLoader(root: AbstractFile, parent: ClassLoader)
       if (file == null)
         return null
     }
-      
+
     file.lookupName(pathParts.last, false) match {
       case null   => null
       case file   => file
@@ -41,7 +41,7 @@ class AbstractFileClassLoader(root: AbstractFile, parent: ClassLoader)
   override def getResourceAsStream(name: String) = findAbstractFile(name) match {
     case null => super.getResourceAsStream(name)
     case file => file.input
-  }  
+  }
   override def classBytes(name: String): Array[Byte] = findAbstractFile(name) match {
     case null => super.classBytes(name)
     case file => file.toByteArray

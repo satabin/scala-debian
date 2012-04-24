@@ -19,7 +19,7 @@ trait Reactor {
    */
   val reactions: Reactions = new Reactions.Impl
   /**
-   * Listen to the given publisher as long as <code>deafTo</code> isn't called for 
+   * Listen to the given publisher as long as <code>deafTo</code> isn't called for
    * them.
    */
   def listenTo(ps: Publisher*) = for (p <- ps) p.subscribe(reactions)

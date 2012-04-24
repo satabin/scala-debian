@@ -10,7 +10,7 @@
 
 package scala.util.parsing.input
 
-/** Undefined position 
+/** Undefined position
  *
  * @author Martin Odersky, Adriaan Moors
  */

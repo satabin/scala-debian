@@ -16,4 +16,4 @@ class SimpleApplet extends Applet {
       contents = new BoxPanel(Orientation.Vertical) { contents.append(button, text) }
     }
   }
-} 
+}

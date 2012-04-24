@@ -41,7 +41,7 @@ public class Example
         boolean color = false;
 
         ConsoleReader reader = new ConsoleReader();
-        
+
         reader.setBellEnabled(false);
         reader.setPrompt("prompt> ");
 

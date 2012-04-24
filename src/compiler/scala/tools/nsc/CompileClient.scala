@@ -23,7 +23,7 @@ class StandardCompileClient extends HasCompileSocket with CompileOutputCommon {
     // Trying to get out in front of the log messages in case we're
     // going from verbose to not verbose.
     verbose = (args contains "-verbose")
-    
+
     val settings     = new FscSettings(Console.println)
     val command      = new OfflineCompilerCommand(args.toList, settings)
     val shutdown     = settings.shutdown.value
@@ -31,7 +31,7 @@ class StandardCompileClient extends HasCompileSocket with CompileOutputCommon {
 
     val vmArgs  = settings.jvmargs.unparse ++ settings.defines.unparse ++ extraVmArgs
     val fscArgs = args.toList ++ command.extraFscArgs
-    
+
     if (settings.version.value) {
       Console println versionMsg
       return true
@@ -45,7 +45,7 @@ class StandardCompileClient extends HasCompileSocket with CompileOutputCommon {
     val socket =
       if (settings.server.value == "") compileSocket.getOrCreateSocket(vmArgs mkString " ", !shutdown)
       else Some(compileSocket.getSocket(settings.server.value))
-    
+
     socket match {
       case Some(sock) => compileOnServer(sock, fscArgs)
       case _          =>

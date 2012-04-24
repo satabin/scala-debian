@@ -6,7 +6,7 @@ import scala.tools.nsc.io.{ Directory }
 
 
 class SBTRunner extends DirectRunner {
-  
+
   val fileManager = new FileManager {
     var JAVACMD: String        = "java"
     var JAVAC_CMD: String      = "javac"
@@ -15,7 +15,7 @@ class SBTRunner extends DirectRunner {
     val testRootPath: String   = PathSettings.testRoot.path
     val testRootDir: Directory = PathSettings.testRoot
   }
-  
+
   def reflectiveRunTestsForFiles(kindFiles: Array[File], kind: String):java.util.HashMap[String,Int] = {
 
     def convert(scalaM:scala.collection.immutable.Map[String,Int]):java.util.HashMap[String,Int] = {
@@ -25,11 +25,11 @@ class SBTRunner extends DirectRunner {
     }
 
     def failedOnlyIfRequired(files:List[File]):List[File]={
-      if (fileManager.failed) files filter (x => fileManager.logFileExists(x, kind)) else files 
+      if (fileManager.failed) files filter (x => fileManager.logFileExists(x, kind)) else files
     }
 
     convert(runTestsForFiles(failedOnlyIfRequired(kindFiles.toList), kind))
-    
+
   }
 }
 

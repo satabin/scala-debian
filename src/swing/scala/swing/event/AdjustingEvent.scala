@@ -13,7 +13,7 @@ package event
 
 /** <p>
  *    An event that indicates some editing operation that can be still in
- *    progress.<br/> 
+ *    progress.<br/>
  *    Example: dragging a slider creates a number of <code>AdjustmentEvents</code>
  *    with <code>adjusting == true</code> until the user finally releases the
  *    mouse button.

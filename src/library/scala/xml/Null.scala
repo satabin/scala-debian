@@ -17,8 +17,9 @@ import scala.collection.Iterator
  *  It provides a backstop for the unusual collection defined by MetaData,
  *  sort of a linked list of tails.
  */
-case object Null extends MetaData {    
+case object Null extends MetaData {
   override def iterator = Iterator.empty
+  override def size = 0
   override def append(m: MetaData, scope: NamespaceBinding = TopScope): MetaData = m
   override def filter(f: MetaData => Boolean): MetaData = this
 
@@ -33,7 +34,7 @@ case object Null extends MetaData {
 
   override def length = 0
   override def length(i: Int) = i
-  
+
   override def strict_==(other: Equality) = other match {
     case x: MetaData  => x.length == 0
     case _            => false
@@ -44,7 +45,7 @@ case object Null extends MetaData {
   def apply(key: String) = {
     if (!isNameStart(key.head))
       throw new IllegalArgumentException("not a valid attribute name '"+key+"', so can never match !")
-      
+
     null
   }
 

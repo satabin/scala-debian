@@ -10,7 +10,7 @@ package generic
     /** Is this type completed (i.e. not a lazy type)?
      */
     def isComplete: Boolean = true
-    
+
     /** If this is a lazy type, assign a new type to `sym'. */
     def complete(sym: Symbol) {}
 
@@ -40,7 +40,7 @@ package generic
 
   val NoType: Type
   val NoPrefix: Type
-  
+
   type ThisType <: SingletonType
   val ThisType: ThisTypeExtractor
 
@@ -49,8 +49,8 @@ package generic
 
   type SingleType <: SingletonType
   val SingleType: SingleTypeExtractor
-  
-  type SuperType <: SingletonType 
+
+  type SuperType <: SingletonType
   val SuperType: SuperTypeExtractor
 
   type TypeBounds <: Type
@@ -75,15 +75,15 @@ package generic
 
   type PolyType <: Type
   val PolyType: PolyTypeExtractor
-  
+
   type ExistentialType <: Type
   val ExistentialType: ExistentialTypeExtractor
-  
+
   type AnnotatedType <: Type
   val AnnotatedType: AnnotatedTypeExtractor
 
   type LazyType <: Type with AbsLazyType
-    
+
   trait AbsLazyType extends AbsType {
     override def isComplete: Boolean = false
     override def complete(sym: Symbol)

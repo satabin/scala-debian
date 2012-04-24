@@ -14,9 +14,9 @@ import event._
 import javax.swing._
 
 /**
- * A two state button with a push button like user interface. 
+ * A two state button with a push button like user interface.
  * Usually used in tool bars.
- * 
+ *
  * @see javax.swing.JToggleButton
  */
 class ToggleButton(text0: String) extends AbstractButton {

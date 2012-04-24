@@ -8,10 +8,10 @@ abstract class BitSet {
   protected def nwords: Int
   protected def word(idx: Int): Long
   protected def updateWord(idx: Int, w: Long): BitSet
-                         
+
   def + (elem: Int): BitSet = {
     require(elem >= 0)
-    if (contains(elem)) this 
+    if (contains(elem)) this
     else {
       val idx = elem >> LogWL
       updateWord(idx, word(idx) | (1L << elem))
@@ -141,7 +141,7 @@ object BitSet {
   class BitSet1(val elems: Long) extends BitSet {
     protected def nwords = 1
     protected def word(idx: Int) = if (idx == 0) elems else 0L
-    protected def updateWord(idx: Int, w: Long): BitSet = 
+    protected def updateWord(idx: Int, w: Long): BitSet =
       if (idx == 0) new BitSet1(w)
       else if (idx == 1) new BitSet2(elems, w)
       else updateArray(Array(elems), idx, w)
@@ -150,7 +150,7 @@ object BitSet {
   class BitSet2(val elems0: Long, elems1: Long) extends BitSet {
     protected def nwords = 2
     protected def word(idx: Int) = if (idx == 0) elems0 else if (idx == 1) elems1 else 0L
-    protected def updateWord(idx: Int, w: Long): BitSet = 
+    protected def updateWord(idx: Int, w: Long): BitSet =
       if (idx == 0) new BitSet2(w, elems1)
       else if (idx == 1) new BitSet2(elems0, w)
       else updateArray(Array(elems0, elems1), idx, w)

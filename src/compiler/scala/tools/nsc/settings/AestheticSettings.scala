@@ -9,15 +9,15 @@ package settings
 /** Taking flag checking to a somewhat higher level. */
 trait AestheticSettings {
   def settings: Settings
-  
+
   // Some(value) if setting has been set by user, None otherwise.
   def optSetting[T](s: Settings#Setting): Option[T] =
     if (s.isDefault) None else Some(s.value.asInstanceOf[T])
-  
+
   def script       = optSetting[String](settings.script)
   def encoding     = optSetting[String](settings.encoding)
   def sourceReader = optSetting[String](settings.sourceReader)
-  
+
   def debug           = settings.debug.value
   def declsOnly       = false
   def deprecation     = settings.deprecation.value

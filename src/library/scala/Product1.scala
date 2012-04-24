@@ -10,7 +10,7 @@
 package scala
 
 object Product1 {
-  def unapply[T1](x: Product1[T1]): Option[Product1[T1]] = 
+  def unapply[T1](x: Product1[T1]): Option[Product1[T1]] =
     Some(x)
 }
 
@@ -23,20 +23,20 @@ trait Product1[@specialized(Int, Long, Double) +T1] extends Product {
    */
   override def productArity = 1
 
-  
+
   /** Returns the n-th projection of this product if 0 < n <= productArity,
    *  otherwise throws an `IndexOutOfBoundsException`.
    *
-   *  @param n number of the projection to be returned 
+   *  @param n number of the projection to be returned
    *  @return  same as `._(n+1)`, for example `productElement(1)` is the same as `._1`.
    *  @throws  IndexOutOfBoundsException
-   */  
+   */
 
   @throws(classOf[IndexOutOfBoundsException])
-  override def productElement(n: Int) = n match { 
+  override def productElement(n: Int) = n match {
     case 0 => _1
     case _ => throw new IndexOutOfBoundsException(n.toString())
- }  
+ }
 
   /** A projection of element 1 of this Product.
    *  @return   A projection of element 1.

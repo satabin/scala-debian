@@ -15,9 +15,9 @@ package mutable
 /** This is a synchronized version of the `Queue[T]` class. It
  *  implements a data structure that allows one to insert and retrieve
  *  elements in a first-in-first-out (FIFO) manner.
- *  
+ *
  *  @tparam A     type of elements contained in this synchronized queue.
- *  
+ *
  *  @author  Matthias Zenger
  *  @version 1.0, 03/05/2004
  *  @since   1

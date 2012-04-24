@@ -15,12 +15,12 @@ private class cpsMinus extends Annotation // implementation detail
 
 
 final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val x: A) extends Serializable {
-  
-  /*  
+
+  /*
     final def map[A1](f: A => A1): ControlContext[A1,B,C] = {
       new ControlContext((k:(A1 => B)) => fun((x:A) => k(f(x))), null.asInstanceOf[A1])
     }
-  
+
     final def flatMap[A1,B1<:B](f: (A => ControlContext[A1,B1,B])): ControlContext[A1,B1,C] = {
       new ControlContext((k:(A1 => B1)) => fun((x:A) => f(x).fun(k)))
     }
@@ -32,7 +32,7 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
       try {
         new ControlContext(null, f(x)) // TODO: only alloc if f(x) != x
       } catch {
-        case ex: Exception => 
+        case ex: Exception =>
           new ControlContext((k: A1 => B, thr: Exception => B) => thr(ex).asInstanceOf[C], null.asInstanceOf[A1])
       }
     else
@@ -50,17 +50,17 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
         }, thr)
       }, null.asInstanceOf[A1])
   }
-  
+
 
   // it would be nice if @inline would turn the trivial path into a tail call.
   // unfortunately it doesn't, so we do it ourselves in SelectiveCPSTransform
-  
+
   @noinline final def flatMap[A1,B1,C1<:B](f: (A => ControlContext[A1,B1,C1])): ControlContext[A1,B1,C] = {
     if (fun eq null)
       try {
         f(x).asInstanceOf[ControlContext[A1,B1,C]]
       } catch {
-        case ex: Exception => 
+        case ex: Exception =>
           new ControlContext((k: A1 => B1, thr: Exception => B1) => thr(ex).asInstanceOf[C], null.asInstanceOf[A1])
       }
     else
@@ -74,21 +74,21 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
             res
           } catch {
             case ex: Exception if !done =>
-              thr(ex).asInstanceOf[B] // => B NOTE: in general this is unsafe! 
+              thr(ex).asInstanceOf[B] // => B NOTE: in general this is unsafe!
           }                           // However, the plugin will not generate offending code
         }, thr.asInstanceOf[Exception=>B]) // => B
       }, null.asInstanceOf[A1])
   }
 
   final def foreach(f: A => B) = foreachFull(f, throw _)
-  
+
   def foreachFull(f: A => B, g: Exception => B): C = {
     if (fun eq null)
       f(x).asInstanceOf[C]
     else
       fun(f, g)
   }
-  
+
 
   final def isTrivial = fun eq null
   final def getTrivialValue = x.asInstanceOf[A]
@@ -127,7 +127,7 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
         f()
         this
       } catch {
-        case ex: Exception => 
+        case ex: Exception =>
           new ControlContext((k: A => B, thr: Exception => B) => thr(ex).asInstanceOf[C], null.asInstanceOf[A])
       }
     } else {
@@ -157,5 +157,5 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
       new ControlContext(fun1, null.asInstanceOf[A])
     }
   }
-  
+
 }

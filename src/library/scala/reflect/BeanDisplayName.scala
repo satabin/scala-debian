@@ -10,7 +10,7 @@
 package scala.reflect
 
 /** Provides a display name when generating bean information. This
- *  annotation can be attached to the bean itself, or to any member.  
+ *  annotation can be attached to the bean itself, or to any member.
  *
  *  @author Ross Judson (rjudson@managedobjects.com)
  */

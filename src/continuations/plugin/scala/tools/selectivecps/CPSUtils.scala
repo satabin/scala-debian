@@ -36,8 +36,8 @@ trait CPSUtils {
     MarkerCPSAdaptPlus, MarkerCPSAdaptMinus)
 
   // annotation checker
-  
-  def filterAttribs(tpe:Type, cls:Symbol) = 
+
+  def filterAttribs(tpe:Type, cls:Symbol) =
     tpe.annotations.filter(_.atp.typeSymbol == cls)
 
   def removeAttribs(tpe:Type, cls:Symbol*) =
@@ -68,10 +68,10 @@ trait CPSUtils {
 
   def getExternalAnswerTypeAnn(tp: Type) = {
     tp.annotations.find(a => a.atp.typeSymbol == MarkerCPSTypes) match {
-      case Some(AnnotationInfo(atp, _, _)) => 
+      case Some(AnnotationInfo(atp, _, _)) =>
         val atp0::atp1::Nil = atp.normalize.typeArgs
         Some((atp0, atp1))
-      case None => 
+      case None =>
         if (tp.hasAnnotation(MarkerCPSAdaptPlus))
           global.warning("trying to instantiate type " + tp + " to unknown cps type")
         None
@@ -80,7 +80,7 @@ trait CPSUtils {
 
   def getAnswerTypeAnn(tp: Type) = {
     tp.annotations.find(a => a.atp.typeSymbol == MarkerCPSTypes) match {
-      case Some(AnnotationInfo(atp, _, _)) => 
+      case Some(AnnotationInfo(atp, _, _)) =>
         if (!tp.hasAnnotation(MarkerCPSAdaptPlus)) {//&& !tp.hasAnnotation(MarkerCPSAdaptMinus))
           val atp0::atp1::Nil = atp.normalize.typeArgs
           Some((atp0, atp1))
@@ -124,7 +124,7 @@ trait CPSUtils {
       case _ => None
     }
   }
-  
+
   // cps transform
 
 }

@@ -28,9 +28,9 @@ import java.math.BigDecimal;
       case java.sql.ResultSetMetaData.columnNullable => Some(true);
       case java.sql.ResultSetMetaData.columnNullableUnknown => None;
     }
-  
+
   /** Returns the binary precision for an integer field. This should only be
-   * used to find precision for integer numbers. It assumes that 
+   * used to find precision for integer numbers. It assumes that
    * bytes cannot be used partially (result % 8 = 0). */
   def bytePrecision (precision:Int, signed:scala.Boolean, safe:scala.Boolean): Int = {
     val decimalPrecision = precision + (if (safe) 1 else 0);
@@ -58,9 +58,9 @@ import java.math.BigDecimal;
       case Pair(false,dp) if (dp <= 37) => 120
       case Pair(_,dp) if (dp <= 39) => 128
       case _ => java.lang.Integer.MAX_VALUE
-    } 
+    }
   }
-  
+
   def create (metadata:java.sql.ResultSetMetaData, index:Int): DataType = {
     metadata.getColumnType(index) match {
       /* Boolean data types. */

@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools
 
 import java.lang.reflect.Method
@@ -13,7 +13,7 @@ package object reflect {
   def allInterfaces(cl: Class[_]): List[Class[_]] =
     if (cl == null) Nil
     else cl.getInterfaces.toList ++ allInterfaces(cl.getSuperclass) distinct
-  
+
   def methodsNamed(target: AnyRef, name: String): List[Method] =
     target.getClass.getMethods filter (x => x.getName == name) toList
 
@@ -26,7 +26,7 @@ package object reflect {
       case _        => None
     }
   }
-  
+
   def zeroOfClass(clazz: Class[_]) = zeroOf(Manifest.classType(clazz))
   def zeroOf[T](implicit m: Manifest[T]): AnyRef = {
     if (m == manifest[Boolean] || m == manifest[jl.Boolean]) false: jl.Boolean

@@ -15,7 +15,7 @@ trait TreePrinters { trees: SymbolTable =>
   import treeInfo.{ IsTrue, IsFalse }
 
   final val showOuterTests = false
-  
+
   /** Adds backticks if the name is a scala keyword. */
   def quotedName(name: Name, decode: Boolean): String = {
     val s = if (decode) name.decode else name.toString
@@ -24,7 +24,7 @@ trait TreePrinters { trees: SymbolTable =>
     else s
   }
   def quotedName(name: Name): String = quotedName(name, false)
-    
+
   /** Turns a path into a String, introducing backquotes
    *  as necessary.
    */
@@ -43,7 +43,7 @@ trait TreePrinters { trees: SymbolTable =>
 
     def indent() = indentMargin += indentStep
     def undent() = indentMargin -= indentStep
-    
+
     protected def doPrintPositions = settings.Xprintpos.value
     def printPosition(tree: Tree) = if (doPrintPositions) print(tree.pos.show)
 
@@ -111,13 +111,13 @@ trait TreePrinters { trees: SymbolTable =>
           printColumn(List(tree), "{", ";", "}")
       }
     }
-    
+
     private def symFn[T](tree: Tree, f: Symbol => T, orElse: => T): T = tree.symbol match {
       case null | NoSymbol  => orElse
       case sym              => f(sym)
     }
     private def ifSym(tree: Tree, p: Symbol => Boolean) = symFn(tree, p, false)
-    
+
     private def symNameInternal(tree: Tree, name: Name, decoded: Boolean): String = {
       def nameFn(sym: Symbol) = {
         val prefix = if (sym.isMixinConstructor) "/*%s*/".format(quotedName(sym.owner.name, decoded)) else ""
@@ -125,7 +125,7 @@ trait TreePrinters { trees: SymbolTable =>
       }
       symFn(tree, nameFn, quotedName(name, decoded))
     }
-    
+
     def decodedSymName(tree: Tree, name: Name) = symNameInternal(tree, name, true)
     def symName(tree: Tree, name: Name) = symNameInternal(tree, name, false)
 
@@ -151,7 +151,7 @@ trait TreePrinters { trees: SymbolTable =>
       val annots =
         if (tree.symbol.hasAssignedAnnotations) tree.symbol.annotations
         else tree.asInstanceOf[MemberDef].mods.annotations
-      
+
       annots foreach (annot => print("@"+annot+" "))
     }
 
@@ -173,7 +173,7 @@ trait TreePrinters { trees: SymbolTable =>
             if (mods.hasTraitFlag) "trait"
             else if (ifSym(tree, _.isModuleClass)) "object"
             else "class"
-            
+
           print(word + " " + symName(tree, name))
           printTypeParams(tparams)
           print(if (mods.isDeferred) " <: " else " extends "); print(impl)
@@ -229,15 +229,15 @@ trait TreePrinters { trees: SymbolTable =>
           print("import "); print(backquotedPath(expr))
           print(".")
           selectors match {
-            case List(s) => 
+            case List(s) =>
               // If there is just one selector and it is not remapping a name, no braces are needed
               if (isNotRemap(s)) {
-                print(selectorToString(s)) 
-              } else { 
+                print(selectorToString(s))
+              } else {
                 print("{"); print(selectorToString(s)); print("}")
               }
               // If there is more than one selector braces are always needed
-            case many =>        
+            case many =>
               print(many.map(selectorToString).mkString("{", ", ", "}"))
           }
 
@@ -250,9 +250,9 @@ trait TreePrinters { trees: SymbolTable =>
           printRow(parents, " with ")
           if (!body.isEmpty) {
             if (self.name != nme.WILDCARD) {
-              print(" { "); print(self.name); printOpt(": ", self.tpt); print(" => ") 
+              print(" { "); print(self.name); printOpt(": ", self.tpt); print(" => ")
             } else if (!self.tpt.isEmpty) {
-              print(" { _ : "); print(self.tpt); print(" => ") 
+              print(" { _ : "); print(self.tpt); print(" => ")
             } else {
               print(" {")
             }
@@ -352,7 +352,7 @@ trait TreePrinters { trees: SymbolTable =>
           print(".super")
           if (!mix.isEmpty)
             print("[" + mix + "]")
-            
+
         case This(qual) =>
           if (!qual.isEmpty) print(symName(tree, qual) + ".")
           print("this")
@@ -387,7 +387,7 @@ trait TreePrinters { trees: SymbolTable =>
           }
           if (tree.isType) { print(tree); print(" "); printAnnot() }
           else { print(tree); print(": "); printAnnot() }
-          
+
         case SingletonTypeTree(ref) =>
           print(ref); print(".type")
 
@@ -404,7 +404,7 @@ trait TreePrinters { trees: SymbolTable =>
           printOpt(" >: ", lo); printOpt(" <: ", hi)
 
         case ExistentialTypeTree(tpt, whereClauses) =>
-          print(tpt); 
+          print(tpt);
           printColumn(whereClauses, " forSome { ", ";", "}")
 
         case SelectFromArray(qualifier, name, _) =>
@@ -413,7 +413,7 @@ trait TreePrinters { trees: SymbolTable =>
         case TypeTreeWithDeferredRefCheck() =>
           print("<tree with deferred refcheck>")
 
-        case tree => 
+        case tree =>
           print("<unknown tree of class "+tree.getClass+">")
       }
       if (settings.printtypes.value && tree.isTerm && !tree.isEmpty) {
@@ -426,8 +426,8 @@ trait TreePrinters { trees: SymbolTable =>
       printRaw(
         if (tree.isDef && tree.symbol != NoSymbol && tree.symbol.isInitialized) {
           tree match {
-            case ClassDef(_, _, _, impl @ Template(ps, emptyValDef, body)) 
-            if (tree.symbol.thisSym != tree.symbol) => 
+            case ClassDef(_, _, _, impl @ Template(ps, emptyValDef, body))
+            if (tree.symbol.thisSym != tree.symbol) =>
               ClassDef(tree.symbol, Template(ps, ValDef(tree.symbol.thisSym), body))
             case ClassDef(_, _, _, impl)           => ClassDef(tree.symbol, impl)
             case ModuleDef(_, _, impl)             => ModuleDef(tree.symbol, impl)
@@ -452,13 +452,13 @@ trait TreePrinters { trees: SymbolTable =>
   /** A tree printer which is stingier about vertical whitespace and unnecessary
    *  punctuation than the standard one.
    */
-  class CompactTreePrinter(out: PrintWriter) extends TreePrinter(out) {    
+  class CompactTreePrinter(out: PrintWriter) extends TreePrinter(out) {
     override def printRow(ts: List[Tree], start: String, sep: String, end: String) {
       print(start)
       printSeq(ts)(print)(print(sep))
       print(end)
     }
-    
+
     // drill down through Blocks and pull out the real statements.
     def allStatements(t: Tree): List[Tree] = t match {
       case Block(stmts, expr) => (stmts flatMap allStatements) ::: List(expr)
@@ -473,7 +473,7 @@ trait TreePrinters { trees: SymbolTable =>
 
     def printLogicalOp(t1: (Tree, Boolean), t2: (Tree, Boolean), op: String) = {
       def maybenot(tvalue: Boolean) = if (tvalue) "" else "!"
-      
+
       print("%s(" format maybenot(t1._2))
       printRaw(t1._1)
       print(") %s %s(".format(op, maybenot(t2._2)))
@@ -490,10 +490,10 @@ trait TreePrinters { trees: SymbolTable =>
         case LabelDef(name, params, rhs) =>
           print("labeldef %s(%s) = ".format(name, params mkString ","))
           printRaw(rhs)
-          
+
         case Ident(name) =>
           print(decodedSymName(tree, name))
-                  
+
         // target.method(arg) ==> target method arg
         case Apply(Select(target, method), List(arg)) =>
           if (method.decode.toString == "||")
@@ -501,7 +501,7 @@ trait TreePrinters { trees: SymbolTable =>
           else if (method.decode.toString == "&&")
             printLogicalAnd(target -> true, arg -> true)
           else (target, arg) match {
-            case (_: Ident, _: Literal | _: Ident)  => 
+            case (_: Ident, _: Literal | _: Ident)  =>
               printRaw(target)
               print(" ")
               printRaw(Ident(method))
@@ -524,7 +524,7 @@ trait TreePrinters { trees: SymbolTable =>
         case Apply(fn, Nil)   => printRaw(fn)
 
         // if a Block only continues one actual statement, just print it.
-        case Block(stats, expr) =>          
+        case Block(stats, expr) =>
           allStatements(tree) match {
             case List(x)            => printRaw(x)
             case xs                 => s()
@@ -544,19 +544,19 @@ trait TreePrinters { trees: SymbolTable =>
           def ifIndented(x: Tree) = {
             indent ; println() ; printRaw(x) ; undent
           }
-        
+
           val List(thenStmts, elseStmts) = List(thenp, elsep) map allStatements
           print("if ("); print(cond); print(") ")
-          
+
           thenStmts match {
             case List(x: If)  => ifIndented(x)
             case List(x)      => printRaw(x)
             case _            => printRaw(thenp)
           }
-          
+
           if (elseStmts.nonEmpty) {
             print(" else")
-            indent ; println() 
+            indent ; println()
             elseStmts match {
               case List(x)  => printRaw(x)
               case _        => printRaw(elsep)
@@ -565,9 +565,9 @@ trait TreePrinters { trees: SymbolTable =>
           }
         case _        => s()
       }
-    }      
+    }
   }
-  
+
   /** This must guarantee not to force any evaluation, so we can learn
    *  a little bit about trees in the midst of compilation without altering
    *  the natural course of events.
@@ -579,7 +579,7 @@ trait TreePrinters { trees: SymbolTable =>
     }
     private def default(t: Tree) = t.getClass.getName.reverse.takeWhile(_ != '.').reverse
     private def params(trees: List[Tree]): String = trees map safe mkString ", "
-    
+
     private def safe(name: Name): String = name.decode
     private def safe(tree: Tree): String = tree match {
       case Apply(fn, args)        => "%s(%s)".format(safe(fn), params(args))
@@ -589,10 +589,10 @@ trait TreePrinters { trees: SymbolTable =>
       case Literal(value)         => value.stringValue
       case _                      => "(?: %s)".format(default(tree))
     }
-    
+
     override def printRaw(tree: Tree) { print(safe(tree)) }
   }
-      
+
   class TreeMatchTemplate {
     // non-trees defined in Trees
     //
@@ -605,28 +605,28 @@ trait TreePrinters { trees: SymbolTable =>
       case AssignOrNamedArg(lhs, rhs) =>
       case DocDef(comment, definition) =>
       case Import(expr, selectors) =>
-      
+
       // eliminated by refchecks
       case ModuleDef(mods, name, impl) =>
       case TypeTreeWithDeferredRefCheck() =>
-      
+
       // eliminated by erasure
       case TypeDef(mods, name, tparams, rhs) =>
       case Typed(expr, tpt) =>
-      
+
       // eliminated by cleanup
       case ApplyDynamic(qual, args) =>
-      
+
       // eliminated by explicitouter
       case Alternative(trees) =>
       case Bind(name, body) =>
       case CaseDef(pat, guard, body) =>
       case Star(elem) =>
       case UnApply(fun, args) =>
-      
+
       // eliminated by lambdalift
       case Function(vparams, body) =>
-      
+
       // eliminated by uncurry
       case AppliedTypeTree(tpt, args) =>
       case CompoundTypeTree(templ) =>
@@ -634,7 +634,7 @@ trait TreePrinters { trees: SymbolTable =>
       case SelectFromTypeTree(qual, selector) =>
       case SingletonTypeTree(ref) =>
       case TypeBoundsTree(lo, hi) =>
-      
+
       // survivors
       case Apply(fun, args) =>
       case ArrayValue(elemtpt, trees) =>
@@ -660,32 +660,32 @@ trait TreePrinters { trees: SymbolTable =>
       case TypeApply(fun, args) =>
       case TypeTree() =>
       case ValDef(mods, name, tpt, rhs) =>
-      
+
       // missing from the Trees comment
       case Parens(args) =>                          // only used during parsing
       case SelectFromArray(qual, name, erasure) =>  // only used during erasure
     }
   }
-  
+
   private def asStringInternal(t: Tree, f: PrintWriter => TreePrinter): String = {
     val buffer = new StringWriter()
     val printer = f(new PrintWriter(buffer))
     printer.print(t)
     printer.flush()
     buffer.toString
-  }    
+  }
   def asString(t: Tree): String = asStringInternal(t, newStandardTreePrinter)
   def asCompactString(t: Tree): String = asStringInternal(t, newCompactTreePrinter)
 
   def newStandardTreePrinter(writer: PrintWriter): TreePrinter = new TreePrinter(writer)
   def newStandardTreePrinter(stream: OutputStream): TreePrinter = newStandardTreePrinter(new PrintWriter(stream))
   def newStandardTreePrinter(): TreePrinter = newStandardTreePrinter(new PrintWriter(ConsoleWriter))
-  
+
   def newCompactTreePrinter(writer: PrintWriter): CompactTreePrinter = new CompactTreePrinter(writer)
   def newCompactTreePrinter(stream: OutputStream): CompactTreePrinter = newCompactTreePrinter(new PrintWriter(stream))
   def newCompactTreePrinter(): CompactTreePrinter = newCompactTreePrinter(new PrintWriter(ConsoleWriter))
-  
-  def newTreePrinter(writer: PrintWriter): TreePrinter = 
+
+  def newTreePrinter(writer: PrintWriter): TreePrinter =
     if (settings.Ycompacttrees.value) newCompactTreePrinter(writer)
     else newStandardTreePrinter(writer)
   def newTreePrinter(stream: OutputStream): TreePrinter = newTreePrinter(new PrintWriter(stream))
@@ -697,11 +697,11 @@ trait TreePrinters { trees: SymbolTable =>
    */
   object ConsoleWriter extends Writer {
     override def write(str: String) { Console.print(str) }
-    
+
     def write(cbuf: Array[Char], off: Int, len: Int) {
       write(new String(cbuf, off, len))
     }
-    
+
     def close = { /* do nothing */ }
     def flush = { /* do nothing */ }
   }

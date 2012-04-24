@@ -26,11 +26,11 @@ class SimpleBuildManager(val settings: Settings) extends BuildManager {
 
     def this(settings: Settings) =
       this(settings, new ConsoleReporter(settings))
-    
+
     def newRun() = new Run()
   }
-  
-  protected def newCompiler(settings: Settings) = new BuilderGlobal(settings) 
+
+  protected def newCompiler(settings: Settings) = new BuilderGlobal(settings)
 
   val compiler = newCompiler(settings)
 
@@ -69,19 +69,19 @@ class SimpleBuildManager(val settings: Settings) extends BuildManager {
    */
   def update(files: Set[AbstractFile]) {
     deleteClassfiles(files)
-    
+
     val deps = compiler.dependencyAnalysis.dependencies
     val run = compiler.newRun()
     compiler.inform("compiling " + files)
 
-    val toCompile = 
+    val toCompile =
       (files ++ deps.dependentFiles(Int.MaxValue, files)) intersect sources
-    
 
-    compiler.inform("Recompiling " + 
+
+    compiler.inform("Recompiling " +
                     (if(settings.debug.value) toCompile.mkString(", ")
                      else toCompile.size + " files"))
-    
+
     buildingFiles(toCompile)
 
     run.compileFiles(files.toList)
@@ -94,7 +94,7 @@ class SimpleBuildManager(val settings: Settings) extends BuildManager {
       sources ++= compiler.dependencyAnalysis.managedFiles
     success
   }
-  
+
   /** Save dependency information to `file'. */
   def saveTo(file: AbstractFile, fromFile: AbstractFile => String) {
     compiler.dependencyAnalysis.dependenciesFile = file

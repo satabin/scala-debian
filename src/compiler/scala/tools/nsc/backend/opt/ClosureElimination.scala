@@ -28,7 +28,7 @@ abstract class ClosureElimination extends SubComponent {
   val peephole = new PeepholeOpt {
 
     def peep(bb: BasicBlock, i1: Instruction, i2: Instruction) = (i1, i2) match {
-      case (CONSTANT(c), DROP(_)) => 
+      case (CONSTANT(c), DROP(_)) =>
         if (c.tag == UnitTag) Some(List(i2)) else Some(Nil)
 
       case (LOAD_LOCAL(x), STORE_LOCAL(y)) =>
@@ -78,15 +78,15 @@ abstract class ClosureElimination extends SubComponent {
       closser analyzeClass c
   }
 
-  /** 
-   * Remove references to the environment through fields of a closure object. 
-   * This has to be run after an 'apply' method has been inlined, but it still 
+  /**
+   * Remove references to the environment through fields of a closure object.
+   * This has to be run after an 'apply' method has been inlined, but it still
    * references the closure object.
    *
    */
   class ClosureElim {
     def analyzeClass(cls: IClass): Unit = if (settings.Xcloselim.value) {
-      cls.methods foreach { m => 
+      cls.methods foreach { m =>
         analyzeMethod(m)
         peephole(m)
      }}
@@ -114,7 +114,7 @@ abstract class ClosureElimination extends SubComponent {
                   bb.replaceInstruction(i, valueToInstruction(t));
                   log("replaced " + i + " with " + t)
 
-                case _ => 
+                case _ =>
                   bb.replaceInstruction(i, LOAD_LOCAL(info.getAlias(l)))
                   log("replaced " + i + " with " + info.getAlias(l))
 
@@ -125,7 +125,7 @@ abstract class ClosureElimination extends SubComponent {
                 val Record(cls, bindings) = r
                 info.getFieldNonRecordValue(r, f) match {
                 	case Some(v) =>
-                		bb.replaceInstruction(i, 
+                		bb.replaceInstruction(i,
                 				DROP(REFERENCE(cls)) :: valueToInstruction(v) :: Nil);
                 		log("Replaced " + i + " with " + info.getFieldNonRecordValue(r, f));
                 	case None =>
@@ -140,16 +140,16 @@ abstract class ClosureElimination extends SubComponent {
                   info.getBinding(l) match {
                     case r @ Record(_, bindings) if bindings isDefinedAt f =>
                       replaceFieldAccess(r)
-                    case _ => 
+                    case _ =>
                   }
                 case Deref(Field(r1, f1)) =>
                   info.getFieldValue(r1, f1) match {
                     case Some(r @ Record(_, bindings)) if bindings isDefinedAt f =>
                       replaceFieldAccess(r)
-                    case _ => 
+                    case _ =>
                   }
 
-                case _ => 
+                case _ =>
               }
 
             case UNBOX(_) =>
@@ -176,7 +176,7 @@ abstract class ClosureElimination extends SubComponent {
         }
       }
     }} catch {
-      case e: LubException => 
+      case e: LubException =>
         Console.println("In method: " + m)
         Console.println(e)
         e.printStackTrace
@@ -184,7 +184,7 @@ abstract class ClosureElimination extends SubComponent {
 
     /* Partial mapping from values to instructions that load them. */
     def valueToInstruction(v: Value): Instruction = (v: @unchecked) match {
-      case Deref(LocalVar(v)) => 
+      case Deref(LocalVar(v)) =>
         LOAD_LOCAL(v)
       case Const(k) =>
         CONSTANT(k)
@@ -195,7 +195,7 @@ abstract class ClosureElimination extends SubComponent {
     }
 
     /** is field 'f' accessible from method 'm'? */
-    def accessible(f: Symbol, m: Symbol): Boolean = 
+    def accessible(f: Symbol, m: Symbol): Boolean =
       f.isPublic || (f.isProtected && (f.enclosingPackageClass == m.enclosingPackageClass))
   } /* class ClosureElim */
 
@@ -215,7 +215,7 @@ abstract class ClosureElimination extends SubComponent {
       liveness = new global.icodes.liveness.LivenessAnalysis
       liveness.init(m)
       liveness.run
-      for (b <- m.code.blocks) 
+      for (b <- m.code.blocks)
         transformBlock(b)
     }
 

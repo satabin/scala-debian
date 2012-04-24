@@ -15,4 +15,4 @@ import generic._
 
 trait GenTraversableView[+A, +Coll] extends GenTraversableViewLike[A, Coll, GenTraversableView[A, Coll]] { }
 
- 
+

@@ -44,7 +44,7 @@ object Main extends AnyRef with EvalLoop {
     reporter     = new ConsoleReporter(ss)
     val command  = new CompilerCommand(args.toList, ss)
     val settings = command.settings
-    
+
     if (settings.version.value)
       reporter.info(null, versionMsg, true)
     else if (settings.Yidedebug.value) {
@@ -52,7 +52,7 @@ object Main extends AnyRef with EvalLoop {
       settings.Yrangepos.value = true
       val compiler = new interactive.Global(settings, reporter)
       import compiler.{ reporter => _, _ }
-      
+
       val sfs = command.files map getSourceFile
       val reloaded = new interactive.Response[Unit]
       askReload(sfs, reloaded)
@@ -64,14 +64,14 @@ object Main extends AnyRef with EvalLoop {
       askShutdown
     }
     else if (settings.Ybuilderdebug.value != "none") {
-      def fileSet(files : List[String]) = Set.empty ++ (files map AbstractFile.getFile) 
-      
+      def fileSet(files : List[String]) = Set.empty ++ (files map AbstractFile.getFile)
+
       val buildManager = settings.Ybuilderdebug.value match {
         case "simple"   => new SimpleBuildManager(settings)
         case _          => new RefinedBuildManager(settings)
-      }  
+      }
       buildManager.addSourceFiles(fileSet(command.files))
-  
+
       // enter resident mode
       loop { line =>
         val args = line.split(' ').toList
@@ -79,7 +79,7 @@ object Main extends AnyRef with EvalLoop {
         buildManager.update(fileSet(command.files), Set.empty)
       }
     }
-    else {      
+    else {
       if (settings.target.value == "msil")
         msilLibPath foreach (x => settings.assemrefs.value += (pathSeparator + x))
 
@@ -90,7 +90,7 @@ object Main extends AnyRef with EvalLoop {
       try {
         if (reporter.hasErrors)
           return reporter.flush()
-        
+
         if (command.shouldStopWithInfo) {
           reporter.info(null, command.getInfoMessage(compiler), true)
         }
@@ -110,7 +110,7 @@ object Main extends AnyRef with EvalLoop {
       }
       catch {
         case ex =>
-          compiler.logThrowable(ex)  
+          compiler.logThrowable(ex)
           ex match {
             case FatalError(msg)  => reporter.error(null, "fatal error: " + msg)
             case _                => throw ex

@@ -16,7 +16,7 @@ trait ScalaSettings extends AbsScalaSettings
                        with StandardScalaSettings
                        with Warnings {
   self: MutableSettings =>
-  
+
   import Defaults.scalaUserClassPath
 
   /** Set of settings */
@@ -38,7 +38,7 @@ trait ScalaSettings extends AbsScalaSettings
   val classpath     = PathSetting       ("-classpath", "Specify where to find user class files.", scalaUserClassPath) .
                                             withAbbreviation ("-cp")
   val d             = OutputSetting     (outputDirs, ".")
-  val optimise      = BooleanSetting    ("-optimise", "Generates faster bytecode by applying optimisations to the program") . 
+  val optimise      = BooleanSetting    ("-optimise", "Generates faster bytecode by applying optimisations to the program") .
                                             withAbbreviation("-optimize") .
                                             withPostSetHook(set => List(inline, Xcloselim, Xdce) foreach (_.value = set.value))
   val nospecialization = BooleanSetting    ("-no-specialization", "Ignore @specialize annotations.")
@@ -76,14 +76,14 @@ trait ScalaSettings extends AbsScalaSettings
   val prompt        = BooleanSetting    ("-Xprompt", "Display a prompt after each error (debugging option).")
   val resident      = BooleanSetting    ("-Xresident", "Compiler stays resident: read source filenames from standard input.")
   val script        = StringSetting     ("-Xscript", "object", "Treat the source file as a script and wrap it in a main method.", "")
-  val Xshowcls      = StringSetting     ("-Xshow-class", "class", "Show internal representation of class.", "")  
+  val Xshowcls      = StringSetting     ("-Xshow-class", "class", "Show internal representation of class.", "")
   val Xshowobj      = StringSetting     ("-Xshow-object", "object", "Show internal representation of object.", "")
   val showPhases    = BooleanSetting    ("-Xshow-phases", "Print a synopsis of compiler phases.")
   val sourceReader  = StringSetting     ("-Xsource-reader", "classname", "Specify a custom method for reading source files.", "")
 
   // Experimental Extensions
   val Xexperimental = BooleanSetting    ("-Xexperimental", "Enable experimental extensions.") .
-                          withPostSetHook(set => List(YdepMethTpes, YmethodInfer) foreach (_.value = set.value)) //YvirtClasses, 
+                          withPostSetHook(set => List(YdepMethTpes, YmethodInfer) foreach (_.value = set.value)) //YvirtClasses,
 
   /** Compatibility stubs for options whose value name did
    *  not previously match the option name.
@@ -136,12 +136,12 @@ trait ScalaSettings extends AbsScalaSettings
                       ChoiceSetting     ("-Ystruct-dispatch", "policy", "structural method dispatch policy",
                         List("no-cache", "mono-cache", "poly-cache", "invoke-dynamic"), "poly-cache")
   val Yrangepos     = BooleanSetting    ("-Yrangepos", "Use range positions for syntax trees.")
-  val YrichExes     = BooleanSetting    ("-Yrich-exceptions", 
+  val YrichExes     = BooleanSetting    ("-Yrich-exceptions",
                                             "Fancier exceptions.  Set source search path with -D" +
                                             sys.SystemProperties.traceSourcePath.key)
   val Yidedebug     = BooleanSetting    ("-Yide-debug", "Generate, validate and output trees using the interactive compiler.")
   val Ybuilderdebug = ChoiceSetting     ("-Ybuilder-debug", "manager", "Compile using the specified build manager.", List("none", "refined", "simple"), "none")
-  val Ybuildmanagerdebug = 
+  val Ybuildmanagerdebug =
                       BooleanSetting    ("-Ybuild-manager-debug", "Generate debug information for the Refined Build Manager compiler.")
   val Ytyperdebug   = BooleanSetting    ("-Ytyper-debug", "Trace all type assignments.")
   val Yinferdebug   = BooleanSetting    ("-Yinfer-debug", "Trace type inference and implicit search.")
@@ -159,7 +159,7 @@ trait ScalaSettings extends AbsScalaSettings
   val YvirtClasses  = false // too embryonic to even expose as a -Y //BooleanSetting    ("-Yvirtual-classes", "Support virtual classes")
 
   val exposeEmptyPackage = BooleanSetting("-Yexpose-empty-package", "Internal only: expose the empty package.").internalOnly()
-  
+
   def stop = stopAfter
 
   /**
@@ -167,7 +167,8 @@ trait ScalaSettings extends AbsScalaSettings
    */
   val YpresentationVerbose = BooleanSetting("-Ypresentation-verbose", "Print information about presentation compiler tasks.")
   val YpresentationDebug   = BooleanSetting("-Ypresentation-debug",  "Enable debugging output for the presentation compiler.")
-  
+  val YpresentationStrict  = BooleanSetting("-Ypresentation-strict", "Do not report type errors in sources with syntax errors.")
+
   val YpresentationLog     = StringSetting("-Ypresentation-log", "file", "Log presentation compiler events into file", "")
   val YpresentationReplay  = StringSetting("-Ypresentation-replay", "file", "Replay presentation compiler events from file", "")
   val YpresentationDelay   = IntSetting("-Ypresentation-delay", "Wait number of ms after typing before starting typechecking", 0, Some(0, 999), str => Some(str.toInt))

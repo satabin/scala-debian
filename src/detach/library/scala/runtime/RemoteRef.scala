@@ -43,7 +43,7 @@ object RemoteRef { /*extends Thread {
               if (isTerminated) throw new QuitException
           }
           remoteGC.gc()
-          if (remoteGC.allClosed) 
+          if (remoteGC.allClosed)
             throw new QuitException
         } // synchronized
 

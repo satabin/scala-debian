@@ -27,14 +27,14 @@ import scala.collection.mutable.ListBuffer
  *   If the node has a TransparentPosition, the solid descendants of all its children
  *   Otherwise, the singleton consisting of the node itself.
  */
-trait RangePositions extends Trees with Positions { 
+trait RangePositions extends Trees with Positions {
 self: scala.tools.nsc.Global =>
 
   case class Range(pos: Position, tree: Tree) {
     def isFree = tree == EmptyTree
   }
 
-  override def rangePos(source: SourceFile, start: Int, point: Int, end: Int) = 
+  override def rangePos(source: SourceFile, start: Int, point: Int, end: Int) =
     new RangePosition(source, start, point, end)
 
   /** A position that wraps a set of trees.
@@ -59,27 +59,27 @@ self: scala.tools.nsc.Global =>
   }
 
 /*
-  override def integratePos(tree: Tree, pos: Position) = 
-    if (pos.isSynthetic && !tree.pos.isSynthetic) tree.syntheticDuplicate 
+  override def integratePos(tree: Tree, pos: Position) =
+    if (pos.isSynthetic && !tree.pos.isSynthetic) tree.syntheticDuplicate
     else tree
 */
 
   // -------------- ensuring no overlaps -------------------------------
 
-  def solidDescendants(tree: Tree): List[Tree] = 
-    if (tree.pos.isTransparent) tree.children flatMap solidDescendants 
+  def solidDescendants(tree: Tree): List[Tree] =
+    if (tree.pos.isTransparent) tree.children flatMap solidDescendants
     else List(tree)
 
   /** A free range from `lo` to `hi` */
-  private def free(lo: Int, hi: Int): Range = 
+  private def free(lo: Int, hi: Int): Range =
     Range(new RangePosition(null, lo, lo, hi), EmptyTree)
 
   /** The maximal free range */
   private lazy val maxFree: Range = free(0, Int.MaxValue)
 
-  /** A singleton list of a non-empty range from `lo` to `hi`, or else the empty List */ 
-  private def maybeFree(lo: Int, hi: Int) = 
-    if (lo < hi) List(free(lo, hi)) 
+  /** A singleton list of a non-empty range from `lo` to `hi`, or else the empty List */
+  private def maybeFree(lo: Int, hi: Int) =
+    if (lo < hi) List(free(lo, hi))
     else List()
 
   /** Insert `pos` into ranges `rs` if possible;
@@ -95,13 +95,13 @@ self: scala.tools.nsc.Global =>
 //      println("subdividing "+r+"/"+t.pos)
         maybeFree(t.pos.end, r.pos.end) ::: List(Range(t.pos, t)) ::: maybeFree(r.pos.start, t.pos.start) ::: rs1
       } else {
-        if (!r.isFree && (r.pos overlaps t.pos)) conflicting += r.tree 
+        if (!r.isFree && (r.pos overlaps t.pos)) conflicting += r.tree
         r :: insert(rs1, t, conflicting)
       }
   }
 
   /** Replace elem `t` of `ts` by `replacement` list. */
-  private def replace(ts: List[Tree], t: Tree, replacement: List[Tree]): List[Tree] = 
+  private def replace(ts: List[Tree], t: Tree, replacement: List[Tree]): List[Tree] =
     if (ts.head == t) replacement ::: ts.tail
     else ts.head :: replace(ts.tail, t, replacement)
 
@@ -111,7 +111,7 @@ self: scala.tools.nsc.Global =>
    *  to some of the nodes in `tree`.
    */
   override def ensureNonOverlapping(tree: Tree, others: List[Tree]) {
-    def isOverlapping(pos: Position) = 
+    def isOverlapping(pos: Position) =
       pos.isRange && (others exists (pos overlaps _.pos))
     if (isOverlapping(tree.pos)) {
       val children = tree.children
@@ -145,7 +145,7 @@ self: scala.tools.nsc.Global =>
    *                Uses the point of the position as the point of all positions it assigns.
    *                Uses the start of this position as an Offset position for unpositioed trees
    *                without children.
-   *  @param  trees  The children to position. All children must be positionable. 
+   *  @param  trees  The children to position. All children must be positionable.
    */
   private def setChildrenPos(pos: Position, trees: List[Tree]): Unit = try {
     for (tree <- trees) {
@@ -193,7 +193,7 @@ self: scala.tools.nsc.Global =>
       inform(tree.toString)
       inform("")
     }
-    
+
     def positionError(msg: String)(body : => Unit) {
       inform("======= Bad positions: "+msg)
       inform("")
@@ -205,10 +205,10 @@ self: scala.tools.nsc.Global =>
       inform("=======")
       throw new ValidateException(msg)
     }
-    
+
     def validate(tree: Tree, encltree: Tree): Unit = {
       if (!tree.isEmpty) {
-        if (!tree.pos.isDefined) 
+        if (!tree.pos.isDefined)
           positionError("Unpositioned tree ["+tree.id+"]") { reportTree("Unpositioned", tree) }
         if (tree.pos.isRange) {
           if (!encltree.pos.isRange)
@@ -221,7 +221,7 @@ self: scala.tools.nsc.Global =>
               reportTree("Enclosing", encltree)
               reportTree("Enclosed", tree)
             }
-          
+
           findOverlapping(tree.children flatMap solidDescendants) match {
             case List() => ;
             case xs => {

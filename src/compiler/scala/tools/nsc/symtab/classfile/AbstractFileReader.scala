@@ -13,7 +13,7 @@ import java.lang.Double.longBitsToDouble
 
 import scala.tools.nsc.io.AbstractFile
 
-/** 
+/**
  * This class reads files byte per byte. Only used by ClassFileParser
  *
  * @author Philippe Altherr

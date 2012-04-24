@@ -42,14 +42,14 @@ class Line[+T](val code: String, body: => T) {
     try {
       _result = body
       setState(Done)
-    } 
+    }
     catch {
       case x =>
         _caught = x
         setState(Threw)
     }
   }
-  
+
   def state     = _state
   def thread    = _thread
   def alive     = thread.isAlive
@@ -75,7 +75,7 @@ object Line {
   case object Threw extends State
   case object Cancelled extends State
   case object Done extends State
-  
+
   class Manager {
     /** Override to add behavior for runaway lines.  This method will
      *  be called if a line thread is still running five seconds after

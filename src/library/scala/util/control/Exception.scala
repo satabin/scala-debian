@@ -5,9 +5,9 @@ import java.lang.reflect.InvocationTargetException
 
 /** Classes representing the components of exception handling.
  *  Each class is independently composable.  Some example usages:
- * 
  *
- *  
+ *
+ *
  *  <pre>
  *  <b>import</b> scala.util.control.Exception._
  *  <b>import</b> java.net._
@@ -20,7 +20,7 @@ import java.lang.reflect.InvocationTargetException
  *  @author Paul Phillips
  */
 
-object Exception {  
+object Exception {
   type Catcher[+T] = PartialFunction[Throwable, T]
 
   def mkCatcher[Ex <: Throwable: ClassManifest, T](isDef: Ex => Boolean, f: Ex => T) = new Catcher[T] {
@@ -30,12 +30,12 @@ object Exception {
 
     def isDefinedAt(x: Throwable) = downcast(x) exists isDef
     def apply(x: Throwable): T = f(downcast(x).get)
-  }    
+  }
   def mkThrowableCatcher[T](isDef: Throwable => Boolean, f: Throwable => T) = mkCatcher(isDef, f)
-  
+
   implicit def throwableSubtypeToCatcher[Ex <: Throwable: ClassManifest, T](pf: PartialFunction[Ex, T]) =
     mkCatcher(pf.isDefinedAt _, pf.apply _)
-  
+
   /** !!! Not at all sure of every factor which goes into this,
    *  and/or whether we need multiple standard variations.
    */
@@ -46,7 +46,7 @@ object Exception {
     case _                        => false
   }
 
-  trait Described { 
+  trait Described {
     protected val name: String
     private var _desc: String = ""
     def desc = _desc
@@ -56,33 +56,33 @@ object Exception {
     }
     override def toString() = name + "(" + desc + ")"
   }
-  
+
   /** A container class for finally code. */
   class Finally private[Exception](body: => Unit) extends Described {
     protected val name = "Finally"
-    
+
     def and(other: => Unit): Finally = new Finally({ body ; other })
     def invoke(): Unit = { body }
   }
-  
+
   /** A container class for catch/finally logic.
-   * 
+   *
    *  Pass a different value for rethrow if you want to probably
    *  unwisely allow catching control exceptions and other throwables
    *  which the rest of the world may expect to get through.
    */
   class Catch[+T](
-    val pf: Catcher[T], 
+    val pf: Catcher[T],
     val fin: Option[Finally] = None,
     val rethrow: Throwable => Boolean = shouldRethrow)
   extends Described {
-    
+
     protected val name = "Catch"
-    
+
     /** Create a new Catch with additional exception handling logic. */
     def or[U >: T](pf2: Catcher[U]): Catch[U] = new Catch(pf orElse pf2, fin, rethrow)
     def or[U >: T](other: Catch[U]): Catch[U] = or(other.pf)
-    
+
     /** Apply this catch logic to the supplied body. */
     def apply[U >: T](body: => U): U =
       try body
@@ -91,24 +91,24 @@ object Exception {
         case x if pf isDefinedAt x  => pf(x)
       }
       finally fin map (_.invoke())
-    
+
     /* Create an empty Try container with this Catch and the supplied Finally */
     def andFinally(body: => Unit): Catch[T] = fin match {
       case None     => new Catch(pf, Some(new Finally(body)), rethrow)
       case Some(f)  => new Catch(pf, Some(f and body), rethrow)
     }
-    
+
     /** Apply this catch logic to the supplied body, mapping the result
      *  into Option[T] - None if any exception was caught, Some(T) otherwise.
      */
     def opt[U >: T](body: => U): Option[U] = toOption(Some(body))
-    
+
     /** Apply this catch logic to the supplied body, mapping the result
      *  into Either[Throwable, T] - Left(exception) if an exception was caught,
      *  Right(T) otherwise.
      */
     def either[U >: T](body: => U): Either[Throwable, U] = toEither(Right(body))
-    
+
     /** Create a new Catch with the same isDefinedAt logic as this one,
       * but with the supplied apply method replacing the current one. */
     def withApply[U](f: Throwable => U): Catch[U] = {
@@ -123,33 +123,33 @@ object Exception {
     def toOption: Catch[Option[T]] = withApply(_ => None)
     def toEither: Catch[Either[Throwable, T]] = withApply(Left(_))
   }
-  
+
   /** A container class for Try logic */
-  class Try[+T] private[Exception](body: => T, val catcher: Catch[T]) {    
+  class Try[+T] private[Exception](body: => T, val catcher: Catch[T]) {
     /** Execute "body" using catch/finally logic "catcher" */
     def apply(): T                    = catcher(body)
     def apply[U >: T](other: => U): U = catcher(other)
-        
+
     /** As apply, but map caught exceptions to None and success to Some(T) */
     def opt(): Option[T]                      = catcher opt body
     def opt[U >: T](other: => U): Option[U]   = catcher opt other
-    
+
     /** As apply, but map caught exceptions to Left(ex) and success to Right(x) */
     def either(): Either[Throwable, T]                    = catcher either body
     def either[U >: T](other: => U): Either[Throwable, U] = catcher either other
-    
+
     /** Create a new Try with the supplied body replacing the current body */
     def tryInstead[U >: T](other: => U) = new Try(other, catcher)
-    
+
     /** Create a new Try with the supplied logic appended to the existing Catch logic. */
     def or[U >: T](pf: Catcher[U]) = new Try(body, catcher or pf)
 
     /** Create a new Try with the supplied code appended to the existing Finally. */
     def andFinally(fin: => Unit) = new Try(body, catcher andFinally fin)
-    
+
     override def toString() = List("Try(<body>)", catcher.toString) mkString " "
   }
-  
+
   final val nothingCatcher: Catcher[Nothing]  = mkThrowableCatcher(_ => false, throw _)
   final def allCatcher[T]: Catcher[T]         = mkThrowableCatcher(_ => true, throw _)
 
@@ -172,7 +172,7 @@ object Exception {
     new Catch(pfFromExceptions(exceptions : _*)) withDesc (exceptions map (_.getName) mkString ", ")
 
   def catching[T](c: Catcher[T]): Catch[T] = new Catch(c)
-  
+
   /** Creates a Catch object which will catch any of the supplied exceptions.
    *  Unlike "catching" which filters out those in shouldRethrow, this one will
    *  catch whatever you ask of it: ControlThrowable, InterruptedException,
@@ -180,15 +180,15 @@ object Exception {
    */
   def catchingPromiscuously[T](exceptions: Class[_]*): Catch[T] = catchingPromiscuously(pfFromExceptions(exceptions : _*))
   def catchingPromiscuously[T](c: Catcher[T]): Catch[T]         = new Catch(c, None, _ => false)
-  
+
   /** Creates a Catch object which catches and ignores any of the supplied exceptions. */
   def ignoring(exceptions: Class[_]*): Catch[Unit] =
     catching(exceptions: _*) withApply (_ => ())
-  
+
   /** Creates a Catch object which maps all the supplied exceptions to 'None'. */
   def failing[T](exceptions: Class[_]*): Catch[Option[T]] =
     catching(exceptions: _*) withApply (_ => None)
-    
+
   /** Creates a Catch object which maps all the supplied exceptions to the given value. */
   def failAsValue[T](exceptions: Class[_]*)(value: => T): Catch[T] =
     catching(exceptions: _*) withApply (_ => value)
@@ -201,10 +201,10 @@ object Exception {
     def by(x: T): R = f(x)
   }
   def handling[T](exceptions: Class[_]*) = {
-    def fun(f: Throwable => T) = catching(exceptions: _*) withApply f    
+    def fun(f: Throwable => T) = catching(exceptions: _*) withApply f
     new By[Throwable => T, Catch[T]](fun _)
   }
-  
+
   /** Returns a Catch object with no catch logic and the argument as Finally. */
   def ultimately[T](body: => Unit): Catch[T] = noCatch andFinally body
 
@@ -213,17 +213,17 @@ object Exception {
     def unwrap(x: Throwable): Throwable =
       if (wouldMatch(x, exceptions) && x.getCause != null) unwrap(x.getCause)
       else x
-    
+
     catching(exceptions: _*) withApply (x => throw unwrap(x))
   }
-  
+
   /** Private **/
-  private def wouldMatch(x: Throwable, classes: collection.Seq[Class[_]]): Boolean = 
+  private def wouldMatch(x: Throwable, classes: collection.Seq[Class[_]]): Boolean =
     classes exists (_ isAssignableFrom x.getClass)
-  
-  private def pfFromExceptions(exceptions: Class[_]*) = 
+
+  private def pfFromExceptions(exceptions: Class[_]*) =
     new PartialFunction[Throwable, Nothing] {
       def apply(x: Throwable) = throw x
       def isDefinedAt(x: Throwable) = wouldMatch(x, exceptions)
-    }  
+    }
 }

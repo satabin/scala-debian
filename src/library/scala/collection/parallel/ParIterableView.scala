@@ -12,11 +12,11 @@ import scala.collection.{ Parallel, IterableView, GenIterableView, Iterator }
 import scala.collection.generic.CanCombineFrom
 
 /** A template view of a non-strict view of a parallel iterable collection.
- *  
+ *
  *  @tparam T         the type of elements
  *  @tparam Coll      the type of the parallel collection this view was created from
  *  @tparam CollSeq   the type of the sequential collection corresponding to the underlying parallel collection
- *  
+ *
  *  @since 2.9
  */
 trait ParIterableView[+T, +Coll <: Parallel, +CollSeq]
@@ -35,10 +35,10 @@ object ParIterableView {
     def combine[N <: T, NewTo >: Nothing](other: Combiner[N, NewTo]) =
       throw new UnsupportedOperationException("ParIterableView.Combiner.result")
   }
-  
+
   type Coll = ParIterableView[_, C, _] forSome { type C <: ParIterable[_] }
-  
-  implicit def canBuildFrom[T]: CanCombineFrom[Coll, T, ParIterableView[T, ParIterable[T], Iterable[T]]] = 
+
+  implicit def canBuildFrom[T]: CanCombineFrom[Coll, T, ParIterableView[T, ParIterable[T], Iterable[T]]] =
     new CanCombineFrom[Coll, T, ParIterableView[T, ParIterable[T], Iterable[T]]] {
       def apply(from: Coll) = new NoCombiner[T] {} // was: with EnvironmentPassingCombiner[T, Nothing]
       def apply() = new NoCombiner[T] {} // was: with EnvironmentPassingCombiner[T, Nothing]

@@ -17,4 +17,4 @@ package scala.collection
  *  @version 2.8
  *  @since   2.8
  */
-trait SeqProxy[+A] extends Seq[A] with SeqProxyLike[A, Seq[A]] 
+trait SeqProxy[+A] extends Seq[A] with SeqProxyLike[A, Seq[A]]

@@ -12,17 +12,17 @@ package scala.tools.ant.sabbus
 import java.net.URL
 
 object Compilers extends collection.DefaultMap[String, Compiler] {
-  
+
   val debug = false
-  
+
   private val container = new collection.mutable.HashMap[String, Compiler]
-  
-  def iterator = container.iterator	
-  
+
+  def iterator = container.iterator
+
   def get(id: String) = container.get(id)
-  
+
   override def size = container.size
-  
+
   def make(id: String, classpath: Array[URL], settings: Settings): Compiler = {
     val runtime = Runtime.getRuntime
     if (debug) println("Making compiler " + id)
@@ -32,7 +32,7 @@ object Compilers extends collection.DefaultMap[String, Compiler] {
     if (debug) println("  memory after: " + (runtime.freeMemory/1048576.).formatted("%10.2f") + " MB")
     comp
   }
-  
+
   def break(id: String): Null = {
     val runtime = Runtime.getRuntime
     if (debug) println("Breaking compiler " + id)

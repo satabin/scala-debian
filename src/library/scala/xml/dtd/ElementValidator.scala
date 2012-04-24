@@ -22,7 +22,7 @@ import scala.collection.mutable.BitSet
  *  exceptions are created but not thrown.
  */
 class ElementValidator() extends Function1[Node,Boolean] {
-  
+
   private var exc: List[ValidationException] = Nil
 
   protected var contentModel: ContentModel           = _
@@ -48,7 +48,7 @@ class ElementValidator() extends Function1[Node,Boolean] {
 
   def getIterable(nodes: Seq[Node], skipPCDATA: Boolean): Iterable[ElemName] = {
     def isAllWhitespace(a: Atom[_]) = cond(a.data) { case s: String if s.trim == "" => true }
-    
+
     nodes.filter {
       case y: SpecialNode => y match {
         case a: Atom[_] if isAllWhitespace(a) => false  // always skip all-whitespace nodes
@@ -56,14 +56,14 @@ class ElementValidator() extends Function1[Node,Boolean] {
       }
       case x                                  => x.namespace eq null
     } . map (x => ElemName(x.label))
-  }  
+  }
 
   /** check attributes, return true if md corresponds to attribute declarations in adecls.
    */
   def check(md: MetaData): Boolean = {
     val len: Int = exc.length
     var ok = new BitSet(adecls.length)
-    
+
     for (attr <- md) {
       def attrStr = attr.value.toString
       def find(Key: String): Option[AttrDecl] = {
@@ -78,13 +78,13 @@ class ElementValidator() extends Function1[Node,Boolean] {
         case None =>
           exc ::= fromUndefinedAttribute(attr.key)
 
-        case Some(AttrDecl(_, tpe, DEFAULT(true, fixedValue))) if attrStr != fixedValue => 
+        case Some(AttrDecl(_, tpe, DEFAULT(true, fixedValue))) if attrStr != fixedValue =>
           exc ::= fromFixedAttribute(attr.key, fixedValue, attrStr)
 
         case _ =>
       }
     }
-    
+
     adecls.zipWithIndex foreach {
       case (AttrDecl(key, tpe, REQUIRED), j) if !ok(j) => exc ::= fromMissingAttribute(key, tpe)
       case _ =>
@@ -104,7 +104,7 @@ class ElementValidator() extends Function1[Node,Boolean] {
       val j = exc.length
       def find(Key: String): Boolean =
         branches exists { case ContentModel.Letter(ElemName(Key)) => true ; case _ => false }
-      
+
       getIterable(nodes, true) map (_.name) filterNot find foreach {
         exc ::= MakeValidationException fromUndefinedElement _
       }

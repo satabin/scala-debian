@@ -80,8 +80,8 @@ import annotation.switch
     /** We need the equals method to take account of tags as well as values.
      */
     override def equals(other: Any): Boolean = other match {
-      case that: Constant => 
-        this.tag == that.tag && 
+      case that: Constant =>
+        this.tag == that.tag &&
         (this.value == that.value || this.isNaN && that.isNaN)
       case _ => false
     }
@@ -92,7 +92,7 @@ import annotation.switch
       case _ => false
     }
 
-    def booleanValue: Boolean = 
+    def booleanValue: Boolean =
       if (tag == BooleanTag) value.asInstanceOf[Boolean]
       else throw new Error("value " + value + " is not a boolean");
 
@@ -219,7 +219,7 @@ import annotation.switch
         text map { ch =>
           if (ch.isControl) "\\0" + toOctalString(ch)
           else escapedChar(ch)
-        } mkString ""        
+        } mkString ""
       }
       tag match {
         case NullTag   => "null"

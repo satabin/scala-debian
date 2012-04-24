@@ -11,7 +11,7 @@ package scala.reflect
 
 /** This annotation indicates that bean information should
  *  <strong>not</strong> be generated for the val, var, or def that it is
- *  attached to.  
+ *  attached to.
  *
  *  @author Ross Judson (rjudson@managedobjects.com)
  */

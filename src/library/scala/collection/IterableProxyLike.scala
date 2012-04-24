@@ -24,7 +24,7 @@ import mutable.Buffer
  */
 trait IterableProxyLike[+A, +Repr <: IterableLike[A, Repr] with Iterable[A]]
     extends IterableLike[A, Repr]
-    with TraversableProxyLike[A, Repr] {  
+    with TraversableProxyLike[A, Repr] {
   override def iterator: Iterator[A] = self.iterator
   override def grouped(size: Int): Iterator[Repr] = self.grouped(size)
   override def sliding[B >: A](size: Int): Iterator[Repr] = self.sliding(size)

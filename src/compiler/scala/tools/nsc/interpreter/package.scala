@@ -2,7 +2,7 @@
  * Copyright 2005-2011 LAMP/EPFL
  * @author Paul Phillips
  */
- 
+
 package scala.tools.nsc
 
 /** The main REPL related classes and values are as follows.
@@ -30,7 +30,7 @@ package object interpreter extends ReplConfig with ReplStrings {
   type JPrintWriter   = java.io.PrintWriter
   type InputStream    = java.io.InputStream
   type OutputStream   = java.io.OutputStream
-  
+
   val IR = Results
 
   private[interpreter] implicit def javaCharSeqCollectionToScala(xs: JCollection[_ <: CharSequence]): List[String] = {
@@ -39,7 +39,7 @@ package object interpreter extends ReplConfig with ReplStrings {
   }
 
   private[nsc] implicit def enrichClass[T](clazz: Class[T]) = new RichClass[T](clazz)
-  private[nsc] implicit def enrichAnyRefWithTap[T](x: T) = new TapMaker(x)  
+  private[nsc] implicit def enrichAnyRefWithTap[T](x: T) = new TapMaker(x)
   private[nsc] def tracing[T](msg: String)(x: T): T = x.tapTrace(msg)
-  private[nsc] def debugging[T](msg: String)(x: T) = x.tapDebug(msg)  
+  private[nsc] def debugging[T](msg: String)(x: T) = x.tapDebug(msg)
 }

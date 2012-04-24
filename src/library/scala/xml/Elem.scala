@@ -18,7 +18,7 @@ package scala.xml
  * @author Burak Emir <bqe@google.com>
  */
 object Elem {
-  def apply(prefix: String,label: String, attributes: MetaData, scope: NamespaceBinding, child: Node*) = 
+  def apply(prefix: String,label: String, attributes: MetaData, scope: NamespaceBinding, child: Node*) =
     new Elem(prefix,label,attributes,scope,child:_*)
 
   def unapplySeq(n: Node) = n match {
@@ -49,14 +49,14 @@ extends Node with Serializable
 {
   final override def doCollectNamespaces = true
   final override def doTransform         = true
-    
+
   if (prefix == "")
     throw new IllegalArgumentException("prefix of zero length, use null instead")
 
   if (scope == null)
     throw new IllegalArgumentException("scope is null, use xml.TopScope for empty scope")
 
-  //@todo: copy the children, 
+  //@todo: copy the children,
   //  setting namespace scope if necessary
   //  cleaning adjacent text nodes if necessary
 
@@ -69,7 +69,7 @@ extends Node with Serializable
    */
   final def %(updates: MetaData): Elem =
     copy(attributes = MetaData.update(attributes, scope, updates))
-  
+
   /** Returns a copy of this element with any supplied arguments replacing
    *  this element's value for that field.
    *

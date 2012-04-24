@@ -9,15 +9,15 @@
 package scala.collection
 package mutable
 
-/** 
+/**
  *  @define Coll OpenHashMap
  *  @define coll open hash map
- *  
+ *
  *  @since 2.7
  */
 object OpenHashMap {
   import generic.BitOperations.Int.highestOneBit
-  
+
   def apply[K, V](elems : (K, V)*) = new OpenHashMap[K, V] ++= elems
   def empty[K, V] = new OpenHashMap[K, V]
 
@@ -26,21 +26,21 @@ object OpenHashMap {
                                             var value: Option[Value])
                 extends HashEntry[Key, OpenEntry[Key, Value]]
 
-  private[mutable] def nextPowerOfTwo(i : Int) = highestOneBit(i) << 1; 
+  private[mutable] def nextPowerOfTwo(i : Int) = highestOneBit(i) << 1;
 }
 
 /** A mutable hash map based on an open hashing scheme. The precise scheme is undefined,
  *  but it should make a reasonable effort to ensure that an insert with consecutive hash
  *  codes is not unneccessarily penalised. In particular, mappings of consecutive integer
  *  keys should work without significant performance loss.
- *  
+ *
  *  @tparam Key          type of the keys in this map.
  *  @tparam Value        type of the values in this map.
  *  @param initialSize   the initial size of the internal hash table.
- *  
+ *
  *  @author David MacIver
  *  @since  2.7
- *  
+ *
  *  @define Coll OpenHashMap
  *  @define coll open hash map
  *  @define mayNotTerminateInf
@@ -65,14 +65,14 @@ extends Map[Key, Value]
   private var mask = actualInitialSize - 1;;
   private var table : Array[Entry] = new Array[Entry](actualInitialSize);
   private var _size = 0;
-  private var deleted = 0; 
- 
+  private var deleted = 0;
+
   // Used for tracking inserts so that iterators can determine in concurrent modification has occurred.
   private[this] var modCount = 0;
 
   override def size = _size;
   private[this] def size_=(s : Int) = _size = s;
-  
+
   /** Returns a mangled hash code of the provided key. */
   protected def hashOf(key : Key) = {
     var h = key.##
@@ -85,11 +85,11 @@ extends Map[Key, Value]
     val newSize = 4 * oldSize;
     val oldTable = table;
     table = new Array[Entry](newSize);
-    mask = newSize - 1;     
+    mask = newSize - 1;
     oldTable.foreach( entry =>
       if (entry != null && entry.value != None) addEntry(entry));
     deleted = 0;
-  } 
+  }
 
   private[this] def findIndex(key : Key) : Int = findIndex(key, hashOf(key));
 
@@ -98,7 +98,7 @@ extends Map[Key, Value]
 
     var index = hash & mask;
     var perturb = index;
-    while(table(index) != null && 
+    while(table(index) != null &&
           !(table(index).hash == hash &&
             table(index).key == key)){
       j = 5 * j + 1 + perturb;
@@ -108,7 +108,7 @@ extends Map[Key, Value]
     index;
   }
 
-  private[this] def addEntry(entry : Entry) = 
+  private[this] def addEntry(entry : Entry) =
     if (entry != null) table(findIndex(entry.key, entry.hash)) = entry;
 
   override def update(key : Key, value : Value) {
@@ -118,7 +118,7 @@ extends Map[Key, Value]
   def += (kv: (Key, Value)): this.type = { put(kv._1, kv._2); this }
   def -= (key: Key): this.type = { remove(key); this }
 
-  override def put(key : Key, value : Value): Option[Value] = 
+  override def put(key : Key, value : Value): Option[Value] =
     put(key, hashOf(key), value)
 
   private def put(key : Key, hash : Int, value : Value): Option[Value] = {
@@ -140,7 +140,7 @@ extends Map[Key, Value]
 
   override def remove(key : Key): Option[Value] = {
     val index = findIndex(key);
-    if (table(index) != null && table(index).value != None){      
+    if (table(index) != null && table(index).value != None){
       val res = table(index).value
       table(index).value = None;
       size -= 1;
@@ -161,7 +161,7 @@ extends Map[Key, Value]
           entry.key == key){
         return entry.value;
       }
-      
+
       j = 5 * j + 1 + perturb;
       perturb >>= 5;
       index = j & mask;
@@ -169,12 +169,12 @@ extends Map[Key, Value]
     }
     None;
   }
- 
+
   /** An iterator over the elements of this map. Use of this iterator follows the same
    *  contract for concurrent modification as the foreach method.
-   *  
+   *
    *  @return   the iterator
-   */ 
+   */
   def iterator = new Iterator[(Key, Value)]{
     var index = 0;
     val initialModCount = modCount;
@@ -202,30 +202,30 @@ extends Map[Key, Value]
 
   /**
    *  Loop over the key, value mappings of this map.
-   *  
-   *  The behaviour of modifying the map during an iteration is as follows: 
-   *  
+   *
+   *  The behaviour of modifying the map during an iteration is as follows:
+   *
    *   <ul>
    *    <li>Deleting a mapping is always permitted.</li>
    *    <li>Changing the value of mapping which is already present is permitted.</li>
    *    <li>Anything else is not permitted. It will usually, but not always, throw an exception.</li>
    *   </ul>
-   * 
+   *
    *  @tparam U  The return type of the specified function `f`, return result of which is ignored.
    *  @param f   The function to apply to each key, value mapping.
-   */ 
+   */
   override def foreach[U](f : ((Key, Value)) => U) {
     val startModCount = modCount;
     foreachUndeletedEntry(entry => {
       if (modCount != startModCount) sys.error("Concurrent Modification")
       f((entry.key, entry.value.get))}
-    );  
+    );
   }
 
   private[this] def foreachUndeletedEntry(f : Entry => Unit){
     table.foreach(entry => if (entry != null && entry.value != None) f(entry));
   }
-  
+
   override def transform(f : (Key, Value) => Value) = {
     foreachUndeletedEntry(entry => entry.value = Some(f(entry.key, entry.value.get)));
     this

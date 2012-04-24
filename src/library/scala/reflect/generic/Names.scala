@@ -1,7 +1,7 @@
 package scala.reflect
 package generic
 
-@deprecated("scala.reflect.generic will be removed", "2.9.1") trait Names { 
+@deprecated("scala.reflect.generic will be removed", "2.9.1") trait Names {
   type Name >: Null <: AnyRef
   type TypeName <: Name
   type TermName <: Name
@@ -15,7 +15,7 @@ package generic
   def newTypeName(cs: Array[Byte], offset: Int, len: Int): TypeName
   def newTypeName(s: String): TypeName
   def mkTypeName(name: Name): TypeName
-  
+
   def isTermName(name: Name): Boolean
   def isTypeName(name: Name): Boolean
 

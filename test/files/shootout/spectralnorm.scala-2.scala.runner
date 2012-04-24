@@ -1,3 +1,0 @@
-object Test extends Application {
-  for(val n <- List(500,1500,2500)) SpectralNorm.main(Array(n.toString)) 
-}

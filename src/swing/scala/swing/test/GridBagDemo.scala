@@ -14,8 +14,8 @@ object GridBagDemo extends SimpleSwingApplication {
       c.fill = Fill.Horizontal
     }
 
-    val button1 = new Button("Button 1") 
-    
+    val button1 = new Button("Button 1")
+
     c.weightx = 0.5
 
     c.fill = Fill.Horizontal
@@ -57,7 +57,7 @@ object GridBagDemo extends SimpleSwingApplication {
     c.gridy = 2;       //third row
     layout(button5) = c
   }
-  
+
   def top = new MainFrame {
     title = "GridBag Demo"
     contents = ui

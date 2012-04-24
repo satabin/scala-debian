@@ -31,7 +31,7 @@ abstract class Phase(val prev: Phase) {
 
   def name: String
   def description: String = name
-  // Will running with -Ycheck:name work? 
+  // Will running with -Ycheck:name work?
   def checkable: Boolean = true
   // def devirtualized: Boolean = false
   def specialized: Boolean = false

@@ -8,11 +8,11 @@ package symtab
 
 trait TypeDebugging {
   self: SymbolTable =>
-  
+
   import definitions._
 
   // @M toString that is safe during debugging (does not normalize, ...)
-  object typeDebug {  
+  object typeDebug {
     private def to_s(x: Any): String = x match {
       // otherwise case classes are caught looking like products
       case _: Tree | _: Type     => "" + x
@@ -25,12 +25,12 @@ trait TypeDebugging {
       val width = pairs map (_._1.length) max
       val fmt   = "%-" + (width + 1) + "s %s"
       val strs  = pairs map { case (k, v) => fmt.format(k, to_s(v)) }
-  
+
       strs.mkString(label + " {\n  ", "\n  ", "\n}")
     }
     def ptLine(label: String, pairs: (String, Any)*): String = {
       val strs = pairs map { case (k, v) => k + "=" + to_s(v) }
-      strs.mkString(label + ": ", ", ", "")      
+      strs.mkString(label + ": ", ", ", "")
     }
     def ptTree(t: Tree) = t match {
       case PackageDef(pid, _)            => "package " + pid
@@ -44,9 +44,9 @@ trait TypeDebugging {
       def brackets(xs: List[_]): String        = if (xs.isEmpty) "" else xs.mkString("[", ", ", "]")
       def tparams(tparams: List[Type]): String = brackets(tparams map debug)
       def parents(ps: List[Type]): String      = (ps map debug).mkString(" with ")
-      def refine(defs: Scope): String          = defs.toList.mkString("{", " ;\n ", "}")      
+      def refine(defs: Scope): String          = defs.toList.mkString("{", " ;\n ", "}")
     }
-    
+
     def dump(tp: Type): Unit = {
       println("** " + tp + " / " + tp.getClass + " **")
       import tp._
@@ -73,7 +73,7 @@ trait TypeDebugging {
       println("baseClasses = " + baseClasses)
       println("toLongString = " + toLongString)
     }
-    
+
     private def debug(tp: Type): String = tp match {
       case TypeRef(pre, sym, args)             => debug(pre) + "." + sym.nameString + str.tparams(args)
       case ThisType(sym)                       => sym.nameString + ".this"

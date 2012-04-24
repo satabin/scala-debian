@@ -22,7 +22,7 @@ object Stack extends SeqFactory[Stack] {
   /** $genericCanBuildFromInfo */
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Stack[A]] = new GenericCanBuildFrom[A]
   def newBuilder[A]: Builder[A, Stack[A]] = new ArrayBuffer[A] mapResult (buf => new Stack(buf.toList))
-  
+
   @deprecated("Use Stack.empty instead", "2.8.0")
   val Empty: Stack[Nothing] = Stack()
 }
@@ -33,12 +33,15 @@ object Stack extends SeqFactory[Stack] {
  *  '''Note:''' This class exists only for historical reason and as an
  *           analogue of mutable stacks.
  *           Instead of an immutable stack you can just use a list.
- *  
+ *
  *  @tparam A    the type of the elements contained in this stack.
- *  
+ *
  *  @author  Matthias Zenger
  *  @version 1.0, 10/07/2003
  *  @since   1
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-immutable-collection-classes.html#immutable_stacks "Scala's Collection Library overview"]]
+ *  section on `Immutable stacks` for more information.
+ *
  *  @define Coll immutable.Stack
  *  @define coll immutable stack
  *  @define orderDependent
@@ -48,14 +51,14 @@ object Stack extends SeqFactory[Stack] {
  */
 @SerialVersionUID(1976480595012942526L)
 class Stack[+A] protected (protected val elems: List[A])
-                    extends LinearSeq[A] 
+                    extends LinearSeq[A]
                     with GenericTraversableTemplate[A, Stack]
                     with LinearSeqOptimized[A, Stack[A]]
                     with Serializable {
   override def companion: GenericCompanion[Stack] = Stack
 
   def this() = this(Nil)
-  
+
   /** Checks if this stack is empty.
    *
    *  @return true, iff there is no element on the stack.
@@ -71,16 +74,16 @@ class Stack[+A] protected (protected val elems: List[A])
    *  @return the stack with the new element on top.
    */
   def push[B >: A](elem: B): Stack[B] = new Stack(elem :: elems)
-   
+
   /** Push a sequence of elements onto the stack. The last element
    *  of the sequence will be on top of the new stack.
    *
    *  @param   elems      the element sequence.
    *  @return the stack with the new elements on top.
    */
-  def push[B >: A](elem1: B, elem2: B, elems: B*): Stack[B] = 
+  def push[B >: A](elem1: B, elem2: B, elems: B*): Stack[B] =
     this.push(elem1).push(elem2).pushAll(elems)
-   
+
   /** Push all elements provided by the given traversable object onto
    *  the stack. The last element returned by the traversable object
    *  will be on top of the new stack.
@@ -125,7 +128,7 @@ class Stack[+A] protected (protected val elems: List[A])
    */
   override def iterator: Iterator[A] = elems.iterator
 
-  /** Returns a string representation of this stack. 
+  /** Returns a string representation of this stack.
    */
   override def toString() = elems.mkString("Stack(", ", ", ")")
 }

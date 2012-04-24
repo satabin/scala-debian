@@ -21,7 +21,7 @@ import generic._
  *  @version 2.8
  *  @since   2.8
  */
-trait SortedMapLike[A, +B, +This <: SortedMapLike[A, B, This] with SortedMap[A, B]] extends Sorted[A, This] with MapLike[A, B, This] { 
+trait SortedMapLike[A, +B, +This <: SortedMapLike[A, B, This] with SortedMap[A, B]] extends Sorted[A, This] with MapLike[A, B, This] {
 self =>
 
   def firstKey : A = head._1
@@ -44,14 +44,14 @@ self =>
     }
   }
 
-  /** Add a key/value pair to this map. 
+  /** Add a key/value pair to this map.
    *  @param    key the key
    *  @param    value the value
    *  @return   A new map with the new binding added to this map
    */
   override def updated[B1 >: B](key: A, value: B1): SortedMap[A, B1] = this+((key, value))
 
-  /** Add a key/value pair to this map. 
+  /** Add a key/value pair to this map.
    *  @param    kv the key/value pair
    *  @return   A new map with the new binding added to this map
    */

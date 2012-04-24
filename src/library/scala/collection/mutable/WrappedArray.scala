@@ -17,7 +17,7 @@ import scala.collection.parallel.mutable.ParArray
 
 /**
  *  A class representing `Array[T]`.
- *  
+ *
  *  @tparam T    type of the elements in this wrapped array.
  *
  *  @author  Martin Odersky, Stephane Micheloud
@@ -25,7 +25,7 @@ import scala.collection.parallel.mutable.ParArray
  *  @since 2.8
  *  @define Coll WrappedArray
  *  @define coll wrapped array
- *  @define orderDependent 
+ *  @define orderDependent
  *  @define orderDependentFold
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
@@ -53,25 +53,25 @@ extends IndexedSeq[T]
 
   /** The underlying array */
   def array: Array[T]
-  
+
   override def par = ParArray.handoff(array)
-  
+
   override def toArray[U >: T : ClassManifest]: Array[U] =
     if (implicitly[ClassManifest[U]].erasure eq array.getClass.getComponentType)
       array.asInstanceOf[Array[U]]
-    else 
+    else
       super.toArray[U]
-  
+
   override def stringPrefix = "WrappedArray"
-  
+
   /** Clones this object, including the underlying Array. */
   override def clone: WrappedArray[T] = WrappedArray make array.clone()
- 
+
   /** Creates new builder for this collection ==> move to subclasses
    */
-  override protected[this] def newBuilder: Builder[T, WrappedArray[T]] = 
+  override protected[this] def newBuilder: Builder[T, WrappedArray[T]] =
     new WrappedArrayBuilder[T](elemManifest)
-  
+
 }
 
 /** A companion object used to create instances of `WrappedArray`.
@@ -80,7 +80,7 @@ object WrappedArray {
   // This is reused for all calls to empty.
   private val EmptyWrappedArray  = new ofRef[AnyRef](new Array[AnyRef](0))
   def empty[T <: AnyRef]: WrappedArray[T] = EmptyWrappedArray.asInstanceOf[WrappedArray[T]]
-  
+
   // If make is called explicitly we use whatever we're given, even if it's
   // empty.  This may be unnecesssary (if WrappedArray is to honor the collections
   // contract all empty ones must be equal, so discriminating based on the reference
@@ -107,7 +107,7 @@ object WrappedArray {
       def apply: Builder[T, WrappedArray[T]] =
         ArrayBuilder.make[T]()(m) mapResult WrappedArray.make[T]
   }
-    
+
   def newBuilder[A]: Builder[A, IndexedSeq[A]] = new ArrayBuffer
 
   final class ofRef[T <: AnyRef](val array: Array[T]) extends WrappedArray[T] with Serializable {

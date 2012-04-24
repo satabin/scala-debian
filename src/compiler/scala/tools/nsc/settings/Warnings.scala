@@ -15,10 +15,10 @@ import scala.collection.mutable.HashSet
  */
 trait Warnings {
   self: MutableSettings =>
-  
+
   // Warning semantics.
   val fatalWarnings = BooleanSetting("-Xfatal-warnings", "Fail the compilation if there are any warnings.")
-  
+
   // These warnings are all so noisy as to be useless in their
   // present form, but have the potential to offer useful info.
   protected def allWarnings = lintWarnings ++ List(
@@ -52,9 +52,9 @@ trait Warnings {
   val warnNumericWiden     = BooleanSetting   ("-Ywarn-numeric-widen", "Warn when numerics are widened.")
   val warnNullaryUnit      = BooleanSetting   ("-Ywarn-nullary-unit", "Warn when nullary methods return Unit.")
   val warnInaccessible     = BooleanSetting   ("-Ywarn-inaccessible", "Warn about inaccessible types in method signatures.")
-  val warnNullaryOverride  = BooleanSetting   ("-Ywarn-nullary-override", 
-    "Warn when non-nullary overrides nullary, e.g. `def foo()` over `def foo`.")  
-  
+  val warnNullaryOverride  = BooleanSetting   ("-Ywarn-nullary-override",
+    "Warn when non-nullary overrides nullary, e.g. `def foo()` over `def foo`.")
+
   // Backward compatibility.
   def Xwarnfatal    = fatalWarnings
   def Xchecknull    = warnSelectNullable

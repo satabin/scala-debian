@@ -13,9 +13,9 @@ package mutable
 
 /** `Queue` objects implement data structures that allow to
  *  insert and retrieve elements in a first-in-first-out (FIFO) manner.
- *  
+ *
  *  @tparam A   type of the elements in this queue proxy.
- *  
+ *
  *  @author  Matthias Zenger
  *  @version 1.1, 03/05/2004
  *  @since   1

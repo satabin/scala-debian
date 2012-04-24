@@ -27,7 +27,7 @@ class NoBindingFactoryAdapter extends FactoryAdapter with NodeFactory[Elem]
   /** From FactoryAdapter.  Creates a node. never creates the same node twice, using hash-consing. */
   def createNode(pre: String, label: String, attrs: MetaData, scope: NamespaceBinding, children: List[Node]): Elem =
     Elem(pre, label, attrs, scope, children: _*)
-  
+
   /** Creates a text node. */
   def createText(text: String) = Text(text)
 

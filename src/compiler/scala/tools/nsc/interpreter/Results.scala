@@ -15,7 +15,7 @@ object Results {
 
   /** The line was erroneous in some way. */
   case object Error extends Result
-  
+
   /** The input was incomplete.  The caller should request more input.
    */
   case object Incomplete extends Result

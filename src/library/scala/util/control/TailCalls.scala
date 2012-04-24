@@ -12,7 +12,7 @@ package scala.util.control
  *    if (xs.isEmpty) done(true) else tailcall(isOdd(xs.tail))
  *
  *  def isOdd(xs: List[Int]): TailRec[Boolean] =
- *   if (xs.isEmpty) done(false) else tailcall(isEven(xs.tail)) 
+ *   if (xs.isEmpty) done(false) else tailcall(isEven(xs.tail))
  *
  *  isEven((1 to 100000).toList).result
  *  }}}
@@ -50,7 +50,7 @@ object TailCalls {
    *  @return a `TailRec` object representing a computation which immediately returns `result`
    */
   def done[A](result: A): TailRec[A] = new Done(result)
-  
+
 }
 
 

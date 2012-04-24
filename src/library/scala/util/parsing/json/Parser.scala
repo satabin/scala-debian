@@ -16,7 +16,7 @@ import scala.util.parsing.combinator.lexical._
 
 /**
  *  A marker class for the JSON result types.
- * 
+ *
  *  @author Derek Chen-Becker <"java"+@+"chen-becker"+"."+"org">
  */
 sealed abstract class JSONType {
@@ -37,7 +37,7 @@ sealed abstract class JSONType {
  * This object defines functions that are used when converting JSONType
  * values into String representations. Mostly this is concerned with
  * proper quoting of strings.
- * 
+ *
  * @author Derek Chen-Becker <"java"+@+"chen-becker"+"."+"org">
  */
 object JSONFormat {
@@ -67,7 +67,7 @@ object JSONFormat {
     s.map {
       case '"'  => "\\\""
       case '\\' => "\\\\"
-      case '/'  => "\\/" 
+      case '/'  => "\\/"
       case '\b' => "\\b"
       case '\f' => "\\f"
       case '\n' => "\\n"
@@ -88,16 +88,16 @@ object JSONFormat {
 
 /**
  *  Represents a JSON Object (map).
- * 
+ *
  *  @author Derek Chen-Becker <"java"+@+"chen-becker"+"."+"org">
  */
 case class JSONObject (obj : Map[String,Any]) extends JSONType {
-  def toString (formatter : JSONFormat.ValueFormatter) = 
+  def toString (formatter : JSONFormat.ValueFormatter) =
     "{" + obj.map({ case (k,v) => formatter(k.toString) + " : " + formatter(v) }).mkString(", ") + "}"
 }
 
 /**
- *  Represents a JSON Array (list). 
+ *  Represents a JSON Array (list).
  *  @author Derek Chen-Becker <"java"+@+"chen-becker"+"."+"org">
  */
 case class JSONArray (list : List[Any]) extends JSONType {
@@ -107,7 +107,7 @@ case class JSONArray (list : List[Any]) extends JSONType {
 
 /**
  *  The main JSON Parser.
- * 
+ *
  *  @author Derek Chen-Becker <"java"+@+"chen-becker"+"."+"org">
  */
 class Parser extends StdTokenParsers with ImplicitConversions {
@@ -121,15 +121,15 @@ class Parser extends StdTokenParsers with ImplicitConversions {
 
   /** Type signature for functions that can parse numeric literals */
   type NumericParser = String => Any
-  
+
   // Global default number parsing function
   protected var defaultNumberParser : NumericParser = {_.toDouble}
-  
+
   // Per-thread default number parsing function
   protected val numberParser = new ThreadLocal[NumericParser]() {
     override def initialValue() = defaultNumberParser
   }
-  
+
   // Define the grammar
   def root       = jsonObj | jsonArray
   def jsonObj    = "{" ~> repsep(objEntry, ",") <~ "}" ^^ { case vals : List[_] => JSONObject(Map(vals : _*)) }

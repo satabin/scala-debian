@@ -15,7 +15,7 @@ object Runner {
 
     if (args.isEmpty) return println(helpMsg)
     if (isValidate) return validateAll()
-    
+
     printConfigBanner()
 
     if (isCleanup)
@@ -24,7 +24,7 @@ object Runner {
     val result    = launchTestSuite()
     val exitCode  = result.exitCode
     val message   = "\n" + result + "\n"
-  
+
     if (exitCode == 0) success(message)
     else failure(message)
 

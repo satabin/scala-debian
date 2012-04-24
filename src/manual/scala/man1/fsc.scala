@@ -24,7 +24,7 @@ object fsc extends Command {
   val parameters = scalac.parameters
 
   val description = Section("DESCRIPTION",
-      
+
     "The "&MBold("fsc")&" tool submits Scala compilation jobs to " &
     "a compilation daemon. "&
     "The first time it is executed, the daemon is started automatically. "&
@@ -32,12 +32,12 @@ object fsc extends Command {
     "runs, the same daemon can be reused, thus resulting in a faster compilation. "&
     "The tool is especially effective when repeatedly compiling with the same "&
     "class paths, because the compilation daemon can reuse a compiler instance.",
-    
+
     "The compilation daemon is smart enough to flush its cached compiler "&
     "when the class path changes.  However, if the contents of the class path "&
     "change, for example due to upgrading a library, then the daemon "&
     "should be explicitly shut down with " & MBold("-shutdown") & ".",
-    
+
     "Note that the " & Link(MBold("scala"), "scala.html") & " script runner " &
     "will also use " &
     "the offline compiler by default, with the same advantages and caveats.")
@@ -71,7 +71,7 @@ object fsc extends Command {
 
       "The following session shows a typical speed up due to using the "&
       "offline compiler.",
-      
+
       CodeSample(
       """> fsc -verbose -d /tmp test.scala
         |\&...
@@ -120,11 +120,11 @@ object fsc extends Command {
         SeqPara(
           "Specify the options to be passed to the " & MBold("java") &
           " command defined by " & MBold("JAVACMD") & ".",
-        
+
           "With Java 1.5 (or newer) one may for example configure the " &
           "memory usage of the JVM as follows: " &
           Mono("JAVA_OPTS=\"-Xmx512M -Xms16M -Xss16M\""),
-        
+
           "With " & Link("GNU Java", "http://gcc.gnu.org/java/") & " one " &
           "may configure the memory usage of the GIJ as follows: " &
           Mono("JAVA_OPTS=\"--mx512m --ms16m\"")

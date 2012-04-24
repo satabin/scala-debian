@@ -102,7 +102,7 @@ abstract class NodePrinters {
           }
         def nodeinfo2(tree: Tree): String =
           (if (comma) "," else "") + nodeinfo(tree)
-        
+
         def applyCommon(name: String, tree: Tree, fun: Tree, args: List[Tree]) {
           println(name + "(" + nodeinfo(tree))
           traverse(fun, level + 1, true)
@@ -117,7 +117,7 @@ abstract class NodePrinters {
           }
           printcln(")")
         }
-          
+
         tree match {
           case AppliedTypeTree(tpt, args) => applyCommon("AppliedTypeTree", tree, tpt, args)
           case Apply(fun, args)           => applyCommon("Apply", tree, fun, args)
@@ -203,7 +203,7 @@ abstract class NodePrinters {
             println("  " + parents.map(p =>
                 if (p.tpe ne null) p.tpe.typeSymbol else "null-" + p
               ) + ", // parents")
-            traverse(self, level + 1, true)    
+            traverse(self, level + 1, true)
             if (body.isEmpty)
               println("  List() // no body")
             else {
@@ -257,18 +257,18 @@ abstract class NodePrinters {
                   println(p.productPrefix+"(")
                   for (elem <- (0 until p.productArity) map p.productElement) {
                     def printElem(elem: Any, level: Int): Unit = elem match {
-                      case t: Tree => 
+                      case t: Tree =>
                         traverse(t, level, false)
-                      case xs: List[_] => 
+                      case xs: List[_] =>
                         print("List(")
                         for (x <- xs) printElem(x, level+1)
                         printcln(")")
-                      case _ => 
+                      case _ =>
                         println(elem.toString)
                     }
                     printElem(elem, level+1)
                   }
-                  printcln(")")                
+                  printcln(")")
                 } else printcln(p.productPrefix)
             }
         }

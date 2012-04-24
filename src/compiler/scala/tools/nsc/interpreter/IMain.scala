@@ -29,17 +29,17 @@ import scala.reflect.NameTransformer
 import IMain._
 
 /** An interpreter for Scala code.
- *  
+ *
  *  The main public entry points are compile(), interpret(), and bind().
  *  The compile() method loads a complete Scala file.  The interpret() method
  *  executes one line of Scala code at the request of the user.  The bind()
  *  method binds an object to a variable that can then be used by later
  *  interpreted code.
- *  
+ *
  *  The overall approach is based on compiling the requested code and then
  *  using a Java classloader and Java reflection to run the code
  *  and access its results.
- *  
+ *
  *  In more detail, a single compiler instance is used
  *  to accumulate all successfully compiled or interpreted Scala code.  To
  *  "interpret" a line of code, the compiler generates a fresh object that
@@ -50,7 +50,7 @@ import IMain._
  *  exports members called "$eval" and "$print". To accomodate user expressions
  *  that read from variables or methods defined in previous statements, "import"
  *  statements are used.
- *  
+ *
  *  This interpreter shares the strengths and weaknesses of using the
  *  full compiler-to-Java.  The main strength is that interpreted code
  *  behaves exactly as does compiled code, including running at full speed.
@@ -83,7 +83,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
 
   private[nsc] var printResults: Boolean = true   // whether to print result lines
   private[nsc] var totalSilence: Boolean = false  // whether to print anything
-  
+
   /** directory to save .class files to */
   val virtualDirectory = new VirtualDirectory("(memory)", None) {
     private def pp(root: io.AbstractFile, indentLevel: Int) {
@@ -117,7 +117,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     }
     catch AbstractOrMissingHandler()
   }
-  
+
   // set up initialization future
   private var _isInitialized: () => Boolean = null
   // argument is a thunk to execute after init is done
@@ -157,18 +157,18 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
   // import global.{ treeWrapper => _, _ }
   import global._
   import definitions.{ ScalaPackage, JavaLangPackage, PredefModule, RootClass }
-  // 
+  //
   // private implicit def privateTreeOps(t: Tree): List[Tree] = {
   //   (new Traversable[Tree] {
   //     def foreach[U](f: Tree => U): Unit = t foreach { x => f(x) ; () }
   //   }).toList
   // }
-  
+
   // TODO: If we try to make naming a lazy val, we run into big time
   // scalac unhappiness with what look like cycles.  It has not been easy to
   // reduce, but name resolution clearly takes different paths.
   object naming extends {
-    val global: imain.global.type = imain.global    
+    val global: imain.global.type = imain.global
   } with Naming {
     // make sure we don't overwrite their unwisely named res3 etc.
     override def freshUserVarName(): String = {
@@ -184,12 +184,12 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
   //   val intp: imain.type = imain
   // } with Dossiers { }
   // import dossiers._
-  
+
   lazy val memberHandlers = new {
     val intp: imain.type = imain
   } with MemberHandlers
   import memberHandlers._
-  
+
   def atPickler[T](op: => T): T = atPhase(currentRun.picklerPhase)(op)
   def afterTyper[T](op: => T): T = atPhase(currentRun.typerPhase.next)(op)
 
@@ -206,9 +206,9 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     try operation
     finally totalSilence = saved
   }
-  
+
   def quietRun[T](code: String) = beQuietDuring(interpret(code))
-  
+
   private def logAndDiscard[T](label: String, alt: => T): PartialFunction[Throwable, T] = {
     case t => repldbg(label + ": " + t) ; alt
   }
@@ -224,13 +224,13 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     catch   logAndDiscard("bindLastException", null.asInstanceOf[T])
     finally bindExceptions = true
   }
-  
+
   /** A string representing code to be wrapped around all lines. */
   private var _executionWrapper: String = ""
   def executionWrapper = _executionWrapper
   def setExecutionWrapper(code: String) = _executionWrapper = code
   def clearExecutionWrapper() = _executionWrapper = ""
-  
+
   lazy val lineManager = createLineManager()
 
   /** interpreter settings */
@@ -247,11 +247,11 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
 
     new Global(settings, reporter)
   }
-  
+
   /** Parent classloader.  Overridable. */
   protected def parentClassLoader: ClassLoader =
     settings.explicitParentLoader.getOrElse( this.getClass.getClassLoader() )
-  
+
   /** the compiler's classpath, as URL's */
   lazy val compilerClasspath = global.classPath.asURLs
 
@@ -276,7 +276,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
   def classLoader: AbstractFileClassLoader = {
     if (_classLoader == null)
       resetClassLoader()
-    
+
     _classLoader
   }
   private def makeClassLoader(): AbstractFileClassLoader = {
@@ -376,7 +376,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
         stripString("" + oldSym), stripString("" + newSym)))
       replwarn("Companions must be defined together; you may wish to use :paste mode for this.")
     }
-    
+
     // Updating the defined name map
     req.definedNames foreach { name =>
       if (definedNameMap contains name) {
@@ -458,7 +458,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
       case Some(trees)  => trees
     }
     // repltrace(
-    //   trees map { t => 
+    //   trees map { t =>
     //     t map { t0 => t0.getClass + " at " + safePos(t0, -1) + "\n" }
     //   } mkString
     // )
@@ -514,7 +514,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
           case Right(req) => return Right(req withOriginalLine line)
           case x          => return x
         }
-      case _ => 
+      case _ =>
     }
     Right(buildRequest(line, trees))
   }
@@ -534,9 +534,9 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
 
   /**
    *  Interpret one line of input. All feedback, including parse errors
-   *  and evaluation results, are printed via the supplied compiler's 
+   *  and evaluation results, are printed via the supplied compiler's
    *  reporter. Values defined are available for future interpreted strings.
-   *  
+   *
    *  The return value is whether the line was interpreter successfully,
    *  e.g. that there were no parse errors.
    */
@@ -554,7 +554,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
           printMessage(result stripSuffix "\n")
         else if (isReplDebug) // show quiet-mode activity
           printMessage(result.trim.lines map ("[quiet] " + _) mkString "\n")
-        
+
         // Book-keeping.  Have to record synthetic requests too,
         // as they may have been issued for information, e.g. :type
         recordRequest(req)
@@ -570,7 +570,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     if (global == null) IR.Error
     else requestFromLine(line, synthetic) match {
       case Left(result) => result
-      case Right(req)   => 
+      case Right(req)   =>
         // null indicates a disallowed statement type; otherwise compile and
         // fail if false (implying e.g. a type error)
         if (req == null || !req.compile) IR.Error
@@ -618,7 +618,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     quietRun("val %s = %s.asInstanceOf[%s]".format(name, tempName, newType))
   }
   def quietImport(ids: String*): IR.Result = beQuietDuring(addImports(ids: _*))
-  def addImports(ids: String*): IR.Result = 
+  def addImports(ids: String*): IR.Result =
     if (ids.isEmpty) IR.Success
     else interpret("import " + ids.mkString(", "))
 
@@ -644,7 +644,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
   }
 
   /** Here is where we:
-   * 
+   *
    *  1) Read some source code, and put it in the "read" object.
    *  2) Evaluate the read object, and put the result in the "eval" object.
    *  3) Create a String for human consumption, and put it in the "print" object.
@@ -700,13 +700,13 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     def evalPath  = pathTo(evalName)
     def printPath = pathTo(printName)
 
-    def call(name: String, args: Any*): AnyRef = 
+    def call(name: String, args: Any*): AnyRef =
       evalMethod(name).invoke(evalClass, args.map(_.asInstanceOf[AnyRef]): _*)
 
     def callEither(name: String, args: Any*): Either[Throwable, AnyRef] =
       try Right(call(name, args: _*))
       catch { case ex: Throwable => Left(ex) }
-      
+
     def callOpt(name: String, args: Any*): Option[AnyRef] =
       try Some(call(name, args: _*))
       catch { case ex: Throwable => bindError(ex) ; None }
@@ -715,7 +715,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
 
     private def evalError(path: String, ex: Throwable) =
       throw new EvalException("Failed to load '" + path + "': " + ex.getMessage, ex)
-    
+
     private def load(path: String): Class[_] = {
       try Class.forName(path, true, classLoader)
       catch { case ex => evalError(path, unwrap(ex)) }
@@ -759,7 +759,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
   }
 
   /** One line of code submitted by the user for interpretation */
-  // private 
+  // private
   class Request(val line: String, val trees: List[Tree]) {
     val lineRep = new ReadEvalPrint()
     import lineRep.lineAfterTyper
@@ -821,7 +821,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     private object ResultObjectSourceCode extends CodeAssembler[MemberHandler] {
       /** We only want to generate this code when the result
        *  is a value which can be referred to as-is.
-       */      
+       */
       val evalResult =
         if (!handlers.last.definesValue) ""
         else handlers.last.definesTerm match {
@@ -845,7 +845,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
         lineRep.evalName, evalResult, lineRep.printName,
         executionWrapper, lineRep.readName + accessPath
       )
-      
+
       val postamble = """
       |    )
       |  }
@@ -859,7 +859,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     def getEval: Option[AnyRef] = {
       // ensure it has been compiled
       compile
-      // try to load it and call the value method      
+      // try to load it and call the value method
       lineRep.evalValue filterNot (_ == null)
     }
 
@@ -871,7 +871,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
 
       // compile the object containing the user's code
       lineRep.compile(ObjectSourceCode(handlers)) && {
-        // extract and remember types 
+        // extract and remember types
         typeOf
         typesOfDefinedTerms
 
@@ -919,7 +919,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
       try {
         val execution = lineManager.set(originalLine)(lineRep call sessionNames.print)
         execution.await()
-        
+
         execution.state match {
           case Done       => ("" + execution.get(), true)
           case Threw      => (lineRep.bindError(execution.caught()), false)
@@ -976,7 +976,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
     requestForIdent(id) flatMap (_.getEval)
 
   def classOfTerm(id: String): Option[JClass] =
-    valueOfTerm(id) map (_.getClass)    
+    valueOfTerm(id) map (_.getClass)
 
   def typeOfTerm(id: String): Option[Type] = newTermName(id) match {
     case nme.ROOTPKG  => Some(definitions.RootClass.tpe)
@@ -1023,28 +1023,28 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
   def definedSymbols = prevRequests.toSet flatMap ((x: Request) => x.definedSymbols.values)
 
   private def findName(name: Name) = definedSymbols find (_.name == name)
-  
+
   private def missingOpt(op: => Symbol): Option[Symbol] =
     try Some(op)
     catch { case _: MissingRequirementError => None }
   private def missingWrap(op: => Symbol): Symbol =
     try op
     catch { case _: MissingRequirementError => NoSymbol }
-  
+
   def optCompilerClass(name: String)  = missingOpt(definitions.getClass(name))
   def optCompilerModule(name: String) = missingOpt(definitions.getModule(name))
   def getCompilerClass(name: String)  = missingWrap(definitions.getClass(name))
   def getCompilerModule(name: String) = missingWrap(definitions.getModule(name))
-  
+
   /** Translate a repl-defined identifier into a Symbol.
    */
   def apply(name: String): Symbol = {
     val tpname = newTypeName(name)
     (
              findName(tpname)
-      orElse findName(tpname.companionName) 
-      orElse optCompilerClass(name) 
-      orElse optCompilerModule(name) 
+      orElse findName(tpname.companionName)
+      orElse optCompilerClass(name)
+      orElse optCompilerModule(name)
       getOrElse NoSymbol
     )
   }
@@ -1109,7 +1109,7 @@ class IMain(val settings: Settings, protected val out: JPrintWriter) extends Imp
 object IMain {
   // The two name forms this is catching are the two sides of this assignment:
   //
-  // $line3.$read.$iw.$iw.Bippy = 
+  // $line3.$read.$iw.$iw.Bippy =
   //   $line3.$read$$iw$$iw$Bippy@4a6a00ca
   private def removeLineWrapper(s: String) = s.replaceAll("""\$line\d+[./]\$(read|eval|print)[$.]""", "")
   private def removeIWPackages(s: String)  = s.replaceAll("""\$(iw|read|eval|print)[$.]""", "")
@@ -1146,7 +1146,7 @@ object IMain {
              with StrippingWriter
              with TruncatingWriter {
     self =>
- 
+
     def clean(str: String): String = truncate(strip(str))
     override def write(str: String) = super.write(clean(str))
   }

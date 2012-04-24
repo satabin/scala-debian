@@ -19,7 +19,7 @@ package scala.xml
 //   def apply(data: String) =
 //     if (data != null) new Text(data)
 //     else throw new IllegalArgumentException("tried to construct Text with null")
-//     
+//
 //   def unapply(other: Any): Option[String] = other match {
 //     case x: Text  => Some(x.data)
 //     case _        => None
@@ -42,7 +42,7 @@ case class Text(_data: String) extends Atom[String](_data)
    *  specification.
    *
    *  @param  sb ...
-   *  @return ... 
+   *  @return ...
    */
   override def buildString(sb: StringBuilder) =
     Utility.escape(data, sb)

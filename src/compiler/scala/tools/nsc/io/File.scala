@@ -10,8 +10,8 @@
 package scala.tools.nsc
 package io
 
-import java.io.{ 
-  FileInputStream, FileOutputStream, BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter, 
+import java.io.{
+  FileInputStream, FileOutputStream, BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter,
   BufferedInputStream, BufferedOutputStream, IOException, PrintStream, PrintWriter, Closeable => JCloseable }
 import java.nio.channels.{ Channel, FileChannel }
 import scala.io.Codec
@@ -19,7 +19,7 @@ import scala.io.Codec
 object File {
   def pathSeparator = java.io.File.pathSeparator
   def separator = java.io.File.separator
-  
+
   def apply(path: Path)(implicit codec: Codec) = new File(path.jfile)(codec)
 
   // Create a temporary file, which will be deleted upon jvm exit.
@@ -28,7 +28,7 @@ object File {
     jfile.deleteOnExit()
     apply(jfile)
   }
-    
+
   type HasClose = { def close(): Unit }
 
   def closeQuietly(target: HasClose) {
@@ -37,7 +37,7 @@ object File {
   def closeQuietly(target: JCloseable) {
     try target.close() catch { case e: IOException => }
   }
-  
+
   // this is a workaround for http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6503430
   // we are using a static initializer to statically initialize a java class so we don't
   // trigger java.lang.InternalErrors later when using it concurrently.  We ignore all
@@ -103,43 +103,43 @@ class File(jfile: JFile)(implicit constructorCodec: Codec) extends Path(jfile) w
   def writer(append: Boolean): OutputStreamWriter = writer(append, creationCodec)
   def writer(append: Boolean, codec: Codec): OutputStreamWriter =
     new OutputStreamWriter(outputStream(append), codec.charSet)
-  
+
   /** Wraps a BufferedWriter around the result of writer().
    */
   def bufferedWriter(): BufferedWriter = bufferedWriter(false)
   def bufferedWriter(append: Boolean): BufferedWriter = bufferedWriter(append, creationCodec)
   def bufferedWriter(append: Boolean, codec: Codec): BufferedWriter =
     new BufferedWriter(writer(append, codec))
-  
+
   def printWriter(): PrintWriter = new PrintWriter(bufferedWriter(), true)
   def printWriter(append: Boolean): PrintWriter = new PrintWriter(bufferedWriter(append), true)
-  
+
   /** Creates a new file and writes all the Strings to it. */
-  def writeAll(strings: String*): Unit = {    
+  def writeAll(strings: String*): Unit = {
     val out = bufferedWriter()
     try strings foreach (out write _)
     finally out close
   }
-  
+
   def writeBytes(bytes: Array[Byte]): Unit = {
     val out = bufferedOutput()
     try out write bytes
     finally out close
   }
-  
+
   def appendAll(strings: String*): Unit = {
     val out = bufferedWriter(append = true)
     try strings foreach (out write _)
     finally out.close()
   }
-  
+
   /** Calls println on each string (so it adds a newline in the PrintWriter fashion.) */
   def printlnAll(strings: String*): Unit = {
     val out = printWriter()
     try strings foreach (out println _)
     finally out close
   }
-  
+
   def safeSlurp(): Option[String] =
     try Some(slurp())
     catch { case _: IOException => None }
@@ -158,7 +158,7 @@ class File(jfile: JFile)(implicit constructorCodec: Codec) extends Path(jfile) w
     lazy val in = in_s.getChannel()
     lazy val out = out_s.getChannel()
 
-    try {      
+    try {
       val size = in.size()
       var pos, count = 0L
       while (pos < size) {
@@ -167,16 +167,16 @@ class File(jfile: JFile)(implicit constructorCodec: Codec) extends Path(jfile) w
       }
     }
     finally List[HasClose](out, out_s, in, in_s) foreach closeQuietly
-    
+
     if (this.length != dest.length)
       fail("Failed to completely copy %s to %s".format(name, dest.name))
-    
+
     if (preserveFileDate)
       dest.lastModified = this.lastModified
-    
+
     true
   }
-  
+
   /** Reflection since we're into the java 6+ API.
    */
   def setExecutable(executable: Boolean, ownerOnly: Boolean = true): Boolean = {
@@ -184,7 +184,7 @@ class File(jfile: JFile)(implicit constructorCodec: Codec) extends Path(jfile) w
     val method =
       try classOf[JFile].getMethod("setExecutable", classOf[Boolean], classOf[Boolean])
       catch { case _: NoSuchMethodException => return false }
-    
+
     try method.invoke(jfile, executable: JBoolean, ownerOnly: JBoolean).asInstanceOf[JBoolean].booleanValue
     catch { case _: Exception => false }
   }

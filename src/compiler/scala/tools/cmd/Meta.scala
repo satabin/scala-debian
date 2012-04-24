@@ -18,16 +18,16 @@ object Meta {
     def name: String
     def action: () => Unit
   }
-  
+
   trait StdOpts {
     self: Spec with Interpolation =>
-    
+
                                 Bash.name   --> runAndExit(Bash.action())
     val selfUpdateName  = SelfUpdate.name   --| ;
-    
+
     if (selfUpdateName.isDefined)
       runAndExit(SelfUpdate.action())
-    
+
     /** I think we're as close as we can get to bundling completion with
      *  the program given the constraints imposed by bash.  This outputs
      *  the completion function to a tempfile and echoes ". /path/to/file"
@@ -52,7 +52,7 @@ object Meta {
      *
      *    tools/scmp --self-update tools/scmp
      *
-     *  and it will overwrite itself with the current version.  
+     *  and it will overwrite itself with the current version.
      */
     object SelfUpdate extends Opt {
       val name    = "self-update"

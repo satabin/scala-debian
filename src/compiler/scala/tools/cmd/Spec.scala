@@ -13,7 +13,7 @@ package cmd
 trait Spec {
   def referenceSpec: Reference
   def programInfo: Spec.Info
-  
+
   protected def help(str: => String): Unit
   protected def heading(str: => String): Unit = help("\n  " + str)
 
@@ -23,14 +23,14 @@ trait Spec {
 
 object Spec {
   class Info(
-    val runner: String, 
+    val runner: String,
     val usage: String,
     val mainClass: String
   )
   object Info {
     def apply(runner: String, help: String, mainClass: String): Info = new Info(runner, help, mainClass)
   }
-  
+
   class Accumulator[T: FromString]() {
     private var _buf: List[T] = Nil
 
@@ -45,7 +45,7 @@ object Spec {
     def contains(x: T)    = xs contains x
     override def toString = xs.mkString("{ ", ", ", " }")
   }
-  
+
   class EnvironmentVar(val name: String) {
     override def toString = "${%s}" format name
   }

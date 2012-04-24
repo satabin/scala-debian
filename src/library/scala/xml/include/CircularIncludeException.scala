@@ -13,7 +13,7 @@ package include
 /**
  * <p>
  * A <code>CircularIncludeException</code> is thrown when
- * an included document attempts to include itself or 
+ * an included document attempts to include itself or
  * one of its ancestor documents.
  * </p>
  */

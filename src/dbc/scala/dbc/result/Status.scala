@@ -16,13 +16,13 @@ import scala.dbc.datatype._;
 
 /** An object containing the status of a query */
 @deprecated(DbcIsDeprecated, "2.9.0") abstract class Status[ResultType] {
-  
+
   /** The statement that generated this status result. */
   def statement: scala.dbc.statement.Statement;
-  
+
   /** The number of elements modified or added by this statement. */
   def touchedCount: Option[Int];
-  
+
   def result: ResultType;
-  
+
 }

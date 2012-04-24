@@ -14,13 +14,13 @@ object Scrollable {
   trait Wrapper extends Scrollable {
     protected def scrollablePeer: javax.swing.Scrollable
     def preferredViewportSize = scrollablePeer.getPreferredScrollableViewportSize
-    
+
     def tracksViewportHeight: Boolean = scrollablePeer.getScrollableTracksViewportHeight
     def tracksViewportWidth: Boolean = scrollablePeer.getScrollableTracksViewportWidth
-    
+
     def blockIncrement(visibleRect: Rectangle, orientation: Orientation.Value, direction: Int): Int =
       scrollablePeer.getScrollableBlockIncrement(visibleRect, orientation.id, direction)
-    
+
     def unitIncrement(visibleRect: Rectangle, orientation: Orientation.Value, direction: Int): Int =
       scrollablePeer.getScrollableUnitIncrement(visibleRect, orientation.id, direction)
   }
@@ -28,16 +28,16 @@ object Scrollable {
 
 /**
  * A component that is specially suitable for being placed inside a
- * <code>ScrollPane</code>. 
- * 
+ * <code>ScrollPane</code>.
+ *
  * @see javax.swing.Scrollable
  */
 trait Scrollable extends Component {
   def preferredViewportSize: Dimension
-  
+
   def tracksViewportHeight: Boolean
   def tracksViewportWidth: Boolean
-  
-  def blockIncrement(visibleRect: Rectangle, orientation: Orientation.Value, direction: Int): Int  
+
+  def blockIncrement(visibleRect: Rectangle, orientation: Orientation.Value, direction: Int): Int
   def unitIncrement(visibleRect: Rectangle, orientation: Orientation.Value, direction: Int): Int
 }

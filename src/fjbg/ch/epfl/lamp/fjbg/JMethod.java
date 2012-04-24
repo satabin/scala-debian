@@ -141,7 +141,7 @@ public class JMethod extends JFieldOrMethod {
         }
         return null;
     }
- 
+
     public JLocalVariable[] getLocalVariables() {
         return (JLocalVariable[])localVariables
             .toArray(new JLocalVariable[localVariables.size()]);

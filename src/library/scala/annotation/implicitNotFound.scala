@@ -7,7 +7,7 @@
 \*                                                                      */
 
 package scala.annotation
- 
+
 /**
  * An annotation that specifies the error message that is emitted when the compiler
  * cannot find an implicit value of the annotated type.

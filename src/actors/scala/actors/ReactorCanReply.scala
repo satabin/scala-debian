@@ -17,7 +17,7 @@ package scala.actors
  */
 private[actors] trait ReactorCanReply extends CanReply[Any, Any] {
   _: ReplyReactor =>
-  
+
   type Future[+P] = scala.actors.Future[P]
 
   def !?(msg: Any): Any =
@@ -74,7 +74,7 @@ private[actors] trait ReactorCanReply extends CanReply[Any, Any] {
       def apply() = {
         if (!isSet)
           fvalue = Some(res.get)
-        
+
         fvalueTyped
       }
       def respond(k: A => Unit): Unit =

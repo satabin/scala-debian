@@ -46,13 +46,13 @@ class Jar(file: File) extends Iterable[JarEntry] {
     finally in.close()
   }
   def jarWriter() = new JarWriter(file)
-  
+
   override def foreach[U](f: JarEntry => U): Unit = withJarInput { in =>
     Iterator continually in.getNextJarEntry() takeWhile (_ != null) foreach f
   }
   override def iterator: Iterator[JarEntry] = this.toList.iterator
   def fileishIterator: Iterator[Fileish] = jarFile.entries.asScala map (x => Fileish(x, () => getEntryStream(x)))
-  
+
   private def getEntryStream(entry: JarEntry) = jarFile getInputStream entry match {
     case null   => errorFn("No such entry: " + entry) ; null
     case x      => x
@@ -60,7 +60,7 @@ class Jar(file: File) extends Iterable[JarEntry] {
   override def toString = "" + file
 }
 
-class JarWriter(file: File, val manifest: Manifest = new Manifest()) {  
+class JarWriter(file: File, val manifest: Manifest = new Manifest()) {
   private lazy val out = new JarOutputStream(file.outputStream(), manifest)
   def writeAllFrom(dir: Directory) = {
     try dir.list foreach (x => addEntry(x, ""))
@@ -90,12 +90,12 @@ class JarWriter(file: File, val manifest: Manifest = new Manifest()) {
   }
 }
 
-object Jar {  
+object Jar {
   // See http://download.java.net/jdk7/docs/api/java/nio/file/Path.html
   // for some ideas.
   private val ZipMagicNumber = List[Byte](80, 75, 3, 4)
   private def magicNumberIsZip(f: Path) = f.isFile && (f.toFile.bytes().take(4).toList == ZipMagicNumber)
-  
+
   def isJarOrZip(f: Path): Boolean = isJarOrZip(f, true)
   def isJarOrZip(f: Path, examineFile: Boolean): Boolean =
     f.hasExtension("zip", "jar") || (examineFile && magicNumberIsZip(f))

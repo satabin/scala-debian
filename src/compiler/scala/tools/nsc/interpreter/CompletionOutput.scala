@@ -16,7 +16,7 @@ trait CompletionOutput {
 
   import global._
   import definitions.{ NothingClass, AnyClass, isTupleTypeOrSubtype, isFunctionType, isRepeatedParamType }
-  
+
   /** Reducing fully qualified noise for some common packages.
    */
   val typeTransforms = List(
@@ -25,27 +25,27 @@ trait CompletionOutput {
     "scala.collection.mutable." -> "mutable.",
     "scala.collection.generic." -> "generic."
   )
-    
+
   def quietString(tp: String): String =
     typeTransforms.foldLeft(tp) {
       case (str, (prefix, replacement)) =>
         if (str startsWith prefix) replacement + (str stripPrefix prefix)
         else str
     }
-  
+
   class MethodSymbolOutput(method: Symbol) {
     val pkg       = method.ownerChain find (_.isPackageClass) map (_.fullName) getOrElse ""
-    
+
     def relativize(str: String): String = quietString(str stripPrefix (pkg + "."))
     def relativize(tp: Type): String    = relativize(tp.normalize.toString)
     def relativize(sym: Symbol): String = relativize(sym.info)
-    
+
     def braceList(tparams: List[String]) = if (tparams.isEmpty) "" else (tparams map relativize).mkString("[", ", ", "]")
     def parenList(params: List[Any])  = params.mkString("(", ", ", ")")
-    
+
     def methodTypeToString(mt: MethodType) =
       (mt.paramss map paramsString mkString "") + ": " + relativize(mt.finalResultType)
-    
+
     def typeToString(tp: Type): String = relativize(
       tp match {
         case x if isFunctionType(x)           => functionString(x)
@@ -73,7 +73,7 @@ trait CompletionOutput {
         case xs                     => xs
       }
       parenList(strs)
-    }    
+    }
 
     def methodString() =
       method.keyString + " " + method.nameString + (method.info.normalize match {

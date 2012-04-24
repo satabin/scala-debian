@@ -13,11 +13,11 @@ package value;
 
 
 @deprecated(DbcIsDeprecated, "2.9.0") abstract class Unknown extends Value {
-  
+
   val dataType: datatype.Unknown;
-  
+
   def sqlString = sys.error("An 'ANY' value cannot be represented.");
-  
+
 }
 
 @deprecated(DbcIsDeprecated, "2.9.0") object UnknownType {

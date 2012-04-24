@@ -5,7 +5,7 @@ import swing._
 import event._
 
 /** A GUI app to convert celsius to centigrade
- */    
+ */
 object CelsiusConverter extends SimpleSwingApplication {
   def top = new MainFrame {
     title = "Convert Celsius to Fahrenheit"
@@ -22,13 +22,13 @@ object CelsiusConverter extends SimpleSwingApplication {
       text = "Fahrenheit     "
       border = Swing.EmptyBorder(5, 5, 5, 5)
       listenTo(convertButton, tempCelsius)
-      
+
       def convert() {
         val c = Integer.parseInt(tempCelsius.text)
         val f = c * 9 / 5 + 32
         text = "<html><font color = red>"+f+"</font> Fahrenheit</html>"
       }
-      
+
       reactions += {
         case ButtonClicked(_) | EditDone(_) => convert()
       }

@@ -50,7 +50,7 @@ trait SeqMethods[+A, +This <: SeqLike[A, This] with Seq[A]] extends IterableMeth
   def lastIndexWhere(p: A => Boolean, end: Int): Int
   def lengthCompare(len: Int): Int
   def padTo[B >: A, That](len: Int, elem: B)(implicit bf: CanBuildFrom[This, B, That]): That
-  def patch[B >: A, That](from: Int, patch: GenSeq[B], replaced: Int)(implicit bf: CanBuildFrom[This, B, That]): That 
+  def patch[B >: A, That](from: Int, patch: GenSeq[B], replaced: Int)(implicit bf: CanBuildFrom[This, B, That]): That
   def permutations: Iterator[This]
   def prefixLength(p: A => Boolean): Int
   def reverse: This
@@ -64,7 +64,7 @@ trait SeqMethods[+A, +This <: SeqLike[A, This] with Seq[A]] extends IterableMeth
   def startsWith[B](that: Seq[B], offset: Int): Boolean
   def union[B >: A, That](that: Seq[B])(implicit bf: CanBuildFrom[This, B, That]): That
   def updated[B >: A, That](index: Int, elem: B)(implicit bf: CanBuildFrom[This, B, That]): That
-  
+
   // refinements
   def view: SeqView[A, This]
   def view(from: Int, until: Int): SeqView[A, This]

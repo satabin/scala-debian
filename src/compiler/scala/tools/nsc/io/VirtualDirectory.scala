@@ -9,7 +9,7 @@ import scala.collection.mutable
 
 /**
  * An in-memory directory.
- * 
+ *
  * @author Lex Spoon
  */
 class VirtualDirectory(val name: String, maybeContainer: Option[VirtualDirectory])
@@ -40,23 +40,23 @@ extends AbstractFile {
    *  check that it exists.
    */
   def lookupNameUnchecked(name: String, directory: Boolean): AbstractFile = unsupported
-  
+
   private val files = mutable.Map.empty[String, AbstractFile]
 
   // the toList is so that the directory may continue to be
   // modified while its elements are iterated
   def iterator = files.values.toList.iterator
-  
+
   override def lookupName(name: String, directory: Boolean): AbstractFile =
     files get name filter (_.isDirectory == directory) orNull
-    
+
   override def fileNamed(name: String): AbstractFile =
     Option(lookupName(name, false)) getOrElse {
       val newFile = new VirtualFile(name, path+'/'+name)
       files(name) = newFile
       newFile
     }
-  
+
   override def subdirectoryNamed(name: String): AbstractFile =
     Option(lookupName(name, true)) getOrElse {
       val dir = new VirtualDirectory(name, Some(this))

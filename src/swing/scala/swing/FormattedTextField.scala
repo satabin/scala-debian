@@ -28,17 +28,17 @@ object FormattedTextField {
 
 /**
  * A text field with formatted input.
- * 
+ *
  * @see javax.swing.JFormattedTextField
  */
 class FormattedTextField(format: java.text.Format) extends TextComponent {
   override lazy val peer: JFormattedTextField = new JFormattedTextField(format) with SuperMixin
-  
+
   import FormattedTextField._
- 
+
   def commitEdit() { peer.commitEdit() }
   def editValid: Boolean = peer.isEditValid
-  
+
   def focusLostBehavior: FocusLostBehavior.Value = FocusLostBehavior(peer.getFocusLostBehavior)
   def focusLostBehavior_=(b: FocusLostBehavior.Value) { peer.setFocusLostBehavior(b.id) }
 }

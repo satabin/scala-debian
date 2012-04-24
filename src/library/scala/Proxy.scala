@@ -11,7 +11,7 @@ package scala
 /** This class implements a simple proxy that forwards all calls to
  *  the public, non-final methods defined in class "Any" to another
  *  object self.  Those methods are:
- *  
+ *
  *    def hashCode(): Int
  *    def equals(other: Any): Boolean
  *    def toString(): String
@@ -24,7 +24,7 @@ package scala
  */
 trait Proxy {
   def self: Any
-  
+
   override def hashCode: Int = self.hashCode
   override def equals(that: Any): Boolean = that match {
     case null       => false

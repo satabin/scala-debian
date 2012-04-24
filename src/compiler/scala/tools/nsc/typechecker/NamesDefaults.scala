@@ -34,14 +34,14 @@ trait NamesDefaults { self: Analyzer =>
   }
   def isNamed(arg: Tree) = nameOf(arg).isDefined
 
-  /** @param pos maps indicies from old to new */ 
+  /** @param pos maps indicies from old to new */
   def reorderArgs[T: ClassManifest](args: List[T], pos: Int => Int): List[T] = {
     val res = new Array[T](args.length)
     // (hopefully) faster than zipWithIndex
     (0 /: args) { case (index, arg) => res(pos(index)) = arg; index + 1 }
     res.toList
   }
-  
+
   /** @param pos maps indicies from new to old (!) */
   def reorderArgsInv[T: ClassManifest](args: List[T], pos: Int => Int): List[T] = {
     val argsArray = args.toArray
@@ -78,12 +78,12 @@ trait NamesDefaults { self: Analyzer =>
    *  >  val qual$n+m = arg(m)
    *  >  qual$1.fun[targs](x$1, ...)...(..., x$n)(x$n+1, ..., x$n+m)
    *   }
-   * 
+   *
    * @param typer the typer calling this method; this method calls
    *    typer.doTypedApply
    * @param mode the mode to use for calling typer.doTypedApply
    * @param pt the expected type for calling typer.doTypedApply
-   * 
+   *
    * @param tree: the function application tree
    * @argPos: a function mapping arguments from their current position to the
    *   position specified by the method type. example:
@@ -91,7 +91,7 @@ trait NamesDefaults { self: Analyzer =>
    *    foo(b = "1", a = 2)
    *  calls
    *    transformNamedApplication(Apply(foo, List("1", 2), { 0 => 1, 1 => 0 })
-   * 
+   *
    *  @return the transformed application (a Block) together with the NamedApplyInfo.
    *     if isNamedApplyBlock(tree), returns the existing context.namedApplyBlockInfo
    */
@@ -479,7 +479,7 @@ trait NamesDefaults { self: Analyzer =>
               if (sym.isVariable || sym.isGetter && sym.accessed.isVariable) {
                 // named arg not allowed
                 variableNameClash = true
-                typer.context.error(sym.pos, 
+                typer.context.error(sym.pos,
                   "%s definition needs %s because '%s' is used as a named argument in its body.".format(
                     "variable",   // "method"
                     "type",       // "result type"

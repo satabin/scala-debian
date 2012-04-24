@@ -40,12 +40,12 @@ trait Adjustable extends Oriented {
   def minimum_=(m: Int)
   def maximum: Int
   def maximum_=(m: Int)
-    
+
 // Needs implementation of AdjustmentEvent
 //
 //    val adjustments: Publisher = new Publisher {
 //		peer.addAdjustmentListener(new AdjustmentListener {
-//			def adjustmentValueChanged(e: java.awt.event.AdjustmentEvent) { 
+//			def adjustmentValueChanged(e: java.awt.event.AdjustmentEvent) {
 //				publish(new AdjustmentEvent(e))
 //			}
 //		})

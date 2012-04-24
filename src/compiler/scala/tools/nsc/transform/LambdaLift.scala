@@ -60,16 +60,16 @@ abstract class LambdaLift extends InfoTransform {
 
     private def newSymSet = new TreeSet[Symbol](_ isLess _)
 
-    private def symSet(f: LinkedHashMap[Symbol, SymSet], sym: Symbol): SymSet = 
+    private def symSet(f: LinkedHashMap[Symbol, SymSet], sym: Symbol): SymSet =
       f.getOrElseUpdate(sym, newSymSet)
-    
+
     private def isSameOwnerEnclosure(sym: Symbol) =
       sym.owner.logicallyEnclosingMember == currentOwner.logicallyEnclosingMember
 
     /** Mark symbol `sym' as being free in `enclosure', unless `sym'
      *  is defined in `enclosure' or there is a class between `enclosure's owner
      *  and the owner of `sym'.
-     *  Return `true' if there is no class between `enclosure' and 
+     *  Return `true' if there is no class between `enclosure' and
      *  the owner of sym.
      *  pre: sym.isLocal, (enclosure.isMethod || enclosure.isClass)
      *
@@ -84,7 +84,7 @@ abstract class LambdaLift extends InfoTransform {
      *  }
      *
      *  In this case `x' is free in the primary constructor of class `C'.
-     *  but it is not free in `D', because after lambda lift the code would be transformed 
+     *  but it is not free in `D', because after lambda lift the code would be transformed
      *  as follows:
      *
      *  def f(x$0: int) {
@@ -200,7 +200,7 @@ abstract class LambdaLift extends InfoTransform {
             sym.owner.name + "$"
           else ""
         )
-        sym.name = 
+        sym.name =
           if (sym.name.isTypeName) unit.freshTypeName(base)
           else unit.freshTermName(base)
 
@@ -230,7 +230,7 @@ abstract class LambdaLift extends InfoTransform {
       def searchIn(searchee: Symbol): Symbol = {
         if (settings.debug.value)
           log("searching for " + sym + "(" + sym.owner + ") in " + searchee + " " + searchee.logicallyEnclosingMember)
-              
+
         val ps = (proxies get searchee.logicallyEnclosingMember).toList.flatten filter (_.name == sym.name)
         if (ps.isEmpty) searchIn(searchee.skipConstructor.owner)
         else ps.head
@@ -272,7 +272,7 @@ abstract class LambdaLift extends InfoTransform {
         val freeParams = ps map (p => ValDef(p) setPos tree.pos setType NoType)
         tree match {
           case DefDef(mods, name, tparams, vparamss, tpt, rhs) =>
-            val addParams = cloneSymbols(ps).map(_.setFlag(PARAM))            
+            val addParams = cloneSymbols(ps).map(_.setFlag(PARAM))
             sym.updateInfo(
               lifted(MethodType(sym.info.params ::: addParams, sym.info.resultType)))
             treeCopy.DefDef(tree, mods, name, tparams, List(vparamss.head ++ freeParams), tpt, rhs)
@@ -294,13 +294,13 @@ abstract class LambdaLift extends InfoTransform {
       case None =>
         tree
     }
-    
+
 /*  Something like this will be necessary to eliminate the implementation
  *  restiction from paramGetter above:
  *  We need to pass getters to the interface of an implementation class.
-    private def fixTraitGetters(lifted: List[Tree]): List[Tree] = 
+    private def fixTraitGetters(lifted: List[Tree]): List[Tree] =
       for (stat <- lifted) yield stat match {
-        case ClassDef(mods, name, tparams, templ @ Template(parents, self, body)) 
+        case ClassDef(mods, name, tparams, templ @ Template(parents, self, body))
         if stat.symbol.isTrait && !stat.symbol.isImplClass =>
           val iface = stat.symbol
           lifted.find(l => l.symbol.isImplClass && l.symbol.toInterface == iface) match {
@@ -318,7 +318,7 @@ abstract class LambdaLift extends InfoTransform {
                 treeCopy.ClassDef(
                   stat, mods, name, tparams,
                   treeCopy.Template(templ, parents, self, body ::: ifaceGetterDefs))
-              } else 
+              } else
                 stat
             case None =>
               stat
@@ -330,7 +330,7 @@ abstract class LambdaLift extends InfoTransform {
     private def liftDef(tree: Tree): Tree = {
       val sym = tree.symbol
       val oldOwner = sym.owner
-      if (sym.owner.isAuxiliaryConstructor && sym.isMethod)  // # bug 1909 
+      if (sym.owner.isAuxiliaryConstructor && sym.isMethod)  // # bug 1909
     	  sym setFlag STATIC
       sym.owner = sym.owner.enclClass
       if (sym.isClass) sym.owner = sym.owner.toInterface
@@ -349,7 +349,7 @@ abstract class LambdaLift extends InfoTransform {
           if (sym.isLocal) liftDef(tree1) else tree1
         case DefDef(_, _, _, _, _, _) =>
           val tree1 = addFreeParams(tree, sym)
-          if (sym.isLocal) liftDef(tree1) else tree1 
+          if (sym.isLocal) liftDef(tree1) else tree1
         case ValDef(mods, name, tpt, rhs) =>
           if (sym.isCapturedVariable) {
             val tpt1 = TypeTree(sym.tpe) setPos tpt.pos
@@ -383,7 +383,7 @@ abstract class LambdaLift extends InfoTransform {
         case Ident(name) =>
           val tree1 =
             if (sym != NoSymbol && sym.isTerm && !sym.isLabel)
-              if (sym.isMethod) 
+              if (sym.isMethod)
                 atPos(tree.pos)(memberRef(sym))
               else if (sym.isLocal && !isSameOwnerEnclosure(sym))
                 atPos(tree.pos)(proxyRef(sym))

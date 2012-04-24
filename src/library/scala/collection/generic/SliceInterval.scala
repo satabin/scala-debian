@@ -29,7 +29,7 @@ private[collection] class SliceInterval private (val from: Int, val until: Int) 
    *  // the second call to slice causes the interval to
    *  // be recalculated: the result is SliceInterval(11, 13).
    *  }}}
-   */   
+   */
   def recalculate(_from: Int, _until: Int): SliceInterval = {
     val lo    = _from max 0
     val elems = math.min(_until - lo, width)
@@ -46,7 +46,7 @@ object SliceInterval {
   def apply(from: Int, until: Int) = {
     val lo = from max 0
     val hi = until max 0
-    
+
     if (hi <= lo) new SliceInterval(lo, lo)
     else new SliceInterval(lo, hi)
   }

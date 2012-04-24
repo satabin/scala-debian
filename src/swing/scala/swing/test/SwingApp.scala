@@ -10,7 +10,7 @@ object SwingApp extends SimpleSwingApplication {
     var numclicks = 0
     object label extends Label {
       val prefix = "Number of button clicks: "
-      text = prefix + "0  " 
+      text = prefix + "0  "
       listenTo(button)
       reactions += {
         case ButtonClicked(button) =>

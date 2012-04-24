@@ -14,16 +14,16 @@ package expression;
 
 
 @deprecated(DbcIsDeprecated, "2.9.0") abstract class Field extends Expression {
-  
+
   /** The name of the schema in the database where the field is located. */
   def schemaName: Option[String] = None;
-  
+
   /** The name of the table in the database where the field is located. */
   def tableName: Option[String];
-  
+
   /** The name of the field in the database. */
   def fieldName: String;
-  
+
   /** A SQL-99 compliant string representation of the relation sub-
    * statement. This only has a meaning inside another statement. */
   def sqlInnerString: String = (
@@ -36,5 +36,5 @@ package expression;
       case Some(tn) => tn + "."
     }) + fieldName
   )
-  
+
 }

@@ -16,21 +16,21 @@ trait MSILPlatform extends Platform[MSILType] {
 
   if (settings.verbose.value)
     inform("[AssemRefs = " + settings.assemrefs.value + "]")
-  
+
   // phaseName = "msil"
   object genMSIL extends {
     val global: MSILPlatform.this.global.type = MSILPlatform.this.global
     val runsAfter = List[String]("dce")
     val runsRightAfter = None
   } with GenMSIL
-  
+
   lazy val classPath = MsilClassPath.fromSettings(settings)
   def rootLoader = new loaders.NamespaceLoader(classPath)
-  
+
   def platformPhases = List(
     genMSIL   // generate .msil files
-  )  
-  
+  )
+
   lazy val externalEquals = getMember(ComparatorClass.companionModule, nme.equals_)
   def isMaybeBoxed(sym: Symbol) = sym isNonBottomSubClass BoxedNumberClass
 }

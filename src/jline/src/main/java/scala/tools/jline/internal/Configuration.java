@@ -108,7 +108,7 @@ public final class Configuration
     //
     // System property helpers
     //
-    
+
     public static File getUserHome() {
         return new File(System.getProperty("user.home"));
     }

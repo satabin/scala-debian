@@ -205,7 +205,7 @@ public class JClass extends JMember {
     	}
     	return innerClasses;
     }
-    
+
     /**
      * Decides if the class is an interface.
      * @return The boolean representing if the class is an interface or not.
@@ -312,7 +312,7 @@ public class JClass extends JMember {
     	bootstrapClassAttr = new JBootstrapInvokeDynamic(context, this, bootstrapClass);
     	addAttribute(bootstrapClassAttr);
     }
-    
+
     /**
      * Writes the contents of the class to a data stream.
      * @param stream The data stream in which the class must be written.

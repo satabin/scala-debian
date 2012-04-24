@@ -20,12 +20,12 @@ import parsing.XhtmlEntities
  *
  * @author Burak Emir
  */
-object Utility extends AnyRef with parsing.TokenTests 
+object Utility extends AnyRef with parsing.TokenTests
 {
   final val SU = '\u001A'
-  
+
   implicit def implicitSbToString(sb: StringBuilder) = sb.toString()
-  
+
   // helper for the extremely oft-repeated sequence of creating a
   // StringBuilder, passing it around, and then grabbing its String.
   private [xml] def sbToString(f: (StringBuilder) => Unit): String = {
@@ -42,10 +42,10 @@ object Utility extends AnyRef with parsing.TokenTests
    *  <code>trimProper</code> and account for the fact that you may get back
    *  an empty sequence of nodes.
    *
-   *  precondition: node is not a text node (it might be trimmed) 
+   *  precondition: node is not a text node (it might be trimmed)
    */
   def trim(x: Node): Node = x match {
-    case Elem(pre, lab, md, scp, child@_*) => 
+    case Elem(pre, lab, md, scp, child@_*) =>
       Elem(pre, lab, md, scp, (child flatMap trimProper):_*)
   }
 
@@ -53,11 +53,11 @@ object Utility extends AnyRef with parsing.TokenTests
    *  <code>Atom</code> nodes that are not <code>Text</code> nodes are unaffected.
    */
   def trimProper(x:Node): Seq[Node] = x match {
-    case Elem(pre,lab,md,scp,child@_*) => 
+    case Elem(pre,lab,md,scp,child@_*) =>
       Elem(pre,lab,md,scp, (child flatMap trimProper):_*)
-    case Text(s) => 
+    case Text(s) =>
       new TextBuffer().append(s).toText
-    case _ => 
+    case _ =>
       x
   }
   /** returns a sorted attribute list */
@@ -82,7 +82,7 @@ object Utility extends AnyRef with parsing.TokenTests
    * @return     ...
    */
   final def escape(text: String): String = sbToString(escape(text, _))
-  
+
   object Escapes {
     /** For reasons unclear escape and unescape are a long ways from
       * being logical inverses. */
@@ -99,7 +99,7 @@ object Utility extends AnyRef with parsing.TokenTests
     val unescMap  = pairs ++ Map("apos"  -> '\'')
   }
   import Escapes.{ escMap, unescMap }
-  
+
   /**
    * Appends escaped string to <code>s</code>.
    *
@@ -108,7 +108,7 @@ object Utility extends AnyRef with parsing.TokenTests
    * @return     ...
    */
   final def escape(text: String, s: StringBuilder): StringBuilder = {
-    // Implemented per XML spec: 
+    // Implemented per XML spec:
     // http://www.w3.org/International/questions/qa-controls
     // imperative code 3x-4x faster than current implementation
     // dpp (David Pollak) 2010/02/03
@@ -125,12 +125,12 @@ object Utility extends AnyRef with parsing.TokenTests
         case '\t' => s.append('\t')
         case c => if (c >= ' ') s.append(c)
       }
-      
+
       pos += 1
     }
     s
   }
-  
+
   /**
    * Appends unescaped string to <code>s</code>, amp becomes &amp;
    * lt becomes &lt; etc..
@@ -144,13 +144,13 @@ object Utility extends AnyRef with parsing.TokenTests
     (unescMap get ref) map (s append _) orNull
 
   /**
-   * Returns a set of all namespaces used in a sequence of nodes 
+   * Returns a set of all namespaces used in a sequence of nodes
    * and all their descendants, including the empty namespaces.
    *
    * @param nodes ...
    * @return      ...
    */
-  def collectNamespaces(nodes: Seq[Node]): mutable.Set[String] = 
+  def collectNamespaces(nodes: Seq[Node]): mutable.Set[String] =
     nodes.foldLeft(new HashSet[String]) { (set, x) => collectNamespaces(x, set) ; set }
 
   /**
@@ -167,11 +167,11 @@ object Utility extends AnyRef with parsing.TokenTests
           set += a.getNamespace(n)
         case _ =>
       }
-      for (i <- n.child) 
+      for (i <- n.child)
         collectNamespaces(i, set)
     }
   }
-  
+
   // def toXML(
   //   x: Node,
   //   pscope: NamespaceBinding = TopScope,
@@ -247,7 +247,7 @@ object Utility extends AnyRef with parsing.TokenTests
    * Returns prefix of qualified name if any.
    *
    * @param name ...
-   * @return     ... 
+   * @return     ...
    */
   final def prefix(name: String): Option[String] = (name indexOf ':') match {
     case -1   => None
@@ -321,15 +321,15 @@ object Utility extends AnyRef with parsing.TokenTests
    * error message if it isn't.
    *
    * @param value ...
-   * @return      ... 
+   * @return      ...
    */
   def checkAttributeValue(value: String): String = {
     var i = 0
     while (i < value.length) {
       value.charAt(i) match {
-        case '<' => 
+        case '<' =>
           return "< not allowed in attribute value";
-        case '&' => 
+        case '&' =>
           val n = getName(value, i+1)
           if (n eq null)
             return "malformed entity reference in attribute value ["+value+"]";
@@ -353,7 +353,7 @@ object Utility extends AnyRef with parsing.TokenTests
     val sb  = new StringBuilder
     var rfb: StringBuilder = null
     val nb = new NodeBuffer()
-    
+
     val it = value.iterator
     while (it.hasNext) {
       var c = it.next
@@ -373,10 +373,10 @@ object Utility extends AnyRef with parsing.TokenTests
             rfb.append(c)
             c = it.next
           }
-          val ref = rfb.toString() 
+          val ref = rfb.toString()
           rfb.setLength(0)
           unescape(ref,sb) match {
-            case null => 
+            case null =>
               if (sb.length > 0) {          // flush buffer
                 nb += Text(sb.toString())
                 sb.setLength(0)
@@ -395,7 +395,7 @@ object Utility extends AnyRef with parsing.TokenTests
       else
         nb += x
     }
-    nb 
+    nb
   }
 
   /**
@@ -422,7 +422,7 @@ object Utility extends AnyRef with parsing.TokenTests
           i = i * base + ch().asDigit
         case 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
            | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' =>
-          if (! hex) 
+          if (! hex)
             reportSyntaxError("hex char not allowed in decimal char ref\n" +
                               "Did you mean to write &#x ?")
           else

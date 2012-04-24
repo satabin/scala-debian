@@ -12,12 +12,12 @@ import util._
 import interactive.RangePositions
 import DocParser.Parsed
 
-/** A very minimal global customized for extracting DocDefs.  It stops
- *  right after parsing so it can read DocDefs from source code which would
+/** A very minimal global customized for extracting `DocDefs`.  It stops
+ *  right after parsing so it can read `DocDefs` from source code which would
  *  otherwise cause the compiler to go haywire.
  */
 class DocParser(settings: nsc.Settings, reporter: Reporter)
-        extends Global(settings, reporter) 
+        extends Global(settings, reporter)
            with RangePositions {
 
   def this(settings: Settings) = this(settings, new ConsoleReporter(settings))
@@ -30,9 +30,9 @@ class DocParser(settings: nsc.Settings, reporter: Reporter)
   override protected def computeInternalPhases() {
     phasesSet += syntaxAnalyzer
   }
-  
-  /** Returns a list of DocParser.Parseds, which hold the DocDefs found in the
-   *  given code along with the surrounding trees.
+
+  /** Returns a list of `DocParser.Parseds`, which hold the DocDefs found
+   *  in the given code along with the surrounding trees.
    */
   def docDefs(code: String) = {
     def loop(enclosing: List[Tree], tree: Tree): List[Parsed] = tree match {
@@ -54,7 +54,7 @@ class DocParser(settings: nsc.Settings, reporter: Reporter)
 }
 
 /** Since the DocParser's whole reason for existing involves trashing a
- *  global, it is designed to bottle up general Global#Tree types rather
+ *  global, it is designed to bottle up general `Global#Tree` types rather
  *  than path dependent ones.  The recipient will have to deal.
  */
 object DocParser {
@@ -70,5 +70,5 @@ object DocParser {
     override def toString = (
       nameChain.init.map(x => if (x.isTypeName) x + "#" else x + ".").mkString + nameChain.last
     )
-  }  
+  }
 }

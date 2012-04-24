@@ -26,32 +26,32 @@ object BorderPanel {
   private[swing] def wrapPosition(s: String): Position.Value = s match {
     case BorderLayout.NORTH => Position.North
     case BorderLayout.SOUTH => Position.South
-    case BorderLayout.WEST => Position.West	
+    case BorderLayout.WEST => Position.West
     case BorderLayout.EAST => Position.East
     case BorderLayout.CENTER => Position.Center
   }
 }
 
 /**
- * A container that arranges its children around a central component that 
- * takes most of the space. The other children are placed on one of four 
+ * A container that arranges its children around a central component that
+ * takes most of the space. The other children are placed on one of four
  * borders: north, east, south, west.
- * 
+ *
  * @see javax.swing.BorderLayout
  */
 class BorderPanel extends Panel with LayoutContainer {
   import BorderPanel._
   def layoutManager = peer.getLayout.asInstanceOf[BorderLayout]
-  override lazy val peer = new javax.swing.JPanel(new BorderLayout) with SuperMixin 
-    
+  override lazy val peer = new javax.swing.JPanel(new BorderLayout) with SuperMixin
+
   type Constraints = Position.Value
-  
+
   protected def constraintsFor(comp: Component) =
     wrapPosition(layoutManager.getConstraints(comp.peer).asInstanceOf[String])
-  
+
   protected def areValid(c: Constraints): (Boolean, String) = (true, "")
   protected def add(c: Component, l: Constraints) {
-    // we need to remove previous components with the same constraints as the new one, 
+    // we need to remove previous components with the same constraints as the new one,
     // otherwise the layout manager loses track of the old one
     val old = layoutManager.getLayoutComponent(l.toString)
     if(old != null) peer.remove(old)

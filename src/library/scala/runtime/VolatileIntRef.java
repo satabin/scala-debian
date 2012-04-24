@@ -12,7 +12,7 @@ package scala.runtime;
 
 public class VolatileIntRef implements java.io.Serializable {
     private static final long serialVersionUID = 1488197132022872888L;
-    
+
     volatile public int elem;
     public VolatileIntRef(int elem) { this.elem = elem; }
     public String toString() { return java.lang.Integer.toString(elem); }

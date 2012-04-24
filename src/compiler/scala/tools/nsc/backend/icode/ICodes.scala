@@ -24,9 +24,9 @@ import scala.tools.nsc.symtab.classfile.ICodeReader
  */
 abstract class ICodes extends AnyRef
                                  with Members
-                                 with BasicBlocks                
+                                 with BasicBlocks
                                  with Opcodes
-                                 with TypeStacks 
+                                 with TypeStacks
                                  with TypeKinds
                                  with ExceptionHandlers
                                  with Primitives
@@ -35,12 +35,12 @@ abstract class ICodes extends AnyRef
                                  with Repository
 {
   val global: Global
-  import global.{ log, definitions, settings }
+  import global.{ log, definitions, settings, perRunCaches }
 
   /** The ICode representation of classes */
-  val classes = new mutable.HashMap[global.Symbol, IClass]
-  
-  /** Debugging flag */  
+  val classes = perRunCaches.newMap[global.Symbol, IClass]()
+
+  /** Debugging flag */
   def shouldCheckIcode = settings.check contains global.genicode.phaseName
   def checkerDebug(msg: String) = if (shouldCheckIcode && global.opt.debug) println(msg)
 
@@ -50,21 +50,21 @@ abstract class ICodes extends AnyRef
     case "dfs"    => new DepthFirstLinerizer()
     case "normal" => new NormalLinearizer()
     case "dump"   => new DumpLinearizer()
-    case x        => global.abort("Unknown linearizer: " + x)    
+    case x        => global.abort("Unknown linearizer: " + x)
   }
-    
+
   /** Have to be careful because dump calls around, possibly
    *  re-entering methods which initiated the dump (like foreach
    *  in BasicBlocks) which leads to the icode output olympics.
    */
   private var alreadyDumping = false
-  
+
   /** Print all classes and basic blocks. Used for debugging. */
-  
+
   def dump() {
     if (alreadyDumping) return
     else alreadyDumping = true
-    
+
     val printer = new TextPrinter(new PrintWriter(Console.out, true),
                                   new DumpLinearizer)
 
@@ -109,13 +109,13 @@ abstract class ICodes extends AnyRef
   object icodeReader extends ICodeReader {
     lazy val global: ICodes.this.global.type = ICodes.this.global
   }
-  
+
   /** A phase which works on icode. */
   abstract class ICodePhase(prev: Phase) extends global.GlobalPhase(prev) {
     override def erasedTypes = true
     override def apply(unit: global.CompilationUnit): Unit =
       unit.icode foreach apply
-        
+
     def apply(cls: global.icodes.IClass): Unit
   }
 }

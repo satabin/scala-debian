@@ -20,7 +20,7 @@ import cmd.Spec._
 
 class JavaTask extends Java {
   override def getTaskName()      = "partest"
-  private val scalaRunnerClass    = "scala.tools.nsc.MainGenericRunner"  
+  private val scalaRunnerClass    = "scala.tools.nsc.MainGenericRunner"
   private val partestRunnerClass  = "scala.tools.partest.Runner"
   def defaultJvmArgs              = "-Xms64M -Xmx768M -Xss768K -XX:MaxPermSize=96M"
 
@@ -32,7 +32,7 @@ class JavaTask extends Java {
   private def prop(s: String)     = Option(getProject getProperty s)
   private def jvmline(s: String)  = returning(createJvmarg())(_ setLine s)
   private def addArg(s: String)   = returning(createArg())(_ setValue s)
-  
+
   private def newKeyValue(key: String, value: String) =
     returning(new Environment.Variable)(x => { x setKey key ; x setValue value })
 
@@ -48,7 +48,7 @@ class JavaTask extends Java {
     // do we want basedir or rootDir to be the cwd?
     // setDir(Path(rootDir).jfile)
   }
-  
+
   override def init() = {
     super.init()
     setDefaults()

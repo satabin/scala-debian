@@ -17,10 +17,10 @@ import mutable.{ArrayBuffer, Builder}
  *  that are guaranteed immutable.
  *  $indexedSeqInfo
  */
-trait IndexedSeq[+A] extends Seq[A] 
-                    with scala.collection.IndexedSeq[A] 
+trait IndexedSeq[+A] extends Seq[A]
+                    with scala.collection.IndexedSeq[A]
                     with GenericTraversableTemplate[A, IndexedSeq]
-                    with IndexedSeqLike[A, IndexedSeq[A]] { 
+                    with IndexedSeqLike[A, IndexedSeq[A]] {
   override def companion: GenericCompanion[IndexedSeq] = IndexedSeq
   override def toIndexedSeq[B >: A]: IndexedSeq[B] = this
 }

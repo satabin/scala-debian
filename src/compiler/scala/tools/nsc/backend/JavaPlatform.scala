@@ -14,7 +14,7 @@ import scala.tools.util.PathResolver
 trait JavaPlatform extends Platform[AbstractFile] {
   import global._
   import definitions._
-  
+
   lazy val classPath  = new PathResolver(settings).result
   def rootLoader = new loaders.JavaPackageLoader(classPath)
 
@@ -27,12 +27,12 @@ trait JavaPlatform extends Platform[AbstractFile] {
     liftcode,   // generate reified trees
     genJVM      // generate .class files
   ) ++ depAnalysisPhase
-  
+
   lazy val externalEquals          = getMember(BoxesRunTimeClass, nme.equals_)
   lazy val externalEqualsNumNum    = getMember(BoxesRunTimeClass, "equalsNumNum")
   lazy val externalEqualsNumChar   = getMember(BoxesRunTimeClass, "equalsNumChar")
   lazy val externalEqualsNumObject = getMember(BoxesRunTimeClass, "equalsNumObject")
-  
+
   /** We could get away with excluding BoxedBooleanClass for the
    *  purpose of equality testing since it need not compare equal
    *  to anything but other booleans, but it should be present in

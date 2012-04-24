@@ -11,7 +11,7 @@ package scala.actors
 
 /**
  * Provides methods for generating debugging output.
- * 
+ *
  * @author Philipp Haller
  */
 object Debug extends Logger("") {}

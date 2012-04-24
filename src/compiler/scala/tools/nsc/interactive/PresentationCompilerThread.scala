@@ -6,12 +6,12 @@
 package scala.tools.nsc.interactive
 
 /** A presentation compiler thread. This is a lightweight class, delegating most
- *  of its functionality to the compiler instance. 
- *  
+ *  of its functionality to the compiler instance.
+ *
  */
-final class PresentationCompilerThread(var compiler: Global, name: String = "") 
+final class PresentationCompilerThread(var compiler: Global, name: String = "")
   extends Thread("Scala Presentation Compiler [" + name + "]") {
-  
+
   /** The presentation compiler loop.
    */
   override def run() {
@@ -30,7 +30,7 @@ final class PresentationCompilerThread(var compiler: Global, name: String = "")
         compiler.log.flush()
       }
     } catch {
-      case ex @ ShutdownReq => 
+      case ex @ ShutdownReq =>
         compiler.debugLog("exiting presentation compiler")
         compiler.log.close()
 
@@ -38,12 +38,12 @@ final class PresentationCompilerThread(var compiler: Global, name: String = "")
         compiler = null
       case ex =>
         compiler.log.flush()
-        
+
         ex match {
-          case ex: FreshRunReq =>   
+          case ex: FreshRunReq =>
             compiler.debugLog("fresh run req caught outside presentation compiler loop; ignored") // This shouldn't be reported
           case _ : Global#ValidateException => // This will have been reported elsewhere
-            compiler.debugLog("validate exception caught outside presentation compiler loop; ignored") 
+            compiler.debugLog("validate exception caught outside presentation compiler loop; ignored")
           case _ => ex.printStackTrace(); compiler.informIDE("Fatal Error: "+ex)
         }
     }

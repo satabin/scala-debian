@@ -18,13 +18,13 @@ import scala.util.matching.Regex
 /**
  *  This class serves as a wrapper augmenting `String`s with all the operations
  *  found in indexed sequences.
- *  
+ *
  *  The difference between this class and `StringOps` is that calling transformer
- *  methods such as `filter` and `map` will yield an object of type `WrappedString` 
+ *  methods such as `filter` and `map` will yield an object of type `WrappedString`
  *  rather than a `String`.
- *  
+ *
  *  @param self    a string contained within this wrapped string
- *  
+ *
  *  @since 2.8
  *  @define Coll WrappedString
  *  @define coll wrapped string
@@ -36,7 +36,7 @@ class WrappedString(val self: String) extends IndexedSeq[Char] with StringLike[W
 
   /** Creates a string builder buffer as builder for this class */
   override protected[this] def newBuilder = WrappedString.newBuilder
-  
+
   override def slice(from: Int, until: Int): WrappedString = {
     val start = if (from < 0) 0 else from
     if (until <= start || start >= repr.length)
@@ -50,7 +50,7 @@ class WrappedString(val self: String) extends IndexedSeq[Char] with StringLike[W
 }
 
 /** A companion object for wrapped strings.
- *  
+ *
  *  @since 2.8
  */
 object WrappedString {
@@ -58,6 +58,6 @@ object WrappedString {
     def apply(from: WrappedString) = newBuilder
     def apply() = newBuilder
   }
-  
+
   def newBuilder: Builder[Char, WrappedString] = StringBuilder.newBuilder mapResult (x => new WrappedString(x))
 }

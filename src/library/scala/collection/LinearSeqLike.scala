@@ -17,10 +17,10 @@ import scala.util.control.Breaks._
 /** A template trait for linear sequences of type `LinearSeq[A]`.
  *
  *  $linearSeqInfo
- * 
+ *
  *  This trait just implements `iterator` in terms of `isEmpty, ``head`, and `tail`.
  *  However, see `LinearSeqOptimized` for an implementation trait that overrides operations
- *  to make them run faster under the assumption of fast linear access with `head` and `tail`. 
+ *  to make them run faster under the assumption of fast linear access with `head` and `tail`.
  *
  *  @define  linearSeqInfo
  *  Linear sequences are defined in terms of three abstract methods, which are assumed
@@ -46,11 +46,11 @@ trait LinearSeqLike[+A, +Repr <: LinearSeqLike[A, Repr]] extends SeqLike[A, Repr
   override protected[this] def thisCollection: LinearSeq[A] = this.asInstanceOf[LinearSeq[A]]
   override protected[this] def toCollection(repr: Repr): LinearSeq[A] = repr.asInstanceOf[LinearSeq[A]]
 
-  override /*IterableLike*/ 
+  override /*IterableLike*/
   def iterator: Iterator[A] = new Iterator[A] {
     var these = self
     def hasNext: Boolean = !these.isEmpty
-    def next: A = 
+    def next: A =
       if (hasNext) {
         val result = these.head; these = these.tail; result
       } else Iterator.empty.next

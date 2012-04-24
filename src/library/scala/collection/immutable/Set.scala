@@ -24,11 +24,11 @@ import parallel.immutable.ParSet
  *  @define Coll immutable.Set
  *  @define coll immutable set
  */
-trait Set[A] extends Iterable[A] 
+trait Set[A] extends Iterable[A]
 //                with GenSet[A]
-                with scala.collection.Set[A] 
+                with scala.collection.Set[A]
                 with GenericSetTemplate[A, Set]
-                with SetLike[A, Set[A]] 
+                with SetLike[A, Set[A]]
                 with Parallelizable[A, ParSet[A]]
 {
   override def companion: GenericCompanion[Set] = Set
@@ -46,7 +46,7 @@ object Set extends ImmutableSetFactory[Set] {
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Set[A]] = setCanBuildFrom[A]
   override def empty[A]: Set[A] = EmptySet.asInstanceOf[Set[A]]
 
-  private val hashSeed = "Set".hashCode 
+  private val hashSeed = "Set".hashCode
 
   /** An optimized representation for immutable empty sets */
   private object EmptySet extends Set[Any] with Serializable {
@@ -67,20 +67,20 @@ object Set extends ImmutableSetFactory[Set] {
     def iterator: Iterator[A] = Iterator.empty
     override def foreach[U](f: A =>  U): Unit = {}
   }
-  
+
   /** An optimized representation for immutable sets of size 1 */
   @SerialVersionUID(1233385750652442003L)
   class Set1[A] private[collection] (elem1: A) extends Set[A] with Serializable {
     override def size: Int = 1
-    def contains(elem: A): Boolean = 
+    def contains(elem: A): Boolean =
       elem == elem1
-    def + (elem: A): Set[A] = 
+    def + (elem: A): Set[A] =
       if (contains(elem)) this
       else new Set2(elem1, elem)
-    def - (elem: A): Set[A] = 
+    def - (elem: A): Set[A] =
       if (elem == elem1) Set.empty
       else this
-    def iterator: Iterator[A] = 
+    def iterator: Iterator[A] =
       Iterator(elem1)
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1)
@@ -91,16 +91,16 @@ object Set extends ImmutableSetFactory[Set] {
   @SerialVersionUID(-6443011234944830092L)
   class Set2[A] private[collection] (elem1: A, elem2: A) extends Set[A] with Serializable {
     override def size: Int = 2
-    def contains(elem: A): Boolean = 
+    def contains(elem: A): Boolean =
       elem == elem1 || elem == elem2
-    def + (elem: A): Set[A] = 
+    def + (elem: A): Set[A] =
       if (contains(elem)) this
       else new Set3(elem1, elem2, elem)
-    def - (elem: A): Set[A] = 
+    def - (elem: A): Set[A] =
       if (elem == elem1) new Set1(elem2)
       else if (elem == elem2) new Set1(elem1)
       else this
-    def iterator: Iterator[A] = 
+    def iterator: Iterator[A] =
       Iterator(elem1, elem2)
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1); f(elem2)
@@ -111,17 +111,17 @@ object Set extends ImmutableSetFactory[Set] {
   @SerialVersionUID(-3590273538119220064L)
   class Set3[A] private[collection] (elem1: A, elem2: A, elem3: A) extends Set[A] with Serializable {
     override def size: Int = 3
-    def contains(elem: A): Boolean = 
+    def contains(elem: A): Boolean =
       elem == elem1 || elem == elem2 || elem == elem3
-    def + (elem: A): Set[A] = 
+    def + (elem: A): Set[A] =
       if (contains(elem)) this
       else new Set4(elem1, elem2, elem3, elem)
-    def - (elem: A): Set[A] = 
+    def - (elem: A): Set[A] =
       if (elem == elem1) new Set2(elem2, elem3)
       else if (elem == elem2) new Set2(elem1, elem3)
       else if (elem == elem3) new Set2(elem1, elem2)
       else this
-    def iterator: Iterator[A] = 
+    def iterator: Iterator[A] =
       Iterator(elem1, elem2, elem3)
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1); f(elem2); f(elem3)
@@ -132,18 +132,18 @@ object Set extends ImmutableSetFactory[Set] {
   @SerialVersionUID(-3622399588156184395L)
   class Set4[A] private[collection] (elem1: A, elem2: A, elem3: A, elem4: A) extends Set[A] with Serializable {
     override def size: Int = 4
-    def contains(elem: A): Boolean = 
+    def contains(elem: A): Boolean =
       elem == elem1 || elem == elem2 || elem == elem3 || elem == elem4
-    def + (elem: A): Set[A] = 
+    def + (elem: A): Set[A] =
       if (contains(elem)) this
       else new HashSet[A] + (elem1, elem2, elem3, elem4, elem)
-    def - (elem: A): Set[A] = 
+    def - (elem: A): Set[A] =
       if (elem == elem1) new Set3(elem2, elem3, elem4)
       else if (elem == elem2) new Set3(elem1, elem3, elem4)
       else if (elem == elem3) new Set3(elem1, elem2, elem4)
       else if (elem == elem4) new Set3(elem1, elem2, elem3)
       else this
-    def iterator: Iterator[A] = 
+    def iterator: Iterator[A] =
       Iterator(elem1, elem2, elem3, elem4)
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1); f(elem2); f(elem3); f(elem4)

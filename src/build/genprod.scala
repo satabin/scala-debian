@@ -18,7 +18,7 @@
 object genprod extends App {
   val MAX_ARITY = 22
   def arities = (1 to MAX_ARITY).toList
-  
+
   class Group(val name: String) {
     def className(i: Int) = name + i
     def fileName(i: Int) = className(i) + ".scala"
@@ -32,9 +32,9 @@ object genprod extends App {
 
   trait Arity extends Group {
     def i: Int    // arity
-    
+
     def typeArgsString(xs: Seq[String]) = xs.mkString("[", ", ", "]")
-    
+
     def to              = (1 to i).toList
     def s               = if (i == 1) "" else "s"
     def className       = name + i
@@ -57,7 +57,7 @@ object genprod extends App {
     def moreMethods         = ""
     def packageDef          = "scala"
     def imports             = ""
-    
+
     def header = """
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
@@ -84,7 +84,7 @@ package %s
     f.parent.createDirectory(force = true)
     f.toFile writeAll node.text
   }
-  
+
   allfiles foreach writeFile
 }
 import genprod._
@@ -139,7 +139,7 @@ object FunctionOne extends Function(1) {
    *  @return       a new function `f` such that `f(x) == g(apply(x))`
    */
   def andThen[A](g: R => A): T1 => A = { x => g(apply(x)) }
-"""  
+"""
 }
 
 object FunctionTwo extends Function(2) {
@@ -174,9 +174,9 @@ class Function(val i: Int) extends Group("Function") with Arity {
  *  shorthand for the anonymous class definition %s:
  *
  *  {{{
- *  object Main extends Application { %s }
+ *  object Main extends App { %s }
  *  }}}"""
-  
+
   def toStr() = "\"" + ("<function%d>" format i) + "\""
   def apply() = {
 <file name={fileName}>{header}
@@ -202,14 +202,14 @@ class Function(val i: Int) extends Group("Function") with Arity {
     val body = "apply" + commaXs
     (xdefs, targs).zipped.map("(%s: %s) => ".format(_, _)).mkString("", "", body)
   }
-    
+
   // (x1: T1) => ((x2: T2, x3: T3, x4: T4, x5: T5, x6: T6, x7: T7) => self.apply(x1,x2,x3,x4,x5,x6,x7)).curried
   def longCurry = ((xdefs, targs).zipped.map(_ + ": " + _) drop 1).mkString(
     "(x1: T1) => ((",
     ", ",
     ") => self.apply%s).curried".format(commaXs)
   )
-  
+
   // f(x1,x2,x3,x4,x5,x6)  == (f.curried)(x1)(x2)(x3)(x4)(x5)(x6)
   def curryComment = { """
   /** Creates a curried version of this function.
@@ -218,7 +218,7 @@ class Function(val i: Int) extends Group("Function") with Arity {
    */
 """.format(xdefs map ("(" + _ + ")") mkString, commaXs)
   }
-  
+
   def tupleMethod = {
     def comment = """
   /** Creates a tupled version of this function: instead of %d arguments,
@@ -228,13 +228,13 @@ class Function(val i: Int) extends Group("Function") with Arity {
    */
 """.format(i, i, commaXs, i, commaXs, commaXs)
     def body = "case Tuple%d%s => apply%s".format(i, commaXs, commaXs)
-    
+
     comment + "  def tupled: Tuple%d%s => R = {\n    %s\n  }".format(i, invariantArgs, body)
   }
-  
+
   def curryMethod = {
     val body = if (i < 5) shortCurry else longCurry
-    
+
     curryComment +
     "  def curried: %s => R = {\n    %s\n  }\n".format(
       targs mkString " => ", body
@@ -245,7 +245,7 @@ class Function(val i: Int) extends Group("Function") with Arity {
 } // object Function
 
 
-/* zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz 
+/* zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
                                      T U P L E
 zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz */
 
@@ -254,7 +254,7 @@ object Tuple {
 import scala.collection.{ TraversableLike => TLike, IterableLike => ILike }
 import scala.collection.generic.{ CanBuildFrom => CBF }
 """
-  
+
   def make(i: Int) = apply(i)()
   def apply(i: Int) = i match {
     case 1  => TupleOne
@@ -275,7 +275,7 @@ object TupleTwo extends Tuple(2)
   override def covariantSpecs = "@specialized(Int, Long, Double) "
   override def moreMethods = """
   /** Swaps the elements of this `Tuple`.
-   * @return a new Tuple where the first element is the second element of this Tuple and the 
+   * @return a new Tuple where the first element is the second element of this Tuple and the
    * second element is the first element of this Tuple.
    */
   def swap: Tuple2[T2,T1] = Tuple2(_2, _1)
@@ -371,7 +371,7 @@ object TupleTwo extends Tuple(2)
 
     def foreach[U](f: (El1, El2) => U): Unit = {
       val elems2 = coll2.iterator
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext)
           f(el1, elems2.next)
@@ -380,7 +380,7 @@ object TupleTwo extends Tuple(2)
       }
     }
   }
-"""  
+"""
 }
 
 object TupleThree extends Tuple(3) {
@@ -401,7 +401,7 @@ object TupleThree extends Tuple(3) {
    * {{{
    * scala> val tuple = (List(1,2,3),List('a','b','c'),List("x","y","z"))
    * tuple: (List[Int], List[Char], List[java.lang.String]) = (List(1, 2, 3),List(a, b, c),List(x, y, z))
-   * 
+   *
    * scala> tuple.zipped map { (x,y,z) => x + ":" + y + ":" + z}
    * res8: List[java.lang.String] = List(1:a:x, 2:b:y, 3:c:z)
    * }}}
@@ -455,12 +455,12 @@ object TupleThree extends Tuple(3) {
       val elems2 = coll2.iterator
       val elems3 = coll3.iterator
       def result = (b1.result, b2.result, b3.result)
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext && elems3.hasNext) {
           val el2 = elems2.next
           val el3 = elems3.next
-          
+
           if (f(el1, el2, el3)) {
             b1 += el1
             b2 += el2
@@ -476,7 +476,7 @@ object TupleThree extends Tuple(3) {
     def exists(f: (El1, El2, El3) => Boolean): Boolean = {
       val elems2 = coll2.iterator
       val elems3 = coll3.iterator
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext && elems3.hasNext) {
           if (f(el1, elems2.next, elems3.next))
@@ -486,14 +486,14 @@ object TupleThree extends Tuple(3) {
       }
       false
     }
-    
+
     def forall(f: (El1, El2, El3) => Boolean): Boolean =
       !exists((x, y, z) => !f(x, y, z))
 
     def foreach[U](f: (El1, El2, El3) => U): Unit = {
       val elems2 = coll2.iterator
       val elems3 = coll3.iterator
-      
+
       for (el1 <- coll1) {
         if (elems2.hasNext && elems3.hasNext)
           f(el1, elems2.next, elems3.next)
@@ -509,11 +509,11 @@ class Tuple(val i: Int) extends Group("Tuple") with Arity {
   private def idiomatic =
     if (i < 2) ""
     else " Note that it is more idiomatic to create a %s via `(%s)`".format(className, constructorArgs)
-  
+
   private def params = (
     1 to i map (x => " *  @param  _%d   Element %d of this Tuple%d".format(x, x, i))
   ) mkString "\n"
-  
+
   // prettifies it a little if it's overlong
   def mkToString() = {
   def str(xs: List[String]) = xs.mkString(""" + "," + """)
@@ -524,8 +524,8 @@ class Tuple(val i: Int) extends Group("Tuple") with Arity {
       s1 + " +\n    \",\" + " + s2
     }
   }
-    
-  def apply() = {    
+
+  def apply() = {
 <file name={fileName}>{header}
 
 /** A tuple of {i} elements; the canonical representation of a [[scala.{Product.className(i)}]].
@@ -535,8 +535,8 @@ class Tuple(val i: Int) extends Group("Tuple") with Arity {
  */
 case class {className}{covariantArgs}({fields})
   extends {Product.className(i)}{invariantArgs}
-{{  
-  override def toString() = "(" + {mkToString} + ")"  
+{{
+  override def toString() = "(" + {mkToString} + ")"
   {moreMethods}
 }}
 </file>}
@@ -554,7 +554,7 @@ object Product extends Group("Product")
     case 1  => ProductOne
     case 2  => ProductTwo
     case _ => new Product(i)
-  } 
+  }
 }
 
 object ProductOne extends Product(1)
@@ -572,19 +572,19 @@ class Product(val i: Int) extends Group("Product") with Arity {
   /** Returns the n-th projection of this product if 0 < n <= productArity,
    *  otherwise throws an `IndexOutOfBoundsException`.
    *
-   *  @param n number of the projection to be returned 
+   *  @param n number of the projection to be returned
    *  @return  same as `._(n+1)`, for example `productElement(1)` is the same as `._1`.
    *  @throws  IndexOutOfBoundsException
-   */  
+   */
 """
-  
+
   def cases = {
     val xs = for ((x, i) <- mdefs.zipWithIndex) yield "case %d => %s".format(i, x)
     val default = "case _ => throw new IndexOutOfBoundsException(n.toString())"
     "\n" + ((xs ::: List(default)) map ("    " + _ + "\n") mkString)
   }
   def proj = {
-    (mdefs,targs).zipped.map( (_,_) ).zipWithIndex.map { case ((method,typeName),index) => 
+    (mdefs,targs).zipped.map( (_,_) ).zipWithIndex.map { case ((method,typeName),index) =>
       """|  /** A projection of element %d of this Product.
          |   *  @return   A projection of element %d.
          |   */
@@ -592,11 +592,11 @@ class Product(val i: Int) extends Group("Product") with Arity {
          |""".stripMargin.format(index + 1, index + 1, method, typeName)
     } mkString
   }
-  
+
   def apply() = {
 <file name={fileName}>{header}
 object {className} {{
-  def unapply{invariantArgs}(x: {className}{invariantArgs}): Option[{className}{invariantArgs}] = 
+  def unapply{invariantArgs}(x: {className}{invariantArgs}): Option[{className}{invariantArgs}] =
     Some(x)
 }}
 
@@ -611,7 +611,7 @@ trait {className}{covariantArgs} extends Product {{
 
   {productElementComment}
   @throws(classOf[IndexOutOfBoundsException])
-  override def productElement(n: Int) = n match {{ {cases} }}  
+  override def productElement(n: Int) = n match {{ {cases} }}
 
 {proj}
 {moreMethods}
@@ -641,7 +641,7 @@ class AbstractFunction(val i: Int) extends Group("AbstractFunction") with Arity
   override def packageDef = "scala.runtime"
 
   val superTypeArgs = typeArgsString(targs ::: List("R"))
-  
+
   def apply() = {
 <file name={"runtime/" + fileName}>{header}
 abstract class {className}{contraCoArgs} extends Function{i}{superTypeArgs} {{

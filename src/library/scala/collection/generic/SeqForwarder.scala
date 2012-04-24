@@ -27,8 +27,8 @@ import scala.collection.immutable.Range
  */
 trait SeqForwarder[+A] extends Seq[A] with IterableForwarder[A] {
 
-  protected override def underlying: Seq[A] 
-  
+  protected override def underlying: Seq[A]
+
   override def length: Int = underlying.length
   override def apply(idx: Int): A = underlying.apply(idx)
   override def lengthCompare(len: Int): Int = underlying.lengthCompare(len)

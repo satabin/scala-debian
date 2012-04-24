@@ -25,24 +25,24 @@ import scala.collection.generic.Sizing
  *  The complexity of the `combine` method should be less than linear for best
  *  performance. The `result` method doesn't have to be a constant time operation,
  *  but may be performed in parallel.
- *  
+ *
  *  @tparam Elem   the type of the elements added to the builder
  *  @tparam To     the type of the collection the builder produces
- *  
+ *
  *  @author Aleksandar Prokopec
  *  @since 2.9
  */
 trait Combiner[-Elem, +To] extends Builder[Elem, To] with Sizing with Parallel {
 //self: EnvironmentPassingCombiner[Elem, To] =>
   private[collection] final val tasksupport = getTaskSupport
-  
+
   /** Combines the contents of the receiver builder and the `other` builder,
    *  producing a new builder containing both their elements.
-   *  
+   *
    *  This method may combine the two builders by copying them into a larger collection,
    *  by producing a lazy view that gets evaluated once `result` is invoked, or use
    *  a merge operation specific to the data structure in question.
-   *  
+   *
    *  Note that both the receiver builder and `other` builder become invalidated
    *  after the invocation of this method, and should be cleared (see `clear`)
    *  if they are to be used again.
@@ -53,16 +53,16 @@ trait Combiner[-Elem, +To] extends Builder[Elem, To] with Sizing with Parallel {
    *  {{{
    *  c1.combine(c2)
    *  }}}
-   *  
+   *
    *  always does nothing and returns `c1`.
-   *  
+   *
    *  @tparam N      the type of elements contained by the `other` builder
    *  @tparam NewTo  the type of collection produced by the `other` builder
    *  @param other   the other builder
    *  @return        the parallel builder containing both the elements of this and the `other` builder
    */
   def combine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]): Combiner[N, NewTo]
-  
+
 }
 
 

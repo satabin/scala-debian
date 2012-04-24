@@ -14,7 +14,7 @@ abstract class SecurityTest extends App {
   def readPerm(p: PropertyPermission)            = p.getActions contains "read"
   def writePerm(p: PropertyPermission)           = p.getActions contains "write"
   def propertyCheck(p: PropertyPermission): Unit = throwIt(p)
-  
+
   def check(perm: Permission): Unit = perm match {
     case p: PropertyPermission  => propertyCheck(p)
     case _                      => ()

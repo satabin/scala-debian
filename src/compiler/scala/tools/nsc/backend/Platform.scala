@@ -13,19 +13,19 @@ import util.ClassPath
 trait Platform[T] {
   val global: Global
   import global._
-  
+
   /** The compiler classpath. */
   def classPath: ClassPath[T]
-  
+
   /** The root symbol loader. */
   def rootLoader: LazyType
-  
+
   /** Any platform-specific phases. */
   def platformPhases: List[SubComponent]
-  
+
   /** Symbol for a method which compares two objects. */
   def externalEquals: Symbol
-  
+
   /** The various ways a boxed primitive might materialize at runtime. */
   def isMaybeBoxed(sym: Symbol): Boolean
 }

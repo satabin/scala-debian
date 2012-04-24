@@ -35,10 +35,10 @@ sealed abstract class MethodCache {
 final class EmptyMethodCache extends MethodCache {
 
   def find(forReceiver: JClass[_]): JMethod = null
-      
+
   def add(forReceiver: JClass[_], forMethod: JMethod): MethodCache =
     new PolyMethodCache(this, forReceiver, forMethod, 1)
-  
+
 }
 
 final class MegaMethodCache(
@@ -48,9 +48,9 @@ final class MegaMethodCache(
 
   def find(forReceiver: JClass[_]): JMethod =
     forReceiver.getMethod(forName, forParameterTypes:_*)
-      
+
   def add(forReceiver: JClass[_], forMethod: JMethod): MethodCache = this
-  
+
 }
 
 final class PolyMethodCache(
@@ -59,7 +59,7 @@ final class PolyMethodCache(
   private[this] val method: JMethod,
   private[this] val complexity: Int
 ) extends MethodCache {
-  
+
   /** To achieve tail recursion this must be a separate method
    *  from find, because the type of next is not PolyMethodCache.
    */
@@ -69,12 +69,12 @@ final class PolyMethodCache(
       case x: PolyMethodCache => x findInternal forReceiver
       case _                  => next find forReceiver
     }
-  
+
   def find(forReceiver: JClass[_]): JMethod = findInternal(forReceiver)
-      
+
   // TODO: come up with a more realistic number
-  final private val MaxComplexity = 160    
-  
+  final private val MaxComplexity = 160
+
   def add(forReceiver: JClass[_], forMethod: JMethod): MethodCache =
     if (complexity < MaxComplexity)
       new PolyMethodCache(this, forReceiver, forMethod, complexity + 1)

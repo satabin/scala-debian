@@ -23,18 +23,18 @@ import input._
  *    {@see StdLexical}, for more functionality.
  *  </p>
  *
- *  @author Martin Odersky, Adriaan Moors 
+ *  @author Martin Odersky, Adriaan Moors
  */
 trait Scanners extends Parsers {
   type Elem = Char
   type Token
-  
+
   /** This token is produced by a scanner {@see Scanner} when scanning failed. */
   def errorToken(msg: String): Token
-  
+
   /** a parser that produces a token (from a stream of characters) */
   def token: Parser[Token]
-  
+
   /** a parser for white-space -- its result will be discarded */
   def whitespace: Parser[Any]
 
@@ -51,7 +51,7 @@ trait Scanners extends Parsers {
     /** Convenience constructor (makes a character reader out of the given string) */
     def this(in: String) = this(new CharArrayReader(in.toCharArray()))
     private val (tok, rest1, rest2) = whitespace(in) match {
-      case Success(_, in1) => 
+      case Success(_, in1) =>
         token(in1) match {
           case Success(tok, in2) => (tok, in1, in2)
           case ns: NoSuccess => (errorToken(ns.msg), ns.next, skip(ns.next))

@@ -41,9 +41,9 @@ abstract class Node extends NodeSeq {
   def label: String
 
   /** used internally. Atom/Molecule = -1 PI = -2 Comment = -3 EntityRef = -5
-   */ 
+   */
   def isAtom = this.isInstanceOf[Atom[_]]
-  
+
   /** The logic formerly found in typeTag$, as best I could infer it. */
   def doCollectNamespaces = true  // if (tag >= 0) DO collect namespaces
   def doTransform         = true  // if (tag < 0) DO NOT transform
@@ -107,24 +107,24 @@ abstract class Node extends NodeSeq {
    * @return all children of this node
    */
   def child: Seq[Node]
-  
+
   /** Children which do not stringify to "" (needed for equality)
    */
   def nonEmptyChildren: Seq[Node] = child filterNot (_.toString == "")
 
   /**
-   * Descendant axis (all descendants of this node, not including node itself) 
+   * Descendant axis (all descendants of this node, not including node itself)
    * includes all text nodes, element nodes, comments and processing instructions.
    */
   def descendant: List[Node] =
     child.toList.flatMap { x => x::x.descendant }
 
   /**
-   * Descendant axis (all descendants of this node, including thisa node) 
+   * Descendant axis (all descendants of this node, including thisa node)
    * includes all text nodes, element nodes, comments and processing instructions.
    */
   def descendant_or_self: List[Node] = this :: descendant
-  
+
   override def canEqual(other: Any) = other match {
     case x: Group   => false
     case x: Node    => true

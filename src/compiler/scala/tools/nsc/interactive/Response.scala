@@ -17,8 +17,8 @@ package interactive
  *      case Some(Right(exc)) => <handle>(exc)
  *      case None =>
  *    }
- *  } 
- */ 
+ *  }
+ */
 class Response[T] {
 
   private var data: Option[Either[T, Throwable]] = None
@@ -51,15 +51,15 @@ class Response[T] {
    *  When interrupted will return with Right(InterruptedException)
    */
   def get: Either[T, Throwable] = synchronized {
-    while (!complete) { 
+    while (!complete) {
       try {
         wait()
-      } catch { 
+      } catch {
         case exc: InterruptedException => raise(exc)
       }
     }
     data.get
-  } 
+  }
 
   /** Optionally get data within `timeout` milliseconds.
    *  When interrupted will return with Some(Right(InterruptedException))
@@ -72,16 +72,16 @@ class Response[T] {
     while (!complete && start + timeout > current) {
       try {
         wait(timeout - (current - start))
-      } catch { 
+      } catch {
         case exc: InterruptedException => raise(exc)
-      } 
+      }
       current = System.currentTimeMillis
     }
     data
   }
 
   /** Final data set was stored
-   */ 
+   */
   def isComplete = synchronized { complete }
 
   /** Cancel action computing this response (Only the

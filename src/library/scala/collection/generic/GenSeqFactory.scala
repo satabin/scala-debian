@@ -5,7 +5,7 @@
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
- 
+
 
 
 package scala.collection
@@ -16,7 +16,7 @@ package generic
  *  @since 2.8
  */
 abstract class GenSeqFactory[CC[X] <: GenSeq[X] with GenericTraversableTemplate[X, CC]] extends GenTraversableFactory[CC] {
-  
+
   /** This method is called in a pattern match { case Seq(...) => }.
    *
    *  @param x the selector value

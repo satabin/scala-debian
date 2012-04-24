@@ -37,7 +37,7 @@ abstract class BasicTransformer extends Function1[Node,Node]
    */
   def transform(ns: Seq[Node]): Seq[Node] = {
     val (xs1, xs2) = ns span (n => unchanged(n, transform(n)))
-    
+
     if (xs2.isEmpty) ns
     else xs1 ++ transform(xs2.head) ++ transform(xs2.tail)
   }
@@ -48,7 +48,7 @@ abstract class BasicTransformer extends Function1[Node,Node]
       case _          =>
         val ch = n.child
         val nch = transform(ch)
-        
+
         if (ch eq nch) n
         else           Elem(n.prefix, n.label, n.attributes, n.scope, nch: _*)
     }

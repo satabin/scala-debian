@@ -21,11 +21,11 @@ import java.net.{ URI, URL }
  */
 object Source {
   val DefaultBufSize = 2048
-  
+
   /** Creates a <code>Source</code> from System.in.
    */
   def stdin = fromInputStream(System.in)
-  
+
   /** Creates a Source from an Iterable.
    *
    *  @param    iterable  the Iterable
@@ -46,7 +46,7 @@ object Source {
   /** creates Source from a String, with no description.
    */
   def fromString(s: String): Source = fromIterable(s)
-  
+
   /** creates Source from file with given name, setting its description to
    *  filename.
    */
@@ -77,7 +77,7 @@ object Source {
 
   /** same as fromFile(file, enc, Source.DefaultBufSize)
    */
-  def fromFile(file: JFile, enc: String): BufferedSource = 
+  def fromFile(file: JFile, enc: String): BufferedSource =
     fromFile(file)(Codec(enc))
 
   def fromFile(file: JFile, enc: String, bufferSize: Int): BufferedSource =
@@ -140,11 +140,11 @@ object Source {
   /** same as fromInputStream(url.openStream())(codec)
    */
   def fromURL(url: URL)(implicit codec: Codec): BufferedSource =
-    fromInputStream(url.openStream())(codec)  
+    fromInputStream(url.openStream())(codec)
 
   /** Reads data from inputStream with a buffered reader, using the encoding
    *  in implicit parameter codec.
-   * 
+   *
    *  @param  inputStream  the input stream from which to read
    *  @param  bufferSize   buffer size (defaults to Source.DefaultBufSize)
    *  @param  reset        a () => Source which resets the stream (if unset, reset() will throw an Exception)
@@ -160,13 +160,13 @@ object Source {
   )(implicit codec: Codec): BufferedSource = {
     // workaround for default arguments being unable to refer to other parameters
     val resetFn = if (reset == null) () => createBufferedSource(inputStream, bufferSize, reset, close)(codec) else reset
-    
+
     new BufferedSource(inputStream, bufferSize)(codec) withReset resetFn withClose close
   }
-  
+
   def fromInputStream(is: InputStream, enc: String): BufferedSource =
     fromInputStream(is)(Codec(enc))
-  
+
   def fromInputStream(is: InputStream)(implicit codec: Codec): BufferedSource =
     createBufferedSource(is, reset = () => fromInputStream(is)(codec), close = () => is.close())(codec)
 }
@@ -199,7 +199,7 @@ abstract class Source extends Iterator[Char] {
   @deprecated("Use a collections method such as getLines().toIndexedSeq for random access.", "2.8.0")
   def getLine(line: Int): String = lineNum(line)
   private def lineNum(line: Int): String = getLines() drop (line - 1) take 1 mkString
-  
+
   class LineIterator() extends Iterator[String] {
     private[this] val sb = new StringBuilder
 
@@ -291,8 +291,8 @@ abstract class Source extends Iterator[Char] {
    *  @param out PrintStream to use (optional: defaults to <code>Console.err</code>)
    */
   def reportError(
-    pos: Int, 
-    msg: String, 
+    pos: Int,
+    msg: String,
     out: PrintStream = Console.err)
   {
     nerrors += 1
@@ -318,18 +318,18 @@ abstract class Source extends Iterator[Char] {
    *  @param out PrintStream to use (optional: defaults to <code>Console.out</code>)
    */
   def reportWarning(
-    pos: Int, 
-    msg: String, 
+    pos: Int,
+    msg: String,
     out: PrintStream = Console.out)
   {
     nwarnings += 1
     report(pos, "warning! " + msg, out)
   }
-  
+
   private[this] var resetFunction: () => Source = null
   private[this] var closeFunction: () => Unit = null
   private[this] var positioner: Positioner = RelaxedPositioner
-  
+
   def withReset(f: () => Source): this.type = {
     resetFunction = f
     this
@@ -358,7 +358,7 @@ abstract class Source extends Iterator[Char] {
   }
 
   /** The reset() method creates a fresh copy of this Source. */
-  def reset(): Source = 
+  def reset(): Source =
     if (resetFunction != null) resetFunction()
     else throw new UnsupportedOperationException("Source's reset() method was not set.")
 }

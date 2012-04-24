@@ -32,7 +32,7 @@ trait GenJVMUtil {
     LONG   -> new JObjectType("java.lang.Long"),
     FLOAT  -> new JObjectType("java.lang.Float"),
     DOUBLE -> new JObjectType("java.lang.Double")
-  ) 
+  )
 
   private val javaNameCache = {
     val map = new mutable.WeakHashMap[Symbol, String]()
@@ -40,12 +40,12 @@ trait GenJVMUtil {
       NothingClass        -> RuntimeNothingClass.fullName('/'),
       RuntimeNothingClass -> RuntimeNothingClass.fullName('/'),
       NullClass           -> RuntimeNullClass.fullName('/'),
-      RuntimeNullClass    -> RuntimeNullClass.fullName('/')    
+      RuntimeNullClass    -> RuntimeNullClass.fullName('/')
     )
     map
   }
 
-  /** This trait may be used by tools who need access to 
+  /** This trait may be used by tools who need access to
    *  utility methods like javaName and javaType. (for instance,
    *  the Eclipse plugin uses it).
    */
@@ -68,13 +68,13 @@ trait GenJVMUtil {
       GE -> LT
     )
 
-    /** Specialized array conversion to prevent calling 
+    /** Specialized array conversion to prevent calling
      *  java.lang.reflect.Array.newInstance via TraversableOnce.toArray
      */
-    
+
     def mkArray(xs: Traversable[JType]): Array[JType] = { val a = new Array[JType](xs.size); xs.copyToArray(a); a }
     def mkArray(xs: Traversable[String]): Array[String] = { val a = new Array[String](xs.size); xs.copyToArray(a); a }
-    
+
 
     /** Return the a name of this symbol that can be used on the Java
      *  platform.  It removes spaces from names.
@@ -89,7 +89,7 @@ trait GenJVMUtil {
      *  references from method signatures to these types, because such classes can
      *  not exist in the classpath: the type checker will be very confused.
      */
-    def javaName(sym: Symbol): String =      
+    def javaName(sym: Symbol): String =
       javaNameCache.getOrElseUpdate(sym, {
         if (sym.isClass || (sym.isModule && !sym.isMethod))
           sym.fullName('/') + moduleSuffix(sym)

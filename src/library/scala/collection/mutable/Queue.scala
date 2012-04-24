@@ -20,10 +20,12 @@ import generic._
  *  @author  Martin Odersky
  *  @version 2.8
  *  @since   1
- *  
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#mutable_queues "Scala's Collection Library overview"]]
+ *  section on `Queues` for more information.
+ *
  *  @define Coll mutable.Queue
  *  @define coll mutable queue
- *  @define orderDependent 
+ *  @define orderDependent
  *  @define orderDependentFold
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
@@ -34,18 +36,18 @@ extends MutableList[A]
    with GenericTraversableTemplate[A, Queue]
    with Cloneable[Queue[A]]
    with Serializable
-{  
+{
   override def companion: GenericCompanion[Queue] = Queue
-  
+
   override protected[this] def newBuilder = companion.newBuilder[A]
-  
+
   private[mutable] def this(fst: LinkedList[A], lst: LinkedList[A], lng: Int) {
     this()
     first0 = fst
     last0 = lst
     len = lng
   }
-  
+
   /** Adds all elements to the queue.
    *
    *  @param  elems       the elements to add.
@@ -169,6 +171,6 @@ extends MutableList[A]
 
 object Queue extends SeqFactory[Queue] {
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Queue[A]] = new GenericCanBuildFrom[A]
-  
+
   def newBuilder[A]: Builder[A, Queue[A]] = new MutableList[A] mapResult { _.toQueue }
 }

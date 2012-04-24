@@ -16,7 +16,7 @@ class ConsoleReporter(val verbosity: Int) extends Test.TestCallback {
 
   private val prettyPrms = Params(verbosity)
 
-  override def onPropEval(name: String, w: Int, s: Int, d: Int) = 
+  override def onPropEval(name: String, w: Int, s: Int, d: Int) =
     if(verbosity > 0) {
       if(name == "") {
         if(d == 0) printf("\rPassed %s tests\r", s)
@@ -35,7 +35,7 @@ class ConsoleReporter(val verbosity: Int) extends Test.TestCallback {
       printf("\r%s\n", format(s, "", "", 75))
     } else {
       print(List.fill(78)(' ').mkString)
-      val s = (if(res.passed) "+ " else "! ") + name + ": " + 
+      val s = (if(res.passed) "+ " else "! ") + name + ": " +
         pretty(res, prettyPrms)
       printf("\r%s\n", format(s, "", "", 75))
     }

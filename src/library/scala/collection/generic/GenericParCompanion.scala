@@ -23,7 +23,7 @@ trait GenericParCompanion[+CC[X] <: ParIterable[X]] {
   /** The default builder for $Coll objects.
    */
   def newBuilder[A]: Combiner[A, CC[A]]
-  
+
   /** The parallel builder for $Coll objects.
    */
   def newCombiner[A]: Combiner[A, CC[A]]

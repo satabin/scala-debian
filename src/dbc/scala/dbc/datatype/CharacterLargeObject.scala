@@ -15,17 +15,17 @@ package datatype;
 /** A SQL type for an unbounded length string of characters with arbitrary
   * character set. */
 @deprecated(DbcIsDeprecated, "2.9.0") class CharacterLargeObject extends CharacterString {
-  
+
   def isEquivalent (datatype:DataType) = datatype match {
     case dt:CharacterLargeObject => {
       encoding == dt.encoding
     }
     case _ => false
   }
-  
+
   def isSubtypeOf (datatype:DataType) = isEquivalent(datatype);
-  
+
   /** A SQL-99 compliant string representation of the type. */
   override def sqlString: java.lang.String = "CHARACTER LARGE OBJECT";
-  
+
 }

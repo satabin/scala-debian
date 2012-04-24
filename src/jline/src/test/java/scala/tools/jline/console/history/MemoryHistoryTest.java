@@ -63,7 +63,7 @@ public class MemoryHistoryTest
     @Test
     public void testOffset() {
         history.setMaxSize(5);
-        
+
         assertEquals(0, history.size());
         assertEquals(0, history.index());
 

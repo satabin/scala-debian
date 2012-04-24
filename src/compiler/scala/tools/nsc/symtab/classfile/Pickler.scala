@@ -77,7 +77,7 @@ abstract class Pickler extends SubComponent {
     private val index     = new LinkedHashMap[AnyRef, Int]
     private lazy val nonClassRoot = root.ownersIterator.find(! _.isClass) getOrElse NoSymbol
 
-    private def isRootSym(sym: Symbol) = 
+    private def isRootSym(sym: Symbol) =
       sym.name.toTermName == rootName && sym.owner == rootOwner
 
     /** Returns usually symbol's owner, but picks classfile root instead
@@ -145,7 +145,7 @@ abstract class Pickler extends SubComponent {
           putSymbol(sym.alias)
           if (!sym.children.isEmpty) {
             val (locals, globals) = sym.children.toList.partition(_.isLocalClass)
-            val children = 
+            val children =
               if (locals.isEmpty) globals
               else {
                 val localChildDummy = sym.newClass(sym.pos, tpnme.LOCAL_CHILD)
@@ -200,8 +200,8 @@ abstract class Pickler extends SubComponent {
         case NullaryMethodType(restpe) =>
           putType(restpe)
         case PolyType(tparams, restpe) =>
-          /** no longer needed since all params are now local 
-          tparams foreach { tparam => 
+          /** no longer needed since all params are now local
+          tparams foreach { tparam =>
             if (!isLocal(tparam)) locals += tparam // similar to existential types, these tparams are local
           }
           */
@@ -210,7 +210,7 @@ abstract class Pickler extends SubComponent {
 //          val savedBoundSyms = boundSyms // boundSyms are known to be local based on the EXISTENTIAL flag  (see isLocal)
 //          boundSyms = tparams ::: boundSyms
 //          try {
-            putType(restpe); 
+            putType(restpe);
 //          } finally {
 //            boundSyms = savedBoundSyms
 //          }
@@ -490,7 +490,7 @@ abstract class Pickler extends SubComponent {
      */
     private def writeRef(ref: AnyRef) { writeNat(index(ref)) }
     private def writeRefs(refs: List[AnyRef]) { refs foreach writeRef }
-    private def writeRefsWithLength(refs: List[AnyRef]) { 
+    private def writeRefsWithLength(refs: List[AnyRef]) {
       writeNat(refs.length)
       writeRefs(refs)
     }
@@ -991,7 +991,7 @@ abstract class Pickler extends SubComponent {
     /** Print entry for diagnostics */
     def printEntryAtIndex(idx: Int) = printEntry(entries(idx))
     def printEntry(entry: AnyRef) {
-      def printRef(ref: AnyRef) { 
+      def printRef(ref: AnyRef) {
         print(index(ref)+
               (if (ref.isInstanceOf[Name]) "("+ref+") " else " "))
       }
@@ -1034,23 +1034,23 @@ abstract class Pickler extends SubComponent {
         case ThisType(sym) =>
           print("THIStpe "); printRef(sym)
         case SingleType(pre, sym) =>
-          print("SINGLEtpe "); printRef(pre); printRef(sym); 
+          print("SINGLEtpe "); printRef(pre); printRef(sym);
         case ConstantType(value) =>
-          print("CONSTANTtpe "); printRef(value); 
+          print("CONSTANTtpe "); printRef(value);
         case TypeRef(pre, sym, args) =>
-          print("TYPEREFtpe "); printRef(pre); printRef(sym); printRefs(args); 
+          print("TYPEREFtpe "); printRef(pre); printRef(sym); printRefs(args);
         case TypeBounds(lo, hi) =>
-          print("TYPEBOUNDStpe "); printRef(lo); printRef(hi); 
+          print("TYPEBOUNDStpe "); printRef(lo); printRef(hi);
         case tp @ RefinedType(parents, decls) =>
-          print("REFINEDtpe "); printRef(tp.typeSymbol); printRefs(parents); 
+          print("REFINEDtpe "); printRef(tp.typeSymbol); printRefs(parents);
         case ClassInfoType(parents, decls, clazz) =>
-          print("CLASSINFOtpe "); printRef(clazz); printRefs(parents); 
+          print("CLASSINFOtpe "); printRef(clazz); printRefs(parents);
         case mt @ MethodType(formals, restpe) =>
           print("METHODtpe"); printRef(restpe); printRefs(formals)
         case PolyType(tparams, restpe) =>
-          print("POLYtpe "); printRef(restpe); printRefs(tparams); 
+          print("POLYtpe "); printRef(restpe); printRefs(tparams);
         case ExistentialType(tparams, restpe) =>
-          print("EXISTENTIALtpe "); printRef(restpe); printRefs(tparams); 
+          print("EXISTENTIALtpe "); printRef(restpe); printRefs(tparams);
           print("||| "+entry)
         // case DeBruijnIndex(l, i) =>
         //   print("DEBRUIJNINDEXtpe "); print(l+" "+i)
@@ -1067,7 +1067,7 @@ abstract class Pickler extends SubComponent {
           else if (c.tag == StringTag) { print("String "); printRef(newTermName(c.stringValue)) }
           else if (c.tag == ClassTag) { print("Class "); printRef(c.typeValue) }
           else if (c.tag == EnumTag) { print("Enum "); printRef(c.symbolValue) }
-        case AnnotatedType(annots, tp, selfsym) => 
+        case AnnotatedType(annots, tp, selfsym) =>
           if (settings.selfInAnnots.value) {
             print("ANNOTATEDWSELFtpe ")
             printRef(tp)

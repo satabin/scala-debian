@@ -12,11 +12,11 @@ import java.lang.{ Character => JCharacter }
 /** Contains constants and classifier methods for characters */
 trait Chars {
   // Be very careful touching these.
-  // Apparently trivial changes to the way you write these constants 
-  // will cause Scanners.scala to go from a nice efficient switch to 
+  // Apparently trivial changes to the way you write these constants
+  // will cause Scanners.scala to go from a nice efficient switch to
   // a ghastly nested if statement which will bring the type checker
   // to its knees. See ticket #1456
-  // Martin: (this should be verified now that the pattern rules have been redesigned). 
+  // Martin: (this should be verified now that the pattern rules have been redesigned).
   final val LF = '\u000A'
   final val FF = '\u000C'
   final val CR = '\u000D'
@@ -34,7 +34,7 @@ trait Chars {
     else
       -1
   }
-  
+
   /** Convert a character to a backslash-u escape */
   def char2uescape(c: Char): String = {
     var rest = c.toInt
@@ -53,13 +53,13 @@ trait Chars {
   }
 
   /** Is character a whitespace character (but not a new line)? */
-  def isWhitespace(c: Char) = 
+  def isWhitespace(c: Char) =
     c == ' ' || c == '\t' || c == CR
 
   /** Can character form part of a doc comment variable $xxx? */
-  def isVarPart(c: Char) = 
+  def isVarPart(c: Char) =
     '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
-    
+
   /** Can character start an alphanumeric Scala identifier? */
   def isIdentifierStart(c: Char): Boolean =
     (c == '_') || (c == '$') || Character.isUnicodeIdentifierStart(c)
@@ -73,7 +73,7 @@ trait Chars {
     val chtp = Character.getType(c)
     chtp == Character.MATH_SYMBOL.toInt || chtp == Character.OTHER_SYMBOL.toInt
   }
-  
+
   private final val otherLetters = Set[Char]('\u0024', '\u005F')  // '$' and '_'
   private final val letterGroups = {
     import JCharacter._
@@ -83,9 +83,9 @@ trait Chars {
 
   /** Can character form part of a Scala operator name? */
   def isOperatorPart(c : Char) : Boolean = (c: @switch) match {
-    case '~' | '!' | '@' | '#' | '%' | 
+    case '~' | '!' | '@' | '#' | '%' |
          '^' | '*' | '+' | '-' | '<' |
-         '>' | '?' | ':' | '=' | '&' | 
+         '>' | '?' | ':' | '=' | '&' |
          '|' | '/' | '\\' => true
     case c => isSpecial(c)
   }

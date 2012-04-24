@@ -5,12 +5,12 @@ package scalasig
 
 trait Flags {
   def hasFlag(flag : Long) : Boolean
-  
+
   def isImplicit = hasFlag(0x00000001)
   def isFinal = hasFlag(0x00000002)
   def isPrivate = hasFlag(0x00000004)
   def isProtected = hasFlag(0x00000008)
-    
+
   def isSealed = hasFlag(0x00000010)
   def isOverride = hasFlag(0x00000020)
   def isCase = hasFlag(0x00000040)

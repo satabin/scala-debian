@@ -18,7 +18,7 @@ import org.xml.sax.helpers.DefaultHandler
 trait ConsoleErrorHandler extends DefaultHandler {
   // ignore warning, crimson warns even for entity resolution!
   override def warning(ex: SAXParseException): Unit = { }
-  override def error(ex: SAXParseException): Unit = printError("Error", ex) 
+  override def error(ex: SAXParseException): Unit = printError("Error", ex)
   override def fatalError(ex: SAXParseException): Unit = printError("Fatal Error", ex)
 
   protected def printError(errtype: String, ex: SAXParseException): Unit =
@@ -30,13 +30,13 @@ trait ConsoleErrorHandler extends DefaultHandler {
     }
 }
 
-/** SAX adapter class, for use with Java SAX parser. Keeps track of 
- *  namespace bindings, without relying on namespace handling of the 
+/** SAX adapter class, for use with Java SAX parser. Keeps track of
+ *  namespace bindings, without relying on namespace handling of the
  *  underlying SAX parser.
  */
 abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node] {
   var rootElem: Node = null
-  
+
   val buffer      = new StringBuilder()
   val attribStack = new mutable.Stack[MetaData]
   val hStack      = new mutable.Stack[Node]   // [ element ] contains siblings
@@ -52,7 +52,7 @@ abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node
    * @return true if element named <code>localName</code> contains text.
    */
   def nodeContainsText(localName: String): Boolean // abstract
-  
+
   /** creates an new non-text(tree) node.
    * @param elemName
    * @param attribs
@@ -60,8 +60,8 @@ abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node
    * @return a new XML element.
    */
   def createNode(pre: String, elemName: String, attribs: MetaData,
-                 scope: NamespaceBinding, chIter: List[Node]): Node // abstract 
-  
+                 scope: NamespaceBinding, chIter: List[Node]): Node // abstract
+
   /** creates a Text node.
    * @param text
    * @return a new Text node.
@@ -70,12 +70,12 @@ abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node
 
   /** creates a new processing instruction node.
   */
-  def createProcInstr(target: String, data: String): Seq[ProcInstr] 
-    
+  def createProcInstr(target: String, data: String): Seq[ProcInstr]
+
   //
   // ContentHandler methods
   //
-  
+
   val normalizeWhitespace = false
 
   /** Characters.
@@ -124,16 +124,16 @@ abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node
 
     hStack push null
     var m: MetaData = Null
-    var scpe: NamespaceBinding = 
+    var scpe: NamespaceBinding =
       if (scopeStack.isEmpty) TopScope
       else scopeStack.top
-    
+
     for (i <- 0 until attributes.getLength()) {
       val qname = attributes getQName i
       val value = attributes getValue i
       val (pre, key) = splitName(qname)
       def nullIfEmpty(s: String) = if (s == "") null else s
-      
+
       if (pre == "xmlns" || (pre == null && qname == "xmlns")) {
         val arg = if (pre == null) null else key
         scpe = new NamespaceBinding(arg, nullIfEmpty(value), scpe)
@@ -141,43 +141,43 @@ abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node
       else
         m = Attribute(Option(pre), key, Text(value), m)
     }
-    
+
     scopeStack push scpe
     attribStack push m
   }
-  
+
 
   /** captures text, possibly normalizing whitespace
    */
   def captureText(): Unit = {
     if (capture && buffer.length > 0)
       hStack push createText(buffer.toString)
-    
+
     buffer.clear()
   }
-  
+
   /** End element.
    * @param uri
    * @param localName
    * @param qname
    * @throws org.xml.sax.SAXException if ..
    */
-  override def endElement(uri: String , _localName: String, qname: String): Unit = {  
+  override def endElement(uri: String , _localName: String, qname: String): Unit = {
     captureText()
     val metaData = attribStack.pop
-  
+
     // reverse order to get it right
     val v = (Iterator continually hStack.pop takeWhile (_ != null)).toList.reverse
     val (pre, localName) = splitName(qname)
     val scp = scopeStack.pop
-  
-    // create element    
+
+    // create element
     rootElem = createNode(pre, localName, metaData, scp, v)
     hStack push rootElem
     curTag = tagStack.pop
     capture = curTag != null && nodeContainsText(curTag) // root level
   }
-  
+
   /** Processing instruction.
   */
   override def processingInstruction(target: String, data: String) {

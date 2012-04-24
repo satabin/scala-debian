@@ -66,7 +66,7 @@ class Replayer(raw: Reader) extends LogReplay {
         case UnpickleSuccess(y) => nextComma = true; Some(y)
         case _ => None
       }
-    } 
+    }
 
   def close() { raw.close() }
   def flush() {}

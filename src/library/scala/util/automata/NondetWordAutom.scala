@@ -20,7 +20,7 @@ import scala.collection.{ immutable, mutable }
  */
 abstract class NondetWordAutom[T <: AnyRef] {
   import immutable.BitSet
-  
+
   val nstates: Int
   val labels: Seq[T]
   val finals: Array[Int] // 0 means not final
@@ -32,10 +32,10 @@ abstract class NondetWordAutom[T <: AnyRef] {
 
   /** returns tag of final state */
   final def finalTag(state: Int) = finals(state)
-  
+
   /** returns true if the set of states contains at least one final state */
   final def containsFinal(Q: BitSet): Boolean = Q exists isFinal
-  
+
   /** returns true if there are no accepting states */
   final def isEmpty = (0 until nstates) forall (x => !isFinal(x))
 
@@ -45,17 +45,17 @@ abstract class NondetWordAutom[T <: AnyRef] {
   /** returns a BitSet with the next states for given state and label */
   def next(Q: BitSet, a: T): BitSet = next(Q, next(_, a))
   def nextDefault(Q: BitSet): BitSet = next(Q, default)
-  
+
   private def next(Q: BitSet, f: (Int) => BitSet): BitSet =
     (Q map f).foldLeft(BitSet.empty)(_ ++ _)
 
   private def finalStates = 0 until nstates filter isFinal
   override def toString = {
-    
+
     val finalString = Map(finalStates map (j => j -> finals(j)) : _*).toString
     val deltaString = (0 until nstates) .
       map (i => "   %d->%s\n    _>%s\n".format(i, delta(i), default(i))) mkString
-    
+
     "[NondetWordAutom  nstates=%d  finals=%s  delta=\n%s".format(nstates, finalString, deltaString)
   }
 }

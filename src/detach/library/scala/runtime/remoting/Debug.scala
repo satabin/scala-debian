@@ -58,7 +58,7 @@ class Debug(tag: String) {
       case "verbose" => (VERBOSE, b)
       case "info"    => (INFO   , b)
       case _         => (SILENT , false)
-    }      
+    }
   }
 
   def level = lev
@@ -66,7 +66,7 @@ class Debug(tag: String) {
 
   private val tag0: String =
     if (tag != null & tag.length > 0) tag+" " else ""
- 
+
   def info(msg: String) {
     if (lev >= INFO) Console.println(tag0 + "(info): " + msg)
   }

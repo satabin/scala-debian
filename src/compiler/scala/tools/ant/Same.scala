@@ -35,31 +35,31 @@ class Same extends ScalaMatchingTask {
 /*============================================================================*\
 **                             Ant user-properties                            **
 \*============================================================================*/
-  
+
   private var origin: Option[File] = None
   private var destination: Option[File] = None
-  
+
   private var resultProperty: Option[String] = None
   private var failing: Boolean = false
-  
+
   private var mapperElement: Option[Mapper] = None
 
 /*============================================================================*\
 **                             Properties setters                             **
 \*============================================================================*/
-  
+
   def setDir(input: File) =
     origin = Some(input)
-  
+
   def setTodir(input: File) =
     destination = Some(input)
-  
+
   def setResultproperty(input: String) =
     resultProperty = Some(input)
-  
+
   def setFailondifferent(input: Boolean) =
     failing = input
-  
+
   def createMapper(): Mapper =
     if (mapperElement.isEmpty) {
       val mapper = new Mapper(getProject)
@@ -67,7 +67,7 @@ class Same extends ScalaMatchingTask {
       mapper
     }
     else throw new BuildException("Cannot define more than one mapper", getLocation)
-  
+
   def add(fileNameMapper: FileNameMapper) =
     createMapper().add(fileNameMapper)
 
@@ -85,20 +85,20 @@ class Same extends ScalaMatchingTask {
 /*============================================================================*\
 **                               Support methods                              **
 \*============================================================================*/
-  
+
   private var allEqualNow = true
-  
+
   /** Tests if all mandatory attributes are set and valid. */
   private def validateAttributes() = {
     if (origin.isEmpty) sys.error("Mandatory attribute 'dir' is not set.")
     if (destination.isEmpty) sys.error("Mandatory attribute 'todir' is not set.")
   }
-  
+
   private def reportDiff(f1: File, f2: File) = {
     allEqualNow = false
     log("File '" + f1 + "' is different from correspondant.")
   }
-  
+
   private def reportMissing(f1: File) = {
     allEqualNow = false
     log("File '" + f1 + "' has no correspondant.")
@@ -117,7 +117,7 @@ class Same extends ScalaMatchingTask {
     val originBuffer = new Array[Byte](bufferSize)
     val destBuffer = new Array[Byte](bufferSize)
     for (
-      originName: String <- originNames; 
+      originName: String <- originNames;
       destName: String <- mapper.mapFileName(originName)
     ) {
       //println("originName="+originName)

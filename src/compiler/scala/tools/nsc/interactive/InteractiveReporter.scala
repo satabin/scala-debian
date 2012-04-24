@@ -9,12 +9,12 @@ import collection.mutable.ArrayBuffer
 import util.Position
 import reporters.Reporter
 
-case class Problem(pos: Position, msg: String, severityLevel: Int) 
+case class Problem(pos: Position, msg: String, severityLevel: Int)
 
 abstract class InteractiveReporter extends Reporter {
-  
+
   def compiler: Global
-  
+
   val otherProblems = new ArrayBuffer[Problem]
 
   override def info0(pos: Position, msg: String, severity: Severity, force: Boolean): Unit = try {

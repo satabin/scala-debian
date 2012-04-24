@@ -17,7 +17,7 @@ object UTF8Codec
 {
   final val UNI_REPLACEMENT_CHAR: Int = 0x0000FFFD
   final val UNI_REPLACEMENT_BYTES = Array[Byte](-17, -65, -67)
-  
+
   // Note, from http://unicode.org/faq/utf_bom.html#utf8-5
   //
   // A different issue arises if an unpaired surrogate is encountered when converting

@@ -29,7 +29,7 @@ class JavaCharArrayReader(buf: IndexedSeq[Char], start: Int, /* startline: int, 
   var bp = start
   var oldBp = -1
   var oldCh: Char = _
-  
+
   //private var cline: Int = _
   //private var ccol: Int = _
   def cpos = bp
@@ -51,7 +51,7 @@ class JavaCharArrayReader(buf: IndexedSeq[Char], start: Int, /* startline: int, 
     //nextcol = 1
   }
 
-  def hasNext: Boolean = if (bp < buf.length) true 
+  def hasNext: Boolean = if (bp < buf.length) true
   else {
     false
   }
@@ -64,7 +64,7 @@ class JavaCharArrayReader(buf: IndexedSeq[Char], start: Int, /* startline: int, 
     val buf = this.buf.asInstanceOf[collection.mutable.WrappedArray[Char]].array
     if(!hasNext) {
       ch = SU
-      return SU  // there is an endless stream of SU's at the end 
+      return SU  // there is an endless stream of SU's at the end
     }
     oldBp = bp
     oldCh = ch

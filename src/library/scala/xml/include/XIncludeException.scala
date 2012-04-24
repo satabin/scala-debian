@@ -35,13 +35,13 @@ class XIncludeException(message: String) extends Exception(message) {
   private var rootCause: Throwable = null
 
   /**
-   * When an <code>IOException</code>, <code>MalformedURLException</code> 
+   * When an <code>IOException</code>, <code>MalformedURLException</code>
    * or other generic exception is thrown while processing an XML document
    * for XIncludes, it is customarily replaced
-   * by some form of <code>XIncludeException</code>.  
+   * by some form of <code>XIncludeException</code>.
    * This method allows you to store the original exception.
    *
-   * @param   nestedException   the underlying exception which 
+   * @param   nestedException   the underlying exception which
    * caused the XIncludeException to be thrown
    */
   def setRootCause(nestedException: Throwable ) {
@@ -49,10 +49,10 @@ class XIncludeException(message: String) extends Exception(message) {
   }
 
   /**
-   * When an <code>IOException</code>, <code>MalformedURLException</code> 
+   * When an <code>IOException</code>, <code>MalformedURLException</code>
    * or other generic exception is thrown while processing an XML document
    * for XIncludes, it is customarily replaced
-   * by some form of <code>XIncludeException</code>.  
+   * by some form of <code>XIncludeException</code>.
    * This method allows you to retrieve the original exception.
    * It returns null if no such exception caused this <code>XIncludeException</code>.
    *
@@ -60,5 +60,5 @@ class XIncludeException(message: String) extends Exception(message) {
    *                     <code>XIncludeException</code> to be thrown
    */
   def getRootCause(): Throwable = this.rootCause
-  
+
 }

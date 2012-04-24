@@ -12,13 +12,13 @@ import scala.util.parsing.input.Positional
 
 /** This component provides the core abstractions for representing an Abstract Syntax Tree
  *
- * @author Adriaan Moors 
+ * @author Adriaan Moors
  */
 trait AbstractSyntax {
   /** The base class for elements of the abstract syntax tree.
    */
   trait Element extends Positional
-  
+
   /** The base class for elements in the AST that represent names {@see Binders}.
    */
   trait NameElement extends Element {

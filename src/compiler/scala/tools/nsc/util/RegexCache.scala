@@ -14,7 +14,7 @@ object RegexCache {
 
   /** Lists the regexes that have been recorded in order */
   private val regexList = new mutable.Queue[String]
-  
+
   private val regexesToCache = 1000
 
   /** Compile a regex and add it to the cache */

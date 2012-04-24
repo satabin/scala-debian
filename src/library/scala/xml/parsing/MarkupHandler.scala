@@ -37,7 +37,7 @@ abstract class MarkupHandler extends Logged
   def lookupElemDecl(Label: String): ElemDecl = {
     for (z @ ElemDecl(Label, _) <- decls)
       return z
-      
+
     null
   }
 
@@ -103,7 +103,7 @@ abstract class MarkupHandler extends Logged
   def elemDecl(n: String, cmstr: String): Unit = ()
 
   def attListDecl(name: String, attList: List[AttrDecl]): Unit = ()
-  
+
   private def someEntityDecl(name: String, edef: EntityDef, f: (String, EntityDef) => EntityDecl): Unit =
     edef match {
       case _: ExtDef if !isValidating =>  // ignore (cf REC-xml 4.4.1)
@@ -116,7 +116,7 @@ abstract class MarkupHandler extends Logged
   def parameterEntityDecl(name: String, edef: EntityDef): Unit =
     someEntityDecl(name, edef, ParameterEntityDecl.apply _)
 
-  def parsedEntityDecl(name: String, edef: EntityDef): Unit = 
+  def parsedEntityDecl(name: String, edef: EntityDef): Unit =
     someEntityDecl(name, edef, ParsedEntityDecl.apply _)
 
   def peReference(name: String) { decls ::= PEReference(name) }

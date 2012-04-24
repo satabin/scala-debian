@@ -49,7 +49,7 @@ import annotation.bridge
  *  @define Coll Iterable
  *  @define coll iterable collection
  */
-trait IterableLike[+A, +Repr] extends Equals with TraversableLike[A, Repr] with GenIterableLike[A, Repr] { 
+trait IterableLike[+A, +Repr] extends Equals with TraversableLike[A, Repr] with GenIterableLike[A, Repr] {
 self =>
 
   override protected[this] def thisCollection: Iterable[A] = this.asInstanceOf[Iterable[A]]
@@ -57,38 +57,38 @@ self =>
 
   /** Creates a new iterator over all elements contained in this
    *  iterable object.
-   *  
+   *
    *  @return the new iterator
    */
   def iterator: Iterator[A]
-  
+
   /** Applies a function `f` to all elements of this $coll.
-   *  
+   *
    *    Note: this method underlies the implementation of most other bulk operations.
    *    Subclasses should re-implement this method if a more efficient implementation exists.
-   *  
+   *
    *  @usecase def foreach(f: A => Unit): Unit
    */
-  def foreach[U](f: A => U): Unit = 
+  def foreach[U](f: A => U): Unit =
     iterator.foreach(f)
 
-  override /*TraversableLike*/ def forall(p: A => Boolean): Boolean = 
+  override /*TraversableLike*/ def forall(p: A => Boolean): Boolean =
     iterator.forall(p)
-  override /*TraversableLike*/ def exists(p: A => Boolean): Boolean = 
+  override /*TraversableLike*/ def exists(p: A => Boolean): Boolean =
     iterator.exists(p)
-  override /*TraversableLike*/ def find(p: A => Boolean): Option[A] = 
+  override /*TraversableLike*/ def find(p: A => Boolean): Option[A] =
     iterator.find(p)
-  override /*TraversableLike*/ def isEmpty: Boolean = 
+  override /*TraversableLike*/ def isEmpty: Boolean =
     !iterator.hasNext
   override /*TraversableLike*/ def foldRight[B](z: B)(op: (A, B) => B): B =
     iterator.foldRight(z)(op)
-  override /*TraversableLike*/ def reduceRight[B >: A](op: (A, B) => B): B = 
+  override /*TraversableLike*/ def reduceRight[B >: A](op: (A, B) => B): B =
     iterator.reduceRight(op)
-  override /*TraversableLike*/ def toIterable: Iterable[A] = 
+  override /*TraversableLike*/ def toIterable: Iterable[A] =
     thisCollection
   override /*TraversableLike*/ def head: A =
     iterator.next
-  
+
   override /*TraversableLike*/ def slice(from: Int, until: Int): Repr = {
     val lo = math.max(from, 0)
     val elems = until - lo
@@ -102,13 +102,13 @@ self =>
         b += it.next
         i += 1
       }
-      b.result      
+      b.result
     }
   }
 
   override /*TraversableLike*/ def take(n: Int): Repr = {
     val b = newBuilder
-    
+
     if (n <= 0) b.result
     else {
       b.sizeHintBounded(n, this)
@@ -145,9 +145,9 @@ self =>
     }
     b.result
   }
-  
+
   /** Partitions elements in fixed size ${coll}s.
-   *  @see Iterator#grouped   
+   *  @see Iterator#grouped
    *
    *  @param size the number of elements per group
    *  @return An iterator producing ${coll}s of size `size`, except the
@@ -159,10 +159,10 @@ self =>
       b ++= xs
       b.result
     }
-  
+
   /** Groups elements in fixed size blocks by passing a "sliding window"
    *  over them (as opposed to partitioning them, as is done in grouped.)
-   *  @see Iterator#sliding   
+   *  @see Iterator#sliding
    *
    *  @param size the number of elements per group
    *  @param step the distance between the first elements of successive
@@ -198,10 +198,10 @@ self =>
     }
     b.result
   }
-  
-  /** Selects all elements except last ''n'' ones. 
+
+  /** Selects all elements except last ''n'' ones.
    *  $orderDependent
-   *  
+   *
    *  @param  n    The number of elements to take
    *  @return a $coll consisting of all elements of this $coll except the last `n` ones, or else the
    *          empty $coll, if this $coll has less than `n` elements.
@@ -217,7 +217,7 @@ self =>
     }
     b.result
   }
-  
+
   override /*TraversableLike*/ def copyToArray[B >: A](xs: Array[B], start: Int, len: Int) {
     var i = start
     val end = (start + len) min xs.length
@@ -227,7 +227,7 @@ self =>
       i += 1
     }
   }
-  
+
   def zip[A1 >: A, B, That](that: GenIterable[B])(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That = {
     val b = bf(repr)
     val these = this.iterator
@@ -236,12 +236,12 @@ self =>
       b += ((these.next, those.next))
     b.result
   }
-  
+
   @bridge
-  def zip[A1 >: A, B, That](that: Iterable[B])(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That = 
+  def zip[A1 >: A, B, That](that: Iterable[B])(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That =
     zip(that: GenIterable[B])(bf)
 
-  def zipAll[B, A1 >: A, That](that: GenIterable[B], thisElem: A1, thatElem: B)(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That = {  
+  def zipAll[B, A1 >: A, That](that: GenIterable[B], thisElem: A1, thatElem: B)(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That = {
     val b = bf(repr)
     val these = this.iterator
     val those = that.iterator
@@ -257,17 +257,17 @@ self =>
   @bridge
   def zipAll[B, A1 >: A, That](that: Iterable[B], thisElem: A1, thatElem: B)(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That =
     zipAll(that: GenIterable[B], thisElem, thatElem)(bf)
-  
+
   def zipWithIndex[A1 >: A, That](implicit bf: CanBuildFrom[Repr, (A1, Int), That]): That = {
     val b = bf(repr)
     var i = 0
     for (x <- this) {
       b += ((x, i))
-      i +=1 
+      i +=1
     }
     b.result
   }
-  
+
   def sameElements[B >: A](that: GenIterable[B]): Boolean = {
     val these = this.iterator
     val those = that.iterator
@@ -282,8 +282,8 @@ self =>
   def sameElements[B >: A](that: Iterable[B]): Boolean = sameElements(that: GenIterable[B])
 
   override /*TraversableLike*/ def toStream: Stream[A] = iterator.toStream
-  
-  /** Method called from equality methods, so that user-defined subclasses can 
+
+  /** Method called from equality methods, so that user-defined subclasses can
    *  refuse to be equal to other collections of the same kind.
    *  @param   that   The object with which this $coll should be compared
    *  @return  `true`, if this $coll can possibly equal `that`, `false` otherwise. The test
@@ -297,7 +297,7 @@ self =>
   }
 
   override /*TraversableLike*/ def view(from: Int, until: Int) = view.slice(from, until)
-  
+
   @deprecated("use `iterator' instead", "2.8.0")
   def elements = iterator
 
@@ -307,7 +307,7 @@ self =>
    */
   @deprecated("use `headOption' instead", "2.8.0") def firstOption: Option[A] = headOption
 
-  /** 
+  /**
    * returns a projection that can be used to call non-strict `filter`,
    * `map`, and `flatMap` methods that build projections
    * of the collection.

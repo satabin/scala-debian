@@ -29,7 +29,7 @@ final class SingleFileILPrinterVisitor(_fileName: String) extends ILPrinterVisit
     var fileName: String = _fileName
 
     out = new PrintWriter(new BufferedWriter(new FileWriter(fileName)))
-    
+
    /**
      * Visit an AssemblyBuilder
      */

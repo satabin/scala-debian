@@ -41,7 +41,7 @@ import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
  *    <li>encoding,</li>
  *    <li>target,</li>
  *    <li>force,</li>
- *    <li>fork,</li> 
+ *    <li>fork,</li>
  *    <li>logging,</li>
  *    <li>logphase,</li>
  *    <li>debuginfo,</li>
@@ -166,7 +166,7 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
   /** Prints out the files being compiled by the scalac ant task
    *  (not only the number of files). */
   protected var scalacDebugging: Boolean = false
-  
+
   /** Helpers */
   private def setOrAppend(old: Option[Path], arg: Path): Option[Path] = old match {
     case Some(x)  => x append arg ; Some(x)
@@ -179,10 +179,10 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
   private def createNewPath(getter: () => Option[Path], setter: (Option[Path]) => Unit) = {
     if (getter().isEmpty)
       setter(Some(new Path(getProject())))
- 
+
     getter().get.createPath()
   }
-      
+
   private def plural(xs: List[Any]) = if (xs.size > 1) "s" else ""
   private def plural(x: Int) = if (x > 1) "s" else ""
 
@@ -220,7 +220,7 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
   def setCompilerPath(input : Path) {
     compilerPath = setOrAppend(compilerPath, input)
   }
-  
+
   def createCompilerPath: Path = createNewPath(compilerPath _, p => compilerPath = p)
 
   /** Sets the <code>compilerpathref</code> attribute. Used by Ant.
@@ -301,7 +301,7 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
   /** Sets the <code>force</code> attribute. Used by Ant.
    *  @param input The value for <code>force</code>. */
   def setForce(input: Boolean) { force = input }
-  
+
   /** Sets the <code>fork</code> attribute. Used by Ant.
    *  @param input The value for <code>fork</code>. */
   def setFork(input : Boolean) { fork = input }
@@ -312,7 +312,7 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
   def setJvmargs(input : String) {
     jvmArgs = Some(input)
   }
-  
+
   /** Sets the logging level attribute. Used by Ant.
    *  @param input The value for <code>logging</code>. */
   def setLogging(input: String) {
@@ -479,9 +479,9 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
     val mapper = new GlobPatternMapper()
     mapper setTo "*.class"
     mapper setFrom "*.scala"
-    
+
     var javaOnly = true
-    
+
     def getOriginFiles(originDir: File) = {
       val includedFiles = getDirectoryScanner(originDir).getIncludedFiles()
       val javaFiles = includedFiles filter (_ endsWith ".java")
@@ -507,10 +507,10 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
         log("Compiling %s to %s".format(str, getDestination.toString))
       }
       else log("No files selected for compilation", Project.MSG_VERBOSE)
-      
+
       list
     }
-    
+
     // Scans source directories to build up a compile lists.
     // If force is false, only files were the .class file in destination is
     // older than the .scala file will be used.
@@ -572,11 +572,11 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
     val (settings, sourceFiles, javaOnly) = initialize
     if (sourceFiles.isEmpty || javaOnly)
       return
-      
+
     if (fork) executeFork(settings, sourceFiles)  // TODO - Error
     else executeInternal(settings, sourceFiles)
   }
-  
+
   protected def executeFork(settings: Settings, sourceFiles: List[File]) {
       val java = new Java(this)
       java setFork true
@@ -594,7 +594,7 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
         }
         path
       }
-      
+
       java setClasspath scalacPath
       java setClassname MainClass
 
@@ -604,7 +604,7 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
         val file = File.createTempFile("scalac-ant-",".args")
         file.deleteOnExit()
         val out = new PrintWriter(new BufferedWriter(new FileWriter(file)))
-        
+
         try {
           for (setting <- settings.visibleSettings ; arg <- setting.unparse)
             out println escapeArgument(arg)
@@ -612,7 +612,7 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
             out println escapeArgument(file.getAbsolutePath)
         }
         finally out.close()
-        
+
         file
       }
       val res = execWithArgFiles(java, List(writeSettings.getAbsolutePath))
@@ -620,12 +620,12 @@ class Scalac extends ScalaMatchingTask with ScalacShared {
         buildError("Compilation failed because of an internal compiler error;"+
               " see the error output for details.")
   }
-  
+
   /** Performs the compilation. */
   protected def executeInternal(settings: Settings, sourceFiles : List[File]) {
     val reporter = new ConsoleReporter(settings)
     val compiler = newGlobal(settings, reporter)  // compiles the actual code
-    
+
     try new compiler.Run compile (sourceFiles map (_.toString))
     catch {
       case ex: Throwable =>

@@ -24,19 +24,19 @@ object Actor extends Combinators {
 
   /** State of an actor.
    *  <ul>
-   *    <li><b>New</b> - 
+   *    <li><b>New</b> -
    *      Not yet started</li>
-   *    <li><b>Runnable</b> - 
+   *    <li><b>Runnable</b> -
    *      Executing</li>
-   *    <li><b>Suspended</b> - 
+   *    <li><b>Suspended</b> -
    *      Suspended, waiting in a `react`</li>
-   *    <li><b>TimedSuspended</b> - 
+   *    <li><b>TimedSuspended</b> -
    *      Suspended, waiting in a `reactWithin` </li>
-   *    <li><b>Blocked</b> - 
+   *    <li><b>Blocked</b> -
    *      Blocked waiting in a `receive` </li>
-   *    <li><b>TimedBlocked</b> - 
+   *    <li><b>TimedBlocked</b> -
    *      Blocked waiting in a `receiveWithin` </li>
-   *    <li><b>Terminated</b> - 
+   *    <li><b>Terminated</b> -
    *      Actor has terminated </li>
    *  </ul>
    */
@@ -384,7 +384,7 @@ object Actor extends Combinators {
  *   factory methods in its companion object can be used).  The
  *   behavior of an `Actor` subclass is defined by implementing its
  *   `act` method:
- *   
+ *
  *   {{{
  *   class MyActor extends Actor {
  *     def act() {
@@ -392,27 +392,27 @@ object Actor extends Combinators {
  *     }
  *   }
  *   }}}
- *   
+ *
  *   A new `Actor` instance is started by invoking its `start` method.
- *   
+ *
  *   '''Note:''' care must be taken when invoking thread-blocking methods
  *   other than those provided by the `Actor` trait or its companion
  *   object (such as `receive`). Blocking the underlying thread inside
  *   an actor may lead to starvation of other actors. This also
  *   applies to actors hogging their thread for a long time between
  *   invoking `receive`/`react`.
- *   
+ *
  *   If actors use blocking operations (for example, methods for
  *   blocking I/O), there are several options:
  *   <ul>
  *     <li>The run-time system can be configured to use a larger thread pool size
  *     (for example, by setting the `actors.corePoolSize` JVM property).</li>
- *     
- *     <li>The `scheduler` method of the `Actor` trait can be overridden to return a 
+ *
+ *     <li>The `scheduler` method of the `Actor` trait can be overridden to return a
  *     `ResizableThreadPoolScheduler`, which resizes its thread pool to
  *     avoid starvation caused by actors that invoke arbitrary blocking methods.</li>
- *     
- *     <li>The `actors.enableForkJoin` JVM property can be set to `false`, in which 
+ *
+ *     <li>The `actors.enableForkJoin` JVM property can be set to `false`, in which
  *     case a `ResizableThreadPoolScheduler` is used by default to execute actors.</li>
  *   </ul>
  * </p>
@@ -433,7 +433,7 @@ object Actor extends Combinators {
  *   </li>
  * </ul>
  * </p>
- * 
+ *
  * @author Philipp Haller
  *
  * @define actor actor
@@ -592,7 +592,7 @@ trait Actor extends AbstractActor with ReplyReactor with ActorCanReply with Inpu
             if (onTimeout.isEmpty) {
               if (!f.isDefinedAt(TIMEOUT))
                 sys.error("unhandled timeout")
-              
+
               val thisActor = this
               onTimeout = Some(new TimerTask {
                 def run() {
@@ -601,7 +601,7 @@ trait Actor extends AbstractActor with ReplyReactor with ActorCanReply with Inpu
               })
               Actor.timer.schedule(onTimeout.get, msec)
             }
-            
+
             // It is possible that !onTimeout.isEmpty, but TIMEOUT is not yet in mailbox
             // See SI-4759
             waitingFor = f
@@ -871,7 +871,7 @@ trait Actor extends AbstractActor with ReplyReactor with ActorCanReply with Inpu
           /* Here we should not throw a SuspendActorControl,
              since the current method is called from an actor that
              is in the process of exiting.
-             
+
              Therefore, the contract for scheduleActor is that
              it never throws a SuspendActorControl.
            */
