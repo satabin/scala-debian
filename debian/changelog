@@ -3,7 +3,8 @@ scala (2.9.1.dfsg-4) UNRELEASED; urgency=low
   [ Frank S. Thomas ]
   * Update debian/copyright to version 1.0 of the copyright format.
   * Bump standards version from 3.9.2 to 3.9.3.
-  * Updated debian/watch to match the new names of the source tarballs.
+  * Updated debian/watch to match the new names of the source tarballs
+    (LP: #987561).
 
  -- Frank S. Thomas <fst@debian.org>  Sat, 25 Feb 2012 21:45:25 +0100
 
