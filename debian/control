@@ -6,10 +6,9 @@ Uploaders:
  Mehdi Dogguy <mehdi@debian.org>,
  Min Huang <min.huang@alumni.usc.edu>,
  Frank S. Thomas <fst@debian.org>
-DM-Upload-Allowed: yes
-Standards-Version: 3.9.3
+Standards-Version: 3.9.5
 Build-Depends:
- openjdk-6-jdk | java-compiler,
+ default-jdk | java6-sdk,
  ant,
  ant-contrib,
  ant-optional,
@@ -27,7 +26,7 @@ Package: scala
 Architecture: all
 Depends:
  scala-library (= ${source:Version}),
- openjdk-6-jre | java6-runtime,
+ openjdk-7-jre | java7-runtime | java6-runtime,
  libjansi-java,
  ${misc:Depends}
 Suggests: scala-doc (>= ${source:Version})
@@ -48,7 +47,7 @@ Description: Scala programming language
 Package: scala-library
 Architecture: all
 Depends:
- openjdk-6-jre | java6-runtime,
+ openjdk-7-jre | java7-runtime | java6-runtime,
  ${misc:Depends}
 Description: Scala standard library
  This run-time library is needed to run Scala programs. It also

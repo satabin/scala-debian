@@ -1,3 +1,17 @@
+scala (2.9.2+dfsg-2) unstable; urgency=low
+
+  * Team upload.
+  * Add patch to remove non-ASCII characters from source file
+  * Build-dep on default-jdk instead of openjdk-6-jdk
+    Add patch to build with JDK7.
+    For scala and scala-library, update openjdk-6-jre dependency to 7.
+    (Closes: #720569)
+  * Bump Standards-Version to 3.9.5.
+  * Remove deprecated DMUA flag.
+  * Add lintian override for scala package description.
+
+ -- tony mancill <tmancill@debian.org>  Thu, 26 Dec 2013 20:04:39 -0800
+
 scala (2.9.2+dfsg-1) unstable; urgency=low
 
   [ Frank S. Thomas ]

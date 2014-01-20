@@ -6,11 +6,9 @@ Subject: Adapt SCALA_HOME and TOOL_CLASSPATH to the package layout
  .../scala/tools/ant/templates/tool-unix.tmpl       |   29 +------------------
  1 files changed, 2 insertions(+), 27 deletions(-)
 
-diff --git a/src/compiler/scala/tools/ant/templates/tool-unix.tmpl b/src/compiler/scala/tools/ant/templates/tool-unix.tmpl
-index a3dc582..c9a9c7b 100644
 --- a/src/compiler/scala/tools/ant/templates/tool-unix.tmpl
 +++ b/src/compiler/scala/tools/ant/templates/tool-unix.tmpl
-@@ -48,23 +48,7 @@ case "`uname`" in
+@@ -48,23 +48,7 @@
  esac
  
  # Finding the root folder for this Scala distribution
@@ -35,7 +33,7 @@ index a3dc582..c9a9c7b 100644
  
  # Remove spaces from SCALA_HOME on windows
  if $cygwin; then
-@@ -73,16 +57,7 @@ if $cygwin; then
+@@ -73,16 +57,7 @@
  fi
  
  # Constructing the extension classpath
@@ -53,4 +51,3 @@ index a3dc582..c9a9c7b 100644
  
  CYGWIN_JLINE_TERMINAL=
  if $cygwin; then
--- 

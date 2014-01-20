@@ -1,0 +1,54 @@
+--- a/src/jline/src/main/java/scala/tools/jline/UnixTerminal.java
++++ b/src/jline/src/main/java/scala/tools/jline/UnixTerminal.java
+@@ -33,7 +33,7 @@
+  * @author <a href="mailto:mwp1@cornell.edu">Marc Prud'hommeaux</a>
+  * @author <a href="mailto:dwkemp@gmail.com">Dale Kemp</a>
+  * @author <a href="mailto:jason@planet57.com">Jason Dillon</a>
+- * @author <a href="mailto:jbonofre@apache.org">Jean-Baptiste Onofré</a>
++ * @author <a href="mailto:jbonofre@apache.org">Jean-Baptiste Onofre</a>
+  * @since 2.0
+  */
+ public class UnixTerminal
+@@ -245,4 +245,4 @@
+             return codes.get((short) code);
+         }
+     }
+-}
+\ No newline at end of file
++}
+--- a/src/jline/src/main/java/scala/tools/jline/internal/TerminalLineSettings.java
++++ b/src/jline/src/main/java/scala/tools/jline/internal/TerminalLineSettings.java
+@@ -22,7 +22,7 @@
+  * @author <a href="mailto:mwp1@cornell.edu">Marc Prud'hommeaux</a>
+  * @author <a href="mailto:dwkemp@gmail.com">Dale Kemp</a>
+  * @author <a href="mailto:jason@planet57.com">Jason Dillon</a>
+- * @author <a href="mailto:jbonofre@apache.org">Jean-Baptiste Onofré</a>
++ * @author <a href="mailto:jbonofre@apache.org">Jean-Baptiste Onofre</a>
+  * @since 2.0
+  */
+ public final class TerminalLineSettings
+@@ -214,4 +214,4 @@
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}
+--- a/src/jline/src/test/java/scala/tools/jline/internal/TerminalLineSettingsTest.java
++++ b/src/jline/src/test/java/scala/tools/jline/internal/TerminalLineSettingsTest.java
+@@ -8,7 +8,7 @@
+ /**
+  * Tests for the {@link TerminalLineSettings}.
+  *
+- * @author <a href="mailto:jbonofre@apache.org">Jean-Baptiste Onofré</a>
++ * @author <a href="mailto:jbonofre@apache.org">Jean-Baptiste Onofre</a>
+  */
+ public class TerminalLineSettingsTest
+ {
+@@ -143,4 +143,4 @@
+         assertEquals(32, settings.getProperty("rows", freeBsdSttySample));
+     }
+ 
+-}
+\ No newline at end of file
++}
