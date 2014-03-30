@@ -1,3 +1,11 @@
+scala (2.10.4-1) UNRELEASED; urgency=low
+
+  * New upstream release,
+  * Remove patch to build with JDK7, Scala now natiely compiles with Jaa 7,
+  * Updated debian/watch to match the new names of the source tarballs.
+
+ -- Lucas Satabin <lucas.satabin@gnieh.org>  Sun, 30 Mar 2014 17:02:16 +0200
+
 scala (2.9.2+dfsg-2) unstable; urgency=low
 
   * Team upload.
