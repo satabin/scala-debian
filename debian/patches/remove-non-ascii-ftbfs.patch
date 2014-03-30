@@ -9,13 +9,14 @@
   * @since 2.0
   */
  public class UnixTerminal
-@@ -245,4 +245,4 @@
+@@ -245,4 +245,5 @@
              return codes.get((short) code);
          }
      }
 -}
 \ No newline at end of file
 +}
++
 --- a/src/jline/src/main/java/scala/tools/jline/internal/TerminalLineSettings.java
 +++ b/src/jline/src/main/java/scala/tools/jline/internal/TerminalLineSettings.java
 @@ -22,7 +22,7 @@
@@ -27,13 +28,14 @@
   * @since 2.0
   */
  public final class TerminalLineSettings
-@@ -214,4 +214,4 @@
+@@ -214,4 +214,5 @@
              }
          }
      }
 -}
 \ No newline at end of file
 +}
++
 --- a/src/jline/src/test/java/scala/tools/jline/internal/TerminalLineSettingsTest.java
 +++ b/src/jline/src/test/java/scala/tools/jline/internal/TerminalLineSettingsTest.java
 @@ -8,7 +8,7 @@
@@ -45,10 +47,11 @@
   */
  public class TerminalLineSettingsTest
  {
-@@ -143,4 +143,4 @@
+@@ -143,4 +143,5 @@
          assertEquals(32, settings.getProperty("rows", freeBsdSttySample));
      }
  
 -}
 \ No newline at end of file
 +}
++

@@ -6,17 +6,14 @@ Subject: Use system ant-contrib.jar
  build.xml |    2 +-
  1 files changed, 1 insertions(+), 1 deletions(-)
 
-diff --git a/build.xml b/build.xml
-index f77c225..33db14a 100644
 --- a/build.xml
 +++ b/build.xml
-@@ -220,7 +220,7 @@ INITIALISATION
-     <property name="scalac.args.all" value="${scalac.args} ${scalac.args.optimise}"/>
- 	  <property name="scalac.args.quick" value="${scalac.args.all} ${scalac.args.quickonly}"/>
-     <!-- Setting-up Ant contrib tasks -->
--    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${lib.dir}/ant/ant-contrib.jar"/>
+@@ -202,7 +202,7 @@
+ 
+   <target name="init" depends="boot">
+     <!-- Set up Ant contrib tasks so we can use <if><then><else> instead of the clunky `unless` attribute -->
+-    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${lib-ant.dir}/ant-contrib.jar"/>
 +    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${javalib.dir}/ant-contrib.jar"/>
-     <!-- This is the start time for the distribution -->
-     <tstamp prefix="time">
-       <format property="human" pattern="d MMMM yyyy, HH:mm:ss"/>
--- 
+ 
+     <!-- Add our maven ant tasks -->
+     <path id="maven-ant-tasks.classpath" path="${lib-ant.dir}/maven-ant-tasks-2.1.1.jar" />

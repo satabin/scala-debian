@@ -5,27 +5,16 @@ Forwarded: not-needed
 
 --- a/src/swing/scala/swing/ComboBox.scala
 +++ b/src/swing/scala/swing/ComboBox.scala
-@@ -1,17 +1,15 @@
- /*                     __                                               *\
- **     ________ ___   / /  ___     Scala API                            **
--**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
-+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
- **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
- ** /____/\___/_/ |_/____/_/ | |                                         **
- **                          |/                                          **
- \*                                                                      */
- 
--
--
+@@ -9,7 +9,7 @@
  package scala.swing
  
  import event._
 -import javax.swing.{JList, JComponent, JComboBox, JTextField, ComboBoxModel, AbstractListModel, ListCellRenderer}
-+import javax.swing.{ JComponent, JComboBox, JTextField, ComboBoxModel, AbstractListModel, ListCellRenderer }
++import javax.swing.{JComponent, JComboBox, JTextField, ComboBoxModel, AbstractListModel, ListCellRenderer}
  import java.awt.event.ActionListener
  
  object ComboBox {
-@@ -120,10 +118,10 @@
+@@ -118,10 +118,10 @@
    implicit def floatEditor(c: ComboBox[Float]): Editor[Float] = new BuiltInEditor(c)(s => s.toFloat, s => s.toString)
    implicit def doubleEditor(c: ComboBox[Double]): Editor[Double] = new BuiltInEditor(c)(s => s.toDouble, s => s.toString)
  
@@ -39,7 +28,7 @@ Forwarded: not-needed
        def setSelectedItem(a: Any) {
          if ((selected != null && selected != a) ||
              selected == null && a != null) {
-@@ -131,7 +129,7 @@
+@@ -129,7 +129,7 @@
            fireContentsChanged(this, -1, -1)
          }
        }
@@ -48,7 +37,7 @@ Forwarded: not-needed
        def getSize = items.size
      }
    }
-@@ -159,7 +157,7 @@
+@@ -157,7 +157,7 @@
   * @see javax.swing.JComboBox
   */
  class ComboBox[A](items: Seq[A]) extends Component with Publisher {
@@ -57,7 +46,7 @@ Forwarded: not-needed
  
    object selection extends Publisher {
      def index: Int = peer.getSelectedIndex
-@@ -184,7 +182,8 @@
+@@ -182,7 +182,8 @@
     * of the component to its own defaults _after_ the renderer has been
     * configured. That's Swing's principle of most suprise.
     */
@@ -67,28 +56,68 @@ Forwarded: not-needed
    def renderer_=(r: ListView.Renderer[A]) { peer.setRenderer(r.peer) }
  
    /* XXX: currently not safe to expose:
-@@ -203,8 +202,8 @@
+@@ -201,8 +202,9 @@
      peer.setEditor(editor(this).comboBoxPeer)
    }
  
 -  def prototypeDisplayValue: Option[A] = toOption[A](peer.getPrototypeDisplayValue)
 +  def prototypeDisplayValue: Option[A] = Option(peer.getPrototypeDisplayValue)
    def prototypeDisplayValue_=(v: Option[A]) {
--    peer.setPrototypeDisplayValue(v map toAnyRef orNull)
+-    peer.setPrototypeDisplayValue((v map toAnyRef).orNull)
 +    peer.setPrototypeDisplayValue((v map toAnyRef).orNull.asInstanceOf[A])
    }
  }
++
+--- a/build.xml
++++ b/build.xml
+@@ -364,13 +364,6 @@
+ 
+     <fail if="has.unsupported.jdk" message="JDK ${ant.java.version} is not supported by this build!"/>
+ 
+-    <if><isset property="has.java7"/><then>
+-      <echo level="warning"> You are using JDK7 for this build.
+-        While this will be able to build most of Scala, it will not build the Swing project.
+-        You will be unable to create a distribution.
+-      </echo>
+-    </then></if>
+-
+     <!-- Allow this to be overridden simply -->
+     <property name="sbt.latest.version"    value="0.12.2"/>
+ 
+@@ -1195,7 +1188,7 @@
+   <target name="quick.partest"    depends="quick.scalap, quick.comp, asm.done">
+     <staged-build with="locker"   stage="quick" project="partest" version="partest"/> </target>
+ 
+-  <target name="quick.swing"      depends="quick.actors, quick.lib" if="has.java6">
++  <target name="quick.swing"      depends="quick.actors, quick.lib">
+     <staged-build with="locker"   stage="quick" project="swing"/> </target>
+ 
+   <target name="quick.plugins"    depends="quick.comp">
+@@ -1246,7 +1239,7 @@
+     <staged-pack project="library"/></target>
+ 
+   <target name="pack.actors"  depends="quick.lib">                <staged-pack project="actors"/> </target>
+-  <target name="pack.swing" if="has.java6" depends="quick.swing"> <staged-pack project="swing"/> </target>
++  <target name="pack.swing" depends="quick.swing"> <staged-pack project="swing"/> </target>
+   <target name="pack.reflect" depends="quick.reflect">            <staged-pack project="reflect"/> </target>
+ 
+   <target name="pack.comp"    depends="quick.comp, asm.done">
+@@ -1393,11 +1386,9 @@
+       <make-bundle name="scala-reflect" version="${osgi.version.number}" />
+       <make-bundle name="scala-compiler" version="${osgi.version.number}" />
+       <make-plugin-bundle name="continuations" version="${osgi.version.number}" />
++      <make-bundle name="scala-swing" version="${osgi.version.number}"/>
+       <touch file="${build-osgi.dir}/bundles.complete" verbose="no"/>
+ 
+-      <if><isset property="has.java6"/><then>
+-        <make-bundle name="scala-swing" version="${osgi.version.number}"/></then>
+-      </if>
+       <stopwatch name="osgi.bundle.timer" action="total"/></then>
+     </if>
+   </target>
 --- a/src/swing/scala/swing/ListView.scala
 +++ b/src/swing/scala/swing/ListView.scala
-@@ -1,6 +1,6 @@
- /*                     __                                               *\
- **     ________ ___   / /  ___     Scala API                            **
--**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
-+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
- **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
- ** /____/\___/_/ |_/____/_/ | |                                         **
- **                          |/                                          **
-@@ -24,21 +24,21 @@
+@@ -24,18 +24,18 @@
      val MultiInterval = Value(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
    }
  
@@ -106,15 +135,11 @@ Forwarded: not-needed
       */
 -  	class Wrapped[A](override val peer: ListCellRenderer) extends Renderer[A] {
 -  	  def componentFor(list: ListView[_], isSelected: Boolean, focused: Boolean, a: A, index: Int) = {
-+        class Wrapped[A](override val peer: ListCellRenderer[A]) extends Renderer[A] {
-+          def componentFor(list: ListView[_ <: A], isSelected: Boolean, focused: Boolean, a: A, index: Int) = {
++  	class Wrapped[A](override val peer: ListCellRenderer[A]) extends Renderer[A] {
++  	  def componentFor(list: ListView[_ <: A], isSelected: Boolean, focused: Boolean, a: A, index: Int) = {
          Component.wrap(peer.getListCellRendererComponent(list.peer, a, index, isSelected, focused).asInstanceOf[JComponent])
        }
--  	}
-+	}
- 
-     /**
-      * Returns a renderer for items of type <code>A</code>. The given function
+   	}
 @@ -55,8 +55,8 @@
       * </code>
       */
@@ -188,7 +213,7 @@ Forwarded: not-needed
    def listData: Seq[A] = peer.getModel match {
 -    case model: ModelWrapper => model.items
 -    case model @ _ => new Seq[A] { selfSeq =>
-+    case model: ModelWrapper[a] => model.items
++    case model: ModelWrapper[A] => model.items
 +    case model => new Seq[A] { selfSeq =>
       def length = model.getSize
       def iterator = new Iterator[A] {
@@ -209,34 +234,7 @@ Forwarded: not-needed
        def getSize = items.size
      })
    }
-@@ -195,25 +195,12 @@
-     object indices extends Indices(peer.getSelectedIndices) {
-       def -=(n: Int): this.type = { peer.removeSelectionInterval(n,n); this }
-       def +=(n: Int): this.type = { peer.addSelectionInterval(n,n); this }
--      @deprecated("Use ListView.selection.leadIndex", "2.8.0")
--      def leadIndex: Int = peer.getSelectionModel.getLeadSelectionIndex
--      @deprecated("Use ListView.selection.anchorIndex", "2.8.0")
--      def anchorIndex: Int = peer.getSelectionModel.getAnchorSelectionIndex
-     }
- 
--    @deprecated("Use ListView.selectIndices", "2.8.0")
--    def selectIndices(ind: Int*) = peer.setSelectedIndices(ind.toArray)
--
-     /**
-      * The currently selected items.
-      */
--    object items extends scala.collection.SeqProxy[A] {
--      def self = peer.getSelectedValues.map(_.asInstanceOf[A])
--      @deprecated("Use ListView.selection.leadIndex", "2.8.0")
--      def leadIndex: Int = peer.getSelectionModel.getLeadSelectionIndex
--      @deprecated("Use ListView.selection.anchorIndex", "2.8.0")
--      def anchorIndex: Int = peer.getSelectionModel.getAnchorSelectionIndex
--    }
-+    lazy val items = peer.getSelectedValues.map(_.asInstanceOf[A])
- 
-     def intervalMode: IntervalMode.Value = IntervalMode(peer.getSelectionModel.getSelectionMode)
-     def intervalMode_=(m: IntervalMode.Value) { peer.getSelectionModel.setSelectionMode(m.id) }
-@@ -227,7 +214,7 @@
+@@ -216,7 +216,7 @@
      def adjusting = peer.getSelectionModel.getValueIsAdjusting
    }
  
@@ -245,15 +243,3 @@ Forwarded: not-needed
    def renderer_=(r: ListView.Renderer[A]) { peer.setCellRenderer(r.peer) }
  
    def fixedCellWidth = peer.getFixedCellWidth
-@@ -239,6 +226,11 @@
-   def prototypeCellValue: A = peer.getPrototypeCellValue.asInstanceOf[A]
-   def prototypeCellValue_=(a: A) { peer.setPrototypeCellValue(a) }
- 
-+  def visibleRowCount = peer.getVisibleRowCount
-+  def visibleRowCount_=(n: Int) = peer.setVisibleRowCount(n)
-+
-+  def ensureIndexIsVisible(idx: Int) = peer.ensureIndexIsVisible(idx)
-+
-   def selectionForeground: Color = peer.getSelectionForeground
-   def selectionForeground_=(c: Color) = peer.setSelectionForeground(c)
-   def selectionBackground: Color = peer.getSelectionBackground
