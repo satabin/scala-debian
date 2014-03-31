@@ -16,7 +16,7 @@ override_dh_auto_build:
 	done
 
 override_dh_auto_clean:
-	rm -rf build dist
+	rm -rf build dists
 
 override_dh_compress:
 	dh_compress -X.js -X.scala
