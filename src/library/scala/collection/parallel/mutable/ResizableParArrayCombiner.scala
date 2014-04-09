@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -14,33 +14,29 @@ import scala.collection.generic.Sizing
 import scala.collection.mutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.parallel.TaskSupport
-//import scala.collection.parallel.EnvironmentPassingCombiner
 import scala.collection.parallel.unsupportedop
 import scala.collection.parallel.Combiner
+import scala.collection.parallel.Task
 
 
 
 /** An array combiner that uses a chain of arraybuffers to store elements. */
-trait ResizableParArrayCombiner[T]
-extends LazyCombiner[T, ParArray[T], ExposedArrayBuffer[T]]
-{
-//self: EnvironmentPassingCombiner[T, ParArray[T]] =>
-  import collection.parallel.tasksupport._
+trait ResizableParArrayCombiner[T] extends LazyCombiner[T, ParArray[T], ExposedArrayBuffer[T]] {
 
   override def sizeHint(sz: Int) = if (chain.length == 1) chain(0).sizeHint(sz)
 
+  // public method with private[mutable] type ExposedArrayBuffer in parameter type; cannot be overridden.
   def newLazyCombiner(c: ArrayBuffer[ExposedArrayBuffer[T]]) = ResizableParArrayCombiner(c)
 
   def allocateAndCopy = if (chain.size > 1) {
     val arrayseq = new ArraySeq[T](size)
     val array = arrayseq.array.asInstanceOf[Array[Any]]
 
-    executeAndWaitResult(new CopyChainToArray(array, 0, size))
+    combinerTaskSupport.executeAndWaitResult(new CopyChainToArray(array, 0, size))
 
     new ParArray(arrayseq)
   } else { // optimisation if there is only 1 array
-    val pa = new ParArray(new ExposedArraySeq[T](chain(0).internalArray, size))
-    pa
+    new ParArray(new ExposedArraySeq[T](chain(0).internalArray, size))
   }
 
   override def toString = "ResizableParArrayCombiner(" + size + "): " //+ chain
@@ -85,11 +81,9 @@ extends LazyCombiner[T, ParArray[T], ExposedArrayBuffer[T]]
       val fp = howmany / 2
       List(new CopyChainToArray(array, offset, fp), new CopyChainToArray(array, offset + fp, howmany - fp))
     }
-    def shouldSplitFurther = howmany > collection.parallel.thresholdFromSize(size, parallelismLevel)
+    def shouldSplitFurther = howmany > scala.collection.parallel.thresholdFromSize(size, combinerTaskSupport.parallelismLevel)
   }
-
 }
-
 
 object ResizableParArrayCombiner {
   def apply[T](c: ArrayBuffer[ExposedArrayBuffer[T]]): ResizableParArrayCombiner[T] = {
@@ -97,15 +91,3 @@ object ResizableParArrayCombiner {
   }
   def apply[T](): ResizableParArrayCombiner[T] = apply(new ArrayBuffer[ExposedArrayBuffer[T]] += new ExposedArrayBuffer[T])
 }
-
-
-
-
-
-
-
-
-
-
-
-

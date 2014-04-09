@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2009-2011 Scala Solutions and LAMP/EPFL
+ * Copyright 2009-2013 Typesafe/Scala Solutions and LAMP/EPFL
  * @author Martin Odersky
  * @author Iulian Dragos
  */
@@ -36,7 +36,7 @@ final class PresentationCompilerThread(var compiler: Global, name: String = "")
 
         // make sure we don't keep around stale instances
         compiler = null
-      case ex =>
+      case ex: Throwable =>
         compiler.log.flush()
 
         ex match {

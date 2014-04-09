@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,7 +11,7 @@ package generic
 
 
 import mutable.{Builder, MapBuilder}
-import annotation.bridge
+import scala.language.higherKinds
 
 /** A template for companion objects of `Map` and subclasses thereof.
  *
@@ -35,6 +35,4 @@ abstract class MapFactory[CC[A, B] <: Map[A, B] with MapLike[A, B, CC[A, B]]] ex
 
   def empty[A, B]: CC[A, B]
 
-  @bridge
-  override def apply[A, B](elems: (A, B)*): CC[A, B] = super.apply(elems: _*)
 }

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -40,23 +40,15 @@ trait Iterable[+A] extends Traversable[A]
 /** $factoryInfo
  *  The current default implementation of a $Coll is a `Vector`.
  *  @define coll iterable collection
- *  @define Coll Iterable
+ *  @define Coll `Iterable`
  */
 object Iterable extends TraversableFactory[Iterable] {
 
   /** $genericCanBuildFromInfo */
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Iterable[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Iterable[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
 
   def newBuilder[A]: Builder[A, Iterable[A]] = immutable.Iterable.newBuilder[A]
-
-  /** The minimum element of a non-empty sequence of ordered elements */
-  @deprecated("use <seq>.min instead, where <seq> is the sequence for which you want to compute the minimum", "2.8.0")
-  def min[A](seq: Iterable[A])(implicit ord: Ordering[A]): A = seq.min
-
-  /** The maximum element of a non-empty sequence of ordered elements */
-  @deprecated("use <seq>.max instead, where <seq> is the sequence for which you want to compute the maximum", "2.8.0")
-  def max[A](seq: Iterable[A])(implicit ord: Ordering[A]): A = seq.max
-
-  @deprecated("use View instead", "2.8.0")
-  type Projection[A] = IterableView[A, Coll]
 }
+
+/** Explicit instantiation of the `Iterable` trait to reduce class file size in subclasses. */
+private[scala] abstract class AbstractIterable[+A] extends AbstractTraversable[A] with Iterable[A]

@@ -1,15 +1,12 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.text
-
 
 import java.io.Writer
 
@@ -34,11 +31,8 @@ abstract class Document {
   def :/:(hd: String): Document = hd :: DocBreak :: this
 
   /**
-   * Format this document on <code>writer</code> and try to set line
-   * breaks so that the result fits in <code>width</code> columns.
-   *
-   * @param width  ...
-   * @param writer ...
+   * Format this document on `writer` and try to set line
+   * breaks so that the result fits in `width` columns.
    */
   def format(width: Int, writer: Writer) {
     type FmtState = (Int, Boolean, Document)
@@ -94,6 +88,8 @@ abstract class Document {
       case (i, b, DocGroup(d)) :: z =>
         val fitsFlat = fits(width - k, (i, false, d) :: z)
         fmt(k, (i, !fitsFlat, d) :: z)
+      case _ =>
+        ()
     }
 
     fmt(0, (0, false, DocGroup(this)) :: Nil)

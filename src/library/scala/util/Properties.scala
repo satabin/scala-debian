@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,11 +10,16 @@
 package scala.util
 
 import java.io.{ IOException, PrintWriter }
+import java.util.jar.Attributes.{ Name => AttributeName }
 
-/** Loads library.properties from the jar. */
+/** Loads `library.properties` from the jar. */
 object Properties extends PropertiesTrait {
   protected def propCategory    = "library"
-  protected def pickJarBasedOn  = classOf[ScalaObject]
+  protected def pickJarBasedOn  = classOf[Option[_]]
+
+  /** Scala manifest attributes.
+   */
+  val ScalaCompilerVersion = new AttributeName("Scala-Compiler-Version")
 }
 
 private[scala] trait PropertiesTrait {
@@ -59,7 +64,7 @@ private[scala] trait PropertiesTrait {
   def scalaPropOrEmpty(name: String): String             = scalaPropOrElse(name, "")
   def scalaPropOrNone(name: String): Option[String]      = Option(scalaProps.getProperty(name))
 
-  /** The numeric portion of the runtime scala version, if this is a final
+  /** The numeric portion of the runtime Scala version, if this is a final
    *  release.  If for instance the versionString says "version 2.9.0.final",
    *  this would return Some("2.9.0").
    *
@@ -67,13 +72,13 @@ private[scala] trait PropertiesTrait {
    *  it is an RC, Beta, etc. or was built from source, or if the version
    *  cannot be read.
    */
-  val releaseVersion = 
+  val releaseVersion =
     for {
       v <- scalaPropOrNone("maven.version.number")
       if !(v endsWith "-SNAPSHOT")
     } yield v
 
-  /** The development scala version, if this is not a final release.
+  /** The development Scala version, if this is not a final release.
    *  The precise contents are not guaranteed, but it aims to provide a
    *  unique repository identifier (currently the svn revision) in the
    *  fourth dotted segment if the running version was built from source.
@@ -81,18 +86,23 @@ private[scala] trait PropertiesTrait {
    *  @return Some(version) if this is a non-final version, None if this
    *  is a final release or the version cannot be read.
    */
-  val developmentVersion = 
+  val developmentVersion =
     for {
       v <- scalaPropOrNone("maven.version.number")
       if v endsWith "-SNAPSHOT"
       ov <- scalaPropOrNone("version.number")
     } yield ov
 
+  /** Either the development or release version if known, otherwise
+   *  the empty string.
+   */
+  def versionNumberString = scalaPropOrEmpty("version.number")
+
   /** The version number of the jar this was loaded from plus "version " prefix,
    *  or "version (unknown)" if it cannot be determined.
    */
   val versionString         = "version " + scalaPropOrElse("version.number", "(unknown)")
-  val copyrightString       = scalaPropOrElse("copyright.string", "(c) 2002-2011 LAMP/EPFL")
+  val copyrightString       = scalaPropOrElse("copyright.string", "Copyright 2002-2013, LAMP/EPFL")
 
   /** This is the encoding to use reading in source files, overridden with -encoding
    *  Note that it uses "prop" i.e. looks in the scala jar, not the system properties.
@@ -101,7 +111,7 @@ private[scala] trait PropertiesTrait {
   def sourceReader          = scalaPropOrElse("source.reader", "scala.tools.nsc.io.SourceReader")
 
   /** This is the default text encoding, overridden (unreliably) with
-   *  JAVA_OPTS="-Dfile.encoding=Foo"
+   *  `JAVA_OPTS="-Dfile.encoding=Foo"`
    */
   def encodingString        = propOrElse("file.encoding", "UTF-8")
 
@@ -109,8 +119,7 @@ private[scala] trait PropertiesTrait {
    */
   def lineSeparator         = propOrElse("line.separator", "\n")
 
-  /** Various well-known properties.
-   */
+  /* Various well-known properties. */
   def javaClassPath         = propOrEmpty("java.class.path")
   def javaHome              = propOrEmpty("java.home")
   def javaVendor            = propOrEmpty("java.vendor")
@@ -119,6 +128,10 @@ private[scala] trait PropertiesTrait {
   def javaVmName            = propOrEmpty("java.vm.name")
   def javaVmVendor          = propOrEmpty("java.vm.vendor")
   def javaVmVersion         = propOrEmpty("java.vm.version")
+  // this property must remain less-well-known until 2.11
+  private def javaSpecVersion       = propOrEmpty("java.specification.version")
+  //private def javaSpecVendor        = propOrEmpty("java.specification.vendor")
+  //private def javaSpecName          = propOrEmpty("java.specification.name")
   def osName                = propOrEmpty("os.name")
   def scalaHome             = propOrEmpty("scala.home")
   def tmpDir                = propOrEmpty("java.io.tmpdir")
@@ -126,27 +139,46 @@ private[scala] trait PropertiesTrait {
   def userHome              = propOrEmpty("user.home")
   def userName              = propOrEmpty("user.name")
 
-  /** Some derived values.
-   */
+  /* Some derived values. */
+  /** Returns `true` iff the underlying operating system is a version of Microsoft Windows. */
   def isWin                 = osName startsWith "Windows"
-  def isMac                 = javaVendor startsWith "Apple"
+  // See http://mail.openjdk.java.net/pipermail/macosx-port-dev/2012-November/005148.html for
+  // the reason why we don't follow developer.apple.com/library/mac/#technotes/tn2002/tn2110.
+  /** Returns `true` iff the underlying operating system is a version of Apple Mac OSX.  */
+  def isMac                 = osName startsWith "Mac OS X" 
+
+  // This is looking for javac, tools.jar, etc.
+  // Tries JDK_HOME first, then the more common but likely jre JAVA_HOME,
+  // and finally the system property based javaHome.
+  def jdkHome              = envOrElse("JDK_HOME", envOrElse("JAVA_HOME", javaHome))
 
   def versionMsg            = "Scala %s %s -- %s".format(propCategory, versionString, copyrightString)
   def scalaCmd              = if (isWin) "scala.bat" else "scala"
   def scalacCmd             = if (isWin) "scalac.bat" else "scalac"
 
-  /** Can the java version be determined to be at least as high as the argument?
-   *  Hard to properly future proof this but at the rate 1.7 is going we can leave
-   *  the issue for our cyborg grandchildren to solve.
+  /** Compares the given specification version to the specification version of the platform.
+   *
+   * @param version a specification version of the form "major.minor"
+   * @return `true` iff the specification version of the current runtime
+   * is equal to or higher than the version denoted by the given string.
+   * @throws NumberFormatException if the given string is not a version string
+   *
+   * @example {{{
+   * // In this example, the runtime's Java specification is assumed to be at version 1.7.
+   * isJavaAtLeast("1.6")            // true
+   * isJavaAtLeast("1.7")            // true
+   * isJavaAtLeast("1.8")            // false
+   * }}
    */
-  def isJavaAtLeast(version: String) = {
-    val okVersions = version match {
-      case "1.5"    => List("1.5", "1.6", "1.7")
-      case "1.6"    => List("1.6", "1.7")
-      case "1.7"    => List("1.7")
-      case _        => Nil
+  def isJavaAtLeast(version: String): Boolean = {
+    def parts(x: String) = {
+      val i = x.indexOf('.')
+      if (i < 0) throw new NumberFormatException("Not a version: " + x)
+      (x.substring(0, i), x.substring(i+1, x.length))
     }
-    okVersions exists (javaVersion startsWith _)
+    val (v, _v) = parts(version)
+    val (s, _s) = parts(javaSpecVersion)
+    s.toInt >= v.toInt && _s.toInt >= _v.toInt
   }
 
   // provide a main method so version info can be obtained by running this

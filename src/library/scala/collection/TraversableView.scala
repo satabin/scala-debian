@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -24,8 +24,6 @@ object TraversableView {
   class NoBuilder[A] extends Builder[A, Nothing] {
     def +=(elem: A): this.type = this
     def iterator: Iterator[A] = Iterator.empty
-    @deprecated("use `iterator' instead", "2.8.0")
-    def elements = iterator
     def result() = throw new UnsupportedOperationException("TraversableView.Builder.result")
     def clear() {}
   }

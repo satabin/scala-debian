@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -17,7 +17,7 @@ import parallel.Combiner
  *  @tparam A            the type of the elements in the collection
  *  @tparam ParRepr      the actual type of the collection, which has to be parallel
  */
-trait Parallelizable[+A, +ParRepr <: Parallel] {
+trait Parallelizable[+A, +ParRepr <: Parallel] extends Any {
 
   def seq: TraversableOnce[A]
 

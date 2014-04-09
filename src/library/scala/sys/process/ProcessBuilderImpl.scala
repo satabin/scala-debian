@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -128,7 +128,7 @@ private[process] trait ProcessBuilderImpl {
       val code   = this ! BasicIO(withIn, buffer, log)
 
       if (code == 0) buffer.toString
-      else sys.error("Nonzero exit value: " + code)
+      else scala.sys.error("Nonzero exit value: " + code)
     }
 
     private[this] def lines(

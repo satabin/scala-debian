@@ -1,12 +1,13 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-package scala.sys
+package scala
+package sys
 
 /** A lightweight interface wrapping a property contained in some
  *  unspecified map.  Generally it'll be the system properties but this
@@ -38,7 +39,7 @@ trait Prop[+T] {
 
   /** Sets the property.
    *
-   *  @param    the new string value
+   *  @param    newValue  the new string value
    *  @return   the old value, or null if it was unset.
    */
   def set(newValue: String): String

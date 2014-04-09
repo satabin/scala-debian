@@ -176,7 +176,7 @@ object Test extends App {
 
   println(Fact2()("jyp"))
   println(Fact2(x = 1)())
-  println(Fact2(10)().copy(y = "blabla")())
+  println(Fact2(10)().copy(y = "blabla")(3))
 
 
   // assignment to var <-> named argument
@@ -195,7 +195,7 @@ object Test extends App {
   // dependent types and copy method
   val a11 = new A2
   val b11 = a11.B2(new a11.C2)(1)
-  println(b11.copy()())
+  println(b11.copy()(2))
 
 
 
@@ -392,6 +392,11 @@ object Test extends App {
   }
   println(""+ t4041._1 +", "+ t4041._2)
 
+  // #4441
+  case class C4441a()
+  case class C4441b()()
+  C4441a().copy()
+  C4441b()().copy()()
 
   // DEFINITIONS
   def test1(a: Int, b: String) = println(a +": "+ b)

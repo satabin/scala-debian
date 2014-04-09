@@ -18,23 +18,20 @@ trait Function4[-T1, -T2, -T3, -T4, +R] extends AnyRef { self =>
    *  @return   the result of function application.
    */
   def apply(v1: T1, v2: T2, v3: T3, v4: T4): R
-
   /** Creates a curried version of this function.
    *
    *  @return   a function `f` such that `f(x1)(x2)(x3)(x4) == apply(x1, x2, x3, x4)`
    */
-  def curried: T1 => T2 => T3 => T4 => R = {
+  @annotation.unspecialized def curried: T1 => T2 => T3 => T4 => R = {
     (x1: T1) => (x2: T2) => (x3: T3) => (x4: T4) => apply(x1, x2, x3, x4)
   }
-  @deprecated("Use 'curried' instead", "2.8.0")
-  def curry = curried
-
   /** Creates a tupled version of this function: instead of 4 arguments,
    *  it accepts a single [[scala.Tuple4]] argument.
    *
    *  @return   a function `f` such that `f((x1, x2, x3, x4)) == f(Tuple4(x1, x2, x3, x4)) == apply(x1, x2, x3, x4)`
    */
-  def tupled: Tuple4[T1, T2, T3, T4] => R = {
+
+  @annotation.unspecialized def tupled: Tuple4[T1, T2, T3, T4] => R = {
     case Tuple4(x1, x2, x3, x4) => apply(x1, x2, x3, x4)
   }
   override def toString() = "<function4>"

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -21,7 +21,7 @@ import Utility.SU
  *  All members should be accessed through those.
  */
 private[scala] trait MarkupParserCommon extends TokenTests {
-  protected def unreachable = sys.error("Cannot be reached.")
+  protected def unreachable = scala.sys.error("Cannot be reached.")
 
   // type HandleType       // MarkupHandler, SymbolicXMLBuilder
   type InputType        // Source, CharArrayReader
@@ -54,8 +54,8 @@ private[scala] trait MarkupParserCommon extends TokenTests {
     xTakeUntil(mkProcInstr(_, n, _), () => tmppos, "?>")
   }
 
-  /** attribute value, terminated by either ' or ". value may not contain <.
-   *  @param endch either ' or "
+  /** attribute value, terminated by either `'` or `"`. value may not contain `<`.
+   @param endCh either `'` or `"`
    */
   def xAttributeValue(endCh: Char): String = {
     val buf = new StringBuilder
@@ -82,7 +82,7 @@ private[scala] trait MarkupParserCommon extends TokenTests {
       case `end`  => return buf.toString
       case ch     => buf append ch
     }
-    sys.error("Expected '%s'".format(end))
+    scala.sys.error("Expected '%s'".format(end))
   }
 
   /** [42]  '<' xmlEndTag ::=  '<' '/' Name S? '>'
@@ -175,8 +175,8 @@ private[scala] trait MarkupParserCommon extends TokenTests {
    *  temporarily abstract over the nextchs.
    */
   def ch: Char
-  def nextch: Char
-  def ch_returning_nextch: Char
+  def nextch(): Unit
+  protected def ch_returning_nextch: Char
   def eof: Boolean
 
   // def handle: HandleType
@@ -212,7 +212,7 @@ private[scala] trait MarkupParserCommon extends TokenTests {
     else xHandleError(ch, "whitespace expected")
 
   /** Apply a function and return the passed value */
-  def returning[T](x: T)(f: T => Unit): T = { f(x) ; x }
+  def returning[T](x: T)(f: T => Unit): T = { f(x); x }
 
   /** Execute body with a variable saved and restored after execution */
   def saving[A, B](getter: A, setter: A => Unit)(body: => B): B = {

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,7 +11,6 @@ package immutable
 
 import generic._
 import parallel.immutable.ParMap
-import annotation.bridge
 
 /**
  *  A generic template for immutable maps from keys of type `A`
@@ -36,9 +35,9 @@ import annotation.bridge
  *  It is also good idea to override methods `foreach` and
  *  `size` for efficiency.
  *
- *  @param A     the type of the keys contained in this collection.
- *  @param B     the type of the values associated with the keys.
- *  @param This  The type of the actual map implementation.
+ *  @tparam A     the type of the keys contained in this collection.
+ *  @tparam B     the type of the values associated with the keys.
+ *  @tparam This  The type of the actual map implementation.
  *
  *  @author  Martin Odersky
  *  @version 2.8
@@ -49,7 +48,8 @@ import annotation.bridge
 trait MapLike[A, +B, +This <: MapLike[A, B, This] with Map[A, B]]
   extends scala.collection.MapLike[A, B, This]
      with Parallelizable[(A, B), ParMap[A, B]]
-{ self =>
+{
+self =>
 
   protected[this] override def parCombiner = ParMap.newCombiner[A, B]
 
@@ -85,33 +85,20 @@ trait MapLike[A, +B, +This <: MapLike[A, B, This] with Map[A, B]]
    */
   override def ++[B1 >: B](xs: GenTraversableOnce[(A, B1)]): immutable.Map[A, B1] =
     ((repr: immutable.Map[A, B1]) /: xs.seq) (_ + _)
-
-  @bridge def ++[B1 >: B](xs: TraversableOnce[(A, B1)]): immutable.Map[A, B1] = ++(xs: GenTraversableOnce[(A, B1)])
-
+  
   /** Filters this map by retaining only keys satisfying a predicate.
    *  @param  p   the predicate used to test keys
    *  @return an immutable map consisting only of those key value pairs of this map where the key satisfies
    *          the predicate `p`. The resulting map wraps the original map without copying any elements.
    */
-  override def filterKeys(p: A => Boolean): Map[A, B] = new DefaultMap[A, B] {
-    override def foreach[C](f: ((A, B)) => C): Unit = for (kv <- self) if (p(kv._1)) f(kv)
-    def iterator = self.iterator.filter(kv => p(kv._1))
-    override def contains(key: A) = self.contains(key) && p(key)
-    def get(key: A) = if (!p(key)) None else self.get(key)
-  }
-
+  override def filterKeys(p: A => Boolean): Map[A, B] = new FilteredKeys(p) with DefaultMap[A, B]
+  
   /** Transforms this map by applying a function to every retrieved value.
    *  @param  f   the function used to transform values of this map.
    *  @return a map view which maps every key of this map
    *          to `f(this(key))`. The resulting map wraps the original map without copying any elements.
    */
-  override def mapValues[C](f: B => C): Map[A, C] = new DefaultMap[A, C] {
-    override def foreach[D](g: ((A, C)) => D): Unit = for ((k, v) <- self) g((k, f(v)))
-    def iterator = for ((k, v) <- self.iterator) yield (k, f(v))
-    override def size = self.size
-    override def contains(key: A) = self.contains(key)
-    def get(key: A) = self.get(key).map(f)
-  }
+  override def mapValues[C](f: B => C): Map[A, C] = new MappedValues(f) with DefaultMap[A, C]
 
   /** Collects all keys of this map in a set.
    *  @return  a set containing all keys of this map.

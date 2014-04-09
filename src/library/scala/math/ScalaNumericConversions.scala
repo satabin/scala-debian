@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,10 +10,27 @@ package scala.math
 
 import java.{ lang => jl }
 
-/** Conversions which present a consistent conversion interface
- *  across all the numeric types.
+/** A slightly more specific conversion trait for classes which
+ *  extend ScalaNumber (which excludes value classes.)
  */
-trait ScalaNumericConversions extends ScalaNumber {
+trait ScalaNumericConversions extends ScalaNumber with ScalaNumericAnyConversions {
+  def underlying(): Object
+}
+
+/** Conversions which present a consistent conversion interface
+ *  across all the numeric types, suitable for use in value classes.
+ */
+trait ScalaNumericAnyConversions extends Any {
+  def isWhole(): Boolean
+  def underlying(): Any
+
+  def byteValue(): Byte
+  def shortValue(): Short
+  def intValue(): Int
+  def longValue(): Long
+  def floatValue(): Float
+  def doubleValue(): Double
+
   /** Returns the value of this as a [[scala.Char]]. This may involve
     * rounding or truncation.
     */

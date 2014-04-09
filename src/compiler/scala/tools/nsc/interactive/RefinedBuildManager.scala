@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2009-2011 Scala Solutions and LAMP/EPFL
+ * Copyright 2009-2013 Typesafe/Scala Solutions and LAMP/EPFL
  * @author Iulian Dragos
  * @author Hubert Plocinicak
  */
@@ -12,7 +12,8 @@ import scala.util.control.Breaks._
 import scala.tools.nsc.symtab.Flags
 
 import dependencies._
-import util.{FakePos, ClassPath}
+import scala.reflect.internal.util.FakePos
+import util.ClassPath
 import io.AbstractFile
 import scala.tools.util.PathResolver
 
@@ -22,6 +23,7 @@ import scala.tools.util.PathResolver
  *  changes require a compilation. It repeats this process until
  *  a fixpoint is reached.
  */
+@deprecated("Use sbt incremental compilation mechanism", "2.10.0")
 class RefinedBuildManager(val settings: Settings) extends Changes with BuildManager {
 
   class BuilderGlobal(settings: Settings, reporter : Reporter) extends scala.tools.nsc.Global(settings, reporter)  {
@@ -33,8 +35,9 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
       super.computeInternalPhases
       phasesSet += dependencyAnalysis
     }
-    lazy val _classpath: ClassPath[_] = new NoSourcePathPathResolver(settings).result
-    override def classPath: ClassPath[_] = _classpath
+    lazy val _classpath = new NoSourcePathPathResolver(settings).result
+    override def classPath = _classpath.asInstanceOf[ClassPath[platform.BinaryRepr]]
+       // See discussion in JavaPlatForm for why we need a cast here.
 
     def newRun() = new Run()
   }
@@ -46,7 +49,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
   protected def newCompiler(settings: Settings) = new BuilderGlobal(settings)
 
   val compiler = newCompiler(settings)
-  import compiler.{Symbol, Type, atPhase, currentRun}
+  import compiler.{ Symbol, Type, beforeErasure }
   import compiler.dependencyAnalysis.Inherited
 
   private case class SymWithHistory(sym: Symbol, befErasure: Type)
@@ -113,8 +116,8 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
     // See if we really have corresponding symbols, not just those
     // which share the name
     def isCorrespondingSym(from: Symbol, to: Symbol): Boolean =
-      (from.hasTraitFlag == to.hasTraitFlag) &&
-      (from.hasModuleFlag == to.hasModuleFlag)
+      (from.hasFlag(Flags.TRAIT) == to.hasFlag(Flags.TRAIT)) && // has to run in 2.8, so no hasTraitFlag
+      (from.hasFlag(Flags.MODULE) == to.hasFlag(Flags.MODULE))
 
     // For testing purposes only, order irrelevant for compilation
     def toStringSet(set: Set[AbstractFile]): String =
@@ -158,17 +161,13 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
                     isCorrespondingSym(s.sym, sym)) match {
               case Some(SymWithHistory(oldSym, info)) =>
                 val changes = changeSet(oldSym.info, sym)
-                val changesErasure =
-                    atPhase(currentRun.erasurePhase.prev) {
-                        changeSet(info, sym)
-                    }
+                val changesErasure = beforeErasure(changeSet(info, sym))
+
                 changesOf(oldSym) = (changes ++ changesErasure).distinct
               case _ =>
                 // a new top level definition
-                changesOf(sym) =
-                    sym.info.parents.filter(_.typeSymbol.isSealed).map(
-                      p => changeChangeSet(p.typeSymbol,
-                                           sym+" extends a sealed "+p.typeSymbol))
+                changesOf(sym) = sym.parentSymbols filter (_.isSealed) map (p =>
+                    changeChangeSet(p, sym+" extends a sealed "+p))
             }
           }
           // Create a change for the top level classes that were removed
@@ -221,7 +220,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
   }
 
   /** Return the set of source files that are invalidated by the given changes. */
-  def invalidated(files: Set[AbstractFile], changesOf: collection.Map[Symbol, List[Change]],
+  def invalidated(files: Set[AbstractFile], changesOf: scala.collection.Map[Symbol, List[Change]],
                   processed: Set[AbstractFile] = Set.empty):
     Set[AbstractFile] = {
     val buf = new mutable.HashSet[AbstractFile]
@@ -241,7 +240,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
 
     for ((oldSym, changes) <- changesOf; change <- changes) {
       def checkParents(cls: Symbol, file: AbstractFile) {
-        val parentChange = cls.info.parents.exists(_.typeSymbol.fullName == oldSym.fullName)
+        val parentChange = cls.parentSymbols exists (_.fullName == oldSym.fullName)
           // if (settings.buildmanagerdebug.value)
           //   compiler.inform("checkParents " + cls + " oldSym: " + oldSym + " parentChange: " + parentChange + " " + cls.info.parents)
         change match {
@@ -330,14 +329,10 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
 
   /** Update the map of definitions per source file */
   private def updateDefinitions(files: Set[AbstractFile]) {
-    for (src <- files; val localDefs = compiler.dependencyAnalysis.definitions(src)) {
+    for (src <- files; localDefs = compiler.dependencyAnalysis.definitions(src)) {
       definitions(src) = (localDefs map (s => {
         this.classes += s.fullName -> src
-        SymWithHistory(
-          s.cloneSymbol,
-          atPhase(currentRun.erasurePhase.prev) {
-            s.info.cloneInfo(s)
-          })
+        SymWithHistory(s.cloneSymbol, beforeErasure(s.info.cloneInfo(s)))
       }))
     }
     this.references = compiler.dependencyAnalysis.references
@@ -352,7 +347,7 @@ class RefinedBuildManager(val settings: Settings) extends Changes with BuildMana
     success
   }
 
-  /** Save dependency information to `file'. */
+  /** Save dependency information to `file`. */
   def saveTo(file: AbstractFile, fromFile: AbstractFile => String) {
     compiler.dependencyAnalysis.dependenciesFile = file
     compiler.dependencyAnalysis.saveDependencies(fromFile)

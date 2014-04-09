@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,8 +13,9 @@ package syntactical
 
 import token._
 import lexical.StdLexical
+import scala.language.implicitConversions
 
-/** This component provides primitive parsers for the standard tokens defined in `StdTokens'.
+/** This component provides primitive parsers for the standard tokens defined in `StdTokens`.
 *
 * @author Martin Odersky, Adriaan Moors
  */

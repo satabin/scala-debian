@@ -1,11 +1,14 @@
 /* NSC -- new Scala compiler
- * Copyright LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Stephane Micheloud
- * @author Gilles Dubochet
  */
 
 package scala.man1
 
+/**
+ *  @author Gilles Dubochet
+ *  @version 1.0
+ */
 object scaladoc extends Command {
   import _root_.scala.tools.docutil.ManPage._
 
@@ -46,7 +49,7 @@ object scaladoc extends Command {
 
     // tags are defined in class "scala.tools.nsc.doc.DocGenerator"
     "The recognised format of comments in source is described in the " & Link("online documentation",
-    "http://lampsvn.epfl.ch/trac/scala/wiki/Scaladoc"))
+    "https://wiki.scala-lang.org/display/SW/Scaladoc"))
 
   val options = Section("OPTIONS",
 
@@ -72,7 +75,10 @@ object scaladoc extends Command {
           "Define the overall version number of the documentation, typically the version of the library being documented."),
         Definition(
           CmdOption("doc-source-url", Argument("url")),
-          "Define a URL to be concatenated with source locations for link to source files."))),
+          "Define a URL to be concatenated with source locations for link to source files."),
+        Definition(
+          CmdOption("doc-external-doc", Argument("external-doc")),
+          "Define a comma-separated list of classpath_entry_path#doc_URL pairs describing external dependencies."))),
 
     Section("Compiler Options",
       DefinitionList(
@@ -122,26 +128,25 @@ object scaladoc extends Command {
 
   val exitStatus = Section("EXIT STATUS",
 
-    MBold(command) & " returns a zero exist status if it succeeds to process " &
+    MBold(command) & " returns a zero exit status if it succeeds at processing " &
     "the specified input files. Non zero is returned in case of failure.")
 
   override val authors = Section("AUTHORS",
 
     "This version of Scaladoc was written by Gilles Dubochet with contributions by Pedro Furlanetto and Johannes Rudolph. " &
-    "It is based on the original Scaladoc (Sean McDirmid, Geoffrey Washburn, Vincent Cremet and Stéphane Michleoud), " &
+    "It is based on the original Scaladoc (Sean McDirmid, Geoffrey Washburn, Vincent Cremet and Stéphane Micheloud), " &
     "on vScaladoc (David Bernard), as well as on an unreleased version of Scaladoc 2 (Manohar Jonnalagedda).")
 
   val seeAlso = Section("SEE ALSO",
 
     Link(Bold("fsc") & "(1)", "fsc.html") & ", " &
-    Link(Bold("sbaz") & "(1)", "sbaz.html") & ", " &
     Link(Bold("scala") & "(1)", "scala.html") & ", " &
     Link(Bold("scalac") & "(1)", "scalac.html") & ", " &
     Link(Bold("scalap") & "(1)", "scalap.html"))
 
   def manpage = new Document {
     title = command
-    date = "2 June 2010"
+    date = "June 2010"
     author = "Gilles Dubochet"
     version = "2.0"
     sections = List(

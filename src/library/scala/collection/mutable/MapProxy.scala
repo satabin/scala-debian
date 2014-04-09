@@ -1,19 +1,16 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.collection
 package mutable
 
 /**
- *  This trait implements a proxy for <a href="Map.html"
- *  target="contentFrame"><code>scala.collection.mutable.Map</code></a>.
+ *  This trait implements a proxy for [[scala.collection.mutable.Map]].
  *
  *  It is most useful for assembling customized map abstractions
  *  dynamically using object composition and forwarding.

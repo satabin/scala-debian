@@ -1,38 +1,36 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
-package scala.collection
+package scala
+package collection
 package mutable
 
 import generic._
-
-
+import scala.reflect.ClassTag
 
 /** Factory object for the `ArrayStack` class.
  *
  *  $factoryInfo
  *  @define coll array stack
- *  @define Coll ArrayStack
+ *  @define Coll `ArrayStack`
  */
 object ArrayStack extends SeqFactory[ArrayStack] {
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ArrayStack[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ArrayStack[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   def newBuilder[A]: Builder[A, ArrayStack[A]] = new ArrayStack[A]
   def empty: ArrayStack[Nothing] = new ArrayStack()
-  def apply[A: ClassManifest](elems: A*): ArrayStack[A] = {
-    val els: Array[AnyRef] = elems.reverse.map{_.asInstanceOf[AnyRef]}(breakOut)
+  def apply[A: ClassTag](elems: A*): ArrayStack[A] = {
+    val els: Array[AnyRef] = elems.reverseMap(_.asInstanceOf[AnyRef])(breakOut)
     if (els.length == 0) new ArrayStack()
     else new ArrayStack[A](els, els.length)
   }
 
   private[mutable] def growArray(x: Array[AnyRef]) = {
-    val y = new Array[AnyRef](x.length * 2)
+    val y = new Array[AnyRef](math.max(x.length * 2, 1))
     Array.copy(x, 0, y, 0, x.length)
     y
   }
@@ -55,17 +53,18 @@ object ArrayStack extends SeqFactory[ArrayStack] {
  *
  *  @tparam T    type of the elements contained in this array stack.
  *
- *  @define Coll ArrayStack
+ *  @define Coll `ArrayStack`
  *  @define coll array stack
  *  @define orderDependent
  *  @define orderDependentFold
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-@cloneable @SerialVersionUID(8565219180626620510L)
+@SerialVersionUID(8565219180626620510L)
 class ArrayStack[T] private(private var table : Array[AnyRef],
                             private var index : Int)
-extends Seq[T]
+extends AbstractSeq[T]
+   with Seq[T]
    with SeqLike[T, ArrayStack[T]]
    with GenericTraversableTemplate[T, ArrayStack]
    with Cloneable[ArrayStack[T]]
@@ -90,8 +89,7 @@ extends Seq[T]
 
   override def companion = ArrayStack
 
-  /** Replace element at index <code>n</code> with the new element
-   *  <code>newelem</code>.
+  /** Replace element at index `n` with the new element `newelem`.
    *
    *  This is a constant time operation.
    *
@@ -123,10 +121,6 @@ extends Seq[T]
     table(index) = null
     x
   }
-
-  /** View the top element of the stack. */
-  @deprecated("use top instead", "2.8.0")
-  def peek = top
 
   /** View the top element of the stack.
    *
@@ -160,7 +154,7 @@ extends Seq[T]
 
   /** Pushes all the provided elements in the traversable object onto the stack.
    *
-   *  @param x  The source of elements to push.
+   *  @param xs The source of elements to push.
    *  @return   A reference to this stack.
    */
   override def ++=(xs: TraversableOnce[T]): this.type = { xs.seq foreach += ; this }
@@ -172,7 +166,22 @@ extends Seq[T]
    */
   def +=(x: T): this.type = { push(x); this }
 
-  def result = new ArrayStack[T](table.reverse, index)
+  def result = {
+    reverseTable()
+    this
+  }
+
+  private def reverseTable() {
+    var i = 0
+    val until = index / 2
+    while (i < until) {
+      val revi = index - i - 1
+      val tmp = table(i)
+      table(i) = table(revi)
+      table(revi) = tmp
+      i += 1
+    }
+  }
 
   /** Pop the top two elements off the stack, apply `f` to them and push the result
    *  back on to the stack.
@@ -215,7 +224,7 @@ extends Seq[T]
   /** Creates and iterator over the stack in LIFO order.
    *  @return an iterator over the elements of the stack.
    */
-  def iterator: Iterator[T] = new Iterator[T] {
+  def iterator: Iterator[T] = new AbstractIterator[T] {
     var currentIndex = index
     def hasNext = currentIndex > 0
     def next() = {

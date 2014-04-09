@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -14,9 +14,9 @@ package remote
 
 import java.io.{DataInputStream, DataOutputStream, IOException}
 import java.lang.{Thread, SecurityException}
-import java.net.{InetAddress, ServerSocket, Socket, UnknownHostException}
+import java.net.{InetAddress, InetSocketAddress, ServerSocket, Socket, SocketTimeoutException, UnknownHostException}
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 import scala.util.Random
 
 /* Object TcpService.
@@ -26,7 +26,7 @@ import scala.util.Random
  */
 object TcpService {
   private val random = new Random
-  private val ports = new HashMap[Int, TcpService]
+  private val ports = new mutable.HashMap[Int, TcpService]
 
   def apply(port: Int, cl: ClassLoader): TcpService =
     ports.get(port) match {
@@ -59,6 +59,23 @@ object TcpService {
     portnum
   }
 
+  private val connectTimeoutMillis = {
+    val propName = "scala.actors.tcpSocket.connectTimeoutMillis"
+    val defaultTimeoutMillis = 0
+    sys.props get propName flatMap {
+      timeout =>
+        try {
+          val to = timeout.toInt
+          Debug.info("Using socket timeout $to")
+          Some(to)
+        } catch {
+          case e: NumberFormatException =>
+            Debug.warning(s"""Could not parse $propName = "$timeout" as an Int""")
+            None
+        }
+    } getOrElse defaultTimeoutMillis
+  }
+
   var BufSize: Int = 65536
 }
 
@@ -73,11 +90,11 @@ class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
   private val internalNode = new Node(InetAddress.getLocalHost().getHostAddress(), port)
   def node: Node = internalNode
 
-  private val pendingSends = new HashMap[Node, List[Array[Byte]]]
+  private val pendingSends = new mutable.HashMap[Node, List[Array[Byte]]]
 
   /**
    * Sends a byte array to another node on the network.
-   * If the node is not yet up, up to <code>TcpService.BufSize</code>
+   * If the node is not yet up, up to `TcpService.BufSize`
    * messages are buffered.
    */
   def send(node: Node, data: Array[Byte]): Unit = synchronized {
@@ -161,7 +178,7 @@ class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
   // connection management
 
   private val connections =
-    new scala.collection.mutable.HashMap[Node, TcpServiceWorker]
+    new mutable.HashMap[Node, TcpServiceWorker]
 
   private[actors] def addConnection(node: Node, worker: TcpServiceWorker) = synchronized {
     connections += Pair(node, worker)
@@ -176,7 +193,15 @@ class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
   }
 
   def connect(n: Node): TcpServiceWorker = synchronized {
-    val socket = new Socket(n.address, n.port)
+    val socket = new Socket()
+    val start = System.nanoTime
+    try {
+      socket.connect(new InetSocketAddress(n.address, n.port), TcpService.connectTimeoutMillis)
+    } catch {
+      case e: SocketTimeoutException =>
+        Debug.warning(f"Timed out connecting to $n after ${(System.nanoTime - start) / math.pow(10, 9)}%.3f seconds")
+        throw e
+    }
     val worker = new TcpServiceWorker(this, socket)
     worker.sendNode(n)
     worker.start()

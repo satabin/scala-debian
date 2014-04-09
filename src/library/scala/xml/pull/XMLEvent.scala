@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -38,7 +38,7 @@ case class EvElemEnd(pre: String, label: String) extends XMLEvent
 case class EvText(text: String) extends XMLEvent
 
 /** An entity reference was encountered.
- * @param the name of the entity, e.g. `gt` when encountering the entity `&gt;`
+ * @param entity the name of the entity, e.g. `gt` when encountering the entity `&gt;`
  */
 case class EvEntityRef(entity: String) extends XMLEvent
 

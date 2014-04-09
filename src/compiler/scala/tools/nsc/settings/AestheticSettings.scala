@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
@@ -23,12 +23,14 @@ trait AestheticSettings {
   def deprecation     = settings.deprecation.value
   def experimental    = settings.Xexperimental.value
   def fatalWarnings   = settings.fatalWarnings.value
+  def feature         = settings.feature.value
+  def future          = settings.future.value
   def logClasspath    = settings.Ylogcp.value
   def printStats      = settings.Ystatistics.value
-  def richExes        = settings.YrichExes.value || sys.props.traceSourcePath.isSet
   def target          = settings.target.value
   def unchecked       = settings.unchecked.value
   def verbose         = settings.verbose.value
+  def virtPatmat      = !settings.XoldPatmat.value
 
   /** Derived values */
   def jvm           = target startsWith "jvm"

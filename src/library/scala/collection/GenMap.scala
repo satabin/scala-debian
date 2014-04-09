@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -23,6 +23,8 @@ extends GenMapLike[A, B, GenMap[A, B]]
    with GenIterable[(A, B)]
 {
   def seq: Map[A, B]
+
+  def updated [B1 >: B](key: A, value: B1): GenMap[A, B1]
 }
 
 

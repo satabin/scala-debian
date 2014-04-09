@@ -1,17 +1,24 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-package scala.reflect
+package scala
+package reflect
 
-/**
- *  @author  Martin Odersky
+/** Provides functions to encode and decode Scala symbolic names.
+ *  Also provides some constants.
  */
 object NameTransformer {
+  // XXX Short term: providing a way to alter these without having to recompile
+  // the compiler before recompiling the compiler.
+  val MODULE_SUFFIX_STRING = sys.props.getOrElse("SCALA_MODULE_SUFFIX_STRING", "$")
+  val NAME_JOIN_STRING     = sys.props.getOrElse("SCALA_NAME_JOIN_STRING", "$")
+  val MODULE_INSTANCE_NAME = "MODULE$"
+
   private val nops = 128
   private val ncodes = 26 * 26
 
@@ -130,10 +137,10 @@ object NameTransformer {
               unicode = true
             } catch {
               case _:NumberFormatException =>
-                /* <code>hex</code> did not decode to a hexadecimal number, so
+                /* `hex` did not decode to a hexadecimal number, so
                  * do nothing. */
             }
-                       }
+          }
         }
       }
       /* If we didn't see an opcode or encoded Unicode glyph, and the

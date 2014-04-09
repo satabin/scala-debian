@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
@@ -8,7 +8,7 @@ package nsc
 package doc
 
 import reporters._
-import util._
+import scala.reflect.internal.util._
 import interactive.RangePositions
 import DocParser.Parsed
 

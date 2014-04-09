@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -9,23 +9,23 @@
 package scala.collection
 package parallel.mutable
 
-import collection.parallel.IterableSplitter
+import scala.collection.parallel.IterableSplitter
 
 /** Parallel flat hash table.
  *
  *  @tparam T      type of the elements in the $coll.
  *  @define coll   table
- *  @define Coll   flat hash table
+ *  @define Coll   `ParFlatHashTable`
  *
  *  @author Aleksandar Prokopec
  */
-trait ParFlatHashTable[T] extends collection.mutable.FlatHashTable[T] {
+trait ParFlatHashTable[T] extends scala.collection.mutable.FlatHashTable[T] {
 
   override def alwaysInitSizeMap = true
 
   abstract class ParFlatHashTableIterator(var idx: Int, val until: Int, val totalsize: Int)
   extends IterableSplitter[T] with SizeMapUtils {
-    import collection.DebugUtils._
+    import scala.collection.DebugUtils._
 
     private var traversed = 0
     private val itertable = table

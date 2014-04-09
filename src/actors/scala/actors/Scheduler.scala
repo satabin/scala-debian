@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -37,25 +37,4 @@ object Scheduler extends DelegatingScheduler {
     Debug.info(this+": starting new "+sched+" ["+sched.getClass+"]")
     sched
   }
-
-  /* Only <code>ForkJoinScheduler</code> implements this method.
-   */
-  @deprecated("snapshot will be removed", "2.8.0")
-  def snapshot() {
-    if (sched.isInstanceOf[ForkJoinScheduler]) {
-      sched.asInstanceOf[ForkJoinScheduler].snapshot()
-    } else
-      sys.error("scheduler does not implement snapshot")
-  }
-
-  /* Only <code>ForkJoinScheduler</code> implements this method.
-   */
-  @deprecated("restart will be removed", "2.8.0")
-  def restart() {
-    if (sched.isInstanceOf[ForkJoinScheduler]) {
-      sched.asInstanceOf[ForkJoinScheduler].restart()
-    } else
-      sys.error("scheduler does not implement restart")
-  }
-
 }

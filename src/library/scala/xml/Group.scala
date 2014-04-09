@@ -1,11 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
 
 package scala.xml
 
@@ -21,11 +20,13 @@ final case class Group(val nodes: Seq[Node]) extends Node {
     case x: Group => true
     case _        => false
   }
+
   override def strict_==(other: Equality) = other match {
     case Group(xs)  => nodes sameElements xs
     case _          => false
   }
-  override def basisForHashCode = nodes
+
+  override protected def basisForHashCode = nodes
 
   /** Since Group is very much a hack it throws an exception if you
    *  try to do anything with it.

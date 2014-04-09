@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Stepan Koltsov
  */
 
@@ -22,9 +22,6 @@ class JLineReader(_completion: => Completion) extends InteractiveReader {
 
   lazy val completion = _completion
   lazy val history: JLineHistory = JLineHistory()
-  lazy val keyBindings =
-    try KeyBinding parse slurp(term.getDefaultBindings)
-    catch { case _: Exception => Nil }
 
   private def term = consoleReader.getTerminal()
   def reset() = term.reset()
@@ -40,6 +37,9 @@ class JLineReader(_completion: => Completion) extends InteractiveReader {
   }
 
   class JLineConsoleReader extends ConsoleReader with ConsoleReaderHelper {
+    if ((history: History) ne NoHistory)
+      this setHistory history
+
     // working around protected/trait/java insufficiencies.
     def goBack(num: Int): Unit = back(num)
     def readOneKey(prompt: String) = {
@@ -54,8 +54,6 @@ class JLineReader(_completion: => Completion) extends InteractiveReader {
     // A hook for running code after the repl is done initializing.
     lazy val postInit: Unit = {
       this setBellEnabled false
-      if (history ne NoHistory)
-        this setHistory history
 
       if (completion ne NoCompletion) {
         val argCompletor: ArgumentCompleter =

@@ -3,12 +3,11 @@ import org.scalacheck.Arbitrary.{arbitrary, arbThrowable}
 import org.scalacheck.Gen.oneOf
 import org.scalacheck.util.StdRand
 import org.scalacheck.Prop._
-import org.scalacheck.ConsoleReporter.{testReport, propReport}
 import org.scalacheck.Test.{Params, check}
 import org.scalacheck.ConsoleReporter.testStatsEx
 import Function.tupled
 
-object CheckEither extends Properties("Either") {
+object Test extends Properties("Either") {
   implicit def arbitraryEither[X, Y](implicit xa: Arbitrary[X], ya: Arbitrary[Y]): Arbitrary[Either[X, Y]] = 
     Arbitrary[Either[X, Y]](oneOf(arbitrary[X].map(Left(_)), arbitrary[Y].map(Right(_))))
 
@@ -184,11 +183,5 @@ object CheckEither extends Properties("Either") {
   
   def runTests() = {
     STest.checkProperties(STest.Params(testCallback = ConsoleReporter(0)), this)
-  }
-}
-
-object Test {
-  def main(args: Array[String]): Unit = {
-    CheckEither.runTests()
   }
 }

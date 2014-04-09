@@ -1,10 +1,14 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Stephane Micheloud
  */
 
 package scala.man1
 
+/**
+ *  @author Stephane Micheloud
+ *  @version 1.0
+ */
 object scalap extends Command {
   import _root_.scala.tools.docutil.ManPage._
 
@@ -82,16 +86,15 @@ object scalap extends Command {
   val seeAlso = Section("SEE ALSO",
 
     Link(Bold("fsc") & "(1)", "fsc.html") & ", " &
-    Link(Bold("sbaz") & "(1)", "sbaz.html") & ", " &
     Link(Bold("scala") & "(1)", "scala.html") & ", " &
     Link(Bold("scalac") & "(1)", "scalac.html") & ", " &
     Link(Bold("scaladoc") & "(1)", "scaladoc.html"))
 
   def manpage = new Document {
     title = command
-    date = "June 8, 2006"
+    date = "June 2006"
     author = "Stephane Micheloud"
-    version = "0.2"
+    version = "1.0"
     sections = List(
       name,
       synopsis,

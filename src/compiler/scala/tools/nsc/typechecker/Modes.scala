@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -86,6 +86,10 @@ trait Modes {
    */
   final val TYPEPATmode   = 0x10000
 
+  /** RETmode is set when we are typing a return expression.
+   */
+  final val RETmode       = 0x20000
+
   final private val StickyModes   = EXPRmode | PATTERNmode | TYPEmode | ALTmode
 
   final def onlyStickyModes(mode: Int) =
@@ -105,6 +109,9 @@ trait Modes {
   final def inFunMode(mode: Int)                  = (mode & FUNmode) != 0
   final def inPolyMode(mode: Int)                 = (mode & POLYmode) != 0
   final def inPatternMode(mode: Int)              = (mode & PATTERNmode) != 0
+  final def inExprModeOr(mode: Int, others: Int)  = (mode & (EXPRmode | others)) != 0
+  final def inExprModeButNot(mode: Int, prohibited: Int) =
+    (mode & (EXPRmode | prohibited)) == EXPRmode
 
   /** Translates a mask of mode flags into something readable.
    */

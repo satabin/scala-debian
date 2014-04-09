@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -22,7 +22,7 @@ extends Attribute
   final val pre = null
   val next = if (value ne null) next1 else next1.remove(key)
 
-  /** same as this(key, Text(value), next) */
+  /** same as this(key, Text(value), next), or no attribute if value is null */
   def this(key: String, value: String, next: MetaData) =
     this(key, if (value ne null) Text(value) else null: NodeSeq, next)
 
@@ -56,5 +56,5 @@ extends Attribute
     next(namespace, scope, key)
 }
 object UnprefixedAttribute {
-  def unapply(x: UnprefixedAttribute) = Some(x.key, x.value, x.next)
+  def unapply(x: UnprefixedAttribute) = Some((x.key, x.value, x.next))
 }

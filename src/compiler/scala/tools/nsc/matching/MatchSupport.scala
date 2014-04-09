@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * Author: Paul Phillips
  */
 
@@ -7,9 +7,10 @@ package scala.tools.nsc
 package matching
 
 import transform.ExplicitOuter
-import ast.{ TreePrinters, Trees }
+import ast.{ Printers, Trees }
 import java.io.{ StringWriter, PrintWriter }
-import annotation.elidable
+import scala.annotation.elidable
+import scala.language.postfixOps
 
 /** Ancillary bits of ParallelMatching which are better off
  *  out of the way.
@@ -29,11 +30,10 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
 
   object Types {
     import definitions._
-    implicit def enrichType(x: Type): RichType = new RichType(x)
 
-    val subrangeTypes = Set(ByteClass, ShortClass, CharClass, IntClass)
+    val subrangeTypes = Set[Symbol](ByteClass, ShortClass, CharClass, IntClass)
 
-    class RichType(undecodedTpe: Type) {
+    implicit class RichType(undecodedTpe: Type) {
       def tpe = decodedEqualsType(undecodedTpe)
       def isAnyRef = tpe <:< AnyRefClass.tpe
 
@@ -57,7 +57,7 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
     def symbolToString(s: Symbol): String = s match {
       case x  => x.toString
     }
-    def treeToString(t: Tree): String = unbind(t) match {
+    def treeToString(t: Tree): String = treeInfo.unbind(t) match {
       case EmptyTree            => "?"
       case WILD()               => "_"
       case Literal(Constant(x)) => "LIT(%s)".format(x)
@@ -95,8 +95,6 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
       })
     }
 
-    @elidable(elidable.FINE) def ifDebug(body: => Unit): Unit     = { if (settings.debug.value) body }
-    @elidable(elidable.FINE) def DBG(msg: => String): Unit        = { ifDebug(println(msg)) }
     @elidable(elidable.FINE) def TRACE(f: String, xs: Any*): Unit = {
       if (trace) {
         val msg = if (xs.isEmpty) f else f.format(xs map pp: _*)
@@ -116,6 +114,10 @@ trait MatchSupport extends ast.TreeDSL { self: ParallelMatching =>
     private[nsc] def printing[T](fmt: String, xs: Any*)(x: T): T = {
       println(fmt.format(xs: _*) + " == " + x)
       x
+    }
+    private[nsc] def debugging[T](fmt: String, xs: Any*)(x: T): T = {
+      if (settings.debug.value) printing(fmt, xs: _*)(x)
+      else x
     }
 
     def indent(s: Any) = s.toString() split "\n" map ("  " + _) mkString "\n"

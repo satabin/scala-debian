@@ -56,15 +56,6 @@ object Test1_scala {
     println("arrayEquals(a1, _a1): " + arrayEquals(a1, _a1))
     println()
 
-    // Cell
-    val c1 = new Cell('a')
-    val _c1: Cell[Char] = read(write(c1))
-    println("c1 = " + c1)
-    println("_c1 = " + _c1)
-    println("c1 eq _c1: " + (c1 eq _c1) + ", _c1 eq c1: " + (_c1 eq c1))
-    println("c1 equals _c1: " + (c1 equals _c1) + ", _c1 equals c1: " + (_c1 equals c1))
-    println()
-
     // Either
     val e1 = Left(1)
     val _e1: Either[Int, String] = read(write(e1))
@@ -294,8 +285,9 @@ object Test3_mutable {
   import scala.reflect.ClassManifest
   import scala.collection.mutable.{
     ArrayBuffer, ArrayBuilder, ArraySeq, ArrayStack, BitSet, DoubleLinkedList,
-    HashMap, HashSet, History, LinkedList, ListBuffer, Publisher, Queue,
-    Stack, StringBuilder, WrappedArray}
+    HashMap, HashSet, History, LinkedHashMap, LinkedHashSet, LinkedList, ListBuffer,
+    Publisher, Queue, Stack, StringBuilder, WrappedArray, TreeSet}
+  import scala.collection.concurrent.TrieMap
 
   // in alphabetic order
   try {
@@ -354,6 +346,26 @@ object Test3_mutable {
     val h1 = new History[String, Int]
     val _h1: History[String, Int] = read(write(h1))
     check(h1, _h1)
+
+    // LinkedHashMap
+    { val lhm1 = new LinkedHashMap[String, Int]
+      val list = List(("Linked", 1), ("Hash", 2), ("Map", 3))
+      lhm1 ++= list.iterator
+      val _lhm1: LinkedHashMap[String, Int] = read(write(lhm1))
+      check(lhm1, _lhm1)
+      check(lhm1.toSeq, _lhm1.toSeq) // check elements order
+      check(lhm1.toSeq, list) // check elements order
+    }
+
+    // LinkedHashSet
+    { val lhs1 = new LinkedHashSet[String]
+      val list = List("layers", "buffers", "title")
+      lhs1 ++= list.iterator
+      val _lhs1: LinkedHashSet[String] = read(write(lhs1))
+      check(lhs1, _lhs1)
+      check(lhs1.toSeq, _lhs1.toSeq) // check elements order
+      check(lhs1.toSeq, list) // check elements order
+    }
 /*
     // LinkedList
     val ll1 = new LinkedList[Int](2, null)
@@ -389,6 +401,16 @@ object Test3_mutable {
     val wa1 = WrappedArray.make(Array(1, 2, 3))
     val _wa1: WrappedArray[Int] = read(write(wa1))
     check(wa1, _wa1)
+    
+    // TreeSet
+    val ts1 = TreeSet[Int]() ++= Array(1, 2, 3)
+    val _ts1: TreeSet[Int] = read(write(ts1))
+    check(ts1, _ts1)
+    
+    // concurrent.TrieMap
+    val ct1 = TrieMap[Int, String]() ++= Array(1 -> "one", 2 -> "two", 3 -> "three")
+    val _ct1: TrieMap[Int, String] = read(write(ct1))
+    check(ct1, _ct1)
   }
   catch {
     case e: Exception =>
@@ -535,29 +557,22 @@ class Outer extends Serializable {
 object Test7 {
   val x = new Outer
   x.Inner // initialize
-  try {
-    val y:Outer = read(write(x))
-    if (y.Inner == null)
-      println("Inner object is null")
-  }
-  catch {
-  case e: Exception =>
-    println("Error in Test7: " + e)
-  }
-    
+  val y:Outer = read(write(x))
+  if (y.Inner == null)
+    println("Inner object is null")
 }
-
 
 // Verify that transient lazy vals don't get serialized
 class WithTransient extends Serializable {
   @transient lazy val a1 = 1
   @transient private lazy val a2 = 2
   @transient object B extends Serializable
+  @transient private object C extends Serializable
     
   def test = {
     println(a1)
     println(a2)
-    if (B == null)
+    if (B == null || C == null)
      println("Transient nested object failed to serialize properly")
   }
 }
@@ -618,6 +633,11 @@ object Test9_parallel {
     val mpm = mutable.ParHashMap(1 -> 2, 2 -> 4)
     val _mpm: mutable.ParHashMap[Int, Int] = read(write(mpm))
     check(mpm, _mpm)
+    
+    // mutable.ParTrieMap
+    val mpc = mutable.ParTrieMap(1 -> 2, 2 -> 4)
+    val _mpc: mutable.ParTrieMap[Int, Int] = read(write(mpc))
+    check(mpc, _mpc)
     
     // mutable.ParHashSet
     val mps = mutable.ParHashSet(1, 2, 3)

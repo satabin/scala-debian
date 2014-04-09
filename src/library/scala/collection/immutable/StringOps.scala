@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -25,10 +25,10 @@ import mutable.StringBuilder
  *  @param repr     the actual representation of this string operations object.
  *
  *  @since 2.8
- *  @define Coll StringOps
+ *  @define Coll `String`
  *  @define coll string
  */
-final class StringOps(override val repr: String) extends StringLike[String] {
+final class StringOps(override val repr: String) extends AnyVal with StringLike[String] {
 
   override protected[this] def thisCollection: WrappedString = new WrappedString(repr)
   override protected[this] def toCollection(repr: String): WrappedString = new WrappedString(repr)
@@ -48,5 +48,5 @@ final class StringOps(override val repr: String) extends StringLike[String] {
   override def toString = repr
   override def length = repr.length
 
-  def seq = this.iterator
+  def seq = new WrappedString(repr)
 }

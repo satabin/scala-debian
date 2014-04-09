@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -49,7 +49,7 @@ abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node
   // abstract methods
 
   /** Tests if an XML element contains text.
-   * @return true if element named <code>localName</code> contains text.
+   * @return true if element named `localName` contains text.
    */
   def nodeContainsText(localName: String): Boolean // abstract
 
@@ -158,7 +158,7 @@ abstract class FactoryAdapter extends DefaultHandler with factory.XMLLoader[Node
 
   /** End element.
    * @param uri
-   * @param localName
+   * @param _localName
    * @param qname
    * @throws org.xml.sax.SAXException if ..
    */

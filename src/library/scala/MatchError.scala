@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -23,9 +23,15 @@ final class MatchError(obj: Any) extends RuntimeException {
   /** There's no reason we need to call toString eagerly,
    *  so defer it until getMessage is called.
    */
-  private lazy val objString =
+  private lazy val objString = {
+    def ofClass = "of class " + obj.getClass.getName
     if (obj == null) "null"
-    else obj.toString() + " (of class " + obj.asInstanceOf[AnyRef].getClass.getName + ")"
+    else try {
+      obj.toString() + " (" + ofClass + ")"
+    } catch {
+      case _: Throwable => "an instance " + ofClass
+    }
+  }
 
   override def getMessage() = objString
 }

@@ -1,19 +1,17 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
-
 
 package scala.collection
 package mutable
 
 import generic._
 import script._
-import annotation.{migration, bridge}
+import scala.annotation.{ migration, bridge }
 import parallel.mutable.ParSet
 
 /** A template trait for mutable sets of type `mutable.Set[A]`.
@@ -122,7 +120,9 @@ trait SetLike[A, +This <: SetLike[A, This] with Set[A]]
    *             which `p` returns `true` are retained in the set; all others
    *             are removed.
    */
-  def retain(p: A => Boolean): Unit = for (elem <- this.toList) if (!p(elem)) this -= elem
+  def retain(p: A => Boolean): Unit =
+    for (elem <- this.toList) // SI-7269 toList avoids ConcurrentModificationException
+      if (!p(elem)) this -= elem
 
   /** Removes all elements from the set. After this operation is completed,
    *  the set will be empty.
@@ -172,8 +172,6 @@ trait SetLike[A, +This <: SetLike[A, This] with Set[A]]
   @migration("`++` creates a new set. Use `++=` to add elements to this set and return that set itself.", "2.8.0")
   override def ++(xs: GenTraversableOnce[A]): This = clone() ++= xs.seq
 
-  @bridge def ++(xs: TraversableOnce[A]): This = ++(xs: GenTraversableOnce[A])
-
   /** Creates a new set consisting of all the elements of this set except `elem`.
    *
    *  @param elem  the element to remove.
@@ -204,8 +202,6 @@ trait SetLike[A, +This <: SetLike[A, This] with Set[A]]
    */
   @migration("`--` creates a new set. Use `--=` to remove elements from this set and return that set itself.", "2.8.0")
   override def --(xs: GenTraversableOnce[A]): This = clone() --= xs.seq
-
-  @bridge def --(xs: TraversableOnce[A]): This = --(xs: GenTraversableOnce[A])
 
   /** Send a message to this scriptable object.
    *

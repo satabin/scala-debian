@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -21,8 +21,8 @@ abstract class ConstructingHandler extends MarkupHandler
   val preserveWS: Boolean
 
   def elem(pos: Int, pre: String, label: String, attrs: MetaData,
-           pscope: NamespaceBinding, nodes: NodeSeq): NodeSeq =
-    Elem(pre, label, attrs, pscope, nodes:_*)
+           pscope: NamespaceBinding, empty: Boolean, nodes: NodeSeq): NodeSeq =
+    Elem(pre, label, attrs, pscope, empty, nodes:_*)
 
   def procInstr(pos: Int, target: String, txt: String) =
     ProcInstr(target, txt)

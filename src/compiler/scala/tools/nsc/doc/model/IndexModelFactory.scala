@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  * @author  Pedro Furlanetto
  */
 
@@ -15,12 +15,12 @@ object IndexModelFactory {
 
     lazy val firstLetterIndex: Map[Char, SymbolMap] = {
 
-      val result = new mutable.HashMap[Char,SymbolMap] {
+      object result extends mutable.HashMap[Char,SymbolMap] {
 
         /* Owner template ordering */
         implicit def orderingSet = math.Ordering.String.on { x: MemberEntity => x.name.toLowerCase }
         /* symbol name ordering */
-        implicit def orderingMap = math.Ordering.String.on { x: String => x.toLowerCase }
+        implicit def orderingMap = math.Ordering.String
 
         def addMember(d: MemberEntity) = {
           val firstLetter = {
@@ -35,7 +35,6 @@ object IndexModelFactory {
           } + d
           this(firstLetter) = letter + (d.name -> members)
         }
-
       }
 
       //@scala.annotation.tailrec // TODO
@@ -45,11 +44,7 @@ object IndexModelFactory {
             case tpl: DocTemplateEntity =>
               result.addMember(tpl)
               gather(tpl)
-            case alias: AliasType =>
-              result.addMember(alias)
-            case absType: AbstractType =>
-              result.addMember(absType)
-            case non: NonTemplateMemberEntity if !non.isConstructor =>
+            case non: MemberEntity if !non.isConstructor =>
               result.addMember(non)
             case x @ _ =>
           }

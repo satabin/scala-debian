@@ -1,4 +1,4 @@
-class ann(i: Int) extends Annotation
+class ann(i: Int) extends scala.annotation.Annotation
 
 // annotations on abstract types
 abstract class C1[@serializable @cloneable +T, U, V[_]]
@@ -23,7 +23,7 @@ object Test {
   //bug #1214
   val y = new (Integer @ann(0))(2)
 
-  import scala.reflect.BeanProperty
+  import scala.beans.BeanProperty
 
   // bug #637
   trait S { def getField(): Int }

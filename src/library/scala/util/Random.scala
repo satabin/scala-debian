@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,9 +8,10 @@
 
 package scala.util
 
-import collection.mutable.ArrayBuffer
-import collection.generic.CanBuildFrom
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.{ List, Stream }
+import scala.language.{implicitConversions, higherKinds}
 
 /**
  *  @author Stephane Micheloud
@@ -100,8 +101,7 @@ class Random(val self: java.util.Random) {
 
   /** Returns a new collection of the same type in a randomly chosen order.
    *
-   *  @param  coll    the TraversableOnce to shuffle
-   *  @return         the shuffled TraversableOnce
+   *  @return         the shuffled collection
    */
   def shuffle[T, CC[X] <: TraversableOnce[X]](xs: CC[T])(implicit bf: CanBuildFrom[CC[T], T, CC[T]]): CC[T] = {
     val buf = new ArrayBuffer[T] ++= xs
@@ -117,17 +117,8 @@ class Random(val self: java.util.Random) {
       swap(n - 1, k)
     }
 
-    bf(xs) ++= buf result
+    (bf(xs) ++= buf).result
   }
-
-}
-
-/** The object <code>Random</code> offers a default implementation
- *  of scala.util.Random and random-related convenience methods.
- *
- *  @since 2.8
- */
-object Random extends Random {
 
   /** Returns a Stream of pseudorandomly chosen alphanumeric characters,
    *  equally chosen from A-Z, a-z, and 0-9.
@@ -139,5 +130,16 @@ object Random extends Random {
 
     Stream continually nextPrintableChar filter isAlphaNum
   }
+
+}
+
+/** The object `Random` offers a default implementation
+ *  of scala.util.Random and random-related convenience methods.
+ *
+ *  @since 2.8
+ */
+object Random extends Random {
+
+  implicit def javaRandomToRandom(r: java.util.Random): Random = new Random(r)
 
 }

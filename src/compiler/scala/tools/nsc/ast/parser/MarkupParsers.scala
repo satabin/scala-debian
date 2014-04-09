@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Burak Emir
  */
 
@@ -7,12 +7,14 @@ package scala.tools.nsc
 package ast.parser
 
 import scala.collection.mutable
-import mutable.{ Buffer, ArrayBuffer, ListBuffer, HashMap }
+import mutable.{ Buffer, ArrayBuffer, ListBuffer }
 import scala.util.control.ControlThrowable
-import scala.tools.nsc.util.{SourceFile,CharArrayReader}
+import scala.tools.nsc.util.CharArrayReader
+import scala.reflect.internal.util.SourceFile
 import scala.xml.{ Text, TextBuffer }
+import scala.xml.parsing.MarkupParserCommon
 import scala.xml.Utility.{ isNameStart, isNameChar, isSpace }
-import util.Chars.{ SU, LF }
+import scala.reflect.internal.Chars.{ SU, LF }
 
 // XXX/Note: many/most of the functions in here are almost direct cut and pastes
 // from another file - scala.xml.parsing.MarkupParser, it looks like.
@@ -47,7 +49,7 @@ trait MarkupParsers {
 
   import global._
 
-  class MarkupParser(parser: SourceFileParser, final val preserveWS: Boolean) extends scala.xml.parsing.MarkupParserCommon {
+  class MarkupParser(parser: SourceFileParser, final val preserveWS: Boolean) extends MarkupParserCommon {
 
     import Tokens.{ EMPTY, LBRACE, RBRACE }
 
@@ -76,10 +78,13 @@ trait MarkupParsers {
     var tmppos : Position = NoPosition
     def ch = input.ch
     /** this method assign the next character to ch and advances in input */
-    def nextch = { val result = input.ch; input.nextChar(); result }
-    def ch_returning_nextch = nextch
+    def nextch() { input.nextChar() }
 
-    def mkProcInstr(position: Position, name: String, text: String): Tree =
+    protected def ch_returning_nextch: Char = {
+      val result = ch; input.nextChar(); result
+    }
+
+    def mkProcInstr(position: Position, name: String, text: String): ElementType =
       parser.symbXMLBuilder.procInstr(position, name, text)
 
     var xEmbeddedBlock = false
@@ -113,7 +118,7 @@ trait MarkupParsers {
      *                      | `{` scalablock `}`
      */
     def xAttributes = {
-      val aMap = new HashMap[String, Tree]()
+      val aMap = mutable.LinkedHashMap[String, Tree]()
 
       while (isNameStart(ch)) {
         val start = curOffset
@@ -263,7 +268,7 @@ trait MarkupParsers {
       val (qname, attrMap) = xTag(())
       if (ch == '/') { // empty element
         xToken("/>")
-        handle.element(r2p(start, start, curOffset), qname, attrMap, new ListBuffer[Tree])
+        handle.element(r2p(start, start, curOffset), qname, attrMap, true, new ListBuffer[Tree])
       }
       else { // handle content
         xToken('>')
@@ -277,7 +282,7 @@ trait MarkupParsers {
         val pos = r2p(start, start, curOffset)
         qname match {
           case "xml:group" => handle.group(pos, ts)
-          case _ => handle.element(pos, qname, attrMap, ts)
+          case _ => handle.element(pos, qname, attrMap, false, ts)
         }
       }
     }
@@ -285,7 +290,7 @@ trait MarkupParsers {
     /** parse character data.
      *  precondition: xEmbeddedBlock == false (we are not in a scala block)
      */
-    def xText: String = {
+    private def xText: String = {
       assert(!xEmbeddedBlock, "internal error: encountered embedded block")
       val buf = new StringBuilder
       def done = buf.toString
@@ -393,12 +398,12 @@ trait MarkupParsers {
 
     /** xScalaPatterns  ::= patterns
      */
-    def xScalaPatterns: List[Tree] = escapeToScala(parser.seqPatterns(), "pattern")
+    def xScalaPatterns: List[Tree] = escapeToScala(parser.xmlSeqPatterns(), "pattern")
 
     def reportSyntaxError(pos: Int, str: String) = parser.syntaxError(pos, str)
-    def reportSyntaxError(str: String) = {
+    def reportSyntaxError(str: String) {
       reportSyntaxError(curOffset, "in XML literal: " + str)
-      nextch
+      nextch()
     }
 
     /** '<' xPattern  ::= Name [S] { xmlPattern | '{' pattern3 '}' } ETag

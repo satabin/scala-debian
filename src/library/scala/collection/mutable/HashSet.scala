@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,7 +12,7 @@ package scala.collection
 package mutable
 
 import generic._
-import collection.parallel.mutable.ParHashSet
+import scala.collection.parallel.mutable.ParHashSet
 
 /** This class implements mutable sets using a hashtable.
  *
@@ -25,7 +25,7 @@ import collection.parallel.mutable.ParHashSet
  *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#hash_tables "Scala's Collection Library overview"]]
  *  section on `Hash Tables` for more information.
  *
- *  @define Coll mutable.HashSet
+ *  @define Coll `mutable.HashSet`
  *  @define coll mutable hash set
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
  *    `That` is always `HashSet[B]` because an implicit of type `CanBuildFrom[HashSet, B, HashSet[B]]`
@@ -39,7 +39,8 @@ import collection.parallel.mutable.ParHashSet
  */
 @SerialVersionUID(1L)
 class HashSet[A] private[collection] (contents: FlatHashTable.Contents[A])
-extends Set[A]
+extends AbstractSet[A]
+   with Set[A]
    with GenericSetTemplate[A, HashSet]
    with SetLike[A, HashSet[A]]
    with FlatHashTable[A]
@@ -52,7 +53,7 @@ extends Set[A]
 
   override def companion: GenericCompanion[HashSet] = HashSet
 
-  override def size = tableSize
+  override def size: Int = tableSize
 
   def contains(elem: A): Boolean = containsEntry(elem)
 
@@ -66,7 +67,9 @@ extends Set[A]
 
   override def remove(elem: A): Boolean = removeEntry(elem).isDefined
 
-  override def clear() = clearTable()
+  override def clear() { clearTable() }
+
+  override def iterator: Iterator[A] = super[FlatHashTable].iterator
 
   override def foreach[U](f: A =>  U) {
     var i = 0
@@ -85,7 +88,7 @@ extends Set[A]
   }
 
   private def readObject(in: java.io.ObjectInputStream) {
-    init(in, x => x)
+    init(in, x => ())
   }
 
   /** Toggles whether a size map is used to track hash map statistics.
@@ -97,7 +100,7 @@ extends Set[A]
 }
 
 /** $factoryInfo
- *  @define Coll mutable.HashSet
+ *  @define Coll `mutable.HashSet`
  *  @define coll mutable hash set
  */
 object HashSet extends MutableSetFactory[HashSet] {

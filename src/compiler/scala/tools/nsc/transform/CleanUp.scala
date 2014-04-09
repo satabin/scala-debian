@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyrights 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
@@ -9,11 +9,13 @@ package transform
 import symtab._
 import Flags._
 import scala.collection._
+import scala.language.postfixOps
 
 abstract class CleanUp extends Transform with ast.TreeDSL {
   import global._
   import definitions._
   import CODE._
+  import treeInfo.StripCast
 
   /** the following two members override abstract members in Transform */
   val phaseName: String = "cleanup"
@@ -22,27 +24,36 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
     new CleanUpTransformer(unit)
 
   class CleanUpTransformer(unit: CompilationUnit) extends Transformer {
-    private val newStaticMembers = mutable.Buffer.empty[Tree]
-    private val newStaticInits = mutable.Buffer.empty[Tree]
+    private val newStaticMembers      = mutable.Buffer.empty[Tree]
+    private val newStaticInits        = mutable.Buffer.empty[Tree]
     private val symbolsStoredAsStatic = mutable.Map.empty[String, Symbol]
-    private def mkTerm(prefix: String): TermName = unit.freshTermName(prefix)
-
-    /** Kludge to provide a safe fix for #4560:
-     *  If we generate a reference in an implementation class, we
-     *  watch out for embedded This(..) nodes that point to the interface.
-     *  These must be wrong. We fix them by setting symbol and type to
-     *  the enclosing implementation class instead.
-     */
-    def safeREF(sym: Symbol) = {
-      def fix(tree: Tree): Unit = tree match {
-        case Select(qual @ This(_), name) if qual.symbol != currentClass =>
-          qual.setSymbol(currentClass).setType(currentClass.tpe)
-        case _ =>
-      }
-      val tree = REF(sym)
-      if (currentClass.isImplClass && sym.owner == currentClass) fix(tree)
-      tree
+    private def clearStatics() {
+      newStaticMembers.clear()
+      newStaticInits.clear()
+      symbolsStoredAsStatic.clear()
     }
+    private def savingStatics[T](body: => T): T = {
+      val savedNewStaticMembers : mutable.Buffer[Tree] = newStaticMembers.clone()
+      val savedNewStaticInits   : mutable.Buffer[Tree] = newStaticInits.clone()
+      val savedSymbolsStoredAsStatic : mutable.Map[String, Symbol] = symbolsStoredAsStatic.clone()
+      val result = body
+
+      clearStatics()
+      newStaticMembers      ++= savedNewStaticMembers
+      newStaticInits        ++= savedNewStaticInits
+      symbolsStoredAsStatic ++= savedSymbolsStoredAsStatic
+
+      result
+    }
+    private def transformTemplate(tree: Tree) = {
+      val Template(parents, self, body) = tree
+      clearStatics()
+      val newBody = transformTrees(body)
+      val templ   = deriveTemplate(tree)(_ => transformTrees(newStaticMembers.toList) ::: newBody)
+      try addStaticInits(templ) // postprocess to include static ctors
+      finally clearStatics()
+    }
+    private def mkTerm(prefix: String): TermName = unit.freshTermName(prefix)
 
     //private val classConstantMeth = new HashMap[String, Symbol]
     //private val symbolStaticFields = new HashMap[String, (Symbol, Tree, Tree)]
@@ -59,11 +70,16 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
       case "poly-cache" => POLY_CACHE
     }
 
+    def shouldRewriteTry(tree: Try) = {
+      val sym = tree.tpe.typeSymbol
+      forMSIL && (sym != UnitClass) && (sym != NothingClass)
+    }
+
     private def typedWithPos(pos: Position)(tree: Tree) =
-      localTyper typed { atPos(pos)(tree) }
+      localTyper.typedPos(pos)(tree)
 
     /** A value class is defined to be only Java-compatible values: unit is
-      * not part of it, as opposed to isValueClass in definitions. scala.Int is
+      * not part of it, as opposed to isPrimitiveValueClass in definitions. scala.Int is
       * a value class, java.lang.Integer is not. */
     def isJavaValueClass(sym: Symbol) = boxedClass contains sym
     def isJavaValueType(tp: Type) = isJavaValueClass(tp.typeSymbol)
@@ -72,40 +88,12 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
      */
     def toBoxedType(tp: Type) = if (isJavaValueType(tp)) boxedClass(tp.typeSymbol).tpe else tp
 
-    override def transform(tree: Tree): Tree = tree match {
+    def transformApplyDynamic(ad: ApplyDynamic) = {
+      val qual0 = ad.qual
+      val params = ad.args
+        if (settings.logReflectiveCalls.value)
+          unit.echo(ad.pos, "method invocation uses reflection")
 
-      /* Transforms dynamic calls (i.e. calls to methods that are undefined
-       * in the erased type space) to -- dynamically -- unsafe calls using
-       * reflection. This is used for structural sub-typing of refinement
-       * types, but may be used for other dynamic calls in the future.
-       * For 'a.f(b)' it will generate something like:
-       * 'a.getClass().
-       * '  getMethod("f", Array(classOf[b.type])).
-       * '  invoke(a, Array(b))
-       * plus all the necessary casting/boxing/etc. machinery required
-       * for type-compatibility (see fixResult).
-       *
-       * USAGE CONTRACT:
-       * There are a number of assumptions made on the way a dynamic apply
-       * is used. Assumptions relative to type are handled by the erasure
-       * phase.
-       * - The applied arguments are compatible with AnyRef, which means
-       *   that an argument tree typed as AnyVal has already been extended
-       *   with the necessary boxing calls. This implies that passed
-       *   arguments might not be strictly compatible with the method's
-       *   parameter types (a boxed integer while int is expected).
-       * - The expected return type is an AnyRef, even when the method's
-       *   return type is an AnyVal. This means that the tree containing the
-       *   call has already been extended with the necessary unboxing calls
-       *   (or is happy with the boxed type).
-       * - The type-checker has prevented dynamic applies on methods which
-       *   parameter's erased types are not statically known at the call site.
-       *   This is necessary to allow dispatching the call to the correct
-       *   method (dispatching on parameters is static in Scala). In practice,
-       *   this limitation only arises when the called method is defined as a
-       *   refinement, where the refinement defines a parameter based on a
-       *   type variable. */
-      case ad@ApplyDynamic(qual0, params) =>
         val typedPos = typedWithPos(ad.pos) _
 
         assert(ad.symbol.isPublic)
@@ -113,40 +101,36 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
 
         /* ### CREATING THE METHOD CACHE ### */
 
-        def addStaticVariableToClass(forName: String, forType: Type, forInit: Tree, isFinal: Boolean): Symbol = {
-          val varSym = currentClass.newVariable(ad.pos, mkTerm(forName))
-            .setFlag(PRIVATE | STATIC | SYNTHETIC)
-            .setInfo(forType)
-          if (isFinal) varSym setFlag FINAL else varSym addAnnotation AnnotationInfo(VolatileAttr.tpe, Nil, Nil)
-          currentClass.info.decls enter varSym
+        def addStaticVariableToClass(forName: TermName, forType: Type, forInit: Tree, isFinal: Boolean): Symbol = {
+          val flags = PRIVATE | STATIC | SYNTHETIC | (
+            if (isFinal) FINAL else 0
+          )
+
+          val varSym = currentClass.newVariable(mkTerm("" + forName), ad.pos, flags) setInfoAndEnter forType
+          if (!isFinal)
+            varSym.addAnnotation(VolatileAttr)
 
           val varDef = typedPos( VAL(varSym) === forInit )
           newStaticMembers append transform(varDef)
 
-          val varInit = typedPos( safeREF(varSym) === forInit )
+          val varInit = typedPos( REF(varSym) === forInit )
           newStaticInits append transform(varInit)
 
           varSym
         }
 
-        def addStaticMethodToClass(forName: String, forArgsTypes: List[Type], forResultType: Type)
-                                  (forBody: Pair[Symbol, List[Symbol]] => Tree): Symbol = {
-          val methSym = currentClass.newMethod(ad.pos, mkTerm(forName))
-            .setFlag(STATIC | SYNTHETIC)
+        def addStaticMethodToClass(forBody: (Symbol, Symbol) => Tree): Symbol = {
+          val methSym = currentClass.newMethod(mkTerm(nme.reflMethodName), ad.pos, STATIC | SYNTHETIC)
+          val params  = methSym.newSyntheticValueParams(List(ClassClass.tpe))
+          methSym setInfoAndEnter MethodType(params, MethodClass.tpe)
 
-          methSym.setInfo(MethodType(methSym.newSyntheticValueParams(forArgsTypes), forResultType))
-          currentClass.info.decls enter methSym
-
-          val methDef = typedPos( DefDef(methSym, { forBody(Pair(methSym, methSym.paramss(0))) }) )
+          val methDef = typedPos(DefDef(methSym, forBody(methSym, params.head)))
           newStaticMembers append transform(methDef)
-
           methSym
         }
 
         def fromTypesToClassArrayLiteral(paramTypes: List[Type]): Tree =
           ArrayValue(TypeTree(ClassClass.tpe), paramTypes map LIT)
-
-        def theTypeClassArray = arrayType(ClassClass.tpe)
 
         /* ... */
         def reflectiveMethodCache(method: String, paramTypes: List[Type]): Symbol = dispatchType match {
@@ -162,12 +146,11 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
               */
 
               val reflParamsCacheSym: Symbol =
-                addStaticVariableToClass("reflParams$Cache", theTypeClassArray, fromTypesToClassArrayLiteral(paramTypes), true)
+                addStaticVariableToClass(nme.reflParamsCacheName, arrayType(ClassClass.tpe), fromTypesToClassArrayLiteral(paramTypes), true)
 
-              addStaticMethodToClass("reflMethod$Method", List(ClassClass.tpe), MethodClass.tpe) {
-                case Pair(reflMethodSym, List(forReceiverSym)) =>
-                  (REF(forReceiverSym) DOT Class_getMethod)(LIT(method), safeREF(reflParamsCacheSym))
-              }
+              addStaticMethodToClass((_, forReceiverSym) =>
+                gen.mkMethodCall(REF(forReceiverSym), Class_getMethod, Nil, List(LIT(method), REF(reflParamsCacheSym)))
+              )
 
             case MONO_CACHE =>
 
@@ -191,30 +174,27 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
               */
 
               val reflParamsCacheSym: Symbol =
-                addStaticVariableToClass("reflParams$Cache", theTypeClassArray, fromTypesToClassArrayLiteral(paramTypes), true)
+                addStaticVariableToClass(nme.reflParamsCacheName, arrayType(ClassClass.tpe), fromTypesToClassArrayLiteral(paramTypes), true)
 
               val reflMethodCacheSym: Symbol =
-                addStaticVariableToClass("reflMethod$Cache", MethodClass.tpe, NULL, false)
+                addStaticVariableToClass(nme.reflMethodCacheName, MethodClass.tpe, NULL, false)
 
               val reflClassCacheSym: Symbol =
-                addStaticVariableToClass("reflClass$Cache", SoftReferenceClass.tpe, NULL, false)
-
-              def getMethodSym = ClassClass.tpe member nme.getMethod_
+                addStaticVariableToClass(nme.reflClassCacheName, SoftReferenceClass.tpe, NULL, false)
 
               def isCacheEmpty(receiver: Symbol): Tree =
                 reflClassCacheSym.IS_NULL() OR (reflClassCacheSym.GET() OBJ_NE REF(receiver))
 
-              addStaticMethodToClass("reflMethod$Method", List(ClassClass.tpe), MethodClass.tpe) {
-                case Pair(reflMethodSym, List(forReceiverSym)) =>
-                  BLOCK(
-                    IF (isCacheEmpty(forReceiverSym)) THEN BLOCK(
-                      safeREF(reflMethodCacheSym) === ((REF(forReceiverSym) DOT getMethodSym)(LIT(method), safeREF(reflParamsCacheSym))) ,
-                      safeREF(reflClassCacheSym) === gen.mkSoftRef(REF(forReceiverSym)),
-                      UNIT
-                    ) ENDIF,
-                    safeREF(reflMethodCacheSym)
-                  )
-              }
+              addStaticMethodToClass((_, forReceiverSym) =>
+                BLOCK(
+                  IF (isCacheEmpty(forReceiverSym)) THEN BLOCK(
+                    REF(reflMethodCacheSym) === ((REF(forReceiverSym) DOT Class_getMethod)(LIT(method), REF(reflParamsCacheSym))) ,
+                    REF(reflClassCacheSym) === gen.mkSoftRef(REF(forReceiverSym)),
+                    UNIT
+                  ) ENDIF,
+                  REF(reflMethodCacheSym)
+                )
+              )
 
             case POLY_CACHE =>
 
@@ -227,12 +207,17 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
                 var reflPoly$Cache: SoftReference[scala.runtime.MethodCache] = new SoftReference(new EmptyMethodCache())
 
                 def reflMethod$Method(forReceiver: JClass[_]): JMethod = {
-                  var method: JMethod = reflPoly$Cache.find(forReceiver)
-                  if (method != null)
+                  var methodCache: MethodCache = reflPoly$Cache.find(forReceiver)
+                  if (methodCache eq null) {
+                    methodCache = new EmptyMethodCache
+                    reflPoly$Cache = new SoftReference(methodCache)
+                  }
+                  var method: JMethod = methodCache.find(forReceiver)
+                  if (method ne null)
                     return method
                   else {
                     method = ScalaRunTime.ensureAccessible(forReceiver.getMethod("xyz", reflParams$Cache))
-                    reflPoly$Cache = new SoftReference(reflPoly$Cache.get.add(forReceiver, method))
+                    reflPoly$Cache = new SoftReference(methodCache.add(forReceiver, method))
                     return method
                   }
                 }
@@ -240,84 +225,68 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
               */
 
               val reflParamsCacheSym: Symbol =
-                addStaticVariableToClass("reflParams$Cache", theTypeClassArray, fromTypesToClassArrayLiteral(paramTypes), true)
+                addStaticVariableToClass(nme.reflParamsCacheName, arrayType(ClassClass.tpe), fromTypesToClassArrayLiteral(paramTypes), true)
 
               def mkNewPolyCache = gen.mkSoftRef(NEW(TypeTree(EmptyMethodCacheClass.tpe)))
-              val reflPolyCacheSym: Symbol = addStaticVariableToClass("reflPoly$Cache", SoftReferenceClass.tpe, mkNewPolyCache, false)
-              def getPolyCache = fn(safeREF(reflPolyCacheSym), nme.get) AS_ATTR MethodCacheClass.tpe
+              val reflPolyCacheSym: Symbol = (
+                addStaticVariableToClass(nme.reflPolyCacheName, SoftReferenceClass.tpe, mkNewPolyCache, false)
+              )
+              def getPolyCache = gen.mkCast(fn(REF(reflPolyCacheSym), nme.get), MethodCacheClass.tpe)
 
-              addStaticMethodToClass("reflMethod$Method", List(ClassClass.tpe), MethodClass.tpe)
-                { case Pair(reflMethodSym, List(forReceiverSym)) =>
-                  val methodSym = reflMethodSym.newVariable(ad.pos, mkTerm("method")) setInfo MethodClass.tpe
+              addStaticMethodToClass((reflMethodSym, forReceiverSym) => {
+                val methodCache = reflMethodSym.newVariable(mkTerm("methodCache"), ad.pos) setInfo MethodCacheClass.tpe
+                val methodSym = reflMethodSym.newVariable(mkTerm("method"), ad.pos) setInfo MethodClass.tpe
 
-                  BLOCK(
-                    IF (getPolyCache OBJ_EQ NULL) THEN (safeREF(reflPolyCacheSym) === mkNewPolyCache) ENDIF,
-                    VAL(methodSym) === ((getPolyCache DOT methodCache_find)(REF(forReceiverSym))) ,
-                    IF (REF(methodSym) OBJ_!= NULL) .
-                      THEN (Return(REF(methodSym)))
-                    ELSE {
-                      def methodSymRHS  = ((REF(forReceiverSym) DOT Class_getMethod)(LIT(method), safeREF(reflParamsCacheSym)))
-                      def cacheRHS      = ((getPolyCache DOT methodCache_add)(REF(forReceiverSym), REF(methodSym)))
-                      BLOCK(
-                        REF(methodSym)        === (REF(ensureAccessibleMethod) APPLY (methodSymRHS)),
-                        safeREF(reflPolyCacheSym) === gen.mkSoftRef(cacheRHS),
-                        Return(REF(methodSym))
-                      )
-                    }
-                  )
-                }
+                BLOCK(
+                  VAR(methodCache) === getPolyCache,
+                  IF (REF(methodCache) OBJ_EQ NULL) THEN BLOCK(
+                    REF(methodCache) === NEW(TypeTree(EmptyMethodCacheClass.tpe)),
+                    REF(reflPolyCacheSym) === gen.mkSoftRef(REF(methodCache))
+                  ) ENDIF,
+
+                  VAR(methodSym) === (REF(methodCache) DOT methodCache_find)(REF(forReceiverSym)),
+                  IF (REF(methodSym) OBJ_NE NULL) .
+                    THEN (Return(REF(methodSym)))
+                  ELSE {
+                    def methodSymRHS  = ((REF(forReceiverSym) DOT Class_getMethod)(LIT(method), REF(reflParamsCacheSym)))
+                    def cacheRHS      = ((REF(methodCache) DOT methodCache_add)(REF(forReceiverSym), REF(methodSym)))
+                    BLOCK(
+                      REF(methodSym)        === (REF(ensureAccessibleMethod) APPLY (methodSymRHS)),
+                      REF(reflPolyCacheSym) === gen.mkSoftRef(cacheRHS),
+                      Return(REF(methodSym))
+                    )
+                  }
+                )
+              })
+
         }
 
         /* ### HANDLING METHODS NORMALLY COMPILED TO OPERATORS ### */
 
-        val testForNumber: Tree     = (qual IS_OBJ BoxedNumberClass.tpe) OR (qual IS_OBJ BoxedCharacterClass.tpe)
-        val testForBoolean: Tree    = (qual IS_OBJ BoxedBooleanClass.tpe)
-        val testForNumberOrBoolean  = testForNumber OR testForBoolean
+        def testForName(name: Name): Tree => Tree = t => (
+          if (nme.CommonOpNames(name))
+            gen.mkMethodCall(definitions.Boxes_isNumberOrBool, t :: Nil)
+          else if (nme.BooleanOpNames(name))
+            t IS_OBJ BoxedBooleanClass.tpe
+          else
+            gen.mkMethodCall(definitions.Boxes_isNumber, t :: Nil)
+        )
 
-        val getPrimitiveReplacementForStructuralCall: PartialFunction[Name, (Symbol, Tree)] = {
-          val testsForNumber = Map() ++ List(
-            nme.UNARY_+ -> "positive",
-            nme.UNARY_- -> "negate",
-            nme.UNARY_~ -> "complement",
-            nme.ADD     -> "add",
-            nme.SUB     -> "subtract",
-            nme.MUL     -> "multiply",
-            nme.DIV     -> "divide",
-            nme.MOD     -> "takeModulo",
-            nme.LSL     -> "shiftSignedLeft",
-            nme.LSR     -> "shiftLogicalRight",
-            nme.ASR     -> "shiftSignedRight",
-            nme.LT      -> "testLessThan",
-            nme.LE      -> "testLessOrEqualThan",
-            nme.GE      -> "testGreaterOrEqualThan",
-            nme.GT      -> "testGreaterThan",
-            nme.toByte  -> "toByte",
-            nme.toShort -> "toShort",
-            nme.toChar  -> "toCharacter",
-            nme.toInt   -> "toInteger",
-            nme.toLong  -> "toLong",
-            nme.toFloat -> "toFloat",
-            nme.toDouble-> "toDouble"
+        /** The Tree => Tree function in the return is necessary to prevent the original qual
+         *  from being duplicated in the resulting code.  It may be a side-effecting expression,
+         *  so all the test logic is routed through gen.evalOnce, which creates a block like
+         *    { val x$1 = qual; if (x$1.foo || x$1.bar) f1(x$1) else f2(x$1) }
+         *  (If the compiler can verify qual is safe to inline, it will not create the block.)
+         */
+        def getPrimitiveReplacementForStructuralCall(name: Name): Option[(Symbol, Tree => Tree)] = {
+          val methodName = (
+            if (params.isEmpty) nme.primitivePostfixMethodName(name)
+            else if (params.tail.isEmpty) nme.primitiveInfixMethodName(name)
+            else nme.NO_NAME
           )
-          val testsForBoolean = Map() ++ List(
-            nme.UNARY_! -> "takeNot",
-            nme.ZOR     -> "takeConditionalOr",
-            nme.ZAND    -> "takeConditionalAnd"
-          )
-          val testsForNumberOrBoolean = Map() ++ List(
-            nme.OR      -> "takeOr",
-            nme.XOR     -> "takeXor",
-            nme.AND     -> "takeAnd",
-            nme.EQ      -> "testEqual",
-            nme.NE      -> "testNotEqual"
-          )
-          def get(name: String) = getMember(BoxesRunTimeClass, name)
-
-          /** Begin partial function. */
-          {
-            case x if testsForNumber contains x           => (get(testsForNumber(x)), testForNumber)
-            case x if testsForBoolean contains x          => (get(testsForBoolean(x)), testForBoolean)
-            case x if testsForNumberOrBoolean contains x  => (get(testsForNumberOrBoolean(x)), testForNumberOrBoolean)
+          definitions.getDeclIfDefined(BoxesRunTimeClass, methodName) match {
+            case NoSymbol => None
+            case sym      => assert(!sym.isOverloaded, sym) ; Some((sym, testForName(name)))
           }
         }
 
@@ -334,108 +303,114 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
 
         /* ### CALLING THE APPLY ### */
         def callAsReflective(paramTypes: List[Type], resType: Type): Tree = {
-          /* Some info about the type of the method being called. */
-          val methSym       = ad.symbol
-          val boxedResType  = toBoxedType(resType)      // Int -> Integer
-          val resultSym     = boxedResType.typeSymbol
-          // If this is a primitive method type (like '+' in 5+5=10) then the
-          // parameter types and the (unboxed) result type should all be primitive types,
-          // and the method name should be in the primitive->structural map.
-          def isJavaValueMethod = (
-            (resType :: paramTypes forall isJavaValueType) && // issue #1110
-            (getPrimitiveReplacementForStructuralCall isDefinedAt methSym.name)
-          )
-          // Erasure lets Unit through as Unit, but a method returning Any will have an
-          // erased return type of Object and should also allow Unit.
-          def isDefinitelyUnit  = (resultSym == UnitClass)
-          def isMaybeUnit       = (resultSym == ObjectClass) || isDefinitelyUnit
-          // If there's any chance this signature could be met by an Array.
-          val isArrayMethodSignature = {
-            def typesMatchApply = paramTypes match {
-              case List(tp) => tp <:< IntClass.tpe
-              case _        => false
+          gen.evalOnce(qual, currentOwner, unit) { qual1 =>
+            /* Some info about the type of the method being called. */
+            val methSym       = ad.symbol
+            val boxedResType  = toBoxedType(resType)      // Int -> Integer
+            val resultSym     = boxedResType.typeSymbol
+            // If this is a primitive method type (like '+' in 5+5=10) then the
+            // parameter types and the (unboxed) result type should all be primitive types,
+            // and the method name should be in the primitive->structural map.
+            def isJavaValueMethod = (
+              (resType :: paramTypes forall isJavaValueType) && // issue #1110
+              (getPrimitiveReplacementForStructuralCall(methSym.name).isDefined)
+            )
+            // Erasure lets Unit through as Unit, but a method returning Any will have an
+            // erased return type of Object and should also allow Unit.
+            def isDefinitelyUnit  = (resultSym == UnitClass)
+            def isMaybeUnit       = (resultSym == ObjectClass) || isDefinitelyUnit
+            // If there's any chance this signature could be met by an Array.
+            val isArrayMethodSignature = {
+              def typesMatchApply = paramTypes match {
+                case List(tp) => tp <:< IntClass.tpe
+                case _        => false
+              }
+              def typesMatchUpdate = paramTypes match {
+                case List(tp1, tp2) => (tp1 <:< IntClass.tpe) && isMaybeUnit
+                case _              => false
+              }
+
+              (methSym.name == nme.length && params.isEmpty) ||
+              (methSym.name == nme.clone_ && params.isEmpty) ||
+              (methSym.name == nme.apply  && typesMatchApply) ||
+              (methSym.name == nme.update && typesMatchUpdate)
             }
-            def typesMatchUpdate = paramTypes match {
-              case List(tp1, tp2) => (tp1 <:< IntClass.tpe) && isMaybeUnit
-              case _              => false
+
+            /* Some info about the argument at the call site. */
+            val qualSym           = qual.tpe.typeSymbol
+            val args              = qual1() :: params
+            def isDefinitelyArray = (qualSym == ArrayClass)
+            def isMaybeArray      = (qualSym == ObjectClass) || isDefinitelyArray
+            def isMaybeBoxed      = platform isMaybeBoxed qualSym
+
+            // This is complicated a bit by trying to handle Arrays correctly.
+            // Under normal circumstances if the erased return type is Object then
+            // we're not going to box it to Unit, but that is the situation with
+            // a signature like def f(x: { def update(x: Int, y: Long): Any })
+            //
+            // However we only want to do that boxing if it has been determined
+            // to be an Array and a method returning Unit.  But for this fixResult
+            // could be called in one place: instead it is called separately from the
+            // unconditional outcomes (genValueCall, genArrayCall, genDefaultCall.)
+            def fixResult(tree: Tree, mustBeUnit: Boolean = false) =
+              if (mustBeUnit || resultSym == UnitClass) BLOCK(tree, REF(BoxedUnit_UNIT))  // boxed unit
+              else if (resultSym == ObjectClass) tree                                     // no cast necessary
+              else gen.mkCast(tree, boxedResType)                                         // cast to expected type
+
+            /** Normal non-Array call */
+            def genDefaultCall = {
+              // reflective method call machinery
+              val invokeName  = MethodClass.tpe member nme.invoke_                                  // scala.reflect.Method.invoke(...)
+              def cache       = REF(reflectiveMethodCache(ad.symbol.name.toString, paramTypes))     // cache Symbol
+              def lookup      = Apply(cache, List(qual1() GETCLASS))                                // get Method object from cache
+              def invokeArgs  = ArrayValue(TypeTree(ObjectClass.tpe), params)                       // args for invocation
+              def invocation  = (lookup DOT invokeName)(qual1(), invokeArgs)                        // .invoke(qual1, ...)
+
+              // exception catching machinery
+              val invokeExc   = currentOwner.newValue(mkTerm(""), ad.pos) setInfo InvocationTargetExceptionClass.tpe
+              def catchVar    = Bind(invokeExc, Typed(Ident(nme.WILDCARD), TypeTree(InvocationTargetExceptionClass.tpe)))
+              def catchBody   = Throw(Apply(Select(Ident(invokeExc), nme.getCause), Nil))
+
+              // try { method.invoke } catch { case e: InvocationTargetExceptionClass => throw e.getCause() }
+              fixResult(TRY (invocation) CATCH { CASE (catchVar) ==> catchBody } ENDTRY)
             }
 
-            (methSym.name == nme.length && params.isEmpty) ||
-            (methSym.name == nme.clone_ && params.isEmpty) ||
-            (methSym.name == nme.apply  && typesMatchApply) ||
-            (methSym.name == nme.update && typesMatchUpdate)
+            /** A possible primitive method call, represented by methods in BoxesRunTime. */
+            def genValueCall(operator: Symbol) = fixResult(REF(operator) APPLY args)
+            def genValueCallWithTest = {
+              getPrimitiveReplacementForStructuralCall(methSym.name) match {
+                case Some((operator, test)) =>
+                  IF (test(qual1())) THEN genValueCall(operator) ELSE genDefaultCall
+                case _ =>
+                  genDefaultCall
+              }
+            }
+
+            /** A native Array call. */
+            def genArrayCall = fixResult(
+              methSym.name match {
+                case nme.length => REF(boxMethod(IntClass)) APPLY (REF(arrayLengthMethod) APPLY args)
+                case nme.update => REF(arrayUpdateMethod) APPLY List(args(0), (REF(unboxMethod(IntClass)) APPLY args(1)), args(2))
+                case nme.apply  => REF(arrayApplyMethod) APPLY List(args(0), (REF(unboxMethod(IntClass)) APPLY args(1)))
+                case nme.clone_ => REF(arrayCloneMethod) APPLY List(args(0))
+              },
+              mustBeUnit = methSym.name == nme.update
+            )
+
+            /** A conditional Array call, when we can't determine statically if the argument is
+             *  an Array, but the structural type method signature is consistent with an Array method
+             *  so we have to generate both kinds of code.
+             */
+            def genArrayCallWithTest =
+              IF ((qual1() GETCLASS()) DOT nme.isArray) THEN genArrayCall ELSE genDefaultCall
+
+            localTyper typed (
+              if (isMaybeBoxed && isJavaValueMethod) genValueCallWithTest
+              else if (isArrayMethodSignature && isDefinitelyArray) genArrayCall
+              else if (isArrayMethodSignature && isMaybeArray) genArrayCallWithTest
+              else genDefaultCall
+            )
           }
-
-          /* Some info about the argument at the call site. */
-          val qualSym           = qual.tpe.typeSymbol
-          val args              = qual :: params
-          def isDefinitelyArray = (qualSym == ArrayClass)
-          def isMaybeArray      = (qualSym == ObjectClass) || isDefinitelyArray
-          def isMaybeBoxed      = platform isMaybeBoxed qualSym
-
-          // This is complicated a bit by trying to handle Arrays correctly.
-          // Under normal circumstances if the erased return type is Object then
-          // we're not going to box it to Unit, but that is the situation with
-          // a signature like def f(x: { def update(x: Int, y: Long): Any })
-          //
-          // However we only want to do that boxing if it has been determined
-          // to be an Array and a method returning Unit.  But for this fixResult
-          // could be called in one place: instead it is called separately from the
-          // unconditional outcomes (genValueCall, genArrayCall, genDefaultCall.)
-          def fixResult(tree: Tree, mustBeUnit: Boolean = false) =
-            if (mustBeUnit || resultSym == UnitClass) BLOCK(tree, REF(BoxedUnit_UNIT))  // boxed unit
-            else if (resultSym == ObjectClass) tree                                     // no cast necessary
-            else tree AS_ATTR boxedResType                                              // cast to expected type
-
-          /** Normal non-Array call */
-          def genDefaultCall = {
-            // reflective method call machinery
-            val invokeName  = MethodClass.tpe member nme.invoke_                                // reflect.Method.invoke(...)
-            def cache       = safeREF(reflectiveMethodCache(ad.symbol.name.toString, paramTypes))   // cache Symbol
-            def lookup      = Apply(cache, List(qual GETCLASS))                                 // get Method object from cache
-            def invokeArgs  = ArrayValue(TypeTree(ObjectClass.tpe), params)                     // args for invocation
-            def invocation  = (lookup DOT invokeName)(qual, invokeArgs)                         // .invoke(qual, ...)
-
-            // exception catching machinery
-            val invokeExc   = currentOwner.newValue(ad.pos, mkTerm("")) setInfo InvocationTargetExceptionClass.tpe
-            def catchVar    = Bind(invokeExc, Typed(Ident(nme.WILDCARD), TypeTree(InvocationTargetExceptionClass.tpe)))
-            def catchBody   = Throw(Apply(Select(Ident(invokeExc), nme.getCause), Nil))
-
-            // try { method.invoke } catch { case e: InvocationTargetExceptionClass => throw e.getCause() }
-            fixResult(TRY (invocation) CATCH { CASE (catchVar) ==> catchBody } ENDTRY)
-          }
-
-          /** A possible primitive method call, represented by methods in BoxesRunTime. */
-          def genValueCall(operator: Symbol) = fixResult(REF(operator) APPLY args)
-          def genValueCallWithTest = {
-            val (operator, test)  = getPrimitiveReplacementForStructuralCall(methSym.name)
-            IF (test) THEN genValueCall(operator) ELSE genDefaultCall
-          }
-
-          /** A native Array call. */
-          def genArrayCall = fixResult(
-            methSym.name match {
-              case nme.length => REF(boxMethod(IntClass)) APPLY (REF(arrayLengthMethod) APPLY args)
-              case nme.update => REF(arrayUpdateMethod) APPLY List(args(0), (REF(unboxMethod(IntClass)) APPLY args(1)), args(2))
-              case nme.apply  => REF(arrayApplyMethod) APPLY List(args(0), (REF(unboxMethod(IntClass)) APPLY args(1)))
-              case nme.clone_ => REF(arrayCloneMethod) APPLY List(args(0))
-            },
-            mustBeUnit = methSym.name == nme.update
-          )
-
-          /** A conditional Array call, when we can't determine statically if the argument is
-           *  an Array, but the structural type method signature is consistent with an Array method
-           *  so we have to generate both kinds of code.
-           */
-          def genArrayCallWithTest =
-            IF ((qual GETCLASS()) DOT nme.isArray) THEN genArrayCall ELSE genDefaultCall
-
-          localTyper typed (
-            if (isMaybeBoxed && isJavaValueMethod) genValueCallWithTest
-            else if (isArrayMethodSignature && isDefinitelyArray) genArrayCall
-            else if (isArrayMethodSignature && isMaybeArray) genArrayCallWithTest
-            else genDefaultCall
-          )
         }
 
         if (settings.refinementMethodDispatch.value == "invoke-dynamic") {
@@ -475,18 +450,31 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
            *   is a value type (int et al.) in which case it must cast to the boxed version
            *   because invoke only returns object and erasure made sure the result is
            *   expected to be an AnyRef. */
-          val t: Tree = ad.symbol.tpe match {
-            case MethodType(mparams, resType) =>
-              assert(params.length == mparams.length)
-              typedPos {
-                val sym = currentOwner.newValue(ad.pos, mkTerm("qual")) setInfo qual0.tpe
-                qual = safeREF(sym)
+          val t: Tree = {
+            val (mparams, resType) = ad.symbol.tpe match {
+              case MethodType(mparams, resType) =>
+                assert(params.length == mparams.length, ((params, mparams)))
+                (mparams, resType)
+              case tpe @ OverloadedType(pre, alts) =>
+                unit.warning(ad.pos, s"Overloaded type reached the backend! This is a bug in scalac.\n     Symbol: ${ad.symbol}\n  Overloads: $tpe\n  Arguments: " + ad.args.map(_.tpe))
+                alts filter (_.paramss.flatten.size == params.length) map (_.tpe) match {
+                  case mt @ MethodType(mparams, resType) :: Nil =>
+                    unit.warning(NoPosition, "Only one overload has the right arity, proceeding with overload " + mt)
+                    (mparams, resType)
+                  case _ =>
+                    unit.error(ad.pos, "Cannot resolve overload.")
+                    (Nil, NoType)
+                }
+            }
+            typedPos {
+              val sym = currentOwner.newValue(mkTerm("qual"), ad.pos) setInfo qual0.tpe
+              qual = REF(sym)
 
-                BLOCK(
-                  VAL(sym) === qual0,
-                  callAsReflective(mparams map (_.tpe), resType)
-                )
-              }
+              BLOCK(
+                VAL(sym) === qual0,
+                callAsReflective(mparams map (_.tpe), resType)
+              )
+            }
           }
 
           /* For testing purposes, the dynamic application's condition
@@ -518,6 +506,44 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
           transform(t)
         }
         /* ### END OF DYNAMIC APPLY TRANSFORM ### */
+    }
+
+    override def transform(tree: Tree): Tree = tree match {
+
+      /* Transforms dynamic calls (i.e. calls to methods that are undefined
+       * in the erased type space) to -- dynamically -- unsafe calls using
+       * reflection. This is used for structural sub-typing of refinement
+       * types, but may be used for other dynamic calls in the future.
+       * For 'a.f(b)' it will generate something like:
+       * 'a.getClass().
+       * '  getMethod("f", Array(classOf[b.type])).
+       * '  invoke(a, Array(b))
+       * plus all the necessary casting/boxing/etc. machinery required
+       * for type-compatibility (see fixResult).
+       *
+       * USAGE CONTRACT:
+       * There are a number of assumptions made on the way a dynamic apply
+       * is used. Assumptions relative to type are handled by the erasure
+       * phase.
+       * - The applied arguments are compatible with AnyRef, which means
+       *   that an argument tree typed as AnyVal has already been extended
+       *   with the necessary boxing calls. This implies that passed
+       *   arguments might not be strictly compatible with the method's
+       *   parameter types (a boxed integer while int is expected).
+       * - The expected return type is an AnyRef, even when the method's
+       *   return type is an AnyVal. This means that the tree containing the
+       *   call has already been extended with the necessary unboxing calls
+       *   (or is happy with the boxed type).
+       * - The type-checker has prevented dynamic applies on methods which
+       *   parameter's erased types are not statically known at the call site.
+       *   This is necessary to allow dispatching the call to the correct
+       *   method (dispatching on parameters is static in Scala). In practice,
+       *   this limitation only arises when the called method is defined as a
+       *   refinement, where the refinement defines a parameter based on a
+       *   type variable. */
+
+      case tree: ApplyDynamic =>
+        transformApplyDynamic(tree)
 
       /* Some cleanup transformations add members to templates (classes, traits, etc).
        * When inside a template (i.e. the body of one of its members), two maps
@@ -529,36 +555,13 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
        * constructor. */
       case Template(parents, self, body) =>
         localTyper = typer.atOwner(tree, currentClass)
-        var savedNewStaticMembers : mutable.Buffer[Tree] = null
-        var savedNewStaticInits   : mutable.Buffer[Tree] = null
-        var savedSymbolsStoredAsStatic : mutable.Map[String, Symbol] = null
-        if(forMSIL) {
-          savedNewStaticMembers = newStaticMembers.clone
-          savedNewStaticInits = newStaticInits.clone
-          savedSymbolsStoredAsStatic = symbolsStoredAsStatic.clone
-        }
-        newStaticMembers.clear
-        newStaticInits.clear
-        symbolsStoredAsStatic.clear
-        val transformedTemplate: Template = {
-          var newBody = transformTrees(body)
-          treeCopy.Template(tree, parents, self, transformTrees(newStaticMembers.toList) ::: newBody)
-        }
-        val res = addStaticInits(transformedTemplate) // postprocess to include static ctors
-        newStaticMembers.clear
-        newStaticInits.clear
-        symbolsStoredAsStatic.clear
-        if(forMSIL) {
-          newStaticMembers      ++= savedNewStaticMembers
-          newStaticInits        ++= savedNewStaticInits
-          symbolsStoredAsStatic ++= savedSymbolsStoredAsStatic
-        }
-        res
+        if (forMSIL) savingStatics( transformTemplate(tree) )
+        else transformTemplate(tree)
 
-      case Literal(c) if (c.tag == ClassTag) && !forMSIL=>
+      case Literal(c) if (c.tag == ClazzTag) && !forMSIL=>
         val tpe = c.typeValue
         typedWithPos(tree.pos) {
-          if (isValueClass(tpe.typeSymbol)) {
+          if (isPrimitiveValueClass(tpe.typeSymbol)) {
             if (tpe.typeSymbol == UnitClass)
               REF(BoxedUnit_TYPE)
             else
@@ -572,10 +575,10 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
        * Hence, we here rewrite all try blocks with a result != {Unit, All} such that they
        * store their result in a local variable. The catch blocks are adjusted as well.
        * The try tree is subsituted by a block whose result expression is read of that variable. */
-      case theTry @ Try(block, catches, finalizer)
-        if theTry.tpe.typeSymbol != definitions.UnitClass && theTry.tpe.typeSymbol != definitions.NothingClass =>
+      case theTry @ Try(block, catches, finalizer) if shouldRewriteTry(theTry) =>
+        def transformTry = {
         val tpe = theTry.tpe.widen
-        val tempVar = currentOwner.newVariable(theTry.pos, mkTerm(nme.EXCEPTION_RESULT_PREFIX)).setInfo(tpe)
+        val tempVar = currentOwner.newVariable(mkTerm(nme.EXCEPTION_RESULT_PREFIX), theTry.pos).setInfo(tpe)
         def assignBlock(rhs: Tree) = super.transform(BLOCK(Ident(tempVar) === transform(rhs)))
 
         val newBlock    = assignBlock(block)
@@ -584,7 +587,8 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
         val newTry      = Try(newBlock, newCatches, super.transform(finalizer))
 
         typedWithPos(theTry.pos)(BLOCK(VAL(tempVar) === EmptyTree, newTry, Ident(tempVar)))
-
+        }
+        transformTry
      /*
       * This transformation should identify Scala symbol invocations in the tree and replace them
       * with references to a static member. Also, whenever a class has at least a single symbol invocation
@@ -616,25 +620,27 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
       * And, finally, be advised - scala symbol literal and the Symbol class of the compiler
       * have little in common.
       */
-      case symapp @ Apply(Select(Select(a @ Ident(nme.scala_), b @ nme.Symbol), nme.apply),
-                          List(Literal(Constant(symname: String)))) =>
+      case Apply(fn, (arg @ Literal(Constant(symname: String))) :: Nil) if fn.symbol == Symbol_apply =>
+        def transformApply = {
         // add the symbol name to a map if it's not there already
-        val rhs = gen.mkCast(Apply(gen.scalaDot(nme.Symbol), List(Literal(Constant(symname)))), symbolType)
-        val staticFieldSym = getSymbolStaticField(symapp.pos, symname, rhs, symapp)
-
+        val rhs = gen.mkMethodCall(Symbol_apply, arg :: Nil)
+        val staticFieldSym = getSymbolStaticField(tree.pos, symname, rhs, tree)
         // create a reference to a static field
-        val ntree = typedWithPos(symapp.pos)(safeREF(staticFieldSym))
-
+        val ntree = typedWithPos(tree.pos)(REF(staticFieldSym))
         super.transform(ntree)
+        }
+        transformApply
 
-      // This transform replaces Array(Predef.wrapArray(Array(...)), <manifest>)
-      // with just Array(...)
-      case Apply(appMeth, List(Apply(wrapRefArrayMeth, List(array)), _))
-      if (wrapRefArrayMeth.symbol == Predef_wrapRefArray &&
-          appMeth.symbol == ArrayModule_overloadedApply.suchThat {
-            _.tpe.resultType.dealias.typeSymbol == ObjectClass
-          }) =>
-        super.transform(array)
+      // Replaces `Array(Predef.wrapArray(ArrayValue(...).$asInstanceOf[...]), <tag>)`
+      // with just `ArrayValue(...).$asInstanceOf[...]`
+      //
+      // See SI-6611; we must *only* do this for literal vararg arrays.
+      case Apply(appMeth, List(Apply(wrapRefArrayMeth, List(arg @ StripCast(ArrayValue(_, _)))), _))
+      if wrapRefArrayMeth.symbol == Predef_wrapRefArray && appMeth.symbol == ArrayModule_genericApply =>
+        super.transform(arg)
+      case Apply(appMeth, List(elem0, Apply(wrapArrayMeth, List(rest @ ArrayValue(elemtpt, _)))))
+      if wrapArrayMeth.symbol == Predef_wrapArray(elemtpt.tpe) && appMeth.symbol == ArrayModule_apply(elemtpt.tpe) =>
+        super.transform(treeCopy.ArrayValue(rest, rest.elemtpt, elem0 :: rest.elems))
 
       case _ =>
         super.transform(tree)
@@ -644,19 +650,20 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
      * If it doesn't exist, i.e. the symbol is encountered the first time,
      * it creates a new static field definition and initialization and returns it.
      */
-    private def getSymbolStaticField(pos: Position, symname: String, rhs: Tree, tree: Tree): Symbol =
+    private def getSymbolStaticField(pos: Position, symname: String, rhs: Tree, tree: Tree): Symbol = {
       symbolsStoredAsStatic.getOrElseUpdate(symname, {
         val theTyper = typer.atOwner(tree, currentClass)
 
         // create a symbol for the static field
-        val stfieldSym = currentClass.newVariable(pos, mkTerm("symbol$"))
-          .setFlag(PRIVATE | STATIC | SYNTHETIC | FINAL)
-          .setInfo(symbolType)
+        val stfieldSym = (
+          currentClass.newVariable(mkTerm("symbol$"), pos, PRIVATE | STATIC | SYNTHETIC | FINAL)
+            setInfo SymbolClass.tpe
+        )
         currentClass.info.decls enter stfieldSym
 
         // create field definition and initialization
-        val stfieldDef = theTyper.typed { atPos(pos)(VAL(stfieldSym) === rhs) }
-        val stfieldInit = theTyper.typed { atPos(pos)(safeREF(stfieldSym) === rhs) }
+        val stfieldDef  = theTyper.typedPos(pos)(VAL(stfieldSym) === rhs)
+        val stfieldInit = theTyper.typedPos(pos)(REF(stfieldSym) === rhs)
 
         // add field definition to new defs
         newStaticMembers append stfieldDef
@@ -664,6 +671,7 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
 
         stfieldSym
       })
+    }
 
     /* finds the static ctor DefDef tree within the template if it exists. */
     private def findStaticCtor(template: Template): Option[Tree] =
@@ -675,16 +683,16 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
     /* changes the template for the class so that it contains a static constructor with symbol fields inits,
      * augments an existing static ctor if one already existed.
      */
-    private def addStaticInits(template: Template): Template =
+    private def addStaticInits(template: Template): Template = {
       if (newStaticInits.isEmpty)
         template
       else {
         val newCtor = findStaticCtor(template) match {
           // in case there already were static ctors - augment existing ones
           // currently, however, static ctors aren't being generated anywhere else
-          case Some(ctor @ DefDef(mods, name, tparams, vparamss, tpt, rhs)) =>
+          case Some(ctor @ DefDef(_,_,_,_,_,_)) =>
             // modify existing static ctor
-            val newBlock = rhs match {
+            deriveDefDef(ctor) {
               case block @ Block(stats, expr) =>
                 // need to add inits to existing block
                 treeCopy.Block(block, newStaticInits.toList ::: stats, expr)
@@ -692,18 +700,16 @@ abstract class CleanUp extends Transform with ast.TreeDSL {
                 // need to create a new block with inits and the old term
                 treeCopy.Block(term, newStaticInits.toList, term)
             }
-            treeCopy.DefDef(ctor, mods, name, tparams, vparamss, tpt, newBlock)
-          case None =>
+          case _ =>
             // create new static ctor
-            val staticCtorSym = currentClass.newConstructor(template.pos)
-                                  .setFlag(STATIC)
-                                  .setInfo(UnitClass.tpe)
-            val rhs = Block(newStaticInits.toList, Literal(()))
-            val staticCtorTree = DefDef(staticCtorSym, rhs)
-            localTyper.typed { atPos(template.pos)(staticCtorTree) }
+            val staticCtorSym  = currentClass.newStaticConstructor(template.pos)
+            val rhs            = Block(newStaticInits.toList, Literal(Constant(())))
+
+            localTyper.typedPos(template.pos)(DefDef(staticCtorSym, rhs))
         }
-        treeCopy.Template(template, template.parents, template.self, newCtor :: template.body)
+        deriveTemplate(template)(newCtor :: _)
       }
+    }
 
   } // CleanUpTransformer
 

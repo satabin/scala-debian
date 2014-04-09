@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,28 +12,25 @@ package scala.collection
 package mutable
 
 import generic._
-import collection.immutable.{List, Nil}
-import collection.Iterator
-import annotation.migration
+import scala.collection.immutable.{List, Nil}
+import scala.collection.Iterator
+import scala.annotation.migration
 
 /** Factory object for the `mutable.Stack` class.
  *
  *  $factoryInfo
  *  @define coll mutable stack
- *  @define Coll mutable.Stack
+ *  @define Coll `mutable.Stack`
  */
 object Stack extends SeqFactory[Stack] {
   class StackBuilder[A] extends Builder[A, Stack[A]] {
     val lbuff = new ListBuffer[A]
     def +=(elem: A) = { lbuff += elem; this }
-    def clear = lbuff.clear
-    def result = {
-      val lst = lbuff.result
-      new Stack(lst)
-    }
+    def clear() = lbuff.clear()
+    def result = new Stack(lbuff.result)
   }
 
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Stack[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Stack[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   def newBuilder[A]: Builder[A, Stack[A]] = new StackBuilder[A]
   val empty: Stack[Nothing] = new Stack(Nil)
 }
@@ -47,18 +44,18 @@ object Stack extends SeqFactory[Stack] {
  *  @author  Martin Odersky
  *  @version 2.8
  *  @since   1
- *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stacks"Scala's Collection Library overview"]]
+ *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stacks "Scala's Collection Library overview"]]
  *  section on `Stacks` for more information.
- *  @define Coll Stack
+ *  @define Coll `Stack`
  *  @define coll stack
  *  @define orderDependent
  *  @define orderDependentFold
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-@cloneable
 class Stack[A] private (var elems: List[A])
-extends Seq[A]
+extends AbstractSeq[A]
+   with Seq[A]
    with SeqLike[A, Stack[A]]
    with GenericTraversableTemplate[A, Stack]
    with Cloneable[Stack[A]]
@@ -77,7 +74,7 @@ extends Seq[A]
   /** The number of elements in the stack */
   override def length = elems.length
 
-  /** Retrieve n'th element from stack, where top of stack has index 0.
+  /** Retrieve `n`-th element from stack, where top of stack has index `0`.
    *
    *  This is a linear time operation.
    *
@@ -87,8 +84,7 @@ extends Seq[A]
    */
   override def apply(index: Int) = elems(index)
 
-  /** Replace element at index <code>n</code> with the new element
-   *  <code>newelem</code>.
+  /** Replace element at index `n` with the new element `newelem`.
    *
    *  This is a linear time operation.
    *
@@ -116,18 +112,13 @@ extends Seq[A]
   def push(elem1: A, elem2: A, elems: A*): this.type =
     this.push(elem1).push(elem2).pushAll(elems)
 
-  /** Push all elements in the given traversable object onto
-   *  the stack. The last element in the traversable object
-   *  will be on top of the new stack.
+  /** Push all elements in the given traversable object onto the stack. The
+   *  last element in the traversable object will be on top of the new stack.
    *
    *  @param xs the traversable object.
    *  @return the stack with the new elements on top.
    */
   def pushAll(xs: TraversableOnce[A]): this.type = { xs.seq foreach push ; this }
-
-  @deprecated("use pushAll", "2.8.0")
-  @migration(2, 8, "Stack ++= now pushes arguments on the stack from left to right.")
-  def ++=(xs: TraversableOnce[A]): this.type = pushAll(xs)
 
   /** Returns the top element of the stack. This method will not remove
    *  the element from the stack. An error is signaled if there is no
@@ -159,8 +150,8 @@ extends Seq[A]
   /** Returns an iterator over all elements on the stack. This iterator
    *  is stable with respect to state changes in the stack object; i.e.
    *  such changes will not be reflected in the iterator. The iterator
-   *  issues elements in the reversed order they were inserted into the stack
-   *  (LIFO order).
+   *  issues elements in the reversed order they were inserted into the
+   *  stack (LIFO order).
    *
    *  @return an iterator over all stack elements.
    */
@@ -183,4 +174,3 @@ extends Seq[A]
    */
   override def clone(): Stack[A] = new Stack[A](elems)
 }
-

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://www.scala-lang.org/           **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -32,6 +32,9 @@ package mutable
  *  @tparam A     type of the elements contained in this hash table.
  */
 trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashUtils[A] {
+  // Replacing Entry type parameter by abstract type member here allows to not expose to public
+  // implementation-specific entry classes such as `DefaultEntry` or `LinkedEntry`.
+  // However, I'm afraid it's too late now for such breaking change.
   import HashTable._
 
   @transient protected var _loadFactor = defaultLoadFactor
@@ -52,24 +55,45 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
    */
   @transient protected var sizemap: Array[Int] = null
 
-  protected def initialSize: Int = HashTable.initialSize
+  @transient protected var seedvalue: Int = tableSizeSeed
+
+  protected def tableSizeSeed = Integer.bitCount(table.length - 1)
+
+  /** The initial size of the hash table.
+   */
+  protected def initialSize: Int = 16
+
+  /** The initial threshold.
+   */
+  private def initialThreshold(_loadFactor: Int): Int = newThreshold(_loadFactor, initialCapacity)
+
+  private def initialCapacity = capacity(initialSize)
+
+  private def lastPopulatedIndex = {
+    var idx = table.length - 1
+    while (table(idx) == null && idx > 0)
+      idx -= 1
+
+    idx
+  }
 
   /**
-   * Initializes the collection from the input stream. `f` will be called for each key/value pair
-   * read from the input stream in the order determined by the stream. This is useful for
-   * structures where iteration order is important (e.g. LinkedHashMap).
+   * Initializes the collection from the input stream. `readEntry` will be called for each
+   * entry to be read from the input stream.
    */
-  private[collection] def init[B](in: java.io.ObjectInputStream, f: (A, B) => Entry) {
+  private[collection] def init(in: java.io.ObjectInputStream, readEntry: => Entry) {
     in.defaultReadObject
 
-    _loadFactor = in.readInt
+    _loadFactor = in.readInt()
     assert(_loadFactor > 0)
 
-    val size = in.readInt
+    val size = in.readInt()
     tableSize = 0
     assert(size >= 0)
 
-    val smDefined = in.readBoolean
+    seedvalue = in.readInt()
+
+    val smDefined = in.readBoolean()
 
     table = new Array(capacity(sizeForThreshold(_loadFactor, size)))
     threshold = newThreshold(_loadFactor, table.size)
@@ -78,34 +102,34 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
 
     var index = 0
     while (index < size) {
-      addEntry(f(in.readObject.asInstanceOf[A], in.readObject.asInstanceOf[B]))
+      addEntry(readEntry)
       index += 1
     }
   }
 
   /**
    * Serializes the collection to the output stream by saving the load factor, collection
-   * size, collection keys and collection values. `value` is responsible for providing a value
-   * from an entry.
+   * size and collection entries. `writeEntry` is responsible for writing an entry to the stream.
    *
-   * `foreach` determines the order in which the key/value pairs are saved to the stream. To
+   * `foreachEntry` determines the order in which the key/value pairs are saved to the stream. To
    * deserialize, `init` should be used.
    */
-  private[collection] def serializeTo[B](out: java.io.ObjectOutputStream, value: Entry => B) {
+  private[collection] def serializeTo(out: java.io.ObjectOutputStream, writeEntry: Entry => Unit) {
     out.defaultWriteObject
     out.writeInt(_loadFactor)
     out.writeInt(tableSize)
+    out.writeInt(seedvalue)
     out.writeBoolean(isSizeMapDefined)
-    foreachEntry { entry =>
-      out.writeObject(entry.key)
-      out.writeObject(value(entry))
-    }
+
+    foreachEntry(writeEntry)
   }
 
   /** Find entry with given key in table, null if not found.
    */
-  protected def findEntry(key: A): Entry = {
-    val h = index(elemHashCode(key))
+  protected def findEntry(key: A): Entry =
+    findEntry0(key, index(elemHashCode(key)))
+
+  private[this] def findEntry0(key: A, h: Int): Entry = {
     var e = table(h).asInstanceOf[Entry]
     while (e != null && !elemEquals(e.key, key)) e = e.next
     e
@@ -115,7 +139,10 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
    *  pre: no entry with same key exists
    */
   protected def addEntry(e: Entry) {
-    val h = index(elemHashCode(e.key))
+    addEntry0(e, index(elemHashCode(e.key)))
+  }
+
+  private[this] def addEntry0(e: Entry, h: Int) {
     e.next = table(h).asInstanceOf[Entry]
     table(h) = e
     tableSize = tableSize + 1
@@ -123,6 +150,24 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
     if (tableSize > threshold)
       resize(2 * table.length)
   }
+
+  /** Find entry with given key in table, or add new one if not found.
+   *  May be somewhat faster then `findEntry`/`addEntry` pair as it
+   *  computes entry's hash index only once.
+   *  Returns entry found in table or null.
+   *  New entries are created by calling `createNewEntry` method.
+   */
+  protected def findOrAddEntry[B](key: A, value: B): Entry = {
+    val h = index(elemHashCode(key))
+    val e = findEntry0(key, h)
+    if (e ne null) e else { addEntry0(createNewEntry(key, value), h); null }
+  }
+
+  /** Creates new entry to be immediately inserted into the hashtable.
+   *  This method is guaranteed to be called only once and in case that the entry
+   *  will be added. In other words, an implementation may be side-effecting.
+   */
+  protected def createNewEntry[B](key: A, value: B): Entry
 
   /** Remove entry from table if present.
    */
@@ -154,44 +199,39 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
 
   /** An iterator returning all entries.
    */
-  protected def entriesIterator: Iterator[Entry] = new Iterator[Entry] {
+  protected def entriesIterator: Iterator[Entry] = new AbstractIterator[Entry] {
     val iterTable = table
-    var idx = table.length - 1
-    var es = iterTable(idx).asInstanceOf[Entry]
-    scan()
+    var idx       = lastPopulatedIndex
+    var es        = iterTable(idx)
+
     def hasNext = es != null
     def next() = {
       val res = es
       es = es.next
-      scan()
-      res
-    }
-    def scan() {
       while (es == null && idx > 0) {
         idx = idx - 1
-        es = iterTable(idx).asInstanceOf[Entry]
+        es = iterTable(idx)
       }
+      res.asInstanceOf[Entry]
     }
   }
 
-  /*
-   * We should implement this as a primitive operation over the underlying array, but it can
-   * cause a behaviour change in edge cases where:
-   * - Someone modifies a map during iteration
-   * - The insertion point is close to the iteration point.
-   *
-   * The reason this happens is that the iterator prefetches the following element before
-   * returning from next (to simplify the implementation of hasNext) while the natural
-   * implementation of foreach does not.
-   *
-   * It should be mentioned that modifying a map during iteration leads to unpredictable
-   * results with either implementation.
-   */
-  protected final def foreachEntry[C](f: Entry => C) { entriesIterator.foreach(f) }
+  /** Avoid iterator for a 2x faster traversal. */
+  protected def foreachEntry[U](f: Entry => U) {
+    val iterTable = table
+    var idx       = lastPopulatedIndex
+    var es        = iterTable(idx)
 
-  /** An iterator returning all entries */
-  @deprecated("use entriesIterator instead", "2.8.0")
-  protected def entries: Iterator[Entry] = entriesIterator
+    while (es != null) {
+      f(es.asInstanceOf[Entry])
+      es = es.next
+
+      while (es == null && idx > 0) {
+        idx -= 1
+        es = iterTable(idx)
+      }
+    }
+  }
 
   /** Remove all entries from table
    */
@@ -311,7 +351,7 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
   // this is of crucial importance when populating the table in parallel
   protected final def index(hcode: Int) = {
     val ones = table.length - 1
-    val improved = improve(hcode)
+    val improved = improve(hcode, seedvalue)
     val shifted = (improved >> (32 - java.lang.Integer.bitCount(ones))) & ones
     shifted
   }
@@ -322,6 +362,7 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
       table = c.table
       tableSize = c.tableSize
       threshold = c.threshold
+      seedvalue = c.seedvalue
       sizemap = c.sizemap
     }
     if (alwaysInitSizeMap && sizemap == null) sizeMapInitAndRebuild
@@ -332,6 +373,7 @@ trait HashTable[A, Entry >: Null <: HashEntry[A, Entry]] extends HashTable.HashU
     table,
     tableSize,
     threshold,
+    seedvalue,
     sizemap
   )
 }
@@ -342,19 +384,9 @@ private[collection] object HashTable {
   private[collection] final def defaultLoadFactor: Int = 750 // corresponds to 75%
   private[collection] final def loadFactorDenum = 1000;
 
-  /** The initial size of the hash table.
-   */
-  private[collection] final def initialSize: Int = 16
-
-  /** The initial threshold.
-   */
-  private[collection] final def initialThreshold(_loadFactor: Int): Int = newThreshold(_loadFactor, initialCapacity)
-
-  private[collection] final def initialCapacity = capacity(initialSize)
-
   private[collection] final def newThreshold(_loadFactor: Int, size: Int) = ((size.toLong * _loadFactor) / loadFactorDenum).toInt
 
-  private[collection] final def sizeForThreshold(_loadFactor: Int, thr: Int) = thr * loadFactorDenum / _loadFactor
+  private[collection] final def sizeForThreshold(_loadFactor: Int, thr: Int) = ((thr.toLong * loadFactorDenum) / _loadFactor).toInt
 
   private[collection] final def capacity(expectedSize: Int) = if (expectedSize == 0) 1 else powerOfTwo(expectedSize)
 
@@ -365,7 +397,7 @@ private[collection] object HashTable {
 
     protected def elemHashCode(key: KeyType) = key.##
 
-    protected final def improve(hcode: Int) = {
+    protected final def improve(hcode: Int, seed: Int) = {
       /* Murmur hash
        *  m = 0x5bd1e995
        *  r = 24
@@ -391,12 +423,7 @@ private[collection] object HashTable {
        *
        * For performance reasons, we avoid this improvement.
        * */
-      var i = hcode * 0x9e3775cd
-      i = java.lang.Integer.reverseBytes(i)
-      i * 0x9e3775cd
-      // a slower alternative for byte reversal:
-      // i = (i << 16) | (i >> 16)
-      // i = ((i >> 8) & 0x00ff00ff) | ((i << 8) & 0xff00ff00)
+      val i= scala.util.hashing.byteswap32(hcode)
 
       /* Jenkins hash
        * for range 0-10000, output has the msb set to zero */
@@ -417,6 +444,11 @@ private[collection] object HashTable {
       // h = h ^ (h >>> 14)
       // h = h + (h << 4)
       // h ^ (h >>> 10)
+
+      // the rest of the computation is due to SI-5293
+      val rotation = seed % 32
+      val rotated = (i >>> rotation) | (i << (32 - rotation))
+      rotated
     }
   }
 
@@ -439,9 +471,10 @@ private[collection] object HashTable {
     val table: Array[HashEntry[A, Entry]],
     val tableSize: Int,
     val threshold: Int,
+    val seedvalue: Int,
     val sizemap: Array[Int]
   ) {
-    import collection.DebugUtils._
+    import scala.collection.DebugUtils._
     private[collection] def debugInformation = buildString {
       append =>
       append("Hash table contents")
@@ -449,6 +482,7 @@ private[collection] object HashTable {
       append("Table: [" + arrayString(table, 0, table.length) + "]")
       append("Table size: " + tableSize)
       append("Load factor: " + loadFactor)
+      append("Seedvalue: " + seedvalue)
       append("Threshold: " + threshold)
       append("Sizemap: [" + arrayString(sizemap, 0, sizemap.length) + "]")
     }

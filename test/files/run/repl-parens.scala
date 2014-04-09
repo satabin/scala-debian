@@ -11,7 +11,7 @@ object Test extends ReplTest {
 5 ;   (  (2 + 2 )  ) ; ((5))
 (((2 + 2)), ((2 + 2)))
 (((2 + 2)), ((2 + 2)), 2)
-((((2 + 2)), ((2 + 2)), 2).productIterator ++ Iterator(3) mkString)
+(((((2 + 2)), ((2 + 2)), 2).productIterator ++ Iterator(3)).mkString)
 
 55 ; ((2 + 2)) ; (1, 2, 3)
 55 ; (x: Int) => x + 1 ; () => ((5))
@@ -22,6 +22,8 @@ object Test extends ReplTest {
 
 def foo(x: Int)(y: Int)(z: Int) = x+y+z
 foo(5)(10)(15)+foo(5)(10)(15)
+
+List(1) ++ List('a')
 
   """.trim
 }

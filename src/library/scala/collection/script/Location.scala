@@ -1,19 +1,16 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.collection
 package script
 
-
-/** Class <code>Location</code> describes locations in messages implemented by
- *  class <a href="Message.html" target="contentFrame"><code>Message</code></a>.
+/** Class `Location` describes locations in messages implemented by
+ *  class [[scala.collection.script.Message]].
  *
  *  @author  Matthias Zenger
  *  @version 1.0, 10/05/2004

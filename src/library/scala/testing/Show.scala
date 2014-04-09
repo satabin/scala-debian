@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,35 +10,35 @@
 
 package scala.testing
 
-/** Classes inheriting trait `Show` can test their member methods
- *  using the notattion <code>meth(arg<sub>1</sub>, ..., arg<sub>n</sub>)</code>,
- *  where `meth` is the name of the method and
- *  <code>arg<sub>1</sub>,...,arg<sub>n</sub></code> are the arguments.
+/** Classes inheriting trait `Show` can test their member methods using the
+ *  notation `meth(arg,,1,,, ..., arg,,n,,)`, where `meth` is the name of
+ *  the method and `arg,,1,,,...,arg,,n,,` are the arguments.
  *
  *  The only difference to a normal method call is the leading quote
- *  character (`'`). A quoted method call like the one above will produces a
- *  legible diagnostic to be printed on [[scala.Console]].
+ *  character (`'`). A quoted method call like the one above will produces
+ *  a legible diagnostic to be printed on [[scala.Console]].
  *
  *  It is of the form
- *  <pre>
- *    meth(arg<sub>1</sub>, ..., arg<sub>n</sub>)  gives  &lt;result&gt;</pre>
  *
- *  where <code>&lt;result&gt;</code> is the result of evaluating the call.
+ *    `meth(arg,,1,,, ..., arg,,n,,)`  gives  `&lt;result&gt;`
+ *
+ *  where `&lt;result&gt;` is the result of evaluating the call.
  *
  */
+@deprecated("This class will be removed.", "2.10.0")
 trait Show {
 
-  /** The result class of wrapper `symApply`.
+  /** An implicit definition that adds an apply method to Symbol which forwards to `test`. 
    *  Prints out diagnostics of method applications.
    */
-  class SymApply(f: Symbol) {
+  implicit class SymApply(f: Symbol) {
     def apply[A](args: A*) {
       println(test(f, args: _*))
     }
   }
 
-  /** An implicit definition that adds an apply method to Symbol which forwards to `test`. */
-  implicit def symApply(sym: Symbol) = new SymApply(sym)
+  @deprecated("use SymApply instead", "2.10.0")
+  def symApply(sym: Symbol): SymApply = new SymApply(sym)
 
   /** Apply method with name of given symbol `f` to given arguments and return
    *  a result diagnostics.

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,7 +8,6 @@
 
 package scala.collection
 
-import annotation.bridge
 
 /** A template trait for sets which may possibly
  *  have their operations implemented in parallel.
@@ -51,9 +50,6 @@ extends GenIterableLike[A, Repr]
    */
   def intersect(that: GenSet[A]): Repr = this filter that
 
-  @bridge
-  def intersect(that: Set[A]): Repr = intersect(that: GenSet[A])
-
   /** Computes the intersection between this set and another set.
    *
    *  '''Note:'''  Same as `intersect`.
@@ -62,9 +58,6 @@ extends GenIterableLike[A, Repr]
    *  set and in the given set `that`.
    */
   def &(that: GenSet[A]): Repr = this intersect that
-
-  @bridge
-  def &(that: Set[A]): Repr = &(that: GenSet[A])
 
   /** Computes the union between of set and another set.
    *
@@ -83,9 +76,6 @@ extends GenIterableLike[A, Repr]
    */
   def | (that: GenSet[A]): Repr = this union that
 
-  @bridge
-  def | (that: Set[A]): Repr = | (that: GenSet[A])
-
   /** Computes the difference of this set and another set.
    *
    *  @param that the set of elements to exclude.
@@ -103,9 +93,6 @@ extends GenIterableLike[A, Repr]
    */
   def &~(that: GenSet[A]): Repr = this diff that
 
-  @bridge
-  def &~(that: Set[A]): Repr = &~(that: GenSet[A])
-
   /** Tests whether this set is a subset of another set.
    *
    *  @param that  the set to test.
@@ -113,9 +100,6 @@ extends GenIterableLike[A, Repr]
    *              every element of this set is also an element of `that`.
    */
   def subsetOf(that: GenSet[A]): Boolean = this forall that
-
-  @bridge
-  def subsetOf(that: Set[A]): Boolean = subsetOf(that: GenSet[A])
 
   /** Compares this set with another object for equality.
    *
@@ -143,6 +127,5 @@ extends GenIterableLike[A, Repr]
   // Calling map on a set drops duplicates: any hashcode collisions would
   // then be dropped before they can be added.
   // Hash should be symmetric in set entries, but without trivial collisions.
-  override def hashCode() = util.MurmurHash.symmetricHash(seq, Set.hashSeed)
-
+  override def hashCode()= scala.util.hashing.MurmurHash3.setHash(seq)
 }

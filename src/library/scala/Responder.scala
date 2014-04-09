@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -20,25 +20,18 @@ package scala
  */
 object Responder {
 
-  /** Creates a responder that answer continuations with the constant
-   *  <code>a</code>.
-   *
-   *  @param x ...
-   *  @return ...
+  /** Creates a responder that answer continuations with the constant `a`.
    */
   def constant[A](x: A) = new Responder[A] {
     def respond(k: A => Unit) = k(x)
   }
 
-  /** Executes <code>x</code> and returns <code>true</code>, useful
-   *  as syntactic convenience in for comprehensions.
-   *
-   *  @param x ...
-   *  @return ...
+  /** Executes `x` and returns `'''true'''`, useful as syntactic
+   *  convenience in for comprehensions.
    */
   def exec[A](x: => Unit): Boolean = { x; true }
 
-  /** runs a responder, returning an optional result
+  /** Runs a responder, returning an optional result.
   */
   def run[A](r: Responder[A]): Option[A] = {
     var result: Option[A] = None
@@ -47,12 +40,11 @@ object Responder {
   }
 
   def loop[A](r: Responder[Unit]): Responder[Nothing] =
-    for (_ <- r; val y <- loop(r)) yield y
+    for (_ <- r; y <- loop(r)) yield y
 
   def loopWhile[A](cond: => Boolean)(r: Responder[Unit]): Responder[Unit] =
-    if (cond) for (_ <- r; val y <- loopWhile(cond)(r)) yield y
+    if (cond) for (_ <- r; y <- loopWhile(cond)(r)) yield y
     else constant(())
-
 }
 
 /** Instances of responder are the building blocks of small programs
@@ -92,4 +84,3 @@ abstract class Responder[+A] extends Serializable {
 
   override def toString = "Responder"
 }
-

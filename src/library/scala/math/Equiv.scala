@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -29,7 +29,7 @@ import java.util.Comparator
  *  @since 2.7
  */
 
-trait Equiv[T] {
+trait Equiv[T] extends Any with Serializable {
   /** Returns `true` iff `x` is equivalent to `y`.
    */
   def equiv(x: T, y: T): Boolean

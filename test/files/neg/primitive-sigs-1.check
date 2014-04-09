@@ -1,6 +1,6 @@
-A_3.scala:3: error: type mismatch;
+B.scala:3: error: type mismatch;
  found   : Bippy
- required: AC[java.lang.Integer]
-    J_2.f(new Bippy())
-          ^
+ required: AC[Integer]
+    J.f(new Bippy())
+        ^
 one error found

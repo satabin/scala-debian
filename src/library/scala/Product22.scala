@@ -17,23 +17,23 @@ object Product22 {
 /** Product22 is a cartesian product of 22 components.
  *  @since 2.3
  */
-trait Product22[+T1, +T2, +T3, +T4, +T5, +T6, +T7, +T8, +T9, +T10, +T11, +T12, +T13, +T14, +T15, +T16, +T17, +T18, +T19, +T20, +T21, +T22] extends Product {
+trait Product22[+T1, +T2, +T3, +T4, +T5, +T6, +T7, +T8, +T9, +T10, +T11, +T12, +T13, +T14, +T15, +T16, +T17, +T18, +T19, +T20, +T21, +T22] extends Any with Product {
   /** The arity of this product.
    *  @return 22
    */
   override def productArity = 22
 
-
+  
   /** Returns the n-th projection of this product if 0 < n <= productArity,
    *  otherwise throws an `IndexOutOfBoundsException`.
    *
    *  @param n number of the projection to be returned
-   *  @return  same as `._(n+1)`, for example `productElement(1)` is the same as `._1`.
+   *  @return  same as `._(n+1)`, for example `productElement(0)` is the same as `._1`.
    *  @throws  IndexOutOfBoundsException
    */
 
   @throws(classOf[IndexOutOfBoundsException])
-  override def productElement(n: Int) = n match {
+  override def productElement(n: Int) = n match { 
     case 0 => _1
     case 1 => _2
     case 2 => _3

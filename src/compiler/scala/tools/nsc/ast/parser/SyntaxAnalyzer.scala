@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
@@ -24,7 +24,7 @@ abstract class SyntaxAnalyzer extends SubComponent with Parsers with MarkupParse
       import global._
       informProgress("parsing " + unit)
       unit.body =
-        if (unit.source.file.name.endsWith(".java")) new JavaUnitParser(unit).parse()
+        if (unit.isJava) new JavaUnitParser(unit).parse()
         else if (reporter.incompleteHandled) new UnitParser(unit).parse()
         else new UnitParser(unit).smartParse()
 

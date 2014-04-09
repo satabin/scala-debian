@@ -1,12 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
-
 
 package scala.xml
 
@@ -17,8 +15,7 @@ import java.io.{ InputStream, Reader, StringReader, Writer }
 import java.nio.channels.Channels
 import scala.util.control.Exception.ultimately
 
-object Source
-{
+object Source {
   def fromFile(file: File)              = new InputSource(new FileInputStream(file))
   def fromFile(fd: FileDescriptor)      = new InputSource(new FileInputStream(fd))
   def fromFile(name: String)            = new InputSource(new FileInputStream(name))
@@ -28,17 +25,36 @@ object Source
   def fromSysId(sysID: String)          = new InputSource(sysID)
   def fromString(string: String)        = fromReader(new StringReader(string))
 }
+
+/**
+ * Governs how empty elements (i.e. those without child elements) should be serialized.
+ */
+object MinimizeMode extends Enumeration {
+  /** Minimize empty tags if they were originally empty when parsed, or if they were constructed
+   *  with [[scala.xml.Elem]]`#minimizeEmpty` == true
+   */
+  val Default = Value
+
+  /** Always minimize empty tags.  Note that this may be problematic for XHTML, in which
+   * case [[scala.xml.Xhtml]]`#toXhtml` should be used instead.
+   */
+  val Always = Value
+
+  /** Never minimize empty tags.
+   */
+  val Never = Value
+}
+
 import Source._
 
-/** The object <code>XML</code> provides constants, and functions to load
+/** The object `XML` provides constants, and functions to load
  *  and save XML elements. Use this when data binding is not desired, i.e.
- *  when XML is handled using <code>Symbol</code> nodes.
+ *  when XML is handled using `Symbol` nodes.
  *
  *  @author  Burak Emir
  *  @version 1.0, 25/04/2005
  */
-object XML extends XMLLoader[Elem]
-{
+object XML extends XMLLoader[Elem] {
   val xml       = "xml"
   val xmlns     = "xmlns"
   val namespace = "http://www.w3.org/XML/1998/namespace"
@@ -50,14 +66,6 @@ object XML extends XMLLoader[Elem]
   /** Returns an XMLLoader whose load* methods will use the supplied SAXParser. */
   def withSAXParser(p: SAXParser): XMLLoader[Elem] =
     new XMLLoader[Elem] { override val parser: SAXParser = p }
-
-  @deprecated("Use save() instead", "2.8.0")
-  final def saveFull(filename: String, node: Node, xmlDecl: Boolean, doctype: dtd.DocType): Unit =
-    save(filename, node, encoding, xmlDecl, doctype)
-
-  @deprecated("Use save() instead", "2.8.0")
-  final def saveFull(filename: String, node: Node, enc: String, xmlDecl: Boolean, doctype: dtd.DocType): Unit =
-    save(filename, node, enc, xmlDecl, doctype)
 
   /** Saves a node to a file with given filename using given encoding
    *  optionally with xmldecl and doctype declaration.
@@ -89,14 +97,14 @@ object XML extends XMLLoader[Elem]
    *
    *  @param w        the writer
    *  @param node     the xml node we want to write
-   *  @param enc      the string to be used in <code>xmlDecl</code>
+   *  @param enc      the string to be used in `xmlDecl`
    *  @param xmlDecl  if true, write xml declaration
    *  @param doctype  if not null, write doctype declaration
    */
-  final def write(w: java.io.Writer, node: Node, enc: String, xmlDecl: Boolean, doctype: dtd.DocType) {
+  final def write(w: java.io.Writer, node: Node, enc: String, xmlDecl: Boolean, doctype: dtd.DocType, minimizeTags: MinimizeMode.Value = MinimizeMode.Default) {
     /* TODO: optimize by giving writer parameter to toXML*/
     if (xmlDecl) w.write("<?xml version='1.0' encoding='" + enc + "'?>\n")
     if (doctype ne null) w.write( doctype.toString() + "\n")
-    w.write(Utility.toXML(node).toString)
+    w.write(Utility.serialize(node, minimizeTags = minimizeTags).toString)
   }
 }

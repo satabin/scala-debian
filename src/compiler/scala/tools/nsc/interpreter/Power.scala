@@ -1,68 +1,54 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
 package scala.tools.nsc
 package interpreter
 
-import scala.reflect.{ NameTransformer, AnyValManifest }
 import scala.collection.{ mutable, immutable }
 import scala.util.matching.Regex
-import scala.tools.nsc.util.{ BatchSourceFile }
+import scala.reflect.internal.util.{ BatchSourceFile }
 import session.{ History }
 import scala.io.Codec
 import java.net.{ URL, MalformedURLException }
 import io.{ Path }
+import scala.language.implicitConversions
+import scala.reflect.runtime.{universe => ru}
+import scala.reflect.{ClassTag, classTag}
 
-trait SharesGlobal {
-  type GlobalType <: Global
-  val global: GlobalType
+/** Collecting some power mode examples.
 
-  // This business gets really old:
-  //
-  // found   : power.intp.global.Symbol
-  // required: global.Symbol
-  //
-  // Have tried many ways to cast it aside, this is the current winner.
-  // Todo: figure out a way to abstract over all the type members.
-  type AnySymbol   = Global#Symbol
-  type AnyType     = Global#Type
-  type AnyName     = Global#Name
-  type AnyTree     = Global#Tree
+scala> trait F[@specialized(Int) T] { def f: T = ??? }
+defined trait F
 
-  type Symbol   = global.Symbol
-  type Type     = global.Type
-  type Name     = global.Name
-  type Tree     = global.Tree
+scala> trait G[@specialized(Long, Int) T] extends F[T] { override def f: T = super.f }
+defined trait G
 
-  implicit def upDependentSymbol(x: AnySymbol): Symbol = x.asInstanceOf[Symbol]
-  implicit def upDependentType(x: AnyType): Type = x.asInstanceOf[Type]
-  implicit def upDependentName(x: AnyName): Name = x.asInstanceOf[Name]
-  implicit def upDependentTree(x: AnyTree): Tree = x.asInstanceOf[Tree]
+scala> changesAfterEachPhase(intp("G").info.members filter (_.name.toString contains "super")) >
+Gained after  1/parser {
+  method super$f
 }
 
-object Power {
-  def apply(intp: IMain): Power = apply(null, intp)
-  def apply(repl: ILoop): Power = apply(repl, repl.intp)
-  def apply(repl: ILoop, intp: IMain): Power =
-    new Power(repl, intp) {
-      type GlobalType = intp.global.type
-      final val global: intp.global.type = intp.global
-    }
+Gained after 12/specialize {
+  method super$f$mcJ$sp
+  method super$f$mcI$sp
 }
+
+Lost after 18/flatten {
+  method super$f$mcJ$sp
+  method super$f$mcI$sp
+  method super$f
+}
+*/
 
 /** A class for methods to be injected into the intp in power mode.
  */
-abstract class Power(
-  val repl: ILoop,
-  val intp: IMain
-) extends SharesGlobal {
-  import intp.{
-    beQuietDuring, typeOfExpression, getCompilerClass, getCompilerModule,
-    interpret, parse
-  }
-  import global._
+class Power[ReplValsImpl <: ReplVals : ru.TypeTag: ClassTag](val intp: IMain, replVals: ReplValsImpl) {
+  import intp.{ beQuietDuring, typeOfExpression, interpret, parse }
+  import intp.global._
+  import definitions.{ compilerTypeFromTag, compilerSymbolFromTag}
+  import rootMirror.{ getClassIfDefined, getModuleIfDefined }
 
   abstract class SymSlurper {
     def isKeep(sym: Symbol): Boolean
@@ -76,7 +62,7 @@ abstract class Power(
     def discarded = seen.size - keep.size
 
     def members(x: Symbol): List[Symbol] =
-      if (x.rawInfo.isComplete) x.info.members
+      if (x.rawInfo.isComplete) x.info.members.toList
       else Nil
 
     var lastCount = -1
@@ -107,10 +93,7 @@ abstract class Power(
     }
   }
 
-  class PackageSlurper(pkgName: String) extends SymSlurper {
-    val pkgSymbol = getCompilerModule(pkgName)
-    val modClass  = pkgSymbol.moduleClass
-
+  class PackageSlurper(packageClass: Symbol) extends SymSlurper {
     /** Looking for dwindling returns */
     def droppedEnough() = unseenHistory.size >= 4 && {
       unseenHistory takeRight 4 sliding 2 forall { it =>
@@ -121,29 +104,37 @@ abstract class Power(
 
     def isRecur(sym: Symbol)  = true
     def isIgnore(sym: Symbol) = sym.isAnonOrRefinementClass || (sym.name.toString contains "$mc")
-    def isKeep(sym: Symbol)   = sym.hasTransOwner(modClass)
+    def isKeep(sym: Symbol)   = sym.hasTransOwner(packageClass)
     def isFinished()          = droppedEnough()
-    def slurp()               = apply(modClass)
+    def slurp()               = {
+      if (packageClass.isPackageClass)
+        apply(packageClass)
+      else {
+        repldbg("Not a package class! " + packageClass)
+        Set()
+      }
+    }
   }
 
   private def customBanner = replProps.powerBanner.option flatMap (f => io.File(f).safeSlurp())
   private def customInit   = replProps.powerInitCode.option flatMap (f => io.File(f).safeSlurp())
 
   def banner = customBanner getOrElse """
-    |** Power User mode enabled - BEEP BOOP SPIZ **
+    |** Power User mode enabled - BEEP WHIR GYVE **
     |** :phase has been set to 'typer'.          **
     |** scala.tools.nsc._ has been imported      **
-    |** global._ and definitions._ also imported **
-    |** Try  :help,  vals.<tab>,  power.<tab>    **
+    |** global._, definitions._ also imported    **
+    |** Try  :help, :vals, power.<tab>           **
   """.stripMargin.trim
 
   private def initImports = List(
     "scala.tools.nsc._",
     "scala.collection.JavaConverters._",
-    "global.{ error => _, _ }",
+    "intp.global.{ error => _, _ }",
     "definitions.{ getClass => _, _ }",
-    "power.Implicits._",
-    "power.rutil._"
+    "power.rutil._",
+    "replImplicits._",
+    "treedsl.CODE._"
   )
 
   def init = customInit match {
@@ -155,90 +146,106 @@ abstract class Power(
    */
   def unleash(): Unit = beQuietDuring {
     // First we create the ReplVals instance and bind it to $r
-    intp.bind("$r", new ReplVals(repl))
+    intp.bind("$r", replVals)
     // Then we import everything from $r.
     intp interpret ("import " + intp.pathToTerm("$r") + "._")
     // And whatever else there is to do.
     init.lines foreach (intp interpret _)
   }
+  def valsDescription: String = {
+    def to_str(m: Symbol) = "%12s %s".format(
+      m.decodedName, "" + elimRefinement(m.accessedOrSelf.tpe) stripPrefix "scala.tools.nsc.")
+
+    ( rutil.info[ReplValsImpl].membersDeclared
+        filter (m => m.isPublic && !m.hasModuleFlag && !m.isConstructor)
+        sortBy (_.decodedName)
+           map to_str
+      mkString ("Name and type of values imported into the repl in power mode.\n\n", "\n", "")
+    )
+  }
 
   trait LowPriorityInternalInfo {
-    implicit def apply[T: Manifest] : InternalInfo[T] = new InternalInfo[T](None)
+    implicit def apply[T: ru.TypeTag : ClassTag] : InternalInfo[T] = new InternalInfo[T](None)
   }
   object InternalInfo extends LowPriorityInternalInfo { }
 
+  /** Now dealing with the problem of acidentally calling a method on Type
+   *  when you're holding a Symbol and seeing the Symbol converted to the
+   *  type of Symbol rather than the type of the thing represented by the
+   *  symbol, by only implicitly installing one method, "?", and the rest
+   *  of the conveniences exist on that wrapper.
+   */
+  trait LowPriorityInternalInfoWrapper {
+    implicit def apply[T: ru.TypeTag : ClassTag] : InternalInfoWrapper[T] = new InternalInfoWrapper[T](None)
+  }
+  object InternalInfoWrapper extends LowPriorityInternalInfoWrapper {
+
+  }
+  class InternalInfoWrapper[T: ru.TypeTag : ClassTag](value: Option[T] = None) {
+    def ? : InternalInfo[T] = new InternalInfo[T](value)
+  }
+
   /** Todos...
-   *    translate manifest type arguments into applied types
+   *    translate tag type arguments into applied types
    *    customizable symbol filter (had to hardcode no-spec to reduce noise)
    */
-  class InternalInfo[T: Manifest](value: Option[T] = None) {
-    // Decided it was unwise to have implicit conversions via commonly
-    // used type/symbol methods, because it's too easy to e.g. call
-    // "x.tpe" where x is a Type, and rather than failing you get the
-    // Type representing Types#Type (or Manifest, or whatever.)
-    private def tpe    = tpe_
-    private def symbol = symbol_
-    private def name   = name_
+  class InternalInfo[T](value: Option[T] = None)(implicit typeEvidence: ru.TypeTag[T], runtimeClassEvidence: ClassTag[T]) {
+    private def newInfo[U: ru.TypeTag : ClassTag](value: U): InternalInfo[U] = new InternalInfo[U](Some(value))
+    private def isSpecialized(s: Symbol) = s.name.toString contains "$mc"
+    private def isImplClass(s: Symbol)   = s.name.toString endsWith "$class"
 
-    // Would love to have stuff like existential types working,
-    // but very unfortunately those manifests just stuff the relevant
-    // information into the toString method.  Boo.
-    private def manifestToType(m: Manifest[_]): Type = m match {
-      case x: AnyValManifest[_] =>
-        getCompilerClass("scala." + x).tpe
-      case _                             =>
-        val name = m.erasure.getName
-        if (name endsWith "$") getCompilerModule(name dropRight 1).tpe
-        else {
-          val sym  = getCompilerClass(name)
-          val args = m.typeArguments
+    /** Standard noise reduction filter. */
+    def excludeMember(s: Symbol) = (
+         isSpecialized(s)
+      || isImplClass(s)
+      || s.isAnonOrRefinementClass
+      || s.isAnonymousFunction
+    )
+    def symbol      = compilerSymbolFromTag(tag)
+    def tpe         = compilerTypeFromTag(tag)
+    def name        = symbol.name
+    def companion   = symbol.companionSymbol
+    def info        = symbol.info
+    def moduleClass = symbol.moduleClass
+    def owner       = symbol.owner
+    def owners      = symbol.ownerChain drop 1
+    def signature   = symbol.defString
 
-          if (args.isEmpty) sym.tpe
-          else typeRef(NoPrefix, sym, args map manifestToType)
-        }
-    }
+    def decls         = info.decls
+    def declsOverride = membersDeclared filter (_.isOverride)
+    def declsOriginal = membersDeclared filterNot (_.isOverride)
 
-    def symbol_ : Symbol = getCompilerClass(erasure.getName)
-    def tpe_ : Type      = manifestToType(man)
-    def name_ : Name     = symbol.name
-    def companion        = symbol.companionSymbol
-    def info             = symbol.info
-    def module           = symbol.moduleClass
-    def owner            = symbol.owner
-    def owners           = symbol.ownerChain drop 1
-    def defn             = symbol.defString
+    def members           = membersUnabridged filterNot excludeMember
+    def membersUnabridged = tpe.members.toList
+    def membersDeclared   = members filterNot excludeMember
+    def membersInherited  = members filterNot (membersDeclared contains _)
+    def memberTypes       = members filter (_.name.isTypeName)
+    def memberMethods     = members filter (_.isMethod)
 
-    def declares  = members filter (_.owner == symbol)
-    def inherits  = members filterNot (_.owner == symbol)
-    def types     = members filter (_.name.isTypeName)
-    def methods   = members filter (_.isMethod)
-    def overrides = declares filter (_.isOverride)
-    def inPackage = owners find (x => x.isPackageClass || x.isPackage) getOrElse definitions.RootPackage
+    def pkg             = symbol.enclosingPackage
+    def pkgName         = pkg.fullName
+    def pkgClass        = symbol.enclosingPackageClass
+    def pkgMembers      = pkg.info.members filterNot excludeMember
+    def pkgClasses      = pkgMembers filter (s => s.isClass && s.isDefinedInPackage)
+    def pkgSymbols      = new PackageSlurper(pkgClass).slurp() filterNot excludeMember
 
-    def man        = manifest[T]
-    def erasure    = man.erasure
-    def members    = tpe.members filterNot (_.name.toString contains "$mc")
-    def allMembers = tpe.members
-    def bts        = info.baseTypeSeq.toList
-    def btsmap     = bts map (x => (x, x.decls.toList)) toMap
-    def pkgName    = Option(erasure.getPackage) map (_.getName)
-    def pkg        = pkgName map getCompilerModule getOrElse NoSymbol
-    def pkgmates   = pkg.tpe.members
-    def pkgslurp   = pkgName match {
-      case Some(name) => new PackageSlurper(name) slurp()
-      case _          => Set()
-    }
-    def ?         = this
+    def tag            = typeEvidence
+    def runtimeClass   = runtimeClassEvidence.runtimeClass
+    def shortClass     = runtimeClass.getName split "[$.]" last
 
-    def whoHas(name: String) = bts filter (_.decls exists (_.name.toString == name))
-    def <:<[U: Manifest](other: U) = tpe <:< InternalInfo[U].tpe
-    def lub[U: Manifest](other: U) = global.lub(List(tpe, InternalInfo[U].tpe))
-    def glb[U: Manifest](other: U) = global.glb(List(tpe, InternalInfo[U].tpe))
+    def baseClasses                    = tpe.baseClasses
+    def baseClassDecls                 = mapFrom(baseClasses)(_.info.decls.toList.sortBy(_.name))
+    def ancestors                      = baseClasses drop 1
+    def ancestorDeclares(name: String) = ancestors filter (_.info member newTermName(name) ne NoSymbol)
+    def baseTypes                      = tpe.baseTypeSeq.toList
 
-    def shortClass = erasure.getName split "[$.]" last
+    def <:<[U: ru.TypeTag : ClassTag](other: U) = tpe <:< newInfo(other).tpe
+    def lub[U: ru.TypeTag : ClassTag](other: U) = intp.global.lub(List(tpe, newInfo(other).tpe))
+    def glb[U: ru.TypeTag : ClassTag](other: U) = intp.global.glb(List(tpe, newInfo(other).tpe))
+
     override def toString = value match {
       case Some(x)  => "%s (%s)".format(x, shortClass)
-      case _        => erasure.getName
+      case _        => runtimeClass.getName
     }
   }
 
@@ -317,10 +324,11 @@ abstract class Power(
   }
 
   class RichReplString(s: String) {
+    // make an url out of the string
     def u: URL = (
-      if (s contains ":") new java.net.URL(s)
-      else if (new java.io.File(s) exists) new java.io.File(s).toURI.toURL
-      else new java.net.URL("http://" + s)
+      if (s contains ":") new URL(s)
+      else if (new JFile(s) exists) new JFile(s).toURI.toURL
+      else new URL("http://" + s)
     )
   }
   class RichInputStream(in: InputStream)(implicit codec: Codec) {
@@ -328,11 +336,20 @@ abstract class Power(
     def slurp(): String       = io.Streamable.slurp(in)
     def <<(): String          = slurp()
   }
+  class RichReplURL(url: URL)(implicit codec: Codec) {
+    def slurp(): String = io.Streamable.slurp(url)
+  }
+  class RichSymbolList(syms: List[Symbol]) {
+    def sigs  = syms map (_.defString)
+    def infos = syms map (_.info)
+  }
 
-  protected trait Implicits1 {
+  trait Implicits1 {
     // fallback
     implicit def replPrinting[T](x: T)(implicit pretty: Prettifier[T] = Prettifier.default[T]) =
       new SinglePrettifierClass[T](x)
+
+    implicit def liftToTypeName(s: String): TypeName = newTypeName(s)
   }
   trait Implicits2 extends Implicits1 {
     class RichSymbol(sym: Symbol) {
@@ -345,26 +362,31 @@ abstract class Power(
         else if (s1 isLess s2) -1
         else 1
     }
-    implicit lazy val powerNameOrdering: Ordering[Name]     = Ordering[String] on (_.toString)
     implicit lazy val powerSymbolOrdering: Ordering[Symbol] = Ordering[Name] on (_.name)
     implicit lazy val powerTypeOrdering: Ordering[Type]     = Ordering[Symbol] on (_.typeSymbol)
 
-    implicit def replInternalInfo[T: Manifest](x: T): InternalInfo[T] = new InternalInfo[T](Some(x))
+    implicit def replInternalInfo[T: ru.TypeTag : ClassTag](x: T): InternalInfoWrapper[T] = new InternalInfoWrapper[T](Some(x))
     implicit def replEnhancedStrings(s: String): RichReplString = new RichReplString(s)
     implicit def replMultiPrinting[T: Prettifier](xs: TraversableOnce[T]): MultiPrettifierClass[T] =
       new MultiPrettifierClass[T](xs.toSeq)
     implicit def replPrettifier[T] : Prettifier[T] = Prettifier.default[T]
     implicit def replTypeApplication(sym: Symbol): RichSymbol = new RichSymbol(sym)
+
     implicit def replInputStream(in: InputStream)(implicit codec: Codec) = new RichInputStream(in)
-    implicit def replInputStreamURL(url: URL)(implicit codec: Codec) = new RichInputStream(url.openStream())
+    implicit def replEnhancedURLs(url: URL)(implicit codec: Codec): RichReplURL = new RichReplURL(url)(codec)
+
+    implicit def liftToTermName(s: String): TermName = newTermName(s)
+    implicit def replListOfSymbols(xs: List[Symbol]) = new RichSymbolList(xs)
   }
-  object Implicits extends Implicits2 { }
 
   trait ReplUtilities {
-    def module[T: Manifest] = getCompilerModule(manifest[T].erasure.getName stripSuffix "$")
-    def clazz[T: Manifest] = getCompilerClass(manifest[T].erasure.getName)
-    def info[T: Manifest] = InternalInfo[T]
-    def ?[T: Manifest] = InternalInfo[T]
+    // [Eugene to Paul] needs review!
+    // def module[T: Manifest] = getModuleIfDefined(manifest[T].erasure.getName stripSuffix nme.MODULE_SUFFIX_STRING)
+    // def clazz[T: Manifest] = getClassIfDefined(manifest[T].erasure.getName)
+    def module[T: ru.TypeTag] = ru.typeOf[T].typeSymbol.suchThat(_.isPackage)
+    def clazz[T: ru.TypeTag] = ru.typeOf[T].typeSymbol.suchThat(_.isClass)
+    def info[T: ru.TypeTag : ClassTag] = InternalInfo[T]
+    def ?[T: ru.TypeTag : ClassTag] = InternalInfo[T]
     def url(s: String) = {
       try new URL(s)
       catch { case _: MalformedURLException =>
@@ -387,17 +409,13 @@ abstract class Power(
   }
 
   lazy val rutil: ReplUtilities = new ReplUtilities { }
-
-  lazy val phased: Phased = new Phased with SharesGlobal {
-    type GlobalType = Power.this.global.type
-    final val global: Power.this.global.type = Power.this.global
-  }
+  lazy val phased: Phased       = new { val global: intp.global.type = intp.global } with Phased { }
 
   def context(code: String)    = analyzer.rootContext(unit(code))
-  def source(code: String)     = new BatchSourceFile("<console>", code)
-  def unit(code: String)       = new CompilationUnit(source(code))
+  def source(code: String)     = newSourceFile(code)
+  def unit(code: String)       = newCompilationUnit(code)
   def trees(code: String)      = parse(code) getOrElse Nil
-  def typeOf(id: String): Type = intp.typeOfExpression(id) getOrElse NoType
+  def typeOf(id: String)       = intp.typeOfExpression(id)
 
   override def toString = """
     |** Power mode status **

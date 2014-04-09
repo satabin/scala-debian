@@ -1,12 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
-
 
 package scala.collection
 package immutable
@@ -15,6 +13,7 @@ import generic._
 import mutable.Builder
 import scala.util.matching.Regex
 import scala.math.ScalaNumber
+import scala.reflect.ClassTag
 
 /** A companion object for the `StringLike` containing some constants.
  *  @since 2.8
@@ -35,14 +34,14 @@ import StringLike._
  *  @tparam Repr   The type of the actual collection inheriting `StringLike`.
  *
  *  @since 2.8
- *  @define Coll String
+ *  @define Coll `String`
  *  @define coll string
  *  @define orderDependent
  *  @define orderDependentFold
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-trait StringLike[+Repr] extends collection.IndexedSeqOptimized[Char, Repr] with Ordered[String] {
+trait StringLike[+Repr] extends Any with scala.collection.IndexedSeqOptimized[Char, Repr] with Ordered[String] {
 self =>
 
   /** Creates a string builder buffer as builder for this class */
@@ -62,7 +61,7 @@ self =>
     val end   = until min length
 
     if (start >= end) newBuilder.result
-    else newBuilder ++= toString.substring(start, end) result
+    else (newBuilder ++= toString.substring(start, end)).result
   }
 
   /** Return the current string concatenated `n` times.
@@ -81,12 +80,11 @@ self =>
    *  Strip trailing line end character from this string if it has one.
    *
    *  A line end character is one of
-   *  <ul style="list-style-type: none;">
-   *    <li>LF - line feed   (0x0A hex)</li>
-   *    <li>FF - form feed   (0x0C hex)</li>
-   *  </ul>
-   *  If a line feed character LF is preceded by a carriage return CR
-   *  (0x0D hex), the CR character is also stripped (Windows convention).
+   *  - `LF` - line feed   (`0x0A` hex)
+   *  - `FF` - form feed   (`0x0C` hex)
+   *
+   *  If a line feed character `LF` is preceded by a carriage return `CR`
+   *  (`0x0D` hex), the `CR` character is also stripped (Windows convention).
    */
   def stripLineEnd: String = {
     val len = toString.length
@@ -100,20 +98,16 @@ self =>
     }
   }
 
-  /**
-   *    Return all lines in this string in an iterator, including trailing
-   *    line end characters.
+  /** Return all lines in this string in an iterator, including trailing
+   *  line end characters.
    *
-   *    The number of strings returned is one greater than the number of line
-   *    end characters in this string. For an empty string, a single empty
-   *    line is returned. A line end character is one of
-   *
-   *    <ul style="list-style-type: none;">
-   *      <li>LF - line feed   (0x0A hex)</li>
-   *      <li>FF - form feed   (0x0C hex)</li>
-   *    </ul>
+   *  The number of strings returned is one greater than the number of line
+   *  end characters in this string. For an empty string, a single empty
+   *  line is returned. A line end character is one of
+   *  - `LF` - line feed   (`0x0A` hex)
+   *  - `FF` - form feed   (`0x0C` hex)
    */
-  def linesWithSeparators: Iterator[String] = new Iterator[String] {
+  def linesWithSeparators: Iterator[String] = new AbstractIterator[String] {
     val str = self.toString
     private val len = str.length
     private var index = 0
@@ -177,13 +171,10 @@ self =>
     toString.replaceAll(arg1, arg2)
   }
 
-  /**
-   *    For every line in this string:
+  /** For every line in this string:
    *
-   *    <blockquote>
-   *       Strip a leading prefix consisting of blanks or control characters
-   *       followed by `marginChar` from the line.
-   *    </blockquote>
+   *  Strip a leading prefix consisting of blanks or control characters
+   *  followed by `marginChar` from the line.
    */
   def stripMargin(marginChar: Char): String = {
     val buf = new StringBuilder
@@ -197,13 +188,10 @@ self =>
     buf.toString
   }
 
-  /**
-   *    For every line in this string:
+  /** For every line in this string:
    *
-   *    <blockquote>
-   *       Strip a leading prefix consisting of blanks or control characters
-   *       followed by `|` from the line.
-   *    </blockquote>
+   *  Strip a leading prefix consisting of blanks or control characters
+   *  followed by `|` from the line.
    */
   def stripMargin: String = stripMargin('|')
 
@@ -218,12 +206,22 @@ self =>
     toString.split(re)
   }
 
-  /** You can follow a string with `.r', turning
-   *  it into a Regex. E.g.
+  /** You can follow a string with `.r`, turning it into a `Regex`. E.g.
    *
-   *  """A\w*""".r   is the regular expression for identifiers starting with `A'.
+   *  `"""A\w*""".r`   is the regular expression for identifiers starting with `A`.
    */
-  def r: Regex = new Regex(toString)
+  def r: Regex = r()
+
+  /** You can follow a string with `.r(g1, ... , gn)`, turning it into a `Regex`,
+   *  with group names g1 through gn.
+   *
+   *  `"""(\d\d)-(\d\d)-(\d\d\d\d)""".r("month", "day", "year")` matches dates
+   *  and provides its subcomponents through groups named "month", "day" and
+   *  "year".
+   *
+   *  @param groupNames The names of the groups in the pattern, in the order they appear.
+   */
+  def r(groupNames: String*): Regex = new Regex(toString, groupNames: _*)
 
   def toBoolean: Boolean = parseBoolean(toString)
   def toByte: Byte       = java.lang.Byte.parseByte(toString)
@@ -237,12 +235,12 @@ self =>
     if (s != null) s.toLowerCase match {
       case "true" => true
       case "false" => false
-      case _ => throw new NumberFormatException("For input string: \""+s+"\"")
+      case _ => throw new IllegalArgumentException("For input string: \""+s+"\"")
     }
     else
-      throw new NumberFormatException("For input string: \"null\"")
+      throw new IllegalArgumentException("For input string: \"null\"")
 
-  override def toArray[B >: Char : ClassManifest]: Array[B] =
+  override def toArray[B >: Char : ClassTag]: Array[B] =
     toString.toCharArray.asInstanceOf[Array[B]]
 
   private def unwrapArg(arg: Any): AnyRef = arg match {
@@ -250,29 +248,25 @@ self =>
     case x              => x.asInstanceOf[AnyRef]
   }
 
-  /**
-   *  Uses the underlying string as a pattern (in a fashion similar to
+  /** Uses the underlying string as a pattern (in a fashion similar to
    *  printf in C), and uses the supplied arguments to fill in the
    *  holes.
    *
    *    The interpretation of the formatting patterns is described in
    *    <a href="" target="contentFrame" class="java/util/Formatter">
    *    `java.util.Formatter`</a>, with the addition that
-   *    classes deriving from `ScalaNumber` (such as `scala.BigInt` and
-   *    `scala.BigDecimal`) are unwrapped to pass a type which `Formatter`
+   *    classes deriving from `ScalaNumber` (such as [[scala.BigInt]] and
+   *    [[scala.BigDecimal]]) are unwrapped to pass a type which `Formatter`
    *    understands.
    *
-   *
    *  @param args the arguments used to instantiating the pattern.
-   *  @throws java.lang.IllegalArgumentException
+   *  @throws `java.lang.IllegalArgumentException`
    */
   def format(args : Any*): String =
     java.lang.String.format(toString, args map unwrapArg: _*)
 
-  /**
-   *  Like `format(args*)` but takes an initial `Locale` parameter
+  /** Like `format(args*)` but takes an initial `Locale` parameter
    *  which influences formatting as in `java.lang.String`'s format.
-   *
    *
    *    The interpretation of the formatting patterns is described in
    *    <a href="" target="contentFrame" class="java/util/Formatter">
@@ -281,12 +275,10 @@ self =>
    *    `scala.BigDecimal`) are unwrapped to pass a type which `Formatter`
    *    understands.
    *
-   *
-   *  @param locale an instance of `java.util.Locale`
+   *  @param l    an instance of `java.util.Locale`
    *  @param args the arguments used to instantiating the pattern.
-   *  @throws java.lang.IllegalArgumentException
+   *  @throws `java.lang.IllegalArgumentException`
    */
   def formatLocal(l: java.util.Locale, args: Any*): String =
     java.lang.String.format(l, toString, args map unwrapArg: _*)
 }
-

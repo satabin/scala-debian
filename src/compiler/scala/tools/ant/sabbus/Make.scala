@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Ant Tasks                      **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -21,7 +21,7 @@ class Make extends Task with TaskArgs {
     if (!compTarget.isEmpty) settings.target = compTarget.get
     if (!compilationPath.isEmpty) settings.classpath = compilationPath.get
     if (!sourcePath.isEmpty) settings.sourcepath = sourcePath.get
-    if (!params.isEmpty) settings.more = params.get
+    settings.extraParams = extraArgsFlat
     Compilers.make(id.get, (compilerPath.get.list.map{ path => new File(path).toURI.toURL }), settings)
   }
 }

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * Copyright 2007 Google Inc. All Rights Reserved.
  * Author: bqe@google.com (Burak Emir)
  */
@@ -8,13 +8,14 @@ package scala.tools.nsc
 package matching
 
 import PartialFunction._
-import scala.collection.{ mutable, immutable }
-import util.Position
+import scala.collection.{ mutable }
+import scala.reflect.internal.util.Position
 import transform.ExplicitOuter
 import symtab.Flags
 import mutable.ListBuffer
-import immutable.IntMap
-import annotation.elidable
+import scala.annotation.elidable
+import scala.language.postfixOps
+import scala.tools.nsc.settings.ScalaVersion
 
 trait ParallelMatching extends ast.TreeDSL
       with MatchSupport
@@ -25,7 +26,10 @@ trait ParallelMatching extends ast.TreeDSL
   self: ExplicitOuter =>
 
   import global.{ typer => _, _ }
-  import definitions.{ AnyRefClass, NothingClass, IntClass, BooleanClass, SomeClass, getProductArgs, productProj }
+  import definitions.{
+    AnyRefClass, IntClass, BooleanClass, SomeClass, OptionClass,
+    getProductArgs, productProj, Object_eq, Any_asInstanceOf
+  }
   import CODE._
   import Types._
   import Debug._
@@ -43,7 +47,7 @@ trait ParallelMatching extends ast.TreeDSL
     lazy val (rows, targets)                    = expand(roots, cases).unzip
     lazy val expansion: Rep                     = make(roots, rows)
 
-    private val shortCuts = mutable.HashMap[Int, Symbol]()
+    private val shortCuts = perRunCaches.newMap[Int, Symbol]()
 
     final def createShortCut(theLabel: Symbol): Int = {
       val key = shortCuts.size + 1
@@ -52,7 +56,7 @@ trait ParallelMatching extends ast.TreeDSL
     }
     def createLabelDef(namePrefix: String, body: Tree, params: List[Symbol] = Nil, restpe: Type = matchResultType) = {
       val labelName = cunit.freshTermName(namePrefix)
-      val labelSym  = owner.newLabel(owner.pos, labelName)
+      val labelSym  = owner.newLabel(labelName, owner.pos)
       val labelInfo = MethodType(params, restpe)
 
       LabelDef(labelSym setInfo labelInfo, params, body setType restpe)
@@ -133,7 +137,7 @@ trait ParallelMatching extends ast.TreeDSL
 
       def castedTo(headType: Type) =
         if (tpe =:= headType) this
-        else new Scrutinee(createVar(headType, lhs => id AS_ANY lhs.tpe))
+        else new Scrutinee(createVar(headType, lhs => gen.mkAsInstanceOf(id, lhs.tpe)))
 
       override def toString() = "(%s: %s)".format(id, tpe)
     }
@@ -307,12 +311,12 @@ trait ParallelMatching extends ast.TreeDSL
       }
 
       lazy val cases =
-        for ((tag, indices) <- literalMap.toList) yield {
+        for ((tag, indices) <- literalMap.toList.sortBy(_._1)) yield {
           val newRows = indices map (i => addDefaultVars(i)(rest rows i))
           val r       = remake(newRows ++ defaultRows, includeScrut = false)
           val r2      = make(r.tvars, r.rows map (x => x rebind bindVars(tag, x.subst)))
 
-          CASE(Literal(tag)) ==> r2.toTree
+          CASE(Literal(Constant(tag))) ==> r2.toTree
         }
 
       lazy val defaultTree = remake(defaultRows, includeScrut = false).toTree
@@ -356,24 +360,26 @@ trait ParallelMatching extends ast.TreeDSL
       lazy val unapplyResult: PatternVar =
         scrut.createVar(unMethod.tpe, Apply(unTarget, scrut.id :: trailing) setType _.tpe)
 
-      lazy val cond: Tree =
-        if (unapplyResult.tpe.isBoolean) unapplyResult.ident
-        else if (unapplyResult.tpe.typeSymbol == SomeClass) TRUE
-        else NOT(unapplyResult.ident DOT nme.isEmpty)
+      lazy val cond: Tree = unapplyResult.tpe.normalize match {
+        case TypeRef(_, BooleanClass, _)  => unapplyResult.ident
+        case TypeRef(_, SomeClass, _)     => TRUE
+        case _                            => NOT(unapplyResult.ident DOT nme.isEmpty)
+      }
 
       lazy val failure =
         mkFail(zipped.tail filterNot (x => SameUnapplyPattern(x._1)) map { case (pat, r) => r insert pat })
 
       private def doSuccess: (List[PatternVar], List[PatternVar], List[Row]) = {
         // pattern variable for the unapply result of Some(x).get
-        lazy val pv = scrut.createVar(
-          unMethod.tpe typeArgs 0,
-          _ => fn(ID(unapplyResult.lhs), nme.get)
-        )
+        def unMethodTypeArg = unMethod.tpe.baseType(OptionClass).typeArgs match {
+          case Nil      => log("No type argument for unapply result! " + unMethod.tpe) ; NoType
+          case arg :: _ => arg
+        }
+        lazy val pv = scrut.createVar(unMethodTypeArg, _ => fn(ID(unapplyResult.lhs), nme.get))
         def tuple = pv.lhs
 
         // at this point it's Some[T1,T2...]
-        lazy val tpes  = getProductArgs(tuple.tpe).get
+        lazy val tpes  = getProductArgs(tuple.tpe)
 
         // one pattern variable per tuple element
         lazy val tuplePVs =
@@ -672,7 +678,7 @@ trait ParallelMatching extends ast.TreeDSL
       // the val definition's type, or a casted Ident if not.
       private def newValIdent(lhs: Symbol, rhs: Symbol) =
         if (rhs.tpe <:< lhs.tpe) Ident(rhs)
-        else Ident(rhs) AS lhs.tpe
+        else gen.mkTypeApply(Ident(rhs), Any_asInstanceOf, List(lhs.tpe))
 
       protected def newValDefinition(lhs: Symbol, rhs: Symbol) =
         typer typedValDef ValDef(lhs, newValIdent(lhs, rhs))
@@ -741,7 +747,7 @@ trait ParallelMatching extends ast.TreeDSL
           (others.head :: _column.tail, make(_tvars, _rows))
 
         def mix() = {
-          val newScrut = new Scrutinee(specialVar(_pv.sym, _pv.checked))
+          val newScrut = new Scrutinee(new PatternVar(_pv.sym, EmptyTree, _pv.checked))
           PatternMatch(newScrut, _ncol) mkRule _nrep
         }
       }
@@ -816,7 +822,7 @@ trait ParallelMatching extends ast.TreeDSL
       // match that's unimportant; so we add an instance check only if there
       // is a binding.
       def bindingWarning() = {
-        if (isBound && settings.Xmigration28.value) {
+        if (isBound && settings.Xmigration.value < ScalaVersion.twoDotEight) {
           cunit.warning(scrutTree.pos,
             "A bound pattern such as 'x @ Pattern' now matches fewer cases than the same pattern with no binding.")
         }
@@ -835,7 +841,7 @@ trait ParallelMatching extends ast.TreeDSL
       typer typed {
         tpe match {
           case ConstantType(Constant(null)) if isRef  => scrutTree OBJ_EQ NULL
-          case ConstantType(Constant(value))          => scrutTree MEMBER_== Literal(value)
+          case ConstantType(const)                    => scrutTree MEMBER_== Literal(const)
           case SingleType(NoPrefix, sym)              => genEquals(sym)
           case SingleType(pre, sym) if sym.isStable   => genEquals(sym)
           case ThisType(sym) if sym.isModule          => genEquals(sym)
@@ -853,10 +859,11 @@ trait ParallelMatching extends ast.TreeDSL
         case ThisType(clazz)  => THIS(clazz)
         case pre              => REF(pre.prefix, pre.termSymbol)
       })
-
       outerAccessor(tpe2test.typeSymbol) match {
         case NoSymbol => ifDebug(cunit.warning(scrut.pos, "no outer acc for " + tpe2test.typeSymbol)) ; cond
-        case outerAcc => cond AND (((scrut AS_ANY tpe2test) DOT outerAcc)() OBJ_EQ theRef)
+        case outerAcc =>
+          val casted = gen.mkAsInstanceOf(scrut, tpe2test, any = true, wrapInApply = true)
+          cond AND ((casted DOT outerAcc)() OBJ_EQ theRef)
       }
     }
   }

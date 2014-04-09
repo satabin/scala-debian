@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2002-2011 LAMP/EPFL
+ * Copyright 2002-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
@@ -7,8 +7,7 @@ package scala.tools.nsc
 package reporters
 
 import java.io.{ BufferedReader, IOException, PrintWriter }
-import util._
-import scala.tools.util.StringOps.countElementsAsString
+import scala.reflect.internal.util._
 
 /**
  * This class implements a Reporter that displays messages on a text
@@ -40,27 +39,14 @@ class ConsoleReporter(val settings: Settings, reader: BufferedReader, writer: Pr
    *  @return         ...
    */
   private def getCountString(severity: Severity): String =
-    countElementsAsString((severity).count, label(severity))
+    StringOps.countElementsAsString((severity).count, label(severity))
 
   /** Prints the message. */
   def printMessage(msg: String) { writer.print(msg + "\n"); writer.flush() }
 
   /** Prints the message with the given position indication. */
   def printMessage(posIn: Position, msg: String) {
-    val pos = if (posIn eq null) NoPosition
-              else if (posIn.isDefined) posIn.inUltimateSource(posIn.source)
-              else posIn
-    pos match {
-      case FakePos(fmsg) =>
-        printMessage(fmsg+" "+msg)
-      case NoPosition =>
-        printMessage(msg)
-      case _ =>
-        val buf = new StringBuilder(msg)
-        val file = pos.source.file
-        printMessage((if (shortname) file.name else file.path)+":"+pos.line+": "+msg)
-        printSourceLine(pos)
-    }
+    printMessage(Position.formatMessage(posIn, msg, shortname))
   }
   def print(pos: Position, msg: String, severity: Severity) {
     printMessage(pos, clabel(severity) + msg)
@@ -88,30 +74,23 @@ class ConsoleReporter(val settings: Settings, reader: BufferedReader, writer: Pr
   }
 
   def display(pos: Position, msg: String, severity: Severity) {
-    severity.count += 1
     if (severity != ERROR || severity.count <= ERROR_LIMIT)
       print(pos, msg, severity)
   }
 
-  def displayPrompt(): Unit = try {
-    var continue = true
-    while (continue) {
-      writer.print("r)esume, a)bort: ")
-      writer.flush()
-      var line = reader.readLine()
-      if (line ne null) {
-	      line = line.toLowerCase()
-	      if ("abort" startsWith line)
-          abort("user abort")
-	      if ("resume" startsWith line)
-	        continue = false
+  def displayPrompt(): Unit = {
+    writer.print("\na)bort, s)tack, r)esume: ")
+    writer.flush()
+    if (reader != null) {
+      val response = reader.read().asInstanceOf[Char].toLower
+      if (response == 'a' || response == 's') {
+        (new Exception).printStackTrace()
+        if (response == 'a')
+          sys exit 1
+
+        writer.print("\n")
+        writer.flush()
       }
-    }
-  }
-  catch {
-    case ex: IOException => {
-      ex.printStackTrace()
-      abort("input read error")
     }
   }
 

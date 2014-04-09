@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -20,7 +20,7 @@ package scala.actors
  * @author Philipp Haller
  * @author Erik Engbrecht
  */
-case class UncaughtException(actor: Actor,
+case class UncaughtException(actor: InternalActor,
                              message: Option[Any],
                              sender: Option[OutputChannel[Any]],
                              thread: Thread,

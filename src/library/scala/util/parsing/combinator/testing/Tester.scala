@@ -1,11 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
 
 package scala.util.parsing.combinator.testing
 import scala.util.parsing.combinator._
@@ -13,32 +12,31 @@ import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical.Lexical
 import scala.util.parsing.combinator.syntactical.TokenParsers
 
-/** <p>
- *    Facilitates testing a given parser on various input strings.
- *  </p>
- *  <p>
- *    Example use:
- *  </p><pre>
- *    <b>val</b> syntactic = <b>new</b> MyParsers</pre>
- *  <p>
- *    and
- *  </p><pre>
- *    <b>val</b> parser = syntactic.term</pre>
- *  <p>
- *    (if MyParsers extends TokenParsers with a parser called `term')
- *  </p>
+/** Facilitates testing a given parser on various input strings.
  *
- * @author Martin Odersky, Adriaan Moors
+ *  Example use:
+ *  {{{
+ *    val syntactic = new MyParsers
+ *  }}}
+ *  and
+ *  {{{
+ *    val parser = syntactic.term
+ *  }}}
+ *  (If `MyParsers` extends [[scala.util.parsing.combinator.syntactical.TokenParsers]]
+ *  with a parser called `term`.)
+ *
+ * @author Martin Odersky
+ * @author Adriaan Moors
  */
+@deprecated("This class will be removed", "2.10.0")
 abstract class Tester {
 
   val syntactic: TokenParsers { val lexical: Lexical }
   val parser: syntactic.Parser[Any]
 
-
-  /** Scans a String (using a `syntactic.lexical.Scanner'), parses it
-   *  using <code>phrase(parser)</code>, and  prints the input and the
-   *  parsed result to the console.
+  /** Scans a String (using a `syntactic.lexical.Scanner`), parses it using
+   *  `phrase(parser)`, and  prints the input and the parsed result to the
+   *  console.
    */
   def test(in: String) {
     Console.println("\nin : "+in)

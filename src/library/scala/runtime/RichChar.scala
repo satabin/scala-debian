@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,7 +10,10 @@ package scala.runtime
 
 import java.lang.Character
 
-final class RichChar(val self: Char) extends IntegralProxy[Char] {
+final class RichChar(val self: Char) extends AnyVal with IntegralProxy[Char] {
+  protected def num = scala.math.Numeric.CharIsIntegral
+  protected def ord = scala.math.Ordering.Char
+
   def asDigit: Int                      = Character.digit(self, Character.MAX_RADIX)
 
   def isControl: Boolean                = Character.isISOControl(self)
@@ -45,14 +48,4 @@ final class RichChar(val self: Char) extends IntegralProxy[Char] {
   // public static boolean isDefined(char ch)
   // public static boolean isJavaIdentifierStart(char ch)
   // public static boolean isJavaIdentifierPart(char ch)
-
-  @deprecated("Use ch.toLower instead", "2.8.0")
-  def toLowerCase: Char = toLower
-  @deprecated("Use ch.toUpper instead", "2.8.0")
-  def toUpperCase: Char = toUpper
-
-  @deprecated("Use ch.isLower instead", "2.8.0")
-  def isLowerCase: Boolean = isLower
-  @deprecated("Use ch.isUpper instead", "2.8.0")
-  def isUpperCase: Boolean = isUpper
 }

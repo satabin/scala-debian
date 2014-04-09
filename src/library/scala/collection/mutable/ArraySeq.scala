@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -27,7 +27,7 @@ import parallel.mutable.ParArray
  *  @tparam A      type of the elements contained in this array sequence.
  *  @param length  the length of the underlying array.
  *
- *  @define Coll ArraySeq
+ *  @define Coll `ArraySeq`
  *  @define coll array sequence
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
  *    `That` is always `ArraySeq[B]` because an implicit of type `CanBuildFrom[ArraySeq, B, ArraySeq[B]]`
@@ -43,7 +43,8 @@ import parallel.mutable.ParArray
  */
 @SerialVersionUID(1530165946227428979L)
 class ArraySeq[A](override val length: Int)
-extends IndexedSeq[A]
+extends AbstractSeq[A]
+   with IndexedSeq[A]
    with GenericTraversableTemplate[A, ArraySeq]
    with IndexedSeqOptimized[A, ArraySeq[A]]
    with CustomParallelizable[A, ParArray[A]]
@@ -88,15 +89,22 @@ extends IndexedSeq[A]
     Array.copy(array, 0, xs, start, len1)
   }
 
+  override def clone(): ArraySeq[A] = {
+    val cloned = array.clone.asInstanceOf[Array[AnyRef]]
+    new ArraySeq[A](length) {
+      override val array = cloned
+    }
+  }
+
 }
 
 /** $factoryInfo
  *  @define coll array sequence
- *  @define Coll ArraySeq
+ *  @define Coll `ArraySeq`
  */
 object ArraySeq extends SeqFactory[ArraySeq] {
   /** $genericCanBuildFromInfo */
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ArraySeq[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ArraySeq[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   def newBuilder[A]: Builder[A, ArraySeq[A]] =
     new ArrayBuffer[A] mapResult { buf =>
       val result = new ArraySeq[A](buf.length)

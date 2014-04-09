@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
@@ -46,6 +46,9 @@ abstract class SubComponent {
 
   private var ownPhaseCache: WeakReference[Phase] = new WeakReference(null)
   private var ownPhaseRunId = global.NoRunId
+
+  @inline final def beforeOwnPhase[T](op: => T) = global.beforePhase(ownPhase)(op)
+  @inline final def afterOwnPhase[T](op: => T)  = global.afterPhase(ownPhase)(op)
 
   /** The phase corresponding to this subcomponent in the current compiler run */
   def ownPhase: Phase = {

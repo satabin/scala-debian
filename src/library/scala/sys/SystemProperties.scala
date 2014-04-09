@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,6 +11,8 @@ package scala.sys
 import scala.collection.{ mutable, Iterator }
 import scala.collection.JavaConverters._
 import java.security.AccessControlException
+import scala.language.implicitConversions
+
 
 /** A bidirectional map wrapping the java System properties.
  *  Changes to System properties will be immediately visible in the map,
@@ -23,7 +25,10 @@ import java.security.AccessControlException
  *  @version 2.9
  *  @since   2.9
  */
-class SystemProperties extends mutable.Map[String, String] {
+class SystemProperties
+extends mutable.AbstractMap[String, String]
+   with mutable.Map[String, String] {
+
   override def empty = new SystemProperties
   override def default(key: String): String = null
 
@@ -73,6 +78,5 @@ object SystemProperties {
   lazy val preferIPv4Stack     = bool("java.net.preferIPv4Stack", "system should prefer IPv4 sockets")
   lazy val preferIPv6Addresses = bool("java.net.preferIPv6Addresses", "system should prefer IPv6 addresses")
   lazy val noTraceSupression   = bool("scala.control.noTraceSuppression", "scala should not suppress any stack trace creation")
-  lazy val traceSourcePath     = str("scala.control.sourcepath", "sourcepath for looking up stack trace elements")
 }
 

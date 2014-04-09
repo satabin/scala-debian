@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -24,7 +24,7 @@ package immutable
 trait SetProxy[A] extends Set[A] with SetProxyLike[A, Set[A]] {
   override def repr = this
   private def newProxy[B >: A](newSelf: Set[B]): SetProxy[B] =
-    new SetProxy[B] { val self = newSelf }
+    new AbstractSet[B] with SetProxy[B] { val self = newSelf }
 
   override def empty = newProxy(self.empty)
   override def + (elem: A) = newProxy(self + elem)

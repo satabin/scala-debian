@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  * @author Lex Spoon
  * Updated by Anders Bach Nielsen
  */
@@ -28,7 +28,7 @@ trait Plugins {
     val dirs = (settings.pluginsDir.value split File.pathSeparator).toList map Path.apply
     val classes = Plugin.loadAllFrom(jars, dirs, settings.disable.value)
 
-    // Lach plugin must only be instantiated once. A common pattern
+    // Each plugin must only be instantiated once. A common pattern
     // is to register annotation checkers during object construction, so
     // creating multiple plugin instances will leave behind stale checkers.
     classes map (Plugin.instantiate(_, this))
@@ -70,7 +70,7 @@ trait Plugins {
       }
     }
 
-    val plugs = pick(roughPluginsList, Set(), phasesSet map (_.phaseName) toSet)
+    val plugs = pick(roughPluginsList, Set(), (phasesSet map (_.phaseName)).toSet)
 
     /** Verify requirements are present. */
     for (req <- settings.require.value ; if !(plugs exists (_.name == req)))
@@ -112,5 +112,5 @@ trait Plugins {
   def pluginOptionsHelp: String =
     (for (plug <- roughPluginsList ; help <- plug.optionsHelp) yield {
       "\nOptions for plugin '%s':\n%s\n".format(plug.name, help)
-    }) mkString
+    }).mkString
 }

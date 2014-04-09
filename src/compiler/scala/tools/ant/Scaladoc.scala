@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Ant Tasks                      **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,7 +11,7 @@ package scala.tools.ant
 
 import java.io.File
 
-import org.apache.tools.ant.{BuildException, Project}
+import org.apache.tools.ant.Project
 import org.apache.tools.ant.types.{Path, Reference}
 import org.apache.tools.ant.util.{FileUtils, GlobPatternMapper}
 
@@ -43,7 +43,9 @@ import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
  *  - `deprecation`,
  *  - `docgenerator`,
  *  - `docrootcontent`,
- *  - `unchecked`.
+ *  - `unchecked`,
+ *  - `nofail`,
+ *  - `skipPackages`.
  *
  *  It also takes the following parameters as nested elements:
  *  - `src` (for srcdir),
@@ -69,11 +71,16 @@ class Scaladoc extends ScalaMatchingTask {
       (value == "") || values.exists(_.startsWith(value))
   }
 
-  /** Defines valid values for the <code>deprecation</code> and
-   *  <code>unchecked</code> properties.
+  /** Defines valid values for the `deprecation` and
+   *  `unchecked` properties.
    */
   object Flag extends PermissibleValue {
     val values = List("yes", "no", "on", "off")
+    def getBooleanValue(value: String, flagName: String): Boolean =
+      if (Flag.isPermissible(value))
+        return ("yes".equals(value) || "on".equals(value))
+      else
+        buildError("Unknown " + flagName + " flag '" + value + "'")
   }
 
   /** The directories that contain source files to compile. */
@@ -123,29 +130,62 @@ class Scaladoc extends ScalaMatchingTask {
   /** Instruct the compiler to generate unchecked information. */
   private var unchecked: Boolean = false
 
+  /** Instruct the ant task not to fail in the event of errors */
+  private var nofail: Boolean = false
+
+  /** Instruct the scaladoc tool to document implicit conversions */
+  private var docImplicits: Boolean = false
+
+  /** Instruct the scaladoc tool to document all (including impossible) implicit conversions */
+  private var docImplicitsShowAll: Boolean = false
+
+  /** Instruct the scaladoc tool to output implicits debugging information */
+  private var docImplicitsDebug: Boolean = false
+
+  /** Instruct the scaladoc tool to create diagrams */
+  private var docDiagrams: Boolean = false
+
+  /** Instruct the scaladoc tool to output diagram creation debugging information */
+  private var docDiagramsDebug: Boolean = false
+
+  /** Instruct the scaladoc tool to use the binary given to create diagrams */
+  private var docDiagramsDotPath: Option[String] = None
+
+  /** Instruct the scaladoc to produce textual ouput from html pages, for easy diff-ing */
+  private var docRawOutput: Boolean = false
+
+  /** Instruct the scaladoc not to generate prefixes */
+  private var docNoPrefixes: Boolean = false
+
+  /** Instruct the scaladoc tool to group similar functions together */
+  private var docGroups: Boolean = false
+
+  /** Instruct the scaladoc tool to skip certain packages */
+  private var docSkipPackages: String = ""
+
 /*============================================================================*\
 **                             Properties setters                             **
 \*============================================================================*/
 
-  /** Sets the <code>srcdir</code> attribute. Used by Ant.
+  /** Sets the `srcdir` attribute. Used by [[http://ant.apache.org Ant]].
    *
-   *  @param input The value of <code>origin</code>.
+   *  @param input The value of `origin`.
    */
   def setSrcdir(input: Path) {
     if (origin.isEmpty) origin = Some(input)
     else origin.get.append(input)
   }
 
-  /** Sets the <code>origin</code> as a nested src Ant parameter.
+  /** Sets the `origin` as a nested src Ant parameter.
    *
    *  @return An origin path to be configured.
    */
   def createSrc(): Path = {
-    if (origin.isEmpty) origin = Some(new Path(getProject()))
+    if (origin.isEmpty) origin = Some(new Path(getProject))
     origin.get.createPath()
   }
 
-  /** Sets the <code>origin</code> as an external reference Ant parameter.
+  /** Sets the `origin` as an external reference Ant parameter.
    *
    *  @param input A reference to an origin path.
    */
@@ -153,83 +193,81 @@ class Scaladoc extends ScalaMatchingTask {
     createSrc().setRefid(input)
   }
 
-  /** Sets the <code>destdir</code> attribute. Used by Ant.
+  /** Sets the `destdir` attribute. Used by [[http://ant.apache.org Ant]].
    *
-   *  @param input The value of <code>destination</code>.
+   *  @param input The value of `destination`.
    */
   def setDestdir(input: File) {
     destination = Some(input)
   }
 
-  /** Sets the <code>classpath</code> attribute. Used by Ant.
+  /** Sets the `classpath` attribute. Used by [[http://ant.apache.org Ant]].
    *
-   *  @param input The value of <code>classpath</code>.
+   *  @param input The value of `classpath`.
    */
   def setClasspath(input: Path) {
     if (classpath.isEmpty) classpath = Some(input)
     else classpath.get.append(input)
   }
 
-  /** Sets the <code>classpath</code> as a nested classpath Ant parameter.
+  /** Sets the `classpath` as a nested classpath Ant parameter.
    *
    *  @return A class path to be configured.
    */
   def createClasspath(): Path = {
-    if (classpath.isEmpty) classpath = Some(new Path(getProject()))
+    if (classpath.isEmpty) classpath = Some(new Path(getProject))
     classpath.get.createPath()
   }
 
-  /** Sets the <code>classpath</code> as an external reference Ant parameter.
+  /** Sets the `classpath` as an external reference Ant parameter.
    *
    *  @param input A reference to a class path.
    */
   def setClasspathref(input: Reference) =
     createClasspath().setRefid(input)
 
-  /** Sets the <code>sourcepath</code> attribute. Used by Ant.
+  /** Sets the `sourcepath` attribute. Used by [[http://ant.apache.org Ant]].
    *
-   *  @param input The value of <code>sourcepath</code>.
+   *  @param input The value of `sourcepath`.
    */
   def setSourcepath(input: Path) =
     if (sourcepath.isEmpty) sourcepath = Some(input)
     else sourcepath.get.append(input)
 
-  /** Sets the <code>sourcepath</code> as a nested sourcepath Ant parameter.
+  /** Sets the `sourcepath` as a nested sourcepath Ant parameter.
    *
    *  @return A source path to be configured.
    */
   def createSourcepath(): Path = {
-    if (sourcepath.isEmpty) sourcepath = Some(new Path(getProject()))
+    if (sourcepath.isEmpty) sourcepath = Some(new Path(getProject))
     sourcepath.get.createPath()
   }
 
-  /** Sets the <code>sourcepath</code> as an external reference Ant parameter.
+  /** Sets the `sourcepath` as an external reference Ant parameter.
    *
    *  @param input A reference to a source path.
    */
   def setSourcepathref(input: Reference) =
     createSourcepath().setRefid(input)
 
-  /** Sets the <code>bootclasspath</code> attribute. Used by Ant.
+  /** Sets the `bootclasspath` attribute. Used by [[http://ant.apache.org Ant]].
    *
-   *  @param input The value of <code>bootclasspath</code>.
+   *  @param input The value of `bootclasspath`.
    */
   def setBootclasspath(input: Path) =
     if (bootclasspath.isEmpty) bootclasspath = Some(input)
     else bootclasspath.get.append(input)
 
-  /** Sets the <code>bootclasspath</code> as a nested sourcepath Ant
-   *  parameter.
+  /** Sets the `bootclasspath` as a nested `sourcepath` Ant parameter.
    *
    *  @return A source path to be configured.
    */
   def createBootclasspath(): Path = {
-    if (bootclasspath.isEmpty) bootclasspath = Some(new Path(getProject()))
+    if (bootclasspath.isEmpty) bootclasspath = Some(new Path(getProject))
     bootclasspath.get.createPath()
   }
 
-  /** Sets the <code>bootclasspath</code> as an external reference Ant
-   *  parameter.
+  /** Sets the `bootclasspath` as an external reference Ant parameter.
    *
    *  @param input A reference to a source path.
    */
@@ -237,25 +275,25 @@ class Scaladoc extends ScalaMatchingTask {
     createBootclasspath().setRefid(input)
   }
 
-  /** Sets the external extensions path attribute. Used by Ant.
+  /** Sets the external extensions path attribute. Used by [[http://ant.apache.org Ant]].
    *
-   *  @param input The value of <code>extdirs</code>.
+   *  @param input The value of `extdirs`.
    */
   def setExtdirs(input: Path) {
     if (extdirs.isEmpty) extdirs = Some(input)
     else extdirs.get.append(input)
   }
 
-  /** Sets the <code>extdirs</code> as a nested sourcepath Ant parameter.
+  /** Sets the `extdirs` as a nested sourcepath Ant parameter.
    *
    *  @return An extensions path to be configured.
    */
   def createExtdirs(): Path = {
-    if (extdirs.isEmpty) extdirs = Some(new Path(getProject()))
+    if (extdirs.isEmpty) extdirs = Some(new Path(getProject))
     extdirs.get.createPath()
   }
 
-  /** Sets the <code>extdirs</code> as an external reference Ant parameter.
+  /** Sets the `extdirs` as an external reference Ant parameter.
    *
    *  @param input A reference to an extensions path.
    */
@@ -263,15 +301,15 @@ class Scaladoc extends ScalaMatchingTask {
     createExtdirs().setRefid(input)
   }
 
-  /** Sets the <code>encoding</code> attribute. Used by Ant.
+  /** Sets the `encoding` attribute. Used by Ant.
    *
-   *  @param input The value of <code>encoding</code>.
+   *  @param input The value of `encoding`.
    */
   def setEncoding(input: String) {
     encoding = Some(input)
   }
 
-  /** Sets the <code>docgenerator</code> attribute.
+  /** Sets the `docgenerator` attribute.
    *
    *  @param input A fully qualified class name of a doclet.
    */
@@ -291,47 +329,47 @@ class Scaladoc extends ScalaMatchingTask {
 
   /** Sets the `docversion` attribute.
    *
-   *  @param input The value of <code>docversion</code>.
+   *  @param input The value of `docversion`.
    */
   def setDocversion(input: String) {
     docversion = Some(input)
   }
 
-  /** Sets the <code>docsourceurl</code> attribute.
+  /** Sets the `docsourceurl` attribute.
    *
-   *  @param input The value of <code>docsourceurl</code>.
+   *  @param input The value of `docsourceurl`.
    */
   def setDocsourceurl(input: String) {
     docsourceurl = Some(input)
   }
 
-  /** Sets the <code>doctitle</code> attribute.
+  /** Sets the `doctitle` attribute.
    *
-   *  @param input The value of <code>doctitle</code>.
+   *  @param input The value of `doctitle`.
    */
   def setDoctitle(input: String) {
     doctitle = Some(input)
   }
 
-  /** Sets the <code>docfooter</code> attribute.
+  /** Sets the `docfooter` attribute.
    *
-   *  @param input The value of <code>docfooter</code>.
+   *  @param input The value of `docfooter`.
    */
   def setDocfooter(input: String) {
     docfooter = Some(input)
   }
 
-  /** Set the <code>addparams</code> info attribute.
+  /** Set the `addparams` info attribute.
    *
-   *  @param input The value for <code>addparams</code>.
+   *  @param input The value for `addparams`.
    */
   def setAddparams(input: String) {
     addParams = input
   }
 
-  /** Set the <code>deprecation</code> info attribute.
+  /** Set the `deprecation` info attribute.
    *
-   *  @param input One of the flags <code>yes/no</code> or <code>on/off</code>.
+   *  @param input One of the flags `yes/no` or `on/off`.
    */
   def setDeprecation(input: String) {
     if (Flag.isPermissible(input))
@@ -340,9 +378,9 @@ class Scaladoc extends ScalaMatchingTask {
       buildError("Unknown deprecation flag '" + input + "'")
   }
 
-  /** Set the <code>unchecked</code> info attribute.
+  /** Set the `unchecked` info attribute.
    *
-   *  @param input One of the flags <code>yes/no</code> or <code>on/off</code>.
+   *  @param input One of the flags `yes/no` or `on/off`.
    */
   def setUnchecked(input: String) {
     if (Flag.isPermissible(input))
@@ -355,63 +393,122 @@ class Scaladoc extends ScalaMatchingTask {
     docUncompilable = Some(input)
   }
 
+  /** Set the `nofail` info attribute.
+   *
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off.
+   */
+  def setNoFail(input: String) =
+      nofail = Flag.getBooleanValue(input, "nofail")
+
+  /** Set the `implicits` info attribute.
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off. */
+  def setImplicits(input: String) =
+    docImplicits = Flag.getBooleanValue(input, "implicits")
+
+  /** Set the `implicitsShowAll` info attribute to enable scaladoc to show all implicits, including those impossible to
+   *  convert to from the default scope
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off. */
+  def setImplicitsShowAll(input: String) =
+    docImplicitsShowAll = Flag.getBooleanValue(input, "implicitsShowAll")
+
+  /** Set the `implicitsDebug` info attribute so scaladoc outputs implicit conversion debug information
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off. */
+  def setImplicitsDebug(input: String) =
+    docImplicitsDebug = Flag.getBooleanValue(input, "implicitsDebug")
+
+  /** Set the `diagrams` bit so Scaladoc adds diagrams to the documentation
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off. */
+  def setDiagrams(input: String) =
+    docDiagrams = Flag.getBooleanValue(input, "diagrams")
+
+  /** Set the `diagramsDebug` bit so Scaladoc outputs diagram building debug information
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off. */
+  def setDiagramsDebug(input: String) =
+    docDiagramsDebug = Flag.getBooleanValue(input, "diagramsDebug")
+
+  /** Set the `diagramsDotPath` attribute to the path where graphviz dot can be found (including the binary file name,
+   *  eg: /usr/bin/dot) */
+  def setDiagramsDotPath(input: String) =
+    docDiagramsDotPath = Some(input)
+
+  /** Set the `rawOutput` bit so Scaladoc also outputs text from each html file
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off. */
+  def setRawOutput(input: String) =
+    docRawOutput = Flag.getBooleanValue(input, "rawOutput")
+
+  /** Set the `noPrefixes` bit to prevent Scaladoc from generating prefixes in
+   *  front of types -- may lead to confusion, but significantly speeds up the generation.
+   *  @param input One of the flags `yes/no` or `on/off`. Default if no/off. */
+  def setNoPrefixes(input: String) =
+    docNoPrefixes = Flag.getBooleanValue(input, "noPrefixes")
+
+  /** Instruct the scaladoc tool to group similar functions together */
+  def setGroups(input: String) =
+    docGroups = Flag.getBooleanValue(input, "groups")
+
+  /** Instruct the scaladoc tool to skip certain packages.
+   *  @param input A colon-delimited list of fully qualified package names that will be skipped from scaladoc.
+   */
+  def setSkipPackages(input: String) =
+    docSkipPackages = input
+
 /*============================================================================*\
 **                             Properties getters                             **
 \*============================================================================*/
 
-  /** Gets the value of the <code>classpath</code> attribute in a
+  /** Gets the value of the `classpath` attribute in a
    *  Scala-friendly form.
    *
    *  @return The class path as a list of files.
    */
   private def getClasspath: List[File] =
     if (classpath.isEmpty) buildError("Member 'classpath' is empty.")
-    else classpath.get.list().toList.map(nameToFile)
+    else classpath.get.list().toList map nameToFile
 
-  /** Gets the value of the <code>origin</code> attribute in a Scala-friendly
+  /** Gets the value of the `origin` attribute in a Scala-friendly
    *  form.
    *
    *  @return The origin path as a list of files.
    */
   private def getOrigin: List[File] =
     if (origin.isEmpty) buildError("Member 'origin' is empty.")
-    else origin.get.list().toList.map(nameToFile)
+    else origin.get.list().toList map nameToFile
 
-  /** Gets the value of the <code>destination</code> attribute in a
+  /** Gets the value of the `destination` attribute in a
    *  Scala-friendly form.
    *
    *  @return The destination as a file.
    */
   private def getDestination: File =
     if (destination.isEmpty) buildError("Member 'destination' is empty.")
-    else existing(getProject().resolveFile(destination.get.toString))
+    else existing(getProject resolveFile destination.get.toString)
 
-  /** Gets the value of the <code>sourcepath</code> attribute in a
+  /** Gets the value of the `sourcepath` attribute in a
    *  Scala-friendly form.
    *
    *  @return The source path as a list of files.
    */
   private def getSourcepath: List[File] =
     if (sourcepath.isEmpty) buildError("Member 'sourcepath' is empty.")
-    else sourcepath.get.list().toList.map(nameToFile)
+    else sourcepath.get.list().toList map nameToFile
 
-  /** Gets the value of the <code>bootclasspath</code> attribute in a
+  /** Gets the value of the `bootclasspath` attribute in a
    *  Scala-friendly form.
    *
    *  @return The boot class path as a list of files.
    */
   private def getBootclasspath: List[File] =
     if (bootclasspath.isEmpty) buildError("Member 'bootclasspath' is empty.")
-    else bootclasspath.get.list().toList.map(nameToFile)
+    else bootclasspath.get.list().toList map nameToFile
 
-  /** Gets the value of the <code>extdirs</code> attribute in a
+  /** Gets the value of the `extdirs` attribute in a
    *  Scala-friendly form.
    *
    *  @return The extensions path as a list of files.
    */
   private def getExtdirs: List[File] =
     if (extdirs.isEmpty) buildError("Member 'extdirs' is empty.")
-    else extdirs.get.list().toList.map(nameToFile)
+    else extdirs.get.list().toList map nameToFile
 
 /*============================================================================*\
 **                       Compilation and support methods                      **
@@ -441,7 +538,7 @@ class Scaladoc extends ScalaMatchingTask {
    *  @return     A file created from the name.
    */
   private def nameToFile(name: String): File =
-    existing(getProject().resolveFile(name))
+    existing(getProject resolveFile name)
 
   /** Tests if a file exists and prints a warning in case it doesn't. Always
    *  returns the file, even if it doesn't exist.
@@ -459,7 +556,7 @@ class Scaladoc extends ScalaMatchingTask {
   /** Transforms a path into a Scalac-readable string.
    *
    *  @param path A path to convert.
-   *  @return     A string-representation of the path like <code>a.jar:b.jar</code>.
+   *  @return     A string-representation of the path like `a.jar:b.jar`.
    */
   private def asString(path: List[File]): String =
     path.map(asString).mkString("", File.pathSeparator, "")
@@ -467,7 +564,7 @@ class Scaladoc extends ScalaMatchingTask {
   /** Transforms a file into a Scalac-readable string.
    *
    *  @param path A file to convert.
-   *  @return     A string-representation of the file like <code>/x/k/a.scala</code>.
+   *  @return     A string-representation of the file like `/x/k/a.scala`.
    */
   private def asString(file: File): String =
     file.getAbsolutePath()
@@ -486,8 +583,8 @@ class Scaladoc extends ScalaMatchingTask {
     if (destination.isEmpty) destination = Some(getOrigin.head)
 
     val mapper = new GlobPatternMapper()
-    mapper.setTo("*.html")
-    mapper.setFrom("*.scala")
+    mapper setTo "*.html"
+    mapper setFrom "*.scala"
 
     // Scans source directories to build up a compile lists.
     // If force is false, only files were the .class file in destination is
@@ -542,11 +639,22 @@ class Scaladoc extends ScalaMatchingTask {
     if (!doctitle.isEmpty) docSettings.doctitle.value = decodeEscapes(doctitle.get)
     if (!docfooter.isEmpty) docSettings.docfooter.value = decodeEscapes(docfooter.get)
     if (!docversion.isEmpty) docSettings.docversion.value = decodeEscapes(docversion.get)
-    if (!docsourceurl.isEmpty) docSettings.docsourceurl.value =decodeEscapes(docsourceurl.get)
+    if (!docsourceurl.isEmpty) docSettings.docsourceurl.value = decodeEscapes(docsourceurl.get)
     if (!docUncompilable.isEmpty) docSettings.docUncompilable.value = decodeEscapes(docUncompilable.get)
 
     docSettings.deprecation.value = deprecation
     docSettings.unchecked.value = unchecked
+    docSettings.docImplicits.value = docImplicits
+    docSettings.docImplicitsDebug.value = docImplicitsDebug
+    docSettings.docImplicitsShowAll.value = docImplicitsShowAll
+    docSettings.docDiagrams.value = docDiagrams
+    docSettings.docDiagramsDebug.value = docDiagramsDebug
+    docSettings.docRawOutput.value = docRawOutput
+    docSettings.docNoPrefixes.value = docNoPrefixes
+    docSettings.docGroups.value = docGroups
+    docSettings.docSkipPackages.value = docSkipPackages
+    if(!docDiagramsDotPath.isEmpty) docSettings.docDiagramsDotPath.value = docDiagramsDotPath.get
+
     if (!docgenerator.isEmpty) docSettings.docgenerator.value = docgenerator.get
     if (!docrootcontent.isEmpty) docSettings.docRootContent.value = docrootcontent.get.getAbsolutePath()
     log("Scaladoc params = '" + addParams + "'", Project.MSG_DEBUG)
@@ -554,6 +662,8 @@ class Scaladoc extends ScalaMatchingTask {
     docSettings processArgumentString addParams
     Pair(docSettings, sourceFiles)
   }
+
+  def safeBuildError(message: String): Unit = if (nofail) log(message) else buildError(message)
 
   /** Performs the compilation. */
   override def execute() = {
@@ -563,7 +673,7 @@ class Scaladoc extends ScalaMatchingTask {
       val docProcessor = new scala.tools.nsc.doc.DocFactory(reporter, docSettings)
       docProcessor.document(sourceFiles.map (_.toString))
       if (reporter.ERROR.count > 0)
-        buildError(
+        safeBuildError(
           "Document failed with " +
           reporter.ERROR.count + " error" +
           (if (reporter.ERROR.count > 1) "s" else "") +
@@ -576,15 +686,10 @@ class Scaladoc extends ScalaMatchingTask {
           "; see the documenter output for details.")
       reporter.printSummary()
     } catch {
-      case exception: Throwable if exception.getMessage ne null =>
+      case exception: Throwable =>
         exception.printStackTrace()
-        buildError("Document failed because of an internal documenter error (" +
-          exception.getMessage + "); see the error output for details.")
-      case exception =>
-        exception.printStackTrace()
-        buildError("Document failed because of an internal documenter error " +
-          "(no error message provided); see the error output for details.")
+        val msg = Option(exception.getMessage) getOrElse "no error message provided"
+        safeBuildError(s"Document failed because of an internal documenter error ($msg); see the error output for details.")
     }
   }
-
 }

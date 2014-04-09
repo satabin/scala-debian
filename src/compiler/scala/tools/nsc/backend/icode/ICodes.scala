@@ -1,12 +1,7 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
-/* NSC -- new scala compiler
- * Copyright 2005-2011 LAMP/EPFL
- * @author  Martin Odersky
- */
-
 
 package scala.tools.nsc
 package backend
@@ -53,6 +48,9 @@ abstract class ICodes extends AnyRef
     case x        => global.abort("Unknown linearizer: " + x)
   }
 
+  def newTextPrinter() =
+    new TextPrinter(new PrintWriter(Console.out, true), new DumpLinearizer)
+
   /** Have to be careful because dump calls around, possibly
    *  re-entering methods which initiated the dump (like foreach
    *  in BasicBlocks) which leads to the icode output olympics.
@@ -61,31 +59,35 @@ abstract class ICodes extends AnyRef
 
   /** Print all classes and basic blocks. Used for debugging. */
 
-  def dump() {
-    if (alreadyDumping) return
+  def dumpClassesAndAbort(msg: String): Nothing = {
+    if (alreadyDumping) global.abort(msg)
     else alreadyDumping = true
 
-    val printer = new TextPrinter(new PrintWriter(Console.out, true),
-                                  new DumpLinearizer)
-
+    Console.println(msg)
+    val printer = newTextPrinter()
     classes.values foreach printer.printClass
+    global.abort(msg)
   }
 
-  def checkValid(m: IMethod) {
-    // always dicey to iterate over mutable structures
-    val bs = m.code.blocks.toList
+  def dumpMethodAndAbort(m: IMethod, msg: String): Nothing = {
+    Console.println("Fatal bug in inlinerwhile traversing " + m + ": " + msg)
+    m.dump()
+    global.abort("" + m)
+  }
+  def dumpMethodAndAbort(m: IMethod, b: BasicBlock): Nothing =
+    dumpMethodAndAbort(m, "found open block " + b + " " + b.flagsString)
 
-    for (b <- bs ; if !b.closed) {
-      // Something is leaving open/empty blocks around (see SI-4840) so
-      // let's not kill the deal unless it's nonempty.
-      if (b.isEmpty) {
-        log("!!! Found open but empty block while inlining " + m + ": removing from block list.")
-        m.code removeBlock b
-      }
-      else {
-        Console.println("Fatal bug in inliner: found open block when inlining " + m)
-        m.dump
-        global.abort("Open block was: " + b + " " + b.flagsString)
+  def checkValid(m: IMethod) {
+    // always slightly dicey to iterate over mutable structures
+    m foreachBlock { b =>
+      if (!b.closed) {
+        // Something is leaving open/empty blocks around (see SI-4840) so
+        // let's not kill the deal unless it's nonempty.
+        if (b.isEmpty) {
+          log("!!! Found open but empty block while inlining " + m + ": removing from block list.")
+          m.code removeBlock b
+        }
+        else dumpMethodAndAbort(m, b)
       }
     }
   }

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author
  */
 
@@ -37,7 +37,7 @@ trait InfoTransform extends Transform {
         val changesBaseClasses = InfoTransform.this.changesBaseClasses
         def transform(sym: Symbol, tpe: Type): Type = transformInfo(sym, tpe)
       }
-      infoTransformers.insert(infoTransformer)
+      infoTransformers insert infoTransformer
     }
   }
 }

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Burak Emir
  */
 
@@ -7,17 +7,19 @@ package scala.tools.nsc
 package ast.parser
 
 import scala.collection.{ mutable, immutable }
-import xml.{ EntityRef, Text }
-import xml.XML.{ xmlns }
+import scala.xml.{ EntityRef, Text }
+import scala.xml.XML.{ xmlns }
 import symtab.Flags.MUTABLE
-import scala.tools.util.StringOps.splitWhere
+import scala.reflect.internal.util.StringOps.splitWhere
+import scala.language.implicitConversions
 
-/** This class builds instance of <code>Tree</code> that represent XML.
+/** This class builds instance of `Tree` that represent XML.
  *
- * Note from martin: This needs to have its position info reworked. I don't understand exactly
- * what's done here. To make validation pass, I set many positions to be transparent. Not sure this
- * is a good idea for navigating XML trees in the IDE< but it's the best I can do right now. If someone
- * who understands this part better wants to give it a shot, please do!
+ *  Note from martin: This needs to have its position info reworked. I don't
+ *  understand exactly what's done here. To make validation pass, I set many
+ *  positions to be transparent. Not sure this is a good idea for navigating
+ *  XML trees in the IDE but it's the best I can do right now. If someone
+ *  who understands this part better wants to give it a shot, please do!
  *
  *  @author  Burak Emir
  *  @version 1.0
@@ -26,9 +28,9 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
   val global: Global
   import global._
 
-  var isPattern: Boolean = _
+  private[parser] var isPattern: Boolean = _
 
-  trait XMLTypeNames extends LibraryTypeNames {
+  private object xmltypes extends TypeNames {
     val _Comment: NameType             = "Comment"
     val _Elem: NameType                = "Elem"
     val _EntityRef: NameType           = "EntityRef"
@@ -43,7 +45,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
     val _UnprefixedAttribute: NameType = "UnprefixedAttribute"
   }
 
-  trait XMLTermNames extends LibraryTermNames {
+  private object xmlterms extends TermNames {
     val _Null: NameType     = "Null"
     val __Elem: NameType    = "Elem"
     val __Text: NameType    = "Text"
@@ -55,16 +57,10 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
     val _xml: NameType      = "xml"
   }
 
-  private object xmltypes extends XMLTypeNames {
-    type NameType = TypeName
-    implicit def createNameType(name: String): TypeName = newTypeName(name)
-  }
-  private object xmlterms extends XMLTermNames {
-    type NameType = TermName
-    implicit def createNameType(name: String): TermName = newTermName(name)
-  }
-  import xmltypes._
-  import xmlterms._
+  import xmltypes.{_Comment, _Elem, _EntityRef, _Group, _MetaData, _NamespaceBinding, _NodeBuffer,
+    _PrefixedAttribute, _ProcInstr, _Text, _Unparsed, _UnprefixedAttribute}
+
+  import xmlterms.{_Null, __Elem, __Text, _buf, _md, _plus, _scope, _tmpscope, _xml}
 
   // convenience methods
   private def LL[A](x: A*): List[List[A]] = List(List(x:_*))
@@ -97,7 +93,8 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
     pre: Tree,
     label: Tree,
     attrs: Tree,
-    scope:Tree,
+    scope: Tree,
+    empty: Boolean,
     children: Seq[Tree]): Tree =
   {
     def starArgs =
@@ -105,7 +102,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
       else List(Typed(makeXMLseq(pos, children), wildStar))
 
     def pat    = Apply(_scala_xml__Elem, List(pre, label, wild, wild) ::: convertToTextPat(children))
-    def nonpat = New(_scala_xml_Elem, List(List(pre, label, attrs, scope) ::: starArgs))
+    def nonpat = New(_scala_xml_Elem, List(List(pre, label, attrs, scope, if (empty) Literal(Constant(true)) else Literal(Constant(false))) ::: starArgs))
 
     atPos(pos) { if (isPattern) pat else nonpat }
   }
@@ -136,7 +133,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
       case (Some(pre), rest)  => (const(pre), const(rest))
       case _                  => (wild, const(n))
     }
-    mkXML(pos, true, prepat, labpat, null, null, args)
+    mkXML(pos, true, prepat, labpat, null, null, false, args)
   }
 
   protected def convertToTextPat(t: Tree): Tree = t match {
@@ -147,7 +144,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
     (buf map convertToTextPat).toList
 
   def parseAttribute(pos: Position, s: String): Tree = {
-    val ts = xml.Utility.parseAttributeValue(s) map {
+    val ts = scala.xml.Utility.parseAttributeValue(s) map {
       case Text(s)      => text(pos, s)
       case EntityRef(s) => entityRef(pos, s)
     }
@@ -165,7 +162,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
 
   /** could optimize if args.length == 0, args.length == 1 AND args(0) is <: Node. */
   def makeXMLseq(pos: Position, args: Seq[Tree]) = {
-    val buffer = ValDef(NoMods, _buf, TypeTree(), New(_scala_xml_NodeBuffer, List(Nil)))
+    val buffer = ValDef(NoMods, _buf, TypeTree(), New(_scala_xml_NodeBuffer, ListOfNil))
     val applies = args filterNot isEmptyText map (t => Apply(Select(Ident(_buf), _plus), List(t)))
 
     atPos(pos)( Block(buffer :: applies.toList, Ident(_buf)) )
@@ -184,7 +181,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
   def unparsed(pos: Position, str: String): Tree =
     atPos(pos)( New(_scala_xml_Unparsed, LL(const(str))) )
 
-  def element(pos: Position, qname: String, attrMap: mutable.Map[String, Tree], args: Seq[Tree]): Tree = {
+  def element(pos: Position, qname: String, attrMap: mutable.Map[String, Tree], empty: Boolean, args: Seq[Tree]): Tree = {
     def handleNamespaceBinding(pre: String, z: String): Tree = {
       def mkAssign(t: Tree): Tree = Assign(
         Ident(_tmpscope),
@@ -255,6 +252,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
       const(newlabel),
       makeSymbolicAttrs,
       Ident(_scope),
+      empty,
       args
     )
 

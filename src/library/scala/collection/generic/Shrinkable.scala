@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -17,7 +17,7 @@ package generic
  *  @version 2.8
  *  @since   2.8
  *  @define coll shrinkable collection
- *  @define Coll Shrinkable
+ *  @define Coll `Shrinkable`
  */
 trait Shrinkable[-A] {
 
@@ -43,7 +43,7 @@ trait Shrinkable[-A] {
 
   /** Removes all elements produced by an iterator from this $coll.
    *
-   *  @param iter  the iterator producing the elements to remove.
+   *  @param xs   the iterator producing the elements to remove.
    *  @return the $coll itself
    */
   def --=(xs: TraversableOnce[A]): this.type = { xs.seq foreach -= ; this }

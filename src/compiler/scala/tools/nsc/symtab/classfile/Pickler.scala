@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -10,7 +10,7 @@ package classfile
 import java.lang.Float.floatToIntBits
 import java.lang.Double.doubleToLongBits
 import scala.io.Codec
-import reflect.generic.{ PickleBuffer, PickleFormat }
+import scala.reflect.internal.pickling.{ PickleBuffer, PickleFormat }
 import scala.collection.mutable.LinkedHashMap
 import PickleFormat._
 import Flags._
@@ -30,6 +30,8 @@ abstract class Pickler extends SubComponent {
 
   val phaseName = "pickler"
 
+  currentRun
+
   def newPhase(prev: Phase): StdPhase = new PicklePhase(prev)
 
   class PicklePhase(prev: Phase) extends StdPhase(prev) {
@@ -37,7 +39,7 @@ abstract class Pickler extends SubComponent {
       def pickle(tree: Tree) {
         def add(sym: Symbol, pickle: Pickle) = {
           if (currentRun.compiles(sym) && !currentRun.symData.contains(sym)) {
-            if (settings.debug.value) log("pickling " + sym)
+            debuglog("pickling " + sym)
             pickle putSymbol sym
             currentRun.symData(sym) = pickle
           }
@@ -57,12 +59,19 @@ abstract class Pickler extends SubComponent {
         }
       }
       // If there are any erroneous types in the tree, then we will crash
-      // when we pickle it: so let's report an erorr instead.  We know next
+      // when we pickle it: so let's report an error instead.  We know next
       // to nothing about what happened, but our supposition is a lot better
       // than "bad type: <error>" in terms of explanatory power.
-      for (t <- unit.body ; if t.isErroneous) {
-        unit.error(t.pos, "erroneous or inaccessible type")
-        return
+      for (t <- unit.body) {
+        if (t.isErroneous) {
+          unit.error(t.pos, "erroneous or inaccessible type")
+          return
+        }
+
+        if (!t.isDef && t.hasSymbol && t.symbol.isTermMacro) {
+          unit.error(t.pos, "macro has not been expanded")
+          return
+        }
       }
 
       pickle(unit.body)
@@ -75,7 +84,7 @@ abstract class Pickler extends SubComponent {
     private var entries   = new Array[AnyRef](256)
     private var ep        = 0
     private val index     = new LinkedHashMap[AnyRef, Int]
-    private lazy val nonClassRoot = root.ownersIterator.find(! _.isClass) getOrElse NoSymbol
+    private lazy val nonClassRoot = findOrElse(root.ownersIterator)(!_.isClass)(NoSymbol)
 
     private def isRootSym(sym: Symbol) =
       sym.name.toTermName == rootName && sym.owner == rootOwner
@@ -103,10 +112,6 @@ abstract class Pickler extends SubComponent {
        sym.isAbstractType && sym.hasFlag(EXISTENTIAL) || // existential param
        sym.isParameter ||
        isLocal(sym.owner))
-
-    private def staticAnnotations(annots: List[AnnotationInfo]) =
-      annots filter(ann =>
-        ann.atp.typeSymbol isNonBottomSubClass definitions.StaticAnnotationClass)
 
     // Phase 1 methods: Populate entries/index ------------------------------------
 
@@ -144,19 +149,17 @@ abstract class Pickler extends SubComponent {
             putType(sym.typeOfThis);
           putSymbol(sym.alias)
           if (!sym.children.isEmpty) {
-            val (locals, globals) = sym.children.toList.partition(_.isLocalClass)
+            val (locals, globals) = sym.children partition (_.isLocalClass)
             val children =
               if (locals.isEmpty) globals
-              else {
-                val localChildDummy = sym.newClass(sym.pos, tpnme.LOCAL_CHILD)
-                localChildDummy.setInfo(ClassInfoType(List(sym.tpe), EmptyScope, localChildDummy))
-                localChildDummy :: globals
-              }
-            putChildren(sym, children sortBy (_.sealedSortName))
+              else globals + sym.newClassWithInfo(tpnme.LOCAL_CHILD, List(sym.tpe), EmptyScope, pos = sym.pos)
+
+            putChildren(sym, children.toList sortBy (_.sealedSortName))
           }
-          for (annot <- staticAnnotations(sym.annotations.reverse))
+          for (annot <- (sym.annotations filter (ann => ann.isStatic && !ann.isErroneous)).reverse)
             putAnnotation(sym, annot)
-        } else if (sym != NoSymbol) {
+        }
+        else if (sym != NoSymbol) {
           putEntry(if (sym.isModuleClass) sym.name.toTermName else sym.name)
           if (!sym.owner.isRoot) putSymbol(sym.owner)
         }
@@ -191,7 +194,7 @@ abstract class Pickler extends SubComponent {
         case RefinedType(parents, decls) =>
           val rclazz = tp.typeSymbol
           for (m <- decls.iterator)
-            if (m.owner != rclazz) assert(false, "bad refinement member "+m+" of "+tp+", owner = "+m.owner)
+            if (m.owner != rclazz) abort("bad refinement member "+m+" of "+tp+", owner = "+m.owner)
           putSymbol(rclazz); putTypes(parents); putSymbols(decls.toList)
         case ClassInfoType(parents, decls, clazz) =>
           putSymbol(clazz); putTypes(parents); putSymbols(decls.toList)
@@ -218,7 +221,7 @@ abstract class Pickler extends SubComponent {
         case AnnotatedType(annotations, underlying, selfsym) =>
           putType(underlying)
           if (settings.selfInAnnots.value) putSymbol(selfsym)
-          putAnnotations(staticAnnotations(annotations))
+          putAnnotations(annotations filter (_.isStatic))
         case _ =>
           throw new FatalError("bad type: " + tp + "(" + tp.getClass + ")")
       }
@@ -286,7 +289,6 @@ abstract class Pickler extends SubComponent {
           putTree(definition)
 */
         case Template(parents, self, body) =>
-          writeNat(parents.length)
           putTrees(parents)
           putTree(self)
           putTrees(body)
@@ -420,7 +422,7 @@ abstract class Pickler extends SubComponent {
      *  argument of some Annotation */
     private def putMods(mods: Modifiers) = if (putEntry(mods)) {
       // annotations in Modifiers are removed by the typechecker
-      val Modifiers(flags, privateWithin, Nil, _) = mods
+      val Modifiers(flags, privateWithin, Nil) = mods
       putEntry(privateWithin)
     }
 
@@ -429,7 +431,7 @@ abstract class Pickler extends SubComponent {
     private def putConstant(c: Constant) {
       if (putEntry(c)) {
         if (c.tag == StringTag) putEntry(newTermName(c.stringValue))
-        else if (c.tag == ClassTag) putType(c.typeValue)
+        else if (c.tag == ClazzTag) putType(c.typeValue)
         else if (c.tag == EnumTag) putSymbol(c.symbolValue)
       }
     }
@@ -500,7 +502,7 @@ abstract class Pickler extends SubComponent {
     private def writeSymInfo(sym: Symbol) {
       writeRef(sym.name)
       writeRef(localizedOwner(sym))
-      writeLongNat((rawFlagsToPickled(sym.flags & PickledFlags)))
+      writeLongNat((rawToPickledFlags(sym.flags & PickledFlags)))
       if (sym.hasAccessBoundary) writeRef(sym.privateWithin)
       writeRef(sym.info)
     }
@@ -509,7 +511,7 @@ abstract class Pickler extends SubComponent {
     private def writeName(name: Name) {
       ensureCapacity(name.length * 3)
       val utfBytes = Codec toUTF8 name.toString
-      compat.Platform.arraycopy(utfBytes, 0, bytes, writeIndex, utfBytes.length)
+      scala.compat.Platform.arraycopy(utfBytes, 0, bytes, writeIndex, utfBytes.length)
       writeIndex += utfBytes.length
     }
 
@@ -610,21 +612,19 @@ abstract class Pickler extends SubComponent {
           else if (c.tag == FloatTag) writeLong(floatToIntBits(c.floatValue))
           else if (c.tag == DoubleTag) writeLong(doubleToLongBits(c.doubleValue))
           else if (c.tag == StringTag) writeRef(newTermName(c.stringValue))
-          else if (c.tag == ClassTag) writeRef(c.typeValue)
+          else if (c.tag == ClazzTag) writeRef(c.typeValue)
           else if (c.tag == EnumTag) writeRef(c.symbolValue)
           LITERAL + c.tag // also treats UnitTag, NullTag; no value required
         case AnnotatedType(annotations, tp, selfsym) =>
-          val staticAnnots = staticAnnotations(annotations)
-          if (staticAnnots isEmpty) {
-            writeBody(tp) // write the underlying type if there are no annotations
-          } else {
-            if (settings.selfInAnnots.value && selfsym != NoSymbol)
-              writeRef(selfsym)
-            writeRef(tp)
-            writeRefs(staticAnnots)
-            ANNOTATEDtpe
+          annotations filter (_.isStatic) match {
+            case Nil          => writeBody(tp) // write the underlying type if there are no annotations
+            case staticAnnots =>
+              if (settings.selfInAnnots.value && selfsym != NoSymbol)
+                writeRef(selfsym)
+              writeRef(tp)
+              writeRefs(staticAnnots)
+              ANNOTATEDtpe
           }
-
         // annotations attached to a symbol (i.e. annots on terms)
         case (target: Symbol, annot@AnnotationInfo(_, _, _)) =>
           writeRef(target)
@@ -964,8 +964,8 @@ abstract class Pickler extends SubComponent {
           writeRefs(whereClauses)
           TREE
 
-        case Modifiers(flags, privateWithin, _, _) =>
-          val pflags = rawFlagsToPickled(flags)
+        case Modifiers(flags, privateWithin, _) =>
+          val pflags = rawToPickledFlags(flags)
           writeNat((pflags >> 32).toInt)
           writeNat((pflags & 0xFFFFFFFF).toInt)
           writeRef(privateWithin)
@@ -1065,7 +1065,7 @@ abstract class Pickler extends SubComponent {
           else if (c.tag == FloatTag) print("Float "+c.floatValue)
           else if (c.tag == DoubleTag) print("Double "+c.doubleValue)
           else if (c.tag == StringTag) { print("String "); printRef(newTermName(c.stringValue)) }
-          else if (c.tag == ClassTag) { print("Class "); printRef(c.typeValue) }
+          else if (c.tag == ClazzTag) { print("Class "); printRef(c.typeValue) }
           else if (c.tag == EnumTag) { print("Enum "); printRef(c.symbolValue) }
         case AnnotatedType(annots, tp, selfsym) =>
           if (settings.selfInAnnots.value) {

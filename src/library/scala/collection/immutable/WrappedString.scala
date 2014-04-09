@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,7 +13,6 @@ package immutable
 
 import generic._
 import mutable.{Builder, StringBuilder}
-import scala.util.matching.Regex
 
 /**
  *  This class serves as a wrapper augmenting `String`s with all the operations
@@ -26,10 +25,10 @@ import scala.util.matching.Regex
  *  @param self    a string contained within this wrapped string
  *
  *  @since 2.8
- *  @define Coll WrappedString
+ *  @define Coll `WrappedString`
  *  @define coll wrapped string
  */
-class WrappedString(val self: String) extends IndexedSeq[Char] with StringLike[WrappedString] {
+class WrappedString(val self: String) extends AbstractSeq[Char] with IndexedSeq[Char] with StringLike[WrappedString] {
 
   override protected[this] def thisCollection: WrappedString = this
   override protected[this] def toCollection(repr: WrappedString): WrappedString = repr

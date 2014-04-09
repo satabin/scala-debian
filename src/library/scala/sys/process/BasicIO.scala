@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -45,7 +45,7 @@ object BasicIO {
       val q = new LinkedBlockingQueue[Either[Int, T]]
       def next(): Stream[T] = q.take match {
         case Left(0)    => Stream.empty
-        case Left(code) => if (nonzeroException) sys.error("Nonzero exit code: " + code) else Stream.empty
+        case Left(code) => if (nonzeroException) scala.sys.error("Nonzero exit code: " + code) else Stream.empty
         case Right(s)   => Stream.cons(s, next)
       }
       new Streamed((s: T) => q put Right(s), code => q put Left(code), () => next())
@@ -97,7 +97,7 @@ object BasicIO {
     *
     * @param withIn True if the process input should be attached to stdin.
     * @param buffer A `StringBuffer` which will receive the process normal
-    *               output. 
+    *               output.
     * @param log    An optional `ProcessLogger` to which the output should be
     *               sent. If `None`, output will be sent to stderr.
     * @return A `ProcessIO` with the characteristics above.

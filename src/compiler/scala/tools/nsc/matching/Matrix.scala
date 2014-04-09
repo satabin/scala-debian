@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * Author: Paul Phillips
  */
 
@@ -9,6 +9,7 @@ package matching
 import transform.ExplicitOuter
 import symtab.Flags
 import scala.collection.mutable
+import scala.language.implicitConversions
 
 trait Matrix extends MatrixAdditions {
   self: ExplicitOuter with ParallelMatching =>
@@ -23,9 +24,9 @@ trait Matrix extends MatrixAdditions {
 
   /** Translation of match expressions.
    *
-   *  `p':  pattern
-   *  `g':  guard
-   *  `bx': body index
+   *  `p`:  pattern
+   *  `g`:  guard
+   *  `bx`: body index
    *
    *   internal representation is (tvars:List[Symbol], rows:List[Row])
    *
@@ -122,8 +123,7 @@ trait Matrix extends MatrixAdditions {
     private val _syntheticSyms = mutable.HashSet[Symbol]()
     def clearSyntheticSyms() = {
       _syntheticSyms foreach (_ resetFlag (NO_EXHAUSTIVE|MUTABLE))
-      if (settings.debug.value)
-        log("Cleared NO_EXHAUSTIVE/MUTABLE on " + _syntheticSyms.size + " synthetic symbols.")
+      debuglog("Cleared NO_EXHAUSTIVE/MUTABLE on " + _syntheticSyms.size + " synthetic symbols.")
       _syntheticSyms.clear()
     }
     def recordSyntheticSym(sym: Symbol): Symbol = {
@@ -199,6 +199,10 @@ trait Matrix extends MatrixAdditions {
     class PatternVar(val lhs: Symbol, val rhs: Tree, val checked: Boolean) {
       def sym = lhs
       def tpe = lhs.tpe
+      if (checked)
+        lhs resetFlag NO_EXHAUSTIVE
+      else
+        lhs setFlag NO_EXHAUSTIVE
 
       // See #1427 for an example of a crash which occurs unless we retype:
       // in that instance there is an existential in the pattern.
@@ -207,11 +211,6 @@ trait Matrix extends MatrixAdditions {
 
       override def toString() = "%s: %s = %s".format(lhs, tpe, rhs)
     }
-
-    /** Sets the rhs to EmptyTree, which makes the valDef ignored in Scrutinee.
-     */
-    def specialVar(lhs: Symbol, checked: Boolean) =
-      new PatternVar(lhs, EmptyTree, checked)
 
     /** Given a tree, creates a new synthetic variable of the same type
      *  and assigns the tree to it.
@@ -253,7 +252,8 @@ trait Matrix extends MatrixAdditions {
     {
       val n = if (name == null) cunit.freshTermName("temp") else name
       // careful: pos has special meaning
-      recordSyntheticSym(owner.newVariable(pos, n) setInfo tpe setFlag (SYNTHETIC.toLong /: flags)(_|_))
+      val flagsLong = (SYNTHETIC.toLong /: flags)(_|_)
+      recordSyntheticSym(owner.newVariable(n, pos, flagsLong) setInfo tpe)
     }
   }
 }

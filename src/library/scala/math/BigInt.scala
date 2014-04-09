@@ -1,16 +1,15 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.math
 
 import java.math.BigInteger
+import scala.language.implicitConversions
 
 /**
  *  @author  Martin Odersky
@@ -22,6 +21,7 @@ object BigInt {
   private val minCached = -1024
   private val maxCached = 1024
   private val cache = new Array[BigInt](maxCached - minCached + 1)
+  private val minusOne = BigInteger.valueOf(-1)
 
   @deprecated("Use Long.MinValue", "2.9.0")
   val MinLong = BigInt(Long.MinValue)
@@ -29,11 +29,11 @@ object BigInt {
   @deprecated("Use Long.MaxValue", "2.9.0")
   val MaxLong = BigInt(Long.MaxValue)
 
-  /** Constructs a <code>BigInt</code> whose value is equal to that of the
+  /** Constructs a `BigInt` whose value is equal to that of the
    *  specified integer value.
    *
    *  @param i the specified integer value
-   *  @return  the constructed <code>BigInt</code>
+   *  @return  the constructed `BigInt`
    */
   def apply(i: Int): BigInt =
     if (minCached <= i && i <= maxCached) {
@@ -43,11 +43,11 @@ object BigInt {
       n
     } else new BigInt(BigInteger.valueOf(i))
 
-  /** Constructs a <code>BigInt</code> whose value is equal to that of the
+  /** Constructs a `BigInt` whose value is equal to that of the
    *  specified long value.
    *
    *  @param l the specified long value
-   *  @return  the constructed <code>BigInt</code>
+   *  @return  the constructed `BigInt`
    */
   def apply(l: Long): BigInt =
     if (minCached <= l && l <= maxCached) apply(l.toInt)
@@ -71,11 +71,7 @@ object BigInt {
     new BigInt(new BigInteger(bitlength, certainty, rnd.self))
 
   /** Constructs a randomly generated BigInt, uniformly distributed over the
-   *  range 0 to (2 ^ numBits - 1), inclusive.
-   *
-   *  @param numbits ...
-   *  @param rnd     ...
-   *  @return        ...
+   *  range `0` to `(2 ^ numBits - 1)`, inclusive.
    */
   def apply(numbits: Int, rnd: scala.util.Random): BigInt =
     new BigInt(new BigInteger(numbits, rnd.self))
@@ -85,39 +81,44 @@ object BigInt {
   def apply(x: String): BigInt =
     new BigInt(new BigInteger(x))
 
-  /** Translates the string representation of a BigInt in the
-   *  specified <code>radix</code> into a BigInt.
-   *
-   *  @param x     ...
-   *  @param radix ...
-   *  @return      ...
+  /** Translates the string representation of a `BigInt` in the
+   *  specified `radix` into a BigInt.
    */
   def apply(x: String, radix: Int): BigInt =
     new BigInt(new BigInteger(x, radix))
+
+  /** Translates a `java.math.BigInteger` into a BigInt.
+   */
+  def apply(x: BigInteger): BigInt =
+    new BigInt(x)
 
   /** Returns a positive BigInt that is probably prime, with the specified bitLength.
    */
   def probablePrime(bitLength: Int, rnd: scala.util.Random): BigInt =
     new BigInt(BigInteger.probablePrime(bitLength, rnd.self))
 
-  /** Implicit conversion from <code>int</code> to <code>BigInt</code>.
+  /** Implicit conversion from `Int` to `BigInt`.
    */
   implicit def int2bigInt(i: Int): BigInt = apply(i)
 
-  /** Implicit conversion from long to BigInt
+  /** Implicit conversion from `Long` to `BigInt`.
    */
   implicit def long2bigInt(l: Long): BigInt = apply(l)
+
+  /** Implicit conversion from `java.math.BigInteger` to `scala.BigInt`.
+   */
+  implicit def javaBigInteger2bigInt(x: BigInteger): BigInt = apply(x)
 }
 
 /**
  *  @author  Martin Odersky
  *  @version 1.0, 15/07/2003
  */
-class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericConversions with Serializable
-{
+@deprecatedInheritance("This class will be made final.", "2.10.0")
+class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericConversions with Serializable {
   /** Returns the hash code for this BigInt. */
   override def hashCode(): Int =
-    if (fitsInLong) unifiedPrimitiveHashcode
+    if (isValidLong) unifiedPrimitiveHashcode
     else bigInteger.##
 
   /** Compares this BigInt with the specified value for equality.
@@ -125,11 +126,52 @@ class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericCo
   override def equals(that: Any): Boolean = that match {
     case that: BigInt     => this equals that
     case that: BigDecimal => that.toBigIntExact exists (this equals _)
-    case x                => fitsInLong && unifiedPrimitiveEquals(x)
+    case that: Double     => isValidDouble && toDouble == that
+    case that: Float      => isValidFloat && toFloat == that
+    case x                => isValidLong && unifiedPrimitiveEquals(x)
   }
-  private def fitsInLong = this >= Long.MinValue && this <= Long.MaxValue
+  override def isValidByte  = this >= Byte.MinValue && this <= Byte.MaxValue
+  override def isValidShort = this >= Short.MinValue && this <= Short.MaxValue
+  override def isValidChar  = this >= Char.MinValue && this <= Char.MaxValue
+  override def isValidInt   = this >= Int.MinValue && this <= Int.MaxValue
+           def isValidLong  = this >= Long.MinValue && this <= Long.MaxValue
+  /** Returns `true` iff this can be represented exactly by [[scala.Float]]; otherwise returns `false`.
+    */
+  def isValidFloat = {
+    val bitLen = bitLength
+    (bitLen <= 24 ||
+      {
+        val lowest = lowestSetBit
+        bitLen <= java.lang.Float.MAX_EXPONENT + 1 && // exclude this < -2^128 && this >= 2^128
+        lowest >= bitLen - 24 &&
+        lowest < java.lang.Float.MAX_EXPONENT + 1 // exclude this == -2^128
+      }
+    ) && !bitLengthOverflow
+  }
+  /** Returns `true` iff this can be represented exactly by [[scala.Double]]; otherwise returns `false`.
+    */
+  def isValidDouble = {
+    val bitLen = bitLength
+    (bitLen <= 53 ||
+      {
+        val lowest = lowestSetBit
+        bitLen <= java.lang.Double.MAX_EXPONENT + 1 && // exclude this < -2^1024 && this >= 2^1024
+        lowest >= bitLen - 53 &&
+        lowest < java.lang.Double.MAX_EXPONENT + 1 // exclude this == -2^1024
+      }
+    ) && !bitLengthOverflow
+  }
+  /** Some implementations of java.math.BigInteger allow huge values with bit length greater than Int.MaxValue .
+   * The BigInteger.bitLength method returns truncated bit length in this case .
+   * This method tests if result of bitLength is valid.
+   * This method will become unnecessary if BigInt constructors reject huge BigIntegers.
+   */
+  private def bitLengthOverflow = {
+    val shifted = bigInteger.shiftRight(Int.MaxValue)
+    (shifted.signum != 0) && !(shifted equals BigInt.minusOne)
+  }
 
-  protected[math] def isWhole = true
+  def isWhole() = true
   def underlying = bigInteger
 
   /** Compares this BigInt with the specified BigInt for equality.
@@ -211,8 +253,8 @@ class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericCo
    */
   def gcd (that: BigInt): BigInt = new BigInt(this.bigInteger.gcd(that.bigInteger))
 
-  /** Returns a BigInt whose value is (this mod m).
-   *  This method differs from `%' in that it always returns a non-negative BigInt.
+  /** Returns a BigInt whose value is (this mod that).
+   *  This method differs from `%` in that it always returns a non-negative BigInt.
    */
   def mod (that: BigInt): BigInt = new BigInt(this.bigInteger.mod(that.bigInteger))
 
@@ -308,7 +350,7 @@ class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericCo
   override def byteValue   = intValue.toByte
 
   /** Converts this BigInt to a <tt>short</tt>.
-   *  If the BigInt is too big to fit in a byte, only the low-order 16 bits are returned.
+   *  If the BigInt is too big to fit in a short, only the low-order 16 bits are returned.
    *  Note that this conversion can lose information about the overall magnitude of the
    *  BigInt value as well as return a result with the opposite sign.
    */
@@ -322,7 +364,7 @@ class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericCo
   def charValue   = intValue.toChar
 
   /** Converts this BigInt to an <tt>int</tt>.
-   *  If the BigInt is too big to fit in a char, only the low-order 32 bits
+   *  If the BigInt is too big to fit in a int, only the low-order 32 bits
    *  are returned. Note that this conversion can lose information about the
    *  overall magnitude of the BigInt value as well as return a result with
    *  the opposite sign.
@@ -330,28 +372,28 @@ class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericCo
   def intValue    = this.bigInteger.intValue
 
   /** Converts this BigInt to a <tt>long</tt>.
-   *  If the BigInt is too big to fit in a char, only the low-order 64 bits
+   *  If the BigInt is too big to fit in a long, only the low-order 64 bits
    *  are returned. Note that this conversion can lose information about the
    *  overall magnitude of the BigInt value as well as return a result with
    *  the opposite sign.
    */
   def longValue   = this.bigInteger.longValue
 
-  /** Converts this BigInt to a <tt>float</tt>.
-   *  if this BigInt has too great a magnitude to represent as a float,
-   *  it will be converted to <code>Float.NEGATIVE_INFINITY</code> or
-   *  <code>Float.POSITIVE_INFINITY</code> as appropriate.
+  /** Converts this `BigInt` to a `float`.
+   *  If this `BigInt` has too great a magnitude to represent as a float,
+   *  it will be converted to `Float.NEGATIVE_INFINITY` or
+   *  `Float.POSITIVE_INFINITY` as appropriate.
    */
   def floatValue  = this.bigInteger.floatValue
 
-  /** Converts this BigInt to a <tt>double</tt>.
-   *  if this BigInt has too great a magnitude to represent as a double,
-   *  it will be converted to <code>Double.NEGATIVE_INFINITY</code> or
-   *  <code>Double.POSITIVE_INFINITY</code> as appropriate.
+  /** Converts this `BigInt` to a `double`.
+   *  if this `BigInt` has too great a magnitude to represent as a double,
+   *  it will be converted to `Double.NEGATIVE_INFINITY` or
+   *  `Double.POSITIVE_INFINITY` as appropriate.
    */
   def doubleValue = this.bigInteger.doubleValue
 
-  /** Create a NumericRange[BigInt] in range <code>[start;end)</code>
+  /** Create a `NumericRange[BigInt]` in range `[start;end)`
    *  with the specified step, where start is the target BigInt.
    *
    *  @param end    the end value of the range (exclusive)

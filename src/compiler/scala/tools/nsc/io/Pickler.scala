@@ -1,15 +1,17 @@
 package scala.tools.nsc.io
 
-import annotation.unchecked
+import scala.annotation.unchecked
 import Lexer._
 import java.io.Writer
+import scala.language.implicitConversions
+import scala.reflect.ClassTag
 
 /** An abstract class for writing and reading Scala objects to and
  *  from a legible representation. The presesentation follows the following grammar:
  *  {{{
- *  Pickled = `true' | `false' | `null' | NumericLit | StringLit |
- *            Labelled | Pickled `,' Pickled
- *  Labelled = StringLit `(' Pickled? `)'
+ *  Pickled = `true` | `false` | `null` | NumericLit | StringLit |
+ *            Labelled | Pickled `,` Pickled
+ *  Labelled = StringLit `(` Pickled? `)`
  *  }}}
  *
  *  All ...Lit classes are as in JSON. @see scala.tools.nsc.io.Lexer
@@ -165,16 +167,13 @@ object Pickler {
   def pkl[T: Pickler] = implicitly[Pickler[T]]
 
   /** A class represenenting `~`-pairs */
-  case class ~[S, T](fst: S, snd: T)
+  case class ~[+S, +T](fst: S, snd: T)
 
   /** A wrapper class to be able to use `~` s an infix method */
-  class TildeDecorator[S](x: S) {
+  implicit class TildeDecorator[S](x: S) {
     /** Infix method that forms a `~`-pair. */
     def ~ [T](y: T): S ~ T = new ~ (x, y)
   }
-
-  /** An implicit wrapper that adds `~` as a method to any value. */
-  implicit def tildeDecorator[S](x: S): TildeDecorator[S] = new TildeDecorator(x)
 
   /** A converter from binary functions to functions over `~`-pairs
    */
@@ -246,7 +245,7 @@ object Pickler {
         p.tryPickle(wr, x) || qq.tryPickle(wr, x)
       def pickle(wr: Writer, x: T) =
         require(tryPickle(wr, x),
-                "no pickler found for "+x+" of class "+x.asInstanceOf[AnyRef].getClass.getName)
+                "no pickler found for "+x+" of class "+x.getClass.getName)
       def unpickle(rd: Lexer) = p.unpickle(rd) orElse qq.unpickle(rd)
     }
 
@@ -418,7 +417,7 @@ object Pickler {
     iterPickler[T] .wrapped { Vector() ++ _ } { _.iterator } .labelled ("scala.Vector")
 
   /** A pickler for array values */
-  implicit def array[T : ClassManifest : Pickler]: Pickler[Array[T]] =
+  implicit def array[T : ClassTag : Pickler]: Pickler[Array[T]] =
     iterPickler[T] .wrapped { _.toArray} { _.iterator } .labelled ("scala.Array")
 }
 

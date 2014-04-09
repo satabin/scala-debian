@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,13 +11,13 @@ package immutable
 
 import HashMap.{ HashTrieMap, HashMapCollision1, HashMap1 }
 import HashSet.{ HashTrieSet, HashSetCollision1, HashSet1 }
-import annotation.unchecked.{ uncheckedVariance => uV }
+import scala.annotation.unchecked.{ uncheckedVariance => uV }
 import scala.annotation.tailrec
 
 /** Abandons any pretense of type safety for speed.  You can't say I
  *  didn't try: see r23934.
  */
-private[collection] abstract class TrieIterator[+T](elems: Array[Iterable[T]]) extends Iterator[T] {
+private[collection] abstract class TrieIterator[+T](elems: Array[Iterable[T]]) extends AbstractIterator[T] {
   outer =>
 
   private[immutable] def getElem(x: AnyRef): T
@@ -46,7 +46,7 @@ private[collection] abstract class TrieIterator[+T](elems: Array[Iterable[T]]) e
     case x: HashSetCollision1[_]    => x.ks.map(x => HashSet(x)).toArray
   }).asInstanceOf[Array[Iterable[T]]]
 
-  private type SplitIterators = ((Iterator[T], Int), Iterator[T])
+  private[this] type SplitIterators = ((Iterator[T], Int), Iterator[T])
 
   private def isTrie(x: AnyRef) = x match {
     case _: HashTrieMap[_,_] | _: HashTrieSet[_] => true
@@ -75,7 +75,7 @@ private[collection] abstract class TrieIterator[+T](elems: Array[Iterable[T]]) e
   }
 
   private[this] def iteratorWithSize(arr: Array[Iterable[T]]): (Iterator[T], Int) =
-    (newIterator(arr), arr map (_.size) sum)
+    (newIterator(arr), arr.map(_.size).sum)
 
   private[this] def arrayToIterators(arr: Array[Iterable[T]]): SplitIterators = {
     val (fst, snd) = arr.splitAt(arr.length / 2)
@@ -92,7 +92,7 @@ private[collection] abstract class TrieIterator[+T](elems: Array[Iterable[T]]) e
     }
 
   def hasNext = (subIter ne null) || depth >= 0
-  def next: T = {
+  def next(): T = {
     if (subIter ne null) {
       val el = subIter.next
       if (!subIter.hasNext)

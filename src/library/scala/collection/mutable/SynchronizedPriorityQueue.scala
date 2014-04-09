@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -20,7 +20,7 @@ package mutable
  *  @author  Matthias Zenger
  *  @version 1.0, 03/05/2004
  *  @since   1
- *  @define Coll SynchronizedPriorityQueue
+ *  @define Coll `SynchronizedPriorityQueue`
  *  @define coll synchronized priority queue
  */
 class SynchronizedPriorityQueue[A](implicit ord: Ordering[A]) extends PriorityQueue[A] {

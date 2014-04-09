@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -27,7 +27,7 @@ import generic._
  *  @tparam A    the element type of the $coll
  *  @tparam Repr the type of the actual $coll containing the elements.
  *
- *  @define Coll IndexedSeq
+ *  @define Coll `IndexedSeq`
  *  @define coll mutable indexed sequence
  *  @define indexedSeqInfo
  *  @author Martin Odersky
@@ -36,14 +36,14 @@ import generic._
  *  @define willNotTerminateInf
  *  @define mayNotTerminateInf
  */
-trait IndexedSeqLike[A, +Repr] extends scala.collection.IndexedSeqLike[A, Repr] { self =>
+trait IndexedSeqLike[A, +Repr] extends Any with scala.collection.IndexedSeqLike[A, Repr] { self =>
 
   override protected[this] def thisCollection: IndexedSeq[A] = this.asInstanceOf[IndexedSeq[A]]
   override protected[this] def toCollection(repr: Repr): IndexedSeq[A] = repr.asInstanceOf[IndexedSeq[A]]
 
   /** Replaces element at given index with a new value.
    *
-   *  @param n       the index of the element to replace.
+   *  @param idx     the index of the element to replace.
    *  @param elem    the new value.
    *  @throws   IndexOutOfBoundsException if the index is not valid.
    */

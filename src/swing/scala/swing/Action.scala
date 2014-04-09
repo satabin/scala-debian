@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -135,7 +135,7 @@ abstract class Action(title0: String) {
   def accelerator: Option[KeyStroke] =
     toOption(peer.getValue(javax.swing.Action.ACCELERATOR_KEY))
   def accelerator_=(k: Option[KeyStroke]) {
-    peer.putValue(javax.swing.Action.ACCELERATOR_KEY, k orNull)
+    peer.putValue(javax.swing.Action.ACCELERATOR_KEY, k.orNull)
   }
 
   /**

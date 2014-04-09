@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,6 +13,7 @@ package mutable
 
 import generic._
 import immutable.{List, Nil, ::}
+import java.io._
 
 /** A `Buffer` implementation back up by a list. It provides constant time
  *  prepend and append. Most other operations are linear.
@@ -26,7 +27,7 @@ import immutable.{List, Nil, ::}
  *
  *  @tparam A    the type of this list buffer's elements.
  *
- *  @define Coll ListBuffer
+ *  @define Coll `ListBuffer`
  *  @define coll list buffer
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
  *    `That` is always `ListBuffer[B]` because an implicit of type `CanBuildFrom[ListBuffer, B, ListBuffer[B]]`
@@ -40,9 +41,10 @@ import immutable.{List, Nil, ::}
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-@SerialVersionUID(3419063961353022661L)
+@SerialVersionUID(3419063961353022662L)
 final class ListBuffer[A]
-      extends Buffer[A]
+      extends AbstractBuffer[A]
+         with Buffer[A]
          with GenericTraversableTemplate[A, ListBuffer]
          with BufferLike[A, ListBuffer[A]]
          with Builder[A, List[A]]
@@ -52,6 +54,7 @@ final class ListBuffer[A]
   override def companion: GenericCompanion[ListBuffer] = ListBuffer
 
   import scala.collection.Traversable
+  import scala.collection.immutable.ListSerializeEnd
 
   private var start: List[A] = Nil
   private var last0: ::[A] = _
@@ -60,11 +63,56 @@ final class ListBuffer[A]
 
   protected def underlying: immutable.Seq[A] = start
 
+  private def writeObject(out: ObjectOutputStream) {
+    // write start
+    var xs: List[A] = start
+    while (!xs.isEmpty) { out.writeObject(xs.head); xs = xs.tail }
+    out.writeObject(ListSerializeEnd)
+
+    // no need to write last0
+
+    // write if exported
+    out.writeBoolean(exported)
+
+    // write the length
+    out.writeInt(len)
+  }
+
+  private def readObject(in: ObjectInputStream) {
+    // read start, set last0 appropriately
+    var elem: A = in.readObject.asInstanceOf[A]
+    if (elem == ListSerializeEnd) {
+      start = Nil
+      last0 = null
+    } else {
+      var current = new ::(elem, Nil)
+      start = current
+      elem = in.readObject.asInstanceOf[A]
+      while (elem != ListSerializeEnd) {
+        val list = new ::(elem, Nil)
+        current.tl = list
+        current = list
+        elem = in.readObject.asInstanceOf[A]
+      }
+      last0 = current
+      start
+    }
+
+    // read if exported
+    exported = in.readBoolean()
+
+    // read the length
+    len = in.readInt()
+  }
+
   /** The current length of the buffer.
    *
    *  This operation takes constant time.
    */
   override def length = len
+
+  // Don't use the inherited size, which forwards to a List and is O(n).
+  override def size = length
 
   // Implementations of abstract methods in Buffer
 
@@ -81,29 +129,27 @@ final class ListBuffer[A]
    *  @throws Predef.IndexOutOfBoundsException if `n` is out of bounds.
    */
   def update(n: Int, x: A) {
-    try {
-      if (exported) copy()
-      if (n == 0) {
-        val newElem = new :: (x, start.tail);
-        if (last0 eq start) {
-          last0 = newElem
-        }
-        start = newElem
-      } else {
-        var cursor = start
-        var i = 1
-        while (i < n) {
-          cursor = cursor.tail
-          i += 1
-        }
-        val newElem = new :: (x, cursor.tail.tail)
-        if (last0 eq cursor.tail) {
-          last0 = newElem
-        }
-        cursor.asInstanceOf[::[A]].tl = newElem
+    // We check the bounds early, so that we don't trigger copying.
+    if (n < 0 || n >= len) throw new IndexOutOfBoundsException(n.toString)
+    if (exported) copy()
+    if (n == 0) {
+      val newElem = new :: (x, start.tail);
+      if (last0 eq start) {
+        last0 = newElem
       }
-    } catch {
-      case ex: Exception => throw new IndexOutOfBoundsException(n.toString())
+      start = newElem
+    } else {
+      var cursor = start
+      var i = 1
+      while (i < n) {
+        cursor = cursor.tail
+        i += 1
+      }
+      val newElem = new :: (x, cursor.tail.tail)
+      if (last0 eq cursor.tail) {
+        last0 = newElem
+      }
+      cursor.asInstanceOf[::[A]].tl = newElem
     }
   }
 
@@ -127,10 +173,10 @@ final class ListBuffer[A]
   }
 
   override def ++=(xs: TraversableOnce[A]): this.type =
-    if (xs eq this) ++= (this take size) else super.++=(xs)
+    if (xs.asInstanceOf[AnyRef] eq this) ++= (this take size) else super.++=(xs)
 
   override def ++=:(xs: TraversableOnce[A]): this.type =
-    if (xs eq this) ++=: (this take size) else super.++=:(xs)
+    if (xs.asInstanceOf[AnyRef] eq this) ++=: (this take size) else super.++=:(xs)
 
   /** Clears the buffer contents.
    */
@@ -160,38 +206,35 @@ final class ListBuffer[A]
    *  one. Instead, it will insert a new element at index `n`.
    *
    *  @param  n     the index where a new element will be inserted.
-   *  @param  iter  the iterable object providing all elements to insert.
+   *  @param  seq   the iterable object providing all elements to insert.
    *  @throws Predef.IndexOutOfBoundsException if `n` is out of bounds.
    */
   def insertAll(n: Int, seq: Traversable[A]) {
-    try {
-      if (exported) copy()
-      var elems = seq.toList.reverse
-      len += elems.length
-      if (n == 0) {
-        while (!elems.isEmpty) {
-          val newElem = new :: (elems.head, start)
-          if (start.isEmpty) last0 = newElem
-          start = newElem
-          elems = elems.tail
-        }
-      } else {
-        var cursor = start
-        var i = 1
-        while (i < n) {
-          cursor = cursor.tail
-          i += 1
-        }
-        while (!elems.isEmpty) {
-          val newElem = new :: (elems.head, cursor.tail)
-          if (cursor.tail.isEmpty) last0 = newElem
-          cursor.asInstanceOf[::[A]].tl = newElem
-          elems = elems.tail
-        }
+    // We check the bounds early, so that we don't trigger copying.
+    if (n < 0 || n > len) throw new IndexOutOfBoundsException(n.toString)
+    if (exported) copy()
+    var elems = seq.toList.reverse
+    len += elems.length
+    if (n == 0) {
+      while (!elems.isEmpty) {
+        val newElem = new :: (elems.head, start)
+        if (start.isEmpty) last0 = newElem
+        start = newElem
+        elems = elems.tail
       }
-    } catch {
-      case ex: Exception =>
-        throw new IndexOutOfBoundsException(n.toString())
+    } else {
+      var cursor = start
+      var i = 1
+      while (i < n) {
+        cursor = cursor.tail
+        i += 1
+      }
+      while (!elems.isEmpty) {
+        val newElem = new :: (elems.head, cursor.tail)
+        if (cursor.tail.isEmpty) last0 = newElem
+        cursor.asInstanceOf[::[A]].tl = newElem
+        elems = elems.tail
+      }
     }
   }
 
@@ -201,7 +244,12 @@ final class ListBuffer[A]
    *  @param n         the index which refers to the first element to remove.
    *  @param count     the number of elements to remove.
    */
+  @annotation.migration("Invalid input values will be rejected in future releases.", "2.11")
   override def remove(n: Int, count: Int) {
+    if (n >= len)
+      return
+    if (count < 0)
+      throw new IllegalArgumentException(s"removing negative number ($count) of elements")
     if (exported) copy()
     val n1 = n max 0
     val count1 = count min (len - n1)
@@ -290,8 +338,8 @@ final class ListBuffer[A]
   /** Remove a single element from this buffer. May take time linear in the
    *  buffer size.
    *
-   *  @param x  the element to remove.
-   *  @return   this $coll.
+   *  @param elem  the element to remove.
+   *  @return      this $coll.
    */
   override def -= (elem: A): this.type = {
     if (exported) copy()
@@ -315,7 +363,7 @@ final class ListBuffer[A]
     this
   }
 
-  override def iterator: Iterator[A] = new Iterator[A] {
+  override def iterator: Iterator[A] = new AbstractIterator[A] {
     // Have to be careful iterating over mutable structures.
     // This used to have "(cursor ne last0)" as part of its hasNext
     // condition, which means it can return true even when the iterator
@@ -351,7 +399,7 @@ final class ListBuffer[A]
   private def copy() {
     var cursor = start
     val limit = last0.tail
-    clear
+    clear()
     while (cursor ne limit) {
       this += cursor.head
       cursor = cursor.tail
@@ -365,7 +413,7 @@ final class ListBuffer[A]
 
   /** Returns a clone of this buffer.
    *
-   *  @return a <code>ListBuffer</code> with the same elements.
+   *  @return a `ListBuffer` with the same elements.
    */
   override def clone(): ListBuffer[A] = (new ListBuffer[A]) ++= this
 
@@ -377,10 +425,10 @@ final class ListBuffer[A]
 }
 
 /** $factoryInfo
- *  @define Coll ListBuffer
+ *  @define Coll `ListBuffer`
  *  @define coll list buffer
  */
 object ListBuffer extends SeqFactory[ListBuffer] {
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ListBuffer[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ListBuffer[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   def newBuilder[A]: Builder[A, ListBuffer[A]] = new GrowingBuilder(new ListBuffer[A])
 }

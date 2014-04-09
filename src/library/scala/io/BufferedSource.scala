@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,7 +10,7 @@ package scala.io
 
 import java.io.{ InputStream, BufferedReader, InputStreamReader, PushbackReader }
 import Source.DefaultBufSize
-import scala.collection.Iterator
+import scala.collection.{ Iterator, AbstractIterator }
 
 /** This object provides convenience methods to create an iterable
  *  representation of a source file.
@@ -40,7 +40,7 @@ class BufferedSource(inputStream: InputStream, bufferSize: Int)(implicit val cod
     map (_.toChar)
   )
 
-  class BufferedLineIterator extends Iterator[String] {
+  class BufferedLineIterator extends AbstractIterator[String] with Iterator[String] {
     // Don't want to lose a buffered char sitting in iter either. Yes,
     // this is ridiculous, but if I can't get rid of Source, and all the
     // Iterator bits are designed into Source, and people create Sources
@@ -48,7 +48,7 @@ class BufferedSource(inputStream: InputStream, bufferSize: Int)(implicit val cod
     // that calls hasNext to find out if they're empty, and that leads
     // to chars being buffered, and no, I don't work here, they left a
     // door unlocked.
-    val bufReader: BufferedReader = {
+    private val lineReader: BufferedReader = {
       // To avoid inflicting this silliness indiscriminately, we can
       // skip it if the char reader was never created: and almost always
       // it will not have been created, since getLines will be called
@@ -64,13 +64,13 @@ class BufferedSource(inputStream: InputStream, bufferSize: Int)(implicit val cod
 
     override def hasNext = {
       if (nextLine == null)
-        nextLine = bufReader.readLine
+        nextLine = lineReader.readLine
 
       nextLine != null
     }
     override def next(): String = {
       val result = {
-        if (nextLine == null) bufReader.readLine
+        if (nextLine == null) lineReader.readLine
         else try nextLine finally nextLine = null
       }
       if (result == null) Iterator.empty.next

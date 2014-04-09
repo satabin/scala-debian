@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -23,7 +23,7 @@ object PagedSeqReader {
 /** A character array reader reads a stream of characters (keeping track of their positions)
  * from an array.
  *
- * @param source the source sequence
+ * @param seq     the source sequence
  * @param offset  starting offset.
  *
  * @author Martin Odersky

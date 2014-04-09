@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,7 +11,7 @@ package scala.collection
 
 import generic._
 import mutable.{ Builder, SetBuilder }
-import annotation.{migration, bridge}
+import scala.annotation.{migration, bridge}
 import parallel.ParSet
 
 /** A template trait for sets.
@@ -78,7 +78,7 @@ self =>
 
   protected[this] override def parCombiner = ParSet.newCombiner[A]
 
-  /** Overridden for efficiency. */
+  /* Overridden for efficiency. */
   override def toSeq: Seq[A] = toBuffer[A]
   override def toBuffer[A1 >: A]: mutable.Buffer[A1] = {
     val result = new mutable.ArrayBuffer[A1](size)
@@ -127,9 +127,6 @@ self =>
    */
   def ++ (elems: GenTraversableOnce[A]): This = (repr /: elems.seq)(_ + _)
 
-  @bridge
-  def ++ (elems: TraversableOnce[A]): This = ++ (elems: GenTraversableOnce[A])
-
   /** Creates a new set with a given element removed from this set.
    *
    *  @param elem the element to be removed
@@ -144,15 +141,6 @@ self =>
    */
   override def isEmpty: Boolean = size == 0
 
-  /**  This method is an alias for `intersect`.
-   *  It computes an intersection with set `that`.
-   *  It removes all the elements that are not present in `that`.
-   *
-   *  @param that the set to intersect with
-   */
-  @deprecated("use & instead", "2.8.0")
-  def ** (that: Set[A]): This = &(that)
-
   /** Computes the union between of set and another set.
    *
    *  @param   that  the set to form the union with.
@@ -161,9 +149,6 @@ self =>
    */
   def union(that: GenSet[A]): This = this ++ that
 
-  @bridge
-  def union(that: Set[A]): This = union(that: GenSet[A])
-
   /** Computes the difference of this set and another set.
    *
    *  @param that the set of elements to exclude.
@@ -171,9 +156,6 @@ self =>
    *              set that are not also contained in the given set `that`.
    */
   def diff(that: GenSet[A]): This = this -- that
-
-  @bridge
-  def diff(that: Set[A]): This = diff(that: GenSet[A])
 
   /** An iterator over all subsets of this set of the given size.
    *  If the requested size is impossible, an empty iterator is returned.
@@ -190,7 +172,7 @@ self =>
    *
    *  @return     the iterator.
    */
-  def subsets: Iterator[This] = new Iterator[This] {
+  def subsets: Iterator[This] = new AbstractIterator[This] {
     private val elms = self.toIndexedSeq
     private var len = 0
     private var itr: Iterator[This] = Iterator.empty
@@ -216,13 +198,13 @@ self =>
    *  @author Eastsun
    *  @date 2010.12.6
    */
-  private class SubsetsItr(elms: IndexedSeq[A], len: Int) extends Iterator[This] {
+  private class SubsetsItr(elms: IndexedSeq[A], len: Int) extends AbstractIterator[This] {
     private val idxs = Array.range(0, len+1)
     private var _hasNext = true
     idxs(len) = elms.size
 
     def hasNext = _hasNext
-    def next: This = {
+    def next(): This = {
       if (!hasNext) Iterator.empty.next
 
       val buf = self.newBuilder

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,9 +11,9 @@
 package scala.xml
 package dtd
 
-import util.regexp.WordExp
-import util.automata._
-import Utility.sbToString
+import scala.util.regexp.WordExp
+import scala.util.automata._
+import scala.xml.Utility.sbToString
 import PartialFunction._
 
 object ContentModel extends WordExp {
@@ -36,8 +36,8 @@ object ContentModel extends WordExp {
     def traverse(r: RegExp): Set[String] = r match { // !!! check for match translation problem
       case Letter(ElemName(name)) => Set(name)
       case Star(  x @ _  ) => traverse( x ) // bug if x@_*
-      case Sequ( xs @ _* ) => Set(xs map traverse flatten: _*)
-      case Alt(  xs @ _* ) => Set(xs map traverse flatten: _*)
+      case Sequ( xs @ _* ) => Set(xs flatMap traverse: _*)
+      case Alt(  xs @ _* ) => Set(xs flatMap traverse: _*)
     }
 
     traverse(r)
@@ -52,7 +52,6 @@ object ContentModel extends WordExp {
       sb append sep
       buildString(z, sb)
     }
-    sb
   }
 
   def buildString(c: ContentModel, sb: StringBuilder): StringBuilder = c match {

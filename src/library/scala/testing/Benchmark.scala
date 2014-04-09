@@ -1,17 +1,14 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.testing
 
-
-import compat.Platform
+import scala.compat.Platform
 
 /** `Benchmark` can be used to quickly turn an existing class into a
  *  benchmark. Here is a short example:
@@ -36,11 +33,13 @@ import compat.Platform
  *
  *  @author Iulian Dragos, Burak Emir
  */
+@deprecated("This class will be removed.", "2.10.0")
 trait Benchmark {
 
   /** this method should be implemented by the concrete benchmark.
    *  This method is called by the benchmarking code for a number of times.
-   *  The GC is called before each call to 'run'.
+   *  The GC is called between "multiplier" calls to run, right after tear
+   *  down.
    *
    *  @see setUp
    *  @see tearDown
@@ -51,9 +50,6 @@ trait Benchmark {
 
   /** Run the benchmark the specified number of times and return a list with
    *  the execution times in milliseconds in reverse order of the execution.
-   *
-   *  @param noTimes ...
-   *  @return        ...
    */
   def runBenchmark(noTimes: Int): List[Long] =
     for (i <- List.range(1, noTimes + 1)) yield {
@@ -74,8 +70,7 @@ trait Benchmark {
    *  should not be measured. This method is run before each call to the
    *  benchmark payload, 'run'.
    */
-  def setUp() {
-  }
+  def setUp() {}
 
   /** Perform cleanup operations after each 'run'. For micro benchmarks,
    *  think about using the result of 'run' in a way that prevents the JVM
@@ -83,8 +78,7 @@ trait Benchmark {
    *  write the results to a file. The execution time of this method is not
    *  measured.
    */
-  def tearDown() {
-  }
+  def tearDown() {}
 
   /** a string that is written at the beginning of the output line
    *   that contains the timings. By default, this is the class name.
@@ -118,4 +112,3 @@ trait Benchmark {
     }
   }
 }
-

@@ -86,7 +86,7 @@ abstract class ParallelIterableCheck[T](collName: String) extends Properties(col
     println("Collection debug info: ")
     coll.printDebugBuffer
     println("Task debug info: ")
-    println(tasksupport.debugMessages.mkString("\n"))
+    println(coll.tasksupport.debugMessages.mkString("\n"))
   }
   
   def printComparison(t: Traversable[_], coll: ParIterable[_], tf: Traversable[_], cf: ParIterable[_], ind: Int) {
@@ -414,21 +414,21 @@ abstract class ParallelIterableCheck[T](collName: String) extends Properties(col
       }).reduceLeft(_ && _)
   }
   
-  // property("groupBy must be equal") = forAll(collectionPairs) {
-  //   case (t, coll) =>
-  //     (for ((f, ind) <- groupByFunctions.zipWithIndex) yield {
-  //       val tgroup = t.groupBy(f)
-  //       val cgroup = coll.groupBy(f)
-  //       if (tgroup != cgroup || cgroup != tgroup) {
-  //         println("from: " + t)
-  //         println("and: " + coll)
-  //         println("groups are: ")
-  //         println(tgroup)
-  //         println(cgroup)
-  //       }
-  //       ("operator " + ind) |: tgroup == cgroup && cgroup == tgroup
-  //     }).reduceLeft(_ && _)
-  // }
+  property("groupBy must be equal") = forAll(collectionPairs) {
+    case (t, coll) =>
+      (for ((f, ind) <- groupByFunctions.zipWithIndex) yield {
+        val tgroup = t.groupBy(f)
+        val cgroup = coll.groupBy(f)
+        if (tgroup != cgroup || cgroup != tgroup) {
+          println("from: " + t)
+          println("and: " + coll)
+          println("groups are: ")
+          println(tgroup)
+          println(cgroup)
+        }
+        ("operator " + ind) |: tgroup == cgroup && cgroup == tgroup
+      }).reduceLeft(_ && _)
+  }
   
 }
 

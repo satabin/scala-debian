@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -14,12 +14,13 @@ package mutable
 import generic._
 
 import TraversableView.NoBuilder
+import scala.language.implicitConversions
 
 /** A non-strict view of a mutable `IndexedSeq`.
  *  $viewInfo
  *  Some of the operations of this class will yield again a mutable indexed sequence,
  *  others will just yield a plain indexed sequence of type `collection.IndexedSeq`.
- *  Because this is a leaf class there is no associated `Like' class.
+ *  Because this is a leaf class there is no associated `Like` class.
  *  @author Martin Odersky
  *  @version 2.8
  *  @since   2.8
@@ -40,6 +41,9 @@ self =>
     def update(idx: Int, elem: B): Unit
     override def toString = viewToString
   }
+
+  /** Explicit instantiation of the `Transformed` trait to reduce class file size in subclasses. */
+  private[collection] abstract class AbstractTransformed[B] extends super.AbstractTransformed[B] with Transformed[B]
 
   // pre: until <= self.length
   trait Sliced extends super.Sliced with Transformed[A] {
@@ -72,11 +76,11 @@ self =>
   /** Boilerplate method, to override in each subclass
    *  This method could be eliminated if Scala had virtual classes
    */
-  protected override def newFiltered(p: A => Boolean): Transformed[A] = new { val pred = p } with Filtered
-  protected override def newSliced(_endpoints: SliceInterval): Transformed[A] = new { val endpoints = _endpoints } with Sliced
-  protected override def newDroppedWhile(p: A => Boolean): Transformed[A] = new { val pred = p } with DroppedWhile
-  protected override def newTakenWhile(p: A => Boolean): Transformed[A] = new { val pred = p } with TakenWhile
-  protected override def newReversed: Transformed[A] = new Reversed { }
+  protected override def newFiltered(p: A => Boolean): Transformed[A] = new { val pred = p } with AbstractTransformed[A] with Filtered
+  protected override def newSliced(_endpoints: SliceInterval): Transformed[A] = new { val endpoints = _endpoints } with AbstractTransformed[A] with Sliced
+  protected override def newDroppedWhile(p: A => Boolean): Transformed[A] = new { val pred = p } with AbstractTransformed[A] with DroppedWhile
+  protected override def newTakenWhile(p: A => Boolean): Transformed[A] = new { val pred = p } with AbstractTransformed[A] with TakenWhile
+  protected override def newReversed: Transformed[A] = new AbstractTransformed[A] with Reversed
 
   private implicit def asThis(xs: Transformed[A]): This = xs.asInstanceOf[This]
 

@@ -1,5 +1,5 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  * @author Philipp Haller
  */
 
@@ -44,7 +44,7 @@ class ConsoleFileManager extends FileManager {
 
   def this(buildPath: String, rawClasses: Boolean, moreOpts: String) = {
     this(buildPath, rawClasses)
-    SCALAC_OPTS = SCALAC_OPTS+" "+moreOpts
+    SCALAC_OPTS = SCALAC_OPTS ++ moreOpts.split(' ').toSeq.filter(_.length > 0)
   }
 
   lazy val srcDir        = PathSettings.srcDir
@@ -65,7 +65,7 @@ class ConsoleFileManager extends FileManager {
   }
 
   CLASSPATH = {
-    val libs = (srcDir / Directory("lib")).files filter (_ hasExtension "jar") map (_.normalize.path)
+    val libs = (srcDir / Directory("lib")).files filter (_ hasExtension "jar") map (_.toCanonical.path)
 
     // add all jars in libs
     (CLASSPATH :: libs.toList) mkString pathSeparator
@@ -74,15 +74,17 @@ class ConsoleFileManager extends FileManager {
   def findLatest() {
     NestUI.verbose("test parent: "+testParent)
 
-    def prefixFileWith(parent: File, relPath: String) = (io.File(parent) / relPath).normalize
-    def prefixFile(relPath: String) = (testParent / relPath).normalize
+    def prefixFileWith(parent: File, relPath: String) = (io.File(parent) / relPath).toCanonical
+    def prefixFile(relPath: String) = (testParent / relPath).toCanonical
 
     if (!testClasses.isEmpty) {
-      testClassesDir = Path(testClasses.get).normalize.toDirectory
+      testClassesDir = Path(testClasses.get).toCanonical.toDirectory
       NestUI.verbose("Running with classes in "+testClassesDir)
 
       latestFile        = testClassesDir.parent / "bin"
       latestLibFile     = testClassesDir / "library"
+      latestActorsFile  = testClassesDir / "library" / "actors"
+      latestReflectFile = testClassesDir / "reflect"
       latestCompFile    = testClassesDir / "compiler"
       latestPartestFile = testClassesDir / "partest"
       latestFjbgFile    = testParent / "lib" / "fjbg.jar"
@@ -92,14 +94,19 @@ class ConsoleFileManager extends FileManager {
       NestUI.verbose("Running on "+dir)
       latestFile        = dir / "bin"
       latestLibFile     = dir / "lib/scala-library.jar"
+      latestActorsFile  = dir / "lib/scala-actors.jar"
+      latestReflectFile = dir / "lib/scala-reflect.jar"
       latestCompFile    = dir / "lib/scala-compiler.jar"
       latestPartestFile = dir / "lib/scala-partest.jar"
+      latestFjbgFile    = testParent / "lib" / "fjbg.jar"
     }
     else {
       def setupQuick() {
         NestUI.verbose("Running build/quick")
         latestFile        = prefixFile("build/quick/bin")
         latestLibFile     = prefixFile("build/quick/classes/library")
+        latestActorsFile  = prefixFile("build/quick/classes/library/actors")
+        latestReflectFile = prefixFile("build/quick/classes/reflect")
         latestCompFile    = prefixFile("build/quick/classes/compiler")
         latestPartestFile = prefixFile("build/quick/classes/partest")
       }
@@ -109,6 +116,8 @@ class ConsoleFileManager extends FileManager {
         val p = testParent.getParentFile
         latestFile        = prefixFileWith(p, "bin")
         latestLibFile     = prefixFileWith(p, "lib/scala-library.jar")
+        latestActorsFile  = prefixFileWith(p, "lib/scala-actors.jar")
+        latestReflectFile = prefixFileWith(p, "lib/scala-reflect.jar")
         latestCompFile    = prefixFileWith(p, "lib/scala-compiler.jar")
         latestPartestFile = prefixFileWith(p, "lib/scala-partest.jar")
       }
@@ -117,6 +126,8 @@ class ConsoleFileManager extends FileManager {
         NestUI.verbose("Running dists/latest")
         latestFile        = prefixFile("dists/latest/bin")
         latestLibFile     = prefixFile("dists/latest/lib/scala-library.jar")
+        latestActorsFile  = prefixFile("dists/latest/lib/scala-actors.jar")
+        latestReflectFile = prefixFile("dists/latest/lib/scala-reflect.jar")
         latestCompFile    = prefixFile("dists/latest/lib/scala-compiler.jar")
         latestPartestFile = prefixFile("dists/latest/lib/scala-partest.jar")
       }
@@ -125,6 +136,8 @@ class ConsoleFileManager extends FileManager {
         NestUI.verbose("Running build/pack")
         latestFile        = prefixFile("build/pack/bin")
         latestLibFile     = prefixFile("build/pack/lib/scala-library.jar")
+        latestActorsFile  = prefixFile("build/pack/lib/scala-actors.jar")
+        latestReflectFile = prefixFile("build/pack/lib/scala-reflect.jar")
         latestCompFile    = prefixFile("build/pack/lib/scala-compiler.jar")
         latestPartestFile = prefixFile("build/pack/lib/scala-partest.jar")
       }
@@ -138,10 +151,10 @@ class ConsoleFileManager extends FileManager {
         names map (x => prefixFile(base + "/" + x).lastModified) reduceLeft (_ max _)
 
       // detect most recent build
-      val quickTime = mostRecentOf("build/quick/classes", "compiler/compiler.properties", "library/library.properties")
-      val packTime  = mostRecentOf("build/pack/lib", "scala-compiler.jar", "scala-library.jar")
-      val distTime  = mostRecentOf("dists/latest/lib", "scala-compiler.jar", "scala-library.jar")
-      val instTime  = mostRecentOf("lib", "scala-compiler.jar", "scala-library.jar")
+      val quickTime = mostRecentOf("build/quick/classes", "compiler/compiler.properties", "reflect/reflect.properties", "library/library.properties")
+      val packTime  = mostRecentOf("build/pack/lib", "scala-compiler.jar", "scala-reflect.jar", "scala-library.jar")
+      val distTime  = mostRecentOf("dists/latest/lib", "scala-compiler.jar", "scala-reflect.jar", "scala-library.jar")
+      val instTime  = mostRecentOf("lib", "scala-compiler.jar", "scala-reflect.jar", "scala-library.jar")
 
       val pairs = Map(
         (quickTime, () => setupQuick()),
@@ -157,12 +170,22 @@ class ConsoleFileManager extends FileManager {
     }
 
     LATEST_LIB = latestLibFile.getAbsolutePath
+    LATEST_REFLECT = latestReflectFile.getAbsolutePath
+    LATEST_COMP = latestCompFile.getAbsolutePath
+    LATEST_PARTEST = latestPartestFile.getAbsolutePath
+    LATEST_ACTORS = latestActorsFile.getAbsolutePath
   }
 
   var LATEST_LIB: String = ""
+  var LATEST_REFLECT: String = ""
+  var LATEST_COMP: String = ""
+  var LATEST_PARTEST: String = ""
+  var LATEST_ACTORS: String = ""
 
   var latestFile: File = _
   var latestLibFile: File = _
+  var latestActorsFile: File = _
+  var latestReflectFile: File = _
   var latestCompFile: File = _
   var latestPartestFile: File = _
   var latestFjbgFile: File = _

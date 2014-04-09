@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,20 +10,21 @@ package scala.collection
 package generic
 
 import mutable.Builder
+import scala.language.higherKinds
 
-/** A template class for companion objects of ``regular'' collection classes
+/** A template class for companion objects of "regular" collection classes
  *  represent an unconstrained higher-kinded type. Typically
  *  such classes inherit from trait `GenericTraversableTemplate`.
  *  @tparam  CC   The type constructor representing the collection class.
- *  @see GenericTraversableTemplate
+ *  @see [[scala.collection.generic.GenericTraversableTemplate]]
  *  @author Martin Odersky
  *  @since 2.8
  *  @define coll  collection
- *  @define Coll  CC
+ *  @define Coll  `CC`
  */
 abstract class GenericCompanion[+CC[X] <: GenTraversable[X]] {
   /** The underlying collection type with unknown element type */
-  type Coll = CC[_]
+  protected[this] type Coll = CC[_]
 
   /** The default builder for `$Coll` objects.
    *  @tparam A      the type of the ${coll}'s elements

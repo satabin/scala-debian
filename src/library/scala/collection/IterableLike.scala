@@ -1,18 +1,17 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection
-
+package scala
+package collection
 
 import generic._
 import immutable.{ List, Stream }
-import annotation.unchecked.uncheckedVariance
-import annotation.bridge
+import scala.annotation.unchecked.uncheckedVariance
 
 /** A template trait for iterable collections of type `Iterable[A]`.
  *  $iterableInfo
@@ -49,14 +48,13 @@ import annotation.bridge
  *  @define Coll Iterable
  *  @define coll iterable collection
  */
-trait IterableLike[+A, +Repr] extends Equals with TraversableLike[A, Repr] with GenIterableLike[A, Repr] {
+trait IterableLike[+A, +Repr] extends Any with Equals with TraversableLike[A, Repr] with GenIterableLike[A, Repr] {
 self =>
 
   override protected[this] def thisCollection: Iterable[A] = this.asInstanceOf[Iterable[A]]
   override protected[this] def toCollection(repr: Repr): Iterable[A] = repr.asInstanceOf[Iterable[A]]
 
-  /** Creates a new iterator over all elements contained in this
-   *  iterable object.
+  /** Creates a new iterator over all elements contained in this iterable object.
    *
    *  @return the new iterator
    */
@@ -68,6 +66,7 @@ self =>
    *    Subclasses should re-implement this method if a more efficient implementation exists.
    *
    *  @usecase def foreach(f: A => Unit): Unit
+   *    @inheritdoc
    */
   def foreach[U](f: A => U): Unit =
     iterator.foreach(f)
@@ -86,6 +85,8 @@ self =>
     iterator.reduceRight(op)
   override /*TraversableLike*/ def toIterable: Iterable[A] =
     thisCollection
+  override /*TraversableLike*/ def toIterator: Iterator[A] =
+    iterator
   override /*TraversableLike*/ def head: A =
     iterator.next
 
@@ -132,7 +133,7 @@ self =>
       it.next
       i += 1
     }
-    b ++= it result
+    (b ++= it).result
   }
 
   override /*TraversableLike*/ def takeWhile(p: A => Boolean): Repr = {
@@ -147,7 +148,7 @@ self =>
   }
 
   /** Partitions elements in fixed size ${coll}s.
-   *  @see Iterator#grouped
+   *  @see [[scala.collection.Iterator]], method `grouped`
    *
    *  @param size the number of elements per group
    *  @return An iterator producing ${coll}s of size `size`, except the
@@ -162,7 +163,18 @@ self =>
 
   /** Groups elements in fixed size blocks by passing a "sliding window"
    *  over them (as opposed to partitioning them, as is done in grouped.)
-   *  @see Iterator#sliding
+   *  @see [[scala.collection.Iterator]], method `sliding`
+   *
+   *  @param size the number of elements per group
+   *  @return An iterator producing ${coll}s of size `size`, except the
+   *          last and the only element will be truncated if there are
+   *          fewer elements than size.
+   */
+  def sliding(size: Int): Iterator[Repr] = sliding(size, 1)
+  
+  /** Groups elements in fixed size blocks by passing a "sliding window"
+   *  over them (as opposed to partitioning them, as is done in grouped.)
+   *  @see [[scala.collection.Iterator]], method `sliding`
    *
    *  @param size the number of elements per group
    *  @param step the distance between the first elements of successive
@@ -171,8 +183,7 @@ self =>
    *          last and the only element will be truncated if there are
    *          fewer elements than size.
    */
-  def sliding[B >: A](size: Int): Iterator[Repr] = sliding(size, 1)
-  def sliding[B >: A](size: Int, step: Int): Iterator[Repr] =
+  def sliding(size: Int, step: Int): Iterator[Repr] =
     for (xs <- iterator.sliding(size, step)) yield {
       val b = newBuilder
       b ++= xs
@@ -237,10 +248,6 @@ self =>
     b.result
   }
 
-  @bridge
-  def zip[A1 >: A, B, That](that: Iterable[B])(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That =
-    zip(that: GenIterable[B])(bf)
-
   def zipAll[B, A1 >: A, That](that: GenIterable[B], thisElem: A1, thatElem: B)(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That = {
     val b = bf(repr)
     val these = this.iterator
@@ -253,10 +260,6 @@ self =>
       b += ((thisElem, those.next))
     b.result
   }
-
-  @bridge
-  def zipAll[B, A1 >: A, That](that: Iterable[B], thisElem: A1, thatElem: B)(implicit bf: CanBuildFrom[Repr, (A1, B), That]): That =
-    zipAll(that: GenIterable[B], thisElem, thatElem)(bf)
 
   def zipWithIndex[A1 >: A, That](implicit bf: CanBuildFrom[Repr, (A1, Int), That]): That = {
     val b = bf(repr)
@@ -278,9 +281,6 @@ self =>
     !these.hasNext && !those.hasNext
   }
 
-  @bridge
-  def sameElements[B >: A](that: Iterable[B]): Boolean = sameElements(that: GenIterable[B])
-
   override /*TraversableLike*/ def toStream: Stream[A] = iterator.toStream
 
   /** Method called from equality methods, so that user-defined subclasses can
@@ -297,21 +297,4 @@ self =>
   }
 
   override /*TraversableLike*/ def view(from: Int, until: Int) = view.slice(from, until)
-
-  @deprecated("use `iterator' instead", "2.8.0")
-  def elements = iterator
-
-  @deprecated("use `head' instead", "2.8.0") def first: A = head
-
-  /** `None` if iterable is empty.
-   */
-  @deprecated("use `headOption' instead", "2.8.0") def firstOption: Option[A] = headOption
-
-  /**
-   * returns a projection that can be used to call non-strict `filter`,
-   * `map`, and `flatMap` methods that build projections
-   * of the collection.
-   */
-  @deprecated("use `view' instead", "2.8.0")
-  def projection = view
 }

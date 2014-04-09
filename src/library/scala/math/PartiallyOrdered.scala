@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -17,12 +17,12 @@ package scala.math
  */
 trait PartiallyOrdered[+A] {
 
-  /** Result of comparing <code>this</code> with operand <code>that</code>.
-   *  Returns <code>None</code> if operands are not comparable.
-   *  If operands are comparable, returns <code>Some(x)</code> where
-   *  <code>x &lt; 0</code>    iff    <code>this &lt; that</code>
-   *  <code>x == 0</code>   iff    <code>this == that</code>
-   *  <code>x &gt; 0</code>    iff    <code>this &gt; that</code>
+  /** Result of comparing `'''this'''` with operand `that`.
+   *  Returns `None` if operands are not comparable.
+   *  If operands are comparable, returns `Some(x)` where
+   *  - `x < 0`    iff   `'''this''' &lt; that`
+   *  - `x == 0`   iff   `'''this''' == that`
+   *  - `x > 0`    iff   `'''this''' &gt; that`
    */
   def tryCompareTo [B >: A <% PartiallyOrdered[B]](that: B): Option[Int]
 

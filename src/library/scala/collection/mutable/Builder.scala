@@ -1,13 +1,14 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
 
-package scala.collection
+package scala
+package collection
 package mutable
 
 import generic._
@@ -62,9 +63,27 @@ trait Builder[-Elem, +To] extends Growable[Elem] {
    *  wrong, i.e. a different number of elements is added.
    *
    *  @param coll  the collection which serves as a hint for the result's size.
+   */
+  def sizeHint(coll: TraversableLike[_, _]) {
+    if (coll.isInstanceOf[collection.IndexedSeqLike[_,_]]) {
+      sizeHint(coll.size)
+    }
+  }
+
+  /** Gives a hint that one expects the `result` of this builder
+   *  to have the same size as the given collection, plus some delta. This will
+   *  provide a hint only if the collection is known to have a cheap
+   *  `size` method. Currently this is assumed to be the case if and only if
+   *  the collection is of type `IndexedSeqLike`.
+   *  Some builder classes
+   *  will optimize their representation based on the hint. However,
+   *  builder implementations are still required to work correctly even if the hint is
+   *  wrong, i.e. a different number of elements is added.
+   *
+   *  @param coll  the collection which serves as a hint for the result's size.
    *  @param delta a correction to add to the `coll.size` to produce the size hint.
    */
-  def sizeHint(coll: TraversableLike[_, _], delta: Int = 0) {
+  def sizeHint(coll: TraversableLike[_, _], delta: Int) {
     if (coll.isInstanceOf[collection.IndexedSeqLike[_,_]]) {
       sizeHint(coll.size + delta)
     }
@@ -100,6 +119,8 @@ trait Builder[-Elem, +To] extends Growable[Elem] {
       def +=(x: Elem): this.type = { self += x; this }
       def clear() = self.clear()
       override def ++=(xs: TraversableOnce[Elem]): this.type = { self ++= xs; this }
+      override def sizeHint(size: Int) = self.sizeHint(size)
+      override def sizeHintBounded(size: Int, boundColl: TraversableLike[_, _]) = self.sizeHintBounded(size, boundColl)
       def result: NewTo = f(self.result)
     }
 }

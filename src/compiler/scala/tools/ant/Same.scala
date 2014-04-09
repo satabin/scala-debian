@@ -1,11 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Ant Tasks                      **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
 
 package scala.tools.ant
 
@@ -16,18 +15,20 @@ import org.apache.tools.ant.util.{FileNameMapper, IdentityMapper}
 
 import org.apache.tools.ant.types.Mapper
 
-/** <p>
- *    An Ant task that, for a set of files, tests them for byte-to-byte
- *    equality with one or more other files.
- *    This task supports the following parameters as attributes:
- *  </p><ul>
- *  <li>dir</li>
- *  <li>todir</li>
- *  <li>resultproperty (a property to be set when all tested files pairs are equal, if not set, the task will fail instead),</li>
- *  <li>failing (whether to stop if all files are not equal).</li></ul>
- *  <p>It also support the following nested elements:</p><ul>
- *  <li>mapper (a mapper from original files to test files).</li></ul>
- *  <p>This task itself defines a fileset that represents the set of original files.</p>
+/** An Ant task that, for a set of files, tests them for byte-to-byte
+ *  equality with one or more other files.
+ *
+ *  This task supports the following parameters as attributes:
+ *  - `dir`
+ *  - `todir`
+ *  - `resultproperty` (a property to be set when all tested files pairs are
+ *    equal, if not set, the task will fail instead),
+ *  - `failing` (whether to stop if all files are not equal).
+ *
+ *  It also support the following nested elements:
+ *  - `mapper` (a mapper from original files to test files).
+ *
+ *  This task itself defines a fileset that represents the set of original files.
  *
  * @author  Gilles Dubochet
  * @version 1.0 */

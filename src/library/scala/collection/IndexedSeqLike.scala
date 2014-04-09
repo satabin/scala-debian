@@ -1,12 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
-
 
 package scala.collection
 
@@ -28,7 +26,7 @@ import scala.annotation.tailrec
  *  access and length computation. They are defined in terms of abstract methods
  *  `apply` for indexing and `length`.
  *
- *  Indexed sequences do not add any new methods wrt `Seq`, but promise
+ *  Indexed sequences do not add any new methods to `Seq`, but promise
  *  efficient implementations of random access patterns.
  *
  *  @tparam A    the element type of the $coll
@@ -39,8 +37,11 @@ import scala.annotation.tailrec
  *  @define willNotTerminateInf
  *  @define mayNotTerminateInf
  */
-trait IndexedSeqLike[+A, +Repr] extends SeqLike[A, Repr] {
+trait IndexedSeqLike[+A, +Repr] extends Any with SeqLike[A, Repr] {
   self =>
+
+  def seq: IndexedSeq[A]
+  override def hashCode()= scala.util.hashing.MurmurHash3.seqHash(seq)  // TODO - can we get faster via "indexedSeqHash" ?
 
   override protected[this] def thisCollection: IndexedSeq[A] = this.asInstanceOf[IndexedSeq[A]]
   override protected[this] def toCollection(repr: Repr): IndexedSeq[A] = repr.asInstanceOf[IndexedSeq[A]]
@@ -51,14 +52,14 @@ trait IndexedSeqLike[+A, +Repr] extends SeqLike[A, Repr] {
    */
   // pre: start >= 0, end <= self.length
   @SerialVersionUID(1756321872811029277L)
-  protected class Elements(start: Int, end: Int) extends BufferedIterator[A] with Serializable {
+  protected class Elements(start: Int, end: Int) extends AbstractIterator[A] with BufferedIterator[A] with Serializable {
     private def initialSize = if (end <= start) 0 else end - start
     private var index = start
     private def available = (end - index) max 0
 
     def hasNext: Boolean = index < end
 
-    def next: A = {
+    def next(): A = {
       if (index >= end)
         Iterator.empty.next
 
@@ -89,11 +90,10 @@ trait IndexedSeqLike[+A, +Repr] extends SeqLike[A, Repr] {
   override /*IterableLike*/
   def iterator: Iterator[A] = new Elements(0, length)
 
-  /** Overridden for efficiency */
+  /* Overridden for efficiency */
   override def toBuffer[A1 >: A]: mutable.Buffer[A1] = {
     val result = new mutable.ArrayBuffer[A1](size)
     copyToBuffer(result)
     result
   }
 }
-

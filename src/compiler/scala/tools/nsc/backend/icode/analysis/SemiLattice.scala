@@ -1,8 +1,7 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
-
 
 package scala.tools.nsc
 package backend.icode
@@ -26,6 +25,11 @@ trait SemiLattice {
       case _ =>
         false
     }
+    private def tstring(x: Any): String = x match {
+      case xs: TraversableOnce[_] => xs map tstring mkString " "
+      case _                      => "" + x
+    }
+    override def toString = "IState(" + tstring(vars) + ", " + tstring(stack) + ")"
   }
 
   /** Return the least upper bound of a and b. */

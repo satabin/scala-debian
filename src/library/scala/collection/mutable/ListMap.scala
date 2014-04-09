@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,13 +12,14 @@ package scala.collection
 package mutable
 
 import generic._
+import annotation.tailrec
 
 /** A simple mutable map backed by a list.
  *
  *  @tparam A    the type of the keys contained in this list map.
  *  @tparam B    the type of the values assigned to keys in this list map.
  *
- *  @define Coll mutable.ListMap
+ *  @define Coll `mutable.ListMap`
  *  @define coll mutable list map
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
  *    `That` is always `ListMap[A, B]` if the elements contained in the resulting collection are
@@ -34,8 +35,11 @@ import generic._
  *  @define orderDependent
  *  @define orderDependentFold
  */
-class ListMap[A, B] extends Map[A, B] with MapLike[A, B, ListMap[A, B]] with Serializable {
-
+class ListMap[A, B]
+extends AbstractMap[A, B]
+   with Map[A, B]
+   with MapLike[A, B, ListMap[A, B]]
+   with Serializable {
 
   override def empty = ListMap.empty[A, B]
 
@@ -44,20 +48,24 @@ class ListMap[A, B] extends Map[A, B] with MapLike[A, B, ListMap[A, B]] with Ser
 
   def get(key: A): Option[B] = elems find (_._1 == key) map (_._2)
   def iterator: Iterator[(A, B)] = elems.iterator
-  def += (kv: (A, B)) = { elems = remove(kv._1, elems); elems = kv :: elems; siz += 1; this }
-  def -= (key: A) = { elems = remove(key, elems); this }
 
-  private def remove(key: A, elems: List[(A, B)]): List[(A, B)] =
-    if (elems.isEmpty) elems
-    else if (elems.head._1 == key) { siz -= 1; elems.tail }
-    else elems.head :: remove(key, elems.tail)
+  def += (kv: (A, B)) = { elems = remove(kv._1, elems, List()); elems = kv :: elems; siz += 1; this }
+  def -= (key: A) = { elems = remove(key, elems, List()); this }
+
+  @tailrec
+  private def remove(key: A, elems: List[(A, B)], acc: List[(A, B)]): List[(A, B)] = {
+    if (elems.isEmpty) acc
+    else if (elems.head._1 == key) { siz -= 1; acc ::: elems.tail }
+    else remove(key, elems.tail, elems.head :: acc)
+  }
+
 
   override def clear() = { elems = List(); siz = 0 }
   override def size: Int = siz
 }
 
 /** $factoryInfo
- *  @define Coll mutable.ListMap
+ *  @define Coll `mutable.ListMap`
  *  @define coll mutable list map
  */
 object ListMap extends MutableMapFactory[ListMap] {

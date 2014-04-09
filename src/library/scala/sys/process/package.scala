@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -205,7 +205,7 @@ package scala.sys {
   package object process extends ProcessImplicits {
     /** The arguments passed to `java` when creating this process */
     def javaVmArguments: List[String] = {
-      import collection.JavaConversions._
+      import scala.collection.JavaConversions._
 
       java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments().toList
     }

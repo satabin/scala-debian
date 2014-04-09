@@ -1,23 +1,21 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
 package scala.tools.nsc
 package settings
 
-import io.AbstractFile
-
 /** A Settings abstraction boiled out of the original highly mutable Settings
  *  class with the intention of creating an ImmutableSettings which can be used
  *  interchangeably.   Except of course without the mutants.
  */
 
-trait AbsSettings {
+trait AbsSettings extends scala.reflect.internal.settings.AbsSettings {
   type Setting <: AbsSetting      // Fix to the concrete Setting type
   type ResultOfTryToSet           // List[String] in mutable, (Settings, List[String]) in immutable
   def errorFn: String => Unit
-  protected def allSettings: collection.Set[Setting]
+  protected def allSettings: scala.collection.Set[Setting]
 
   // settings minus internal usage settings
   def visibleSettings = allSettings filterNot (_.isInternalOnly)
@@ -32,12 +30,12 @@ trait AbsSettings {
   def lookupSetting(cmd: String): Option[Setting] = allSettings find (_ respondsTo cmd)
 
   // two AbsSettings objects are equal if their visible settings are equal.
-  override def hashCode() = visibleSettings.hashCode
+  override def hashCode() = visibleSettings.size  // going for cheap
   override def equals(that: Any) = that match {
     case s: AbsSettings => this.userSetSettings == s.userSetSettings
     case _              => false
   }
-  override def toString() = "Settings {\n%s}\n" format (userSetSettings map ("  " + _ + "\n") mkString)
+  override def toString() = "Settings {\n%s}\n" format (userSetSettings map ("  " + _ + "\n")).mkString
   def toConciseString = userSetSettings.mkString("(", " ", ")")
 
   def checkDependencies =
@@ -50,12 +48,6 @@ trait AbsSettings {
     })
 
   implicit lazy val SettingOrdering: Ordering[Setting] = Ordering.ordered
-
-  trait AbsSettingValue {
-    type T <: Any
-    def value: T
-    def isDefault: Boolean
-  }
 
   trait AbsSetting extends Ordered[Setting] with AbsSettingValue {
     def name: String
@@ -140,8 +132,8 @@ trait AbsSettings {
       case x: AbsSettings#AbsSetting  => (name == x.name) && (value == x.value)
       case _                          => false
     }
-    override def hashCode() = (name, value).hashCode
-    override def toString() = "%s = %s".format(name, value)
+    override def hashCode() = name.hashCode + value.hashCode
+    override def toString() = name + " = " + value
   }
 
   trait InternalSetting extends AbsSetting {

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -10,42 +10,53 @@ package backend
 package icode
 
 import scala.tools.nsc.ast._
-import scala.tools.nsc.util.{Position,NoPosition}
+import scala.reflect.internal.util.{Position,NoPosition}
 
 /*
   A pattern match
 
-  case THIS(clasz) =>
-  case STORE_THIS(kind) =>
-  case CONSTANT(const) =>
-  case LOAD_ARRAY_ITEM(kind) =>
-  case LOAD_LOCAL(local) =>
-  case LOAD_FIELD(field, isStatic) =>
-  case LOAD_MODULE(module) =>
-  case STORE_ARRAY_ITEM(kind) =>
-  case STORE_LOCAL(local) =>
-  case STORE_FIELD(field, isStatic) =>
-  case CALL_PRIMITIVE(primitive) =>
-  case CALL_METHOD(method, style) =>
-  case NEW(kind) =>
-  case CREATE_ARRAY(elem, dims) =>
-  case IS_INSTANCE(tpe) =>
-  case CHECK_CAST(tpe) =>
-  case SWITCH(tags, labels) =>
-  case JUMP(whereto) =>
-  case CJUMP(success, failure, cond, kind) =>
-  case CZJUMP(success, failure, cond, kind) =>
-  case RETURN(kind) =>
-  case THROW(clasz) =>
-  case DROP(kind) =>
-  case DUP(kind) =>
-  case MONITOR_ENTER() =>
-  case MONITOR_EXIT() =>
-  case BOX(boxType) =>
-  case UNBOX(tpe) =>
-  case SCOPE_ENTER(lv) =>
-  case SCOPE_EXIT(lv) =>
-  case LOAD_EXCEPTION(clasz) =>
+  // locals
+    case THIS(clasz) =>
+    case STORE_THIS(kind) =>
+    case LOAD_LOCAL(local) =>
+    case STORE_LOCAL(local) =>
+    case SCOPE_ENTER(lv) =>
+    case SCOPE_EXIT(lv) =>
+  // stack
+    case LOAD_MODULE(module) =>
+    case LOAD_EXCEPTION(clasz) =>
+    case DROP(kind) =>
+    case DUP(kind) =>
+  // constants
+    case CONSTANT(const) =>
+  // arithlogic
+    case CALL_PRIMITIVE(primitive) =>
+  // casts
+    case IS_INSTANCE(tpe) =>
+    case CHECK_CAST(tpe) =>
+  // objs
+    case NEW(kind) =>
+    case MONITOR_ENTER() =>
+    case MONITOR_EXIT() =>
+    case BOX(boxType) =>
+    case UNBOX(tpe) =>
+  // flds
+    case LOAD_FIELD(field, isStatic) =>
+    case STORE_FIELD(field, isStatic) =>
+  // mthds
+    case CALL_METHOD(method, style) =>
+  // arrays
+    case LOAD_ARRAY_ITEM(kind) =>
+    case STORE_ARRAY_ITEM(kind) =>
+    case CREATE_ARRAY(elem, dims) =>
+  // jumps
+    case SWITCH(tags, labels) =>
+    case JUMP(whereto) =>
+    case CJUMP(success, failure, cond, kind) =>
+    case CZJUMP(success, failure, cond, kind) =>
+  // ret
+    case RETURN(kind) =>
+    case THROW(clasz) =>
 */
 
 
@@ -58,10 +69,32 @@ import scala.tools.nsc.util.{Position,NoPosition}
 trait Opcodes { self: ICodes =>
   import global.{Symbol, NoSymbol, Type, Name, Constant};
 
+  // categories of ICode instructions
+  final val localsCat =  1
+  final val stackCat  =  2
+  final val constCat  =  3
+  final val arilogCat =  4
+  final val castsCat  =  5
+  final val objsCat   =  6
+  final val fldsCat   =  7
+  final val mthdsCat  =  8
+  final val arraysCat =  9
+  final val jumpsCat  = 10
+  final val retCat    = 11
+
+  private lazy val ObjectReferenceList = ObjectReference :: Nil
+
   /** This class represents an instruction of the intermediate code.
    *  Each case subclass will represent a specific operation.
    */
   abstract class Instruction extends Cloneable {
+    // Vlad: I used these for checking the quality of the implementation, and we should regularely run a build with them
+    // enabled. But for production these should definitely be disabled, unless we enjoy getting angry emails from Greg :)
+    //if (!this.isInstanceOf[opcodes.LOAD_EXCEPTION])
+    //  assert(consumed == consumedTypes.length)
+    //assert(produced == producedTypes.length)
+
+    def category: Int = 0 // undefined
 
     /** This abstract method returns the number of used elements on the stack */
     def consumed : Int = 0
@@ -75,6 +108,7 @@ trait Opcodes { self: ICodes =>
     def consumedTypes: List[TypeKind] = Nil
 
     /** This instruction produces these types on top of the stack. */
+    // Vlad: I wonder why we keep producedTypes around -- it looks like an useless thing to have
     def producedTypes: List[TypeKind] = Nil
 
     /** This method returns the difference of size of the stack when the instruction is used */
@@ -94,7 +128,7 @@ trait Opcodes { self: ICodes =>
     }
 
     /** Clone this instruction. */
-    override def clone: Instruction =
+    override def clone(): Instruction =
       super.clone.asInstanceOf[Instruction]
   }
 
@@ -117,7 +151,14 @@ trait Opcodes { self: ICodes =>
       override def consumed = 0
       override def produced = 1
 
-      override def producedTypes = List(REFERENCE(clasz))
+      override def producedTypes =
+        // we're not allowed to have REFERENCE(Array), but what about compiling the Array class? Well, we use object for it.
+        if (clasz != global.definitions.ArrayClass)
+          REFERENCE(clasz) :: Nil
+        else
+          ObjectReference :: Nil
+
+      override def category = localsCat
     }
 
     /** Loads a constant on the stack.
@@ -129,7 +170,9 @@ trait Opcodes { self: ICodes =>
       override def consumed = 0
       override def produced = 1
 
-      override def producedTypes = List(toTypeKind(constant.tpe))
+      override def producedTypes = toTypeKind(constant.tpe) :: Nil
+
+      override def category = constCat
     }
 
     /** Loads an element of an array. The array and the index should
@@ -141,8 +184,10 @@ trait Opcodes { self: ICodes =>
       override def consumed = 2
       override def produced = 1
 
-      override def consumedTypes = List(ARRAY(kind), INT)
-      override def producedTypes = List(kind)
+      override def consumedTypes = ARRAY(kind) :: INT :: Nil
+      override def producedTypes = kind :: Nil
+
+      override def category = arraysCat
     }
 
     /** Load a local variable on the stack. It can be a method argument.
@@ -153,7 +198,9 @@ trait Opcodes { self: ICodes =>
       override def consumed = 0
       override def produced = 1
 
-      override def producedTypes = List(local.kind)
+      override def producedTypes = local.kind :: Nil
+
+      override def category = localsCat
     }
 
     /** Load a field on the stack. The object to which it refers should be
@@ -169,13 +216,15 @@ trait Opcodes { self: ICodes =>
       override def consumed = if (isStatic) 0 else 1
       override def produced = 1
 
-      override def consumedTypes = if (isStatic) Nil else List(REFERENCE(field.owner));
-      override def producedTypes = List(toTypeKind(field.tpe));
+      override def consumedTypes = if (isStatic) Nil else REFERENCE(field.owner) :: Nil
+      override def producedTypes = toTypeKind(field.tpe) :: Nil
 
       // more precise information about how to load this field
       // see #4283
       var hostClass: Symbol = field.owner
       def setHostClass(cls: Symbol): this.type = { hostClass = cls; this }
+
+      override def category = fldsCat
     }
 
     case class LOAD_MODULE(module: Symbol) extends Instruction {
@@ -186,7 +235,9 @@ trait Opcodes { self: ICodes =>
       override def consumed = 0
       override def produced = 1
 
-      override def producedTypes = List(REFERENCE(module))
+      override def producedTypes = REFERENCE(module) :: Nil
+
+      override def category = stackCat
     }
 
     /** Store a value into an array at a specified index.
@@ -197,7 +248,9 @@ trait Opcodes { self: ICodes =>
       override def consumed = 3
       override def produced = 0
 
-      override def consumedTypes = List(ARRAY(kind), INT, kind)
+      override def consumedTypes = ARRAY(kind) :: INT :: kind :: Nil
+
+      override def category = arraysCat
     }
 
     /** Store a value into a local variable. It can be an argument.
@@ -208,7 +261,9 @@ trait Opcodes { self: ICodes =>
       override def consumed = 1
       override def produced = 0
 
-      override def consumedTypes = List(local.kind)
+      override def consumedTypes = local.kind :: Nil
+
+      override def category = localsCat
     }
 
     /** Store a value into a field.
@@ -225,9 +280,11 @@ trait Opcodes { self: ICodes =>
 
       override def consumedTypes =
         if (isStatic)
-          List(toTypeKind(field.tpe))
+          toTypeKind(field.tpe) :: Nil
         else
-          List(REFERENCE(field.owner), toTypeKind(field.tpe));
+          REFERENCE(field.owner) :: toTypeKind(field.tpe) :: Nil;
+
+      override def category = fldsCat
     }
 
     /** Store a value into the 'this' pointer.
@@ -237,7 +294,8 @@ trait Opcodes { self: ICodes =>
     case class STORE_THIS(kind: TypeKind) extends Instruction {
       override def consumed = 1
       override def produced = 0
-      override def consumedTypes = List(kind)
+      override def consumedTypes = kind :: Nil
+      override def category = localsCat
     }
 
     /** Call a primitive function.
@@ -263,35 +321,37 @@ trait Opcodes { self: ICodes =>
       override def produced = 1
 
       override def consumedTypes = primitive match {
-        case Negation(kind)        => List(kind)
-        case Test(_, kind, true)   => List(kind)
-        case Test(_, kind, false)  => List(kind, kind)
-        case Comparison(_, kind)   => List(kind, kind)
-        case Arithmetic(NOT, kind) => List(kind)
-        case Arithmetic(_, kind)   => List(kind, kind)
-        case Logical(_, kind)      => List(kind, kind)
-        case Shift(_, kind)        => List(kind, INT)
-        case Conversion(from, _)   => List(from)
-        case ArrayLength(kind)     => List(ARRAY(kind))
-        case StringConcat(kind)    => List(ConcatClass, kind)
+        case Negation(kind)        => kind :: Nil
+        case Test(_, kind, true)   => kind :: Nil
+        case Test(_, kind, false)  => kind :: kind :: Nil
+        case Comparison(_, kind)   => kind :: kind :: Nil
+        case Arithmetic(NOT, kind) => kind :: Nil
+        case Arithmetic(_, kind)   => kind :: kind :: Nil
+        case Logical(_, kind)      => kind :: kind :: Nil
+        case Shift(_, kind)        => kind :: INT :: Nil
+        case Conversion(from, _)   => from :: Nil
+        case ArrayLength(kind)     => ARRAY(kind) :: Nil
+        case StringConcat(kind)    => ConcatClass :: kind :: Nil
         case StartConcat           => Nil
-        case EndConcat             => List(ConcatClass)
+        case EndConcat             => ConcatClass :: Nil
       }
 
       override def producedTypes = primitive match {
-        case Negation(kind)      => List(kind)
-        case Test(_, _, true)    => List(BOOL)
-        case Test(_, _, false)   => List(BOOL)
-        case Comparison(_, _)    => List(INT)
-        case Arithmetic(_, kind) => List(kind)
-        case Logical(_, kind)    => List(kind)
-        case Shift(_, kind)      => List(kind)
-        case Conversion(_, to)   => List(to)
-        case ArrayLength(_)      => List(INT)
-        case StringConcat(_)     => List(ConcatClass)
-        case StartConcat         => List(ConcatClass)
-        case EndConcat           => List(REFERENCE(global.definitions.StringClass))
+        case Negation(kind)      => kind :: Nil
+        case Test(_, _, true)    => BOOL :: Nil
+        case Test(_, _, false)   => BOOL :: Nil
+        case Comparison(_, _)    => INT :: Nil
+        case Arithmetic(_, kind) => kind :: Nil
+        case Logical(_, kind)    => kind :: Nil
+        case Shift(_, kind)      => kind :: Nil
+        case Conversion(_, to)   => to :: Nil
+        case ArrayLength(_)      => INT :: Nil
+        case StringConcat(_)     => ConcatClass :: Nil
+        case StartConcat         => ConcatClass :: Nil
+        case EndConcat           => REFERENCE(global.definitions.StringClass) :: Nil
       }
+
+      override def category = arilogCat
    }
 
     /** This class represents a CALL_METHOD instruction
@@ -334,33 +394,59 @@ trait Opcodes { self: ICodes =>
         else args
       }
 
-      override def produced =
-        if (producedType == UNIT || method.isConstructor) 0
-        else 1
-
-      private def producedType: TypeKind = toTypeKind(method.info.resultType)
-      override def producedTypes =
-        if (produced == 0) Nil
-        else List(producedType)
+      private val producedList = toTypeKind(method.info.resultType) match {
+        case UNIT                      => Nil
+        case _ if method.isConstructor => Nil
+        case kind                      => kind :: Nil
+      }
+      override def produced = producedList.size
+      override def producedTypes = producedList
 
       /** object identity is equality for CALL_METHODs. Needed for
        *  being able to store such instructions into maps, when more
        *  than one CALL_METHOD to the same method might exist.
        */
+
+      override def category = mthdsCat
+    }
+    
+    /**
+     * A place holder entry that allows us to parse class files with invoke dynamic
+     * instructions. Because the compiler doesn't yet really understand the
+     * behavior of invokeDynamic, this op acts as a poison pill. Any attempt to analyze
+     * this instruction will cause a failure. The only optimization that
+     * should ever look at non-Scala generated icode is the inliner, and it
+     * has been modified to not examine any method with invokeDynamic 
+     * instructions. So if this poison pill ever causes problems then
+     * there's been a serious misunderstanding
+     */
+    // TODO do the real thing
+    case class INVOKE_DYNAMIC(poolEntry: Char) extends Instruction {
+      private def error = sys.error("INVOKE_DYNAMIC is not fully implemented and should not be analyzed")
+      override def consumed = error
+      override def produced = error
+      override def producedTypes = error
+      override def category = error
     }
 
     case class BOX(boxType: TypeKind) extends Instruction {
+      assert(boxType.isValueType && (boxType ne UNIT)) // documentation
       override def toString(): String = "BOX " + boxType
       override def consumed = 1
       override def consumedTypes = boxType :: Nil
       override def produced = 1
+      override def producedTypes = BOXED(boxType) :: Nil
+      override def category = objsCat
     }
 
     case class UNBOX(boxType: TypeKind) extends Instruction {
+      assert(boxType.isValueType && !boxType.isInstanceOf[BOXED] && (boxType ne UNIT)) // documentation
       override def toString(): String = "UNBOX " + boxType
       override def consumed = 1
-      override def consumedTypes = ObjectReference :: Nil
+      override def consumedTypes = ObjectReferenceList
       override def produced = 1
+      override def producedTypes = boxType :: Nil
+      override def category = objsCat
     }
 
     /** Create a new instance of a class through the specified constructor
@@ -373,9 +459,12 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 0;
       override def produced = 1;
+      override def producedTypes = kind :: Nil
 
       /** The corresponding constructor call. */
       var init: CALL_METHOD = _
+
+      override def category = objsCat
     }
 
 
@@ -390,6 +479,9 @@ trait Opcodes { self: ICodes =>
       override def consumed = dims;
       override def consumedTypes = List.fill(dims)(INT)
       override def produced = 1;
+      override def producedTypes = ARRAY(elem) :: Nil
+
+      override def category = arraysCat
     }
 
     /** This class represents a IS_INSTANCE instruction
@@ -401,8 +493,11 @@ trait Opcodes { self: ICodes =>
       override def toString(): String ="IS_INSTANCE "+typ
 
       override def consumed = 1
-      override def consumedTypes = ObjectReference :: Nil
       override def produced = 1
+      override def consumedTypes = ObjectReferenceList
+      override def producedTypes = BOOL :: Nil
+
+      override def category = castsCat
     }
 
     /** This class represents a CHECK_CAST instruction
@@ -415,8 +510,10 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 1
       override def produced = 1
-      override val consumedTypes = List(ObjectReference)
-      override def producedTypes = List(typ)
+      override def consumedTypes = ObjectReferenceList
+      override def producedTypes = typ :: Nil
+
+      override def category = castsCat
     }
 
     /** This class represents a SWITCH instruction
@@ -433,6 +530,12 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 1
       override def produced = 0
+
+      override def consumedTypes = INT :: Nil
+
+      def flatTagsCount: Int = { var acc = 0; var rest = tags; while(rest.nonEmpty) { acc += rest.head.length; rest = rest.tail }; acc } // a one-liner
+
+      override def category = jumpsCat
     }
 
     /** This class represents a JUMP instruction
@@ -445,6 +548,8 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 0
       override def produced = 0
+
+      override def category = jumpsCat
     }
 
     /** This class represents a CJUMP instruction
@@ -466,6 +571,10 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 2
       override def produced = 0
+
+      override def consumedTypes = kind :: kind :: Nil
+
+      override def category = jumpsCat
     }
 
     /** This class represents a CZJUMP instruction
@@ -485,6 +594,9 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 1
       override def produced = 0
+
+      override def consumedTypes = kind :: Nil
+      override def category = jumpsCat
     }
 
 
@@ -495,6 +607,10 @@ trait Opcodes { self: ICodes =>
     case class RETURN(kind: TypeKind) extends Instruction {
       override def consumed = if (kind == UNIT) 0 else 1
       override def produced = 0
+
+      override def consumedTypes = if (kind == UNIT) Nil else kind :: Nil
+
+      override def category = retCat
     }
 
     /** This class represents a THROW instruction
@@ -510,6 +626,10 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 1
       override def produced = 0
+
+      override def consumedTypes = toTypeKind(clasz.tpe) :: Nil
+
+      override def category = retCat
     }
 
     /** This class represents a DROP instruction
@@ -522,6 +642,10 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 1
       override def produced = 0
+
+      override def consumedTypes = typ :: Nil
+
+      override def category = stackCat
     }
 
     /** This class represents a DUP instruction
@@ -531,6 +655,9 @@ trait Opcodes { self: ICodes =>
     case class DUP (typ: TypeKind) extends Instruction {
       override def consumed = 1
       override def produced = 2
+      override def consumedTypes = typ :: Nil
+      override def producedTypes = typ :: typ :: Nil
+      override def category = stackCat
     }
 
     /** This class represents a MONITOR_ENTER instruction
@@ -543,6 +670,10 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 1
       override def produced = 0
+
+      override def consumedTypes = ObjectReference :: Nil
+
+      override def category = objsCat
     }
 
     /** This class represents a MONITOR_EXIT instruction
@@ -555,6 +686,10 @@ trait Opcodes { self: ICodes =>
 
       override def consumed = 1;
       override def produced = 0;
+
+      override def consumedTypes = ObjectReference :: Nil
+
+      override def category = objsCat
     }
 
     /** A local variable becomes visible at this point in code.
@@ -565,6 +700,7 @@ trait Opcodes { self: ICodes =>
       override def toString(): String = "SCOPE_ENTER " + lv
       override def consumed = 0
       override def produced = 0
+      override def category = localsCat
     }
 
     /** A local variable leaves its scope at this point in code.
@@ -575,6 +711,7 @@ trait Opcodes { self: ICodes =>
       override def toString(): String = "SCOPE_EXIT " + lv
       override def consumed = 0
       override def produced = 0
+      override def category = localsCat
     }
 
     /** Fake instruction. It designates the VM who pushes an exception
@@ -586,57 +723,55 @@ trait Opcodes { self: ICodes =>
       override def consumed = sys.error("LOAD_EXCEPTION does clean the whole stack, no idea how many things it consumes!")
       override def produced = 1
       override def producedTypes = REFERENCE(clasz) :: Nil
+      override def category = stackCat
     }
 
     /** This class represents a method invocation style. */
     sealed abstract class InvokeStyle {
       /** Is this a dynamic method call? */
-      def isDynamic: Boolean = this match {
-        case Dynamic =>  true
-        case _       => false
-      }
+      def isDynamic: Boolean = false
 
       /** Is this a static method call? */
-      def isStatic: Boolean = this match {
-        case Static(_) => true
-        case _ =>  false
-      }
+      def isStatic: Boolean = false
 
-      def isSuper: Boolean = this match {
-        case SuperCall(_) => true
-        case _ => false
-      }
+      def isSuper: Boolean = false
 
       /** Is this an instance method call? */
-      def hasInstance: Boolean = this match {
-        case Static(false)      => false
-        case _                  => true
-      }
+      def hasInstance: Boolean = true
 
       /** Returns a string representation of this style. */
-      override def toString(): String = this match {
-        case Dynamic        => "dynamic"
-        case InvokeDynamic  => "invoke-dynamic"
-        case Static(false)  => "static-class"
-        case Static(true)   => "static-instance"
-        case SuperCall(mix) => "super(" + mix + ")"
+      override def toString(): String
+    }
+
+    /** Virtual calls.
+     *  On JVM, translated to either `invokeinterface` or `invokevirtual`.
+     */
+    case object Dynamic extends InvokeStyle {
+      override def isDynamic = true
+      override def toString(): String = "dynamic"
+    }
+
+    /**
+     * Special invoke:
+     *   Static(true)  is used for calls to private members, ie `invokespecial` on JVM.
+     *   Static(false) is used for calls to class-level instance-less static methods, ie `invokestatic` on JVM.
+     */
+    case class Static(onInstance: Boolean) extends InvokeStyle {
+      override def isStatic    = true
+      override def hasInstance = onInstance
+      override def toString(): String = {
+        if(onInstance) "static-instance"
+        else           "static-class"
       }
     }
 
-    /** Virtual calls */
-    case object Dynamic extends InvokeStyle
-
-    /** InvokeDynamic a la JSR 292 (experimental). */
-    case object InvokeDynamic extends InvokeStyle
-
-    /**
-     * Special invoke. Static(true) is used for calls to private
-     * members.
+    /** Call through super[mix].
+     *  On JVM, translated to `invokespecial`.
      */
-    case class Static(onInstance: Boolean) extends InvokeStyle
-
-    /** Call through super[mix]. */
-    case class SuperCall(mix: Name) extends InvokeStyle
+    case class SuperCall(mix: Name) extends InvokeStyle {
+      override def isSuper = true
+      override def toString(): String = { "super(" + mix + ")" }
+    }
 
 
     // CLR backend
@@ -648,8 +783,10 @@ trait Opcodes { self: ICodes =>
       override def consumed = 0
       override def produced = 1
 
-      override def producedTypes = List(msil_mgdptr(local.kind))
-  }
+      override def producedTypes = msil_mgdptr(local.kind) :: Nil
+
+      override def category = localsCat
+    }
 
     case class CIL_LOAD_FIELD_ADDRESS(field: Symbol, isStatic: Boolean) extends Instruction {
       /** Returns a string representation of this instruction */
@@ -659,9 +796,11 @@ trait Opcodes { self: ICodes =>
       override def consumed = if (isStatic) 0 else 1
       override def produced = 1
 
-      override def consumedTypes = if (isStatic) Nil else List(REFERENCE(field.owner));
-      override def producedTypes = List(msil_mgdptr(REFERENCE(field.owner)));
-}
+      override def consumedTypes = if (isStatic) Nil else REFERENCE(field.owner) :: Nil;
+      override def producedTypes = msil_mgdptr(REFERENCE(field.owner)) :: Nil;
+
+      override def category = fldsCat
+    }
 
     case class CIL_LOAD_ARRAY_ITEM_ADDRESS(kind: TypeKind) extends Instruction {
       /** Returns a string representation of this instruction */
@@ -670,23 +809,27 @@ trait Opcodes { self: ICodes =>
       override def consumed = 2
       override def produced = 1
 
-      override def consumedTypes = List(ARRAY(kind), INT)
-      override def producedTypes = List(msil_mgdptr(kind))
+      override def consumedTypes = ARRAY(kind) :: INT :: Nil
+      override def producedTypes = msil_mgdptr(kind) :: Nil
+
+      override def category = arraysCat
     }
 
     case class CIL_UNBOX(valueType: TypeKind) extends Instruction {
       override def toString(): String = "CIL_UNBOX " + valueType
       override def consumed = 1
-      override def consumedTypes = ObjectReference :: Nil // actually consumes a 'boxed valueType'
+      override def consumedTypes = ObjectReferenceList // actually consumes a 'boxed valueType'
       override def produced = 1
-      override def producedTypes = List(msil_mgdptr(valueType))
+      override def producedTypes = msil_mgdptr(valueType) :: Nil
+      override def category = objsCat
     }
 
     case class CIL_INITOBJ(valueType: TypeKind) extends Instruction {
       override def toString(): String = "CIL_INITOBJ " + valueType
       override def consumed = 1
-      override def consumedTypes = ObjectReference :: Nil // actually consumes a managed pointer
+      override def consumedTypes = ObjectReferenceList // actually consumes a managed pointer
       override def produced = 0
+      override def category = objsCat
     }
 
     case class CIL_NEWOBJ(method: Symbol) extends Instruction {
@@ -695,8 +838,8 @@ trait Opcodes { self: ICodes =>
       override def consumed = method.tpe.paramTypes.length
       override def consumedTypes = method.tpe.paramTypes map toTypeKind
       override def produced = 1
-      override def producedTypes = List(toTypeKind(method.tpe.resultType))
+      override def producedTypes = toTypeKind(method.tpe.resultType) :: Nil
+      override def category = objsCat
     }
-
   }
 }

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,7 +12,6 @@ package scala.collection
 package mutable
 
 import generic._
-import annotation.bridge
 
 /** This class implements priority queues using a heap.
  *  To prioritize elements of type A there must be an implicit
@@ -32,23 +31,24 @@ import annotation.bridge
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-@cloneable
 class PriorityQueue[A](implicit val ord: Ordering[A])
-      extends Iterable[A]
+   extends AbstractIterable[A]
+      with Iterable[A]
       with GenericOrderedTraversableTemplate[A, PriorityQueue]
       with IterableLike[A, PriorityQueue[A]]
       with Growable[A]
       with Builder[A, PriorityQueue[A]]
       with Serializable
+      with scala.Cloneable
 {
   import ord._
 
-  private final class ResizableArrayAccess[A] extends ResizableArray[A] {
-    @inline def p_size0 = size0
-    @inline def p_size0_=(s: Int) = size0 = s
-    @inline def p_array = array
-    @inline def p_ensureSize(n: Int) = super.ensureSize(n)
-    @inline def p_swap(a: Int, b: Int) = super.swap(a, b)
+  private class ResizableArrayAccess[A] extends AbstractSeq[A] with ResizableArray[A] {
+    def p_size0 = size0
+    def p_size0_=(s: Int) = size0 = s
+    def p_array = array
+    def p_ensureSize(n: Int) = super.ensureSize(n)
+    def p_swap(a: Int, b: Int) = super.swap(a, b)
   }
 
   protected[this] override def newBuilder = new PriorityQueue[A]
@@ -91,23 +91,6 @@ class PriorityQueue[A](implicit val ord: Ordering[A])
     }
   }
 
-  @deprecated(
-    "Use += instead if you intend to add by side effect to an existing collection.\n"+
-    "Use `clone() +=' if you intend to create a new collection.", "2.8.0"
-  )
-  def +(elem: A): PriorityQueue[A] = { this.clone() += elem }
-
-  /** Add two or more elements to this set.
-   *  @param    elem1 the first element.
-   *  @param    kv2 the second element.
-   *  @param    kvs the remaining elements.
-   */
-  @deprecated(
-    "Use ++= instead if you intend to add by side effect to an existing collection.\n"+
-    "Use `clone() ++=' if you intend to create a new collection.", "2.8.0"
-  )
-  def +(elem1: A, elem2: A, elems: A*) = { this.clone().+=(elem1, elem2, elems : _*) }
-
   /** Inserts a single element into the priority queue.
    *
    *  @param  elem        the element to insert.
@@ -128,9 +111,6 @@ class PriorityQueue[A](implicit val ord: Ordering[A])
    *  @return       a new priority queue containing elements of both `xs` and `this`.
    */
   def ++(xs: GenTraversableOnce[A]): PriorityQueue[A] = { this.clone() ++= xs.seq }
-
-  @bridge
-  def ++(xs: TraversableOnce[A]): PriorityQueue[A] = ++ (xs: GenTraversableOnce[A])
 
   /** Adds all elements to the queue.
    *
@@ -181,12 +161,15 @@ class PriorityQueue[A](implicit val ord: Ordering[A])
    */
   def clear(): Unit = { resarr.p_size0 = 1 }
 
-  /** Returns an iterator which yields all the elements of the priority
-   *  queue in descending priority order.
+  /** Returns an iterator which yields all the elements.
    *
-   *  @return  an iterator over all elements sorted in descending order.
+   *  Note: The order of elements returned is undefined.
+   *  If you want to traverse the elements in priority queue
+   *  order, use `clone().dequeueAll.iterator`.
+   *
+   *  @return  an iterator over all the elements.
    */
-  override def iterator: Iterator[A] = new Iterator[A] {
+  override def iterator: Iterator[A] = new AbstractIterator[A] {
     private var i = 1
     def hasNext: Boolean = i < resarr.p_size0
     def next(): A = {
@@ -195,7 +178,6 @@ class PriorityQueue[A](implicit val ord: Ordering[A])
       toA(n)
     }
   }
-
 
   /** Returns the reverse of this queue. The priority queue that gets
    *  returned will have an inversed ordering - if for some elements
@@ -211,14 +193,21 @@ class PriorityQueue[A](implicit val ord: Ordering[A])
    *  @return   A reversed priority queue.
    */
   def reverse = {
-    val revq = new PriorityQueue[A]()(new math.Ordering[A] {
+    val revq = new PriorityQueue[A]()(new scala.math.Ordering[A] {
       def compare(x: A, y: A) = ord.compare(y, x)
     })
     for (i <- 1 until resarr.length) revq += resarr(i)
     revq
   }
 
-  def reverseIterator = new Iterator[A] {
+  /** Returns an iterator which yields all the elements in the reverse order
+   *  than that returned by the method `iterator`.
+   *
+   *  Note: The order of elements returned is undefined.
+   *
+   *  @return  an iterator over all elements sorted in descending order.
+   */
+  def reverseIterator: Iterator[A] = new AbstractIterator[A] {
     private var i = resarr.p_size0 - 1
     def hasNext: Boolean = i >= 1
     def next(): A = {
@@ -237,6 +226,8 @@ class PriorityQueue[A](implicit val ord: Ordering[A])
     throw new UnsupportedOperationException("unsuitable as hash key")
 
   /** Returns a regular queue containing the same elements.
+   *
+   *  Note: the order of elements is undefined.
    */
   def toQueue: Queue[A] = new Queue[A] ++= this.iterator
 
@@ -245,6 +236,13 @@ class PriorityQueue[A](implicit val ord: Ordering[A])
    *  @return the string representation of this queue.
    */
   override def toString() = toList.mkString("PriorityQueue(", ", ", ")")
+
+  /** Converts this $coll to a list.
+   *
+   *  Note: the order of elements is undefined.
+   *
+   *  @return a list containing all elements of this $coll.
+   */
   override def toList = this.iterator.toList
 
   /** This method clones the priority queue.

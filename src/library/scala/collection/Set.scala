@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -35,12 +35,13 @@ trait Set[A] extends (A => Boolean)
  *  The current default implementation of a $Coll is one of `EmptySet`, `Set1`, `Set2`, `Set3`, `Set4` in
  *  class `immutable.Set` for sets of sizes up to 4, and a `immutable.HashSet` for sets of larger sizes.
  *  @define coll set
- *  @define Coll Set
+ *  @define Coll `Set`
  */
 object Set extends SetFactory[Set] {
-  private[collection] val hashSeed = "Set".hashCode
-
   def newBuilder[A] = immutable.Set.newBuilder[A]
   override def empty[A]: Set[A] = immutable.Set.empty[A]
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Set[A]] = setCanBuildFrom[A]
 }
+
+/** Explicit instantiation of the `Set` trait to reduce class file size in subclasses. */
+private[scala] abstract class AbstractSet[A] extends AbstractIterable[A] with Set[A]

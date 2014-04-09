@@ -1,6 +1,6 @@
 /*     ___ ____ ___   __   ___   ___
 **    / _// __// _ | / /  / _ | / _ \  Scala classfile decoder
-**  __\ \/ /__/ __ |/ /__/ __ |/ ___/  (c) 2003-2011, LAMP/EPFL
+**  __\ \/ /__/ __ |/ /__/ __ |/ ___/  (c) 2003-2013, LAMP/EPFL
 ** /____/\___/_/ |_/____/_/ |_/_/      http://scala-lang.org/
 **
 */
@@ -13,9 +13,8 @@ package scalasig
 
 import java.io.{PrintStream, ByteArrayOutputStream}
 import java.util.regex.Pattern
-
 import scala.tools.scalap.scalax.util.StringUtil
-import reflect.NameTransformer
+import scala.reflect.NameTransformer
 import java.lang.String
 
 class ScalaSigPrinter(stream: PrintStream, printPrivates: Boolean) {
@@ -157,7 +156,7 @@ class ScalaSigPrinter(stream: PrintStream, printPrivates: Boolean) {
         val printer = new ScalaSigPrinter(stream, printPrivates)
         printer.printMethodType(m.infoType, false)(())
         baos.toString
-      case None =>
+      case _ =>
         ""
     }
   }

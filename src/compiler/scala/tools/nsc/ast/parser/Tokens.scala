@@ -1,19 +1,19 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
 package scala.tools.nsc
 package ast.parser
 
-import annotation.switch
+import scala.annotation.switch
 
 /** Common code between JavaTokens and Tokens.  Not as much (and not as concrete)
  *  as one might like because JavaTokens for no clear reason chose new numbers for
  *  identical token sets.
  */
 abstract class Tokens {
-  import util.Chars._
+  import scala.reflect.internal.Chars._
 
   /** special tokens */
   final val EMPTY = -3
@@ -37,27 +37,31 @@ abstract class Tokens {
   def isKeyword(code: Int): Boolean
   def isSymbol(code: Int): Boolean
 
-  final def isSpace(at: Char)         = at == ' ' || at == '\t'
-  final def isNewLine(at: Char)       = at == CR || at == LF || at == FF
-  final def isBrace(code : Int)       = code >= LPAREN && code <= RBRACE
-  final def isOpenBrace(code : Int)   = isBrace(code) && (code % 2 == 0)
-  final def isCloseBrace(code : Int)  = isBrace(code) && (code % 2 == 1)
+  final def isSpace(at: Char)       = at == ' ' || at == '\t'
+  final def isNewLine(at: Char)     = at == CR || at == LF || at == FF
+  final def isBrace(code: Int)      = code >= LPAREN && code <= RBRACE
+  final def isOpenBrace(code: Int)  = isBrace(code) && (code % 2 == 0)
+  final def isCloseBrace(code: Int) = isBrace(code) && (code % 2 == 1)
 }
 
 object Tokens extends Tokens {
-  final val SYMBOLLIT = 7
-  def isLiteral(code : Int) =
-    code >= CHARLIT && code <= SYMBOLLIT
+  final val STRINGPART = 7  // a part of an interpolated string
+  final val SYMBOLLIT = 8
+  final val INTERPOLATIONID = 9 // the lead identifier of an interpolated string
+
+  def isLiteral(code: Int) =
+    code >= CHARLIT && code <= INTERPOLATIONID
+
 
   /** identifiers */
   final val IDENTIFIER = 10
   final val BACKQUOTED_IDENT = 11
-  def isIdentifier(code : Int) =
+  def isIdentifier(code: Int) =
     code >= IDENTIFIER && code <= BACKQUOTED_IDENT
 
-  @switch def canBeginExpression(code : Int) = code match {
+  @switch def canBeginExpression(code: Int) = code match {
     case IDENTIFIER|BACKQUOTED_IDENT|USCORE       => true
-    case LBRACE|LPAREN|LBRACKET|COMMENT|STRINGLIT => true
+    case LBRACE|LPAREN|LBRACKET|COMMENT           => true
     case IF|DO|WHILE|FOR|NEW|TRY|THROW            => true
     case NULL|THIS|TRUE|FALSE                     => true
     case code                                     => isLiteral(code)
@@ -106,11 +110,13 @@ object Tokens extends Tokens {
   final val MATCH = 58
   final val FORSOME = 59
   final val LAZY = 61
+  final val MACRO = 62 // not yet used in 2.10
+  final val THEN = 63  // not yet used in 2.10
 
-  def isKeyword(code : Int) =
+  def isKeyword(code: Int) =
     code >= IF && code <= LAZY
 
-  @switch def isDefinition(code : Int) = code match {
+  @switch def isDefinition(code: Int) = code match {
     case CLASS|TRAIT|OBJECT => true
     case CASECLASS|CASEOBJECT => true
     case DEF|VAL|VAR => true
@@ -135,7 +141,7 @@ object Tokens extends Tokens {
   final val AT = 83
   final val VIEWBOUND = 84
 
-  def isSymbol(code : Int) =
+  def isSymbol(code: Int) =
     code >= COMMA && code <= VIEWBOUND
 
   /** parenthesis */

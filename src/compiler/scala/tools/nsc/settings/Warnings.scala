@@ -1,15 +1,11 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
 package scala.tools
 package nsc
 package settings
-
-import annotation.elidable
-import scala.tools.util.PathResolver.Defaults
-import scala.collection.mutable.HashSet
 
 /** Settings influencing the printing of warnings.
  */
@@ -22,6 +18,7 @@ trait Warnings {
   // These warnings are all so noisy as to be useless in their
   // present form, but have the potential to offer useful info.
   protected def allWarnings = lintWarnings ++ List(
+    warnDeadCode,
     warnSelectNullable,
     warnValueDiscard,
     warnNumericWiden
@@ -29,10 +26,11 @@ trait Warnings {
   // These warnings should be pretty quiet unless you're doing
   // something inadvisable.
   protected def lintWarnings = List(
-    warnDeadCode,
+    // warnDeadCode,
     warnInaccessible,
     warnNullaryOverride,
-    warnNullaryUnit
+    warnNullaryUnit,
+    warnAdaptedArgs
   )
 
   // Warning groups.
@@ -47,6 +45,7 @@ trait Warnings {
 
   // Individual warnings.
   val warnSelectNullable   = BooleanSetting   ("-Xcheck-null", "Warn upon selection of nullable reference.")
+  val warnAdaptedArgs      = BooleanSetting   ("-Ywarn-adapted-args", "Warn if an argument list is modified to match the receiver.")
   val warnDeadCode         = BooleanSetting   ("-Ywarn-dead-code", "Warn when dead code is identified.")
   val warnValueDiscard     = BooleanSetting   ("-Ywarn-value-discard", "Warn when non-Unit expression results are unused.")
   val warnNumericWiden     = BooleanSetting   ("-Ywarn-numeric-widen", "Warn when numerics are widened.")

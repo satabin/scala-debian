@@ -1,28 +1,24 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-package scala.collection
-
-
-import java.lang.Thread._
+package scala
+package collection
 
 import scala.collection.generic.CanBuildFrom
 import scala.collection.generic.CanCombineFrom
 import scala.collection.parallel.mutable.ParArray
 import scala.collection.mutable.UnrolledBuffer
-import annotation.unchecked.uncheckedVariance
-
+import scala.annotation.unchecked.uncheckedVariance
+import scala.language.implicitConversions
 
 /** Package object for parallel collections.
  */
 package object parallel {
-
   /* constants */
   val MIN_FOR_COPY = 512
   val CHECK_RATE = 512
@@ -46,16 +42,56 @@ package object parallel {
   private[parallel] def outofbounds(idx: Int) = throw new IndexOutOfBoundsException(idx.toString)
 
   private[parallel] def getTaskSupport: TaskSupport =
-    if (util.Properties.isJavaAtLeast("1.6")) {
-      val vendor = util.Properties.javaVmVendor
-      if ((vendor contains "Oracle") || (vendor contains "Sun") || (vendor contains "Apple")) new ForkJoinTaskSupport
-      else new ThreadPoolTaskSupport
-    } else new ThreadPoolTaskSupport
+    if (scala.util.Properties.isJavaAtLeast("1.6")) new ForkJoinTaskSupport
+    else new ThreadPoolTaskSupport
 
-  val tasksupport = getTaskSupport
+  val defaultTaskSupport: TaskSupport = getTaskSupport
+
+  def setTaskSupport[Coll](c: Coll, t: TaskSupport): Coll = {
+    c match {
+      case pc: ParIterableLike[_, _, _] => pc.tasksupport = t
+      case _ => // do nothing
+    }
+    c
+  }
 
   /* implicit conversions */
 
+  implicit def factory2ops[From, Elem, To](bf: CanBuildFrom[From, Elem, To]) = new FactoryOps[From, Elem, To] {
+    def isParallel = bf.isInstanceOf[Parallel]
+    def asParallel = bf.asInstanceOf[CanCombineFrom[From, Elem, To]]
+    def ifParallel[R](isbody: CanCombineFrom[From, Elem, To] => R) = new Otherwise[R] {
+      def otherwise(notbody: => R) = if (isParallel) isbody(asParallel) else notbody
+    }
+  }
+  implicit def traversable2ops[T](t: scala.collection.GenTraversableOnce[T]) = new TraversableOps[T] {
+    def isParallel = t.isInstanceOf[Parallel]
+    def isParIterable = t.isInstanceOf[ParIterable[_]]
+    def asParIterable = t.asInstanceOf[ParIterable[T]]
+    def isParSeq = t.isInstanceOf[ParSeq[_]]
+    def asParSeq = t.asInstanceOf[ParSeq[T]]
+    def ifParSeq[R](isbody: ParSeq[T] => R) = new Otherwise[R] {
+      def otherwise(notbody: => R) = if (isParallel) isbody(asParSeq) else notbody
+    }
+    def toParArray = if (t.isInstanceOf[ParArray[_]]) t.asInstanceOf[ParArray[T]] else {
+      val it = t.toIterator
+      val cb = mutable.ParArrayCombiner[T]()
+      while (it.hasNext) cb += it.next
+      cb.result
+    }
+  }
+  implicit def throwable2ops(self: Throwable) = new ThrowableOps {
+    def alongWith(that: Throwable) = (self, that) match {
+      case (self: CompositeThrowable, that: CompositeThrowable) => new CompositeThrowable(self.throwables ++ that.throwables)
+      case (self: CompositeThrowable, _) => new CompositeThrowable(self.throwables + that)
+      case (_, that: CompositeThrowable) => new CompositeThrowable(that.throwables + self)
+      case _ => new CompositeThrowable(Set(self, that))
+    }
+  }
+}
+
+
+package parallel {
   trait FactoryOps[From, Elem, To] {
     trait Otherwise[R] {
       def otherwise(notbody: => R): R
@@ -64,14 +100,6 @@ package object parallel {
     def isParallel: Boolean
     def asParallel: CanCombineFrom[From, Elem, To]
     def ifParallel[R](isbody: CanCombineFrom[From, Elem, To] => R): Otherwise[R]
-  }
-
-  implicit def factory2ops[From, Elem, To](bf: CanBuildFrom[From, Elem, To]) = new FactoryOps[From, Elem, To] {
-    def isParallel = bf.isInstanceOf[Parallel]
-    def asParallel = bf.asInstanceOf[CanCombineFrom[From, Elem, To]]
-    def ifParallel[R](isbody: CanCombineFrom[From, Elem, To] => R) = new Otherwise[R] {
-      def otherwise(notbody: => R) = if (isParallel) isbody(asParallel) else notbody
-    }
   }
 
   trait TraversableOps[T] {
@@ -88,49 +116,40 @@ package object parallel {
     def toParArray: ParArray[T]
   }
 
-  implicit def traversable2ops[T](t: collection.GenTraversableOnce[T]) = new TraversableOps[T] {
-    def isParallel = t.isInstanceOf[Parallel]
-    def isParIterable = t.isInstanceOf[ParIterable[_]]
-    def asParIterable = t.asInstanceOf[ParIterable[T]]
-    def isParSeq = t.isInstanceOf[ParSeq[_]]
-    def asParSeq = t.asInstanceOf[ParSeq[T]]
-    def ifParSeq[R](isbody: ParSeq[T] => R) = new Otherwise[R] {
-      def otherwise(notbody: => R) = if (isParallel) isbody(asParSeq) else notbody
-    }
-    def toParArray = if (t.isInstanceOf[ParArray[_]]) t.asInstanceOf[ParArray[T]] else {
-      val it = t.toIterator
-      val cb = mutable.ParArrayCombiner[T]()
-      while (it.hasNext) cb += it.next
-      cb.result
-    }
-  }
-
   trait ThrowableOps {
     def alongWith(that: Throwable): Throwable
   }
 
-  implicit def throwable2ops(self: Throwable) = new ThrowableOps {
-    def alongWith(that: Throwable) = (self, that) match {
-      case (self: CompositeThrowable, that: CompositeThrowable) => new CompositeThrowable(self.throwables ++ that.throwables)
-      case (self: CompositeThrowable, _) => new CompositeThrowable(self.throwables + that)
-      case (_, that: CompositeThrowable) => new CompositeThrowable(that.throwables + self)
-      case _ => new CompositeThrowable(Set(self, that))
-    }
-  }
-
   /* classes */
 
+  trait CombinerFactory[U, Repr] {
+    /** Provides a combiner used to construct a collection. */
+    def apply(): Combiner[U, Repr]
+    /** The call to the `apply` method can create a new combiner each time.
+     *  If it does, this method returns `false`.
+     *  The same combiner factory may be used each time (typically, this is
+     *  the case for concurrent collections, which are thread safe).
+     *  If so, the method returns `true`.
+     */
+    def doesShareCombiners: Boolean
+  }
+
   /** Composite throwable - thrown when multiple exceptions are thrown at the same time. */
-  final class CompositeThrowable(val throwables: Set[Throwable])
-  extends Throwable("Multiple exceptions thrown during a parallel computation: " + throwables.map(t => (t, t.getStackTrace.toList)).mkString(", "))
+  final case class CompositeThrowable(
+    val throwables: Set[Throwable]
+  ) extends Exception(
+    "Multiple exceptions thrown during a parallel computation: " +
+      throwables.map(t => t + "\n" + t.getStackTrace.take(10).++("...").mkString("\n")).mkString("\n\n")
+  )
 
 
   /** A helper iterator for iterating very small array buffers.
    *  Automatically forwards the signal delegate when splitting.
    */
   private[parallel] class BufferSplitter[T]
-    (private val buffer: collection.mutable.ArrayBuffer[T], private var index: Int, private val until: Int, var signalDelegate: collection.generic.Signalling)
+  (private val buffer: scala.collection.mutable.ArrayBuffer[T], private var index: Int, private val until: Int, _sigdel: scala.collection.generic.Signalling)
   extends IterableSplitter[T] {
+    signalDelegate = _sigdel
     def hasNext = index < until
     def next = {
       val r = buffer(index)
@@ -184,7 +203,7 @@ package object parallel {
    *  the receiver (which will be the return value).
    */
   private[parallel] abstract class BucketCombiner[-Elem, +To, Buck, +CombinerType <: BucketCombiner[Elem, To, Buck, CombinerType]]
-    (private val bucketnumber: Int)
+  (private val bucketnumber: Int)
   extends Combiner[Elem, To] {
   //self: EnvironmentPassingCombiner[Elem, To] =>
     protected var buckets: Array[UnrolledBuffer[Buck]] @uncheckedVariance = new Array[UnrolledBuffer[Buck]](bucketnumber)
@@ -192,53 +211,37 @@ package object parallel {
 
     def size = sz
 
-    def clear = {
+    def clear() = {
       buckets = new Array[UnrolledBuffer[Buck]](bucketnumber)
       sz = 0
     }
 
     def beforeCombine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]) {}
+
     def afterCombine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]) {}
 
-    def combine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]): Combiner[N, NewTo] = if (this ne other) {
-      if (other.isInstanceOf[BucketCombiner[_, _, _, _]]) {
-        beforeCombine(other)
+    def combine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]): Combiner[N, NewTo] = {
+      if (this eq other) this
+      else other match {
+        case _: BucketCombiner[_, _, _, _] =>
+          beforeCombine(other)
+          val that = other.asInstanceOf[BucketCombiner[Elem, To, Buck, CombinerType]]
 
-        val that = other.asInstanceOf[BucketCombiner[Elem, To, Buck, CombinerType]]
-        var i = 0
-        while (i < bucketnumber) {
-          if (buckets(i) eq null) {
-            buckets(i) = that.buckets(i)
-          } else {
-            if (that.buckets(i) ne null) buckets(i) concat that.buckets(i)
+          var i = 0
+          while (i < bucketnumber) {
+            if (buckets(i) eq null)
+              buckets(i) = that.buckets(i)
+            else if (that.buckets(i) ne null)
+              buckets(i) concat that.buckets(i)
+
+            i += 1
           }
-          i += 1
-        }
-        sz = sz + that.size
-
-        afterCombine(other)
-
-        this
-      } else sys.error("Unexpected combiner type.")
-    } else this
-
+          sz = sz + that.size
+          afterCombine(other)
+          this
+        case _ =>
+          sys.error("Unexpected combiner type.")
+      }
+    }
   }
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

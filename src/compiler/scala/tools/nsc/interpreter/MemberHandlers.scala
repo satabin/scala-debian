@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -8,13 +8,14 @@ package interpreter
 
 import scala.collection.{ mutable, immutable }
 import scala.PartialFunction.cond
-import scala.reflect.NameTransformer
-import scala.tools.nsc.util.Chars
+import scala.reflect.internal.Chars
+import scala.reflect.internal.Flags._
+import scala.language.implicitConversions
 
 trait MemberHandlers {
   val intp: IMain
 
-  import intp.{ Request, global, naming, atPickler }
+  import intp.{ Request, global, naming }
   import global._
   import naming._
 
@@ -64,14 +65,16 @@ trait MemberHandlers {
   }
 
   sealed abstract class MemberDefHandler(override val member: MemberDef) extends MemberHandler(member) {
+    def symbol          = if (member.symbol eq null) NoSymbol else member.symbol
     def name: Name      = member.name
     def mods: Modifiers = member.mods
     def keyword         = member.keyword
-    def prettyName      = NameTransformer.decode(name)
+    def prettyName      = name.decode
 
     override def definesImplicit = member.mods.isImplicit
     override def definesTerm: Option[TermName] = Some(name.toTermName) filter (_ => name.isTermName)
     override def definesType: Option[TypeName] = Some(name.toTypeName) filter (_ => name.isTypeName)
+    override def definedSymbols = if (symbol eq NoSymbol) Nil else List(symbol)
   }
 
   /** Class to handle one member among all the members included
@@ -89,6 +92,7 @@ trait MemberHandlers {
     def importedNames        = List[Name]()
     def definedNames         = definesTerm.toList ++ definesType.toList
     def definedOrImported    = definedNames ++ importedNames
+    def definedSymbols       = List[Symbol]()
 
     def extraCodeToEvaluate(req: Request): String = ""
     def resultExtractionCode(req: Request): String = ""
@@ -112,15 +116,20 @@ trait MemberHandlers {
           if (mods.isLazy) codegenln(false, "<lazy>")
           else any2stringOf(req fullPath name, maxStringElements)
 
-        """ + "%s: %s = " + %s""".format(prettyName, string2code(req typeOf name), resultString)
+        val vidString =
+          if (replProps.vids) """" + " @ " + "%%8x".format(System.identityHashCode(%s)) + " """.trim.format(req fullPath name)
+          else ""
+
+        """ + "%s%s: %s = " + %s""".format(string2code(prettyName), vidString, string2code(req typeOf name), resultString)
       }
     }
   }
 
   class DefHandler(member: DefDef) extends MemberDefHandler(member) {
     private def vparamss = member.vparamss
-    // true if 0-arity
-    override def definesValue = vparamss.isEmpty || vparamss.head.isEmpty
+    private def isMacro = member.symbol hasFlag MACRO
+    // true if not a macro and 0-arity
+    override def definesValue = !isMacro && flattensToEmpty(vparamss)
     override def resultExtractionCode(req: Request) =
       if (mods.isPublic) codegenln(name, ": ", req.typeOf(name)) else ""
   }
@@ -138,8 +147,7 @@ trait MemberHandlers {
     override def resultExtractionCode(req: Request) = {
       val lhsType = string2code(req lookupTypeOf name)
       val res     = string2code(req fullPath name)
-
-      """ + "%s: %s = " + %s + "\n" """.format(lhs, lhsType, res) + "\n"
+      """ + "%s: %s = " + %s + "\n" """.format(string2code(lhs.toString), lhsType, res) + "\n"
     }
   }
 
@@ -170,7 +178,7 @@ trait MemberHandlers {
 
   class ImportHandler(imp: Import) extends MemberHandler(imp) {
     val Import(expr, selectors) = imp
-    def targetType = intp.typeOfExpression("" + expr)
+    def targetType: Type = intp.typeOfExpression("" + expr)
     override def isLegalTopLevel = true
 
     def createImportForName(name: Name): String = {
@@ -183,7 +191,7 @@ trait MemberHandlers {
     // TODO: Need to track these specially to honor Predef masking attempts,
     // because they must be the leading imports in the code generated for each
     // line.  We can use the same machinery as Contexts now, anyway.
-    def isPredefImport = false // treeInfo.isPredefExpr(expr)
+    def isPredefImport = isReferenceToPredef(expr)
 
     // wildcard imports, e.g. import foo._
     private def selectorWild    = selectors filter (_.name == nme.USCOREkw)
@@ -200,10 +208,10 @@ trait MemberHandlers {
     def importedSymbols = individualSymbols ++ wildcardSymbols
 
     lazy val individualSymbols: List[Symbol] =
-      atPickler(targetType.toList flatMap (tp => individualNames map (tp nonPrivateMember _)))
+      beforePickler(individualNames map (targetType nonPrivateMember _))
 
     lazy val wildcardSymbols: List[Symbol] =
-      if (importsWildcard) atPickler(targetType.toList flatMap (_.nonPrivateMembers))
+      if (importsWildcard) beforePickler(targetType.nonPrivateMembers.toList)
       else Nil
 
     /** Complete list of names imported by a wildcard */

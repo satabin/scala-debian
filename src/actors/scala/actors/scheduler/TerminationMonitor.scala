@@ -1,22 +1,21 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
 package scala.actors
 package scheduler
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 
 private[scheduler] trait TerminationMonitor {
   _: IScheduler =>
 
   protected var activeActors = 0
-  protected val terminationHandlers = new HashMap[TrackedReactor, () => Unit]
+  protected val terminationHandlers = new mutable.HashMap[TrackedReactor, () => Unit]
   private var started = false
 
   /** newActor is invoked whenever a new actor is started. */
@@ -64,10 +63,6 @@ private[scheduler] trait TerminationMonitor {
   private[actors] def allActorsTerminated: Boolean = synchronized {
     started && activeActors <= 0
   }
-
-  /** Deprecated non-actor-private version */
-  @deprecated("this method is going to be removed in a future release", "2.7.7")
-  def allTerminated: Boolean = allActorsTerminated
 
   /** Checks for actors that have become garbage. */
   protected def gc() {}

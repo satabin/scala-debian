@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
@@ -20,6 +20,7 @@ trait AdvancedScalaSettings {
     val future: BooleanSetting
     val generatephasegraph: StringSetting
     val logimplicits: BooleanSetting
+    val mainClass: StringSetting
     val migration: BooleanSetting
     val noforwarders: BooleanSetting
     val nojline: BooleanSetting

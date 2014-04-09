@@ -1,5 +1,5 @@
 /* scaladoc, a documentation generator for Scala
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  * @author  Geoffrey Washburn
  */
@@ -9,7 +9,7 @@ package scala.tools.nsc
 import java.io.File.pathSeparator
 import scala.tools.nsc.doc.DocFactory
 import scala.tools.nsc.reporters.ConsoleReporter
-import scala.tools.nsc.util.FakePos
+import scala.reflect.internal.util.FakePos
 import Properties.msilLibPath
 
 /** The main class for scaladoc, a front-end for the Scala compiler
@@ -20,7 +20,8 @@ class ScalaDoc {
 
   def process(args: Array[String]): Boolean = {
     var reporter: ConsoleReporter = null
-    val docSettings = new doc.Settings(msg => reporter.error(FakePos("scaladoc"), msg + "\n  scaladoc -help  gives more information"))
+    val docSettings = new doc.Settings(msg => reporter.error(FakePos("scaladoc"), msg + "\n  scaladoc -help  gives more information"),
+                                       msg => reporter.printMessage(msg))
     reporter = new ConsoleReporter(docSettings) {
       // need to do this so that the Global instance doesn't trash all the
       // symbols just because there was an error
@@ -30,17 +31,17 @@ class ScalaDoc {
     def hasFiles = command.files.nonEmpty || docSettings.uncompilableFiles.nonEmpty
 
     if (docSettings.version.value)
-      reporter.info(null, versionMsg, true)
+      reporter.echo(versionMsg)
     else if (docSettings.Xhelp.value)
-      reporter.info(null, command.xusageMsg, true)
+      reporter.echo(command.xusageMsg)
     else if (docSettings.Yhelp.value)
-      reporter.info(null, command.yusageMsg, true)
+      reporter.echo(command.yusageMsg)
     else if (docSettings.showPlugins.value)
       reporter.warning(null, "Plugins are not available when using Scaladoc")
     else if (docSettings.showPhases.value)
       reporter.warning(null, "Phases are restricted when using Scaladoc")
     else if (docSettings.help.value || !hasFiles)
-      reporter.info(null, command.usageMsg, true)
+      reporter.echo(command.usageMsg)
     else try {
       if (docSettings.target.value == "msil")
         msilLibPath foreach (x => docSettings.assemrefs.value += (pathSeparator + x))
