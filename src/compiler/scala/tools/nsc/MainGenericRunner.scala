@@ -1,19 +1,33 @@
 /* NSC -- new Scala compiler
- * Copyright 2006-2011 LAMP/EPFL
+ * Copyright 2006-2013 LAMP/EPFL
  * @author  Lex Spoon
  */
 
 package scala.tools.nsc
 
-import java.io.IOException
 import java.net.URL
 import scala.tools.util.PathResolver
-
 import io.{ File }
 import util.{ ClassPath, ScalaClassLoader }
 import Properties.{ versionString, copyrightString }
 import interpreter.{ ILoop }
 import GenericRunnerCommand._
+
+object JarRunner extends CommonRunner {
+  def runJar(settings: GenericRunnerSettings, jarPath: String, arguments: Seq[String]): Either[Throwable, Boolean] = {
+    val jar       = new io.Jar(jarPath)
+    val mainClass = jar.mainClass getOrElse sys.error("Cannot find main class for jar: " + jarPath)
+    val jarURLs   = ClassPath expandManifestPath jarPath
+    val urls      = if (jarURLs.isEmpty) File(jarPath).toURL +: settings.classpathURLs else jarURLs
+
+    if (settings.Ylogcp.value) {
+      Console.err.println("Running jar with these URLs as the classpath:")
+      urls foreach println
+    }
+
+    runAndCatch(urls, mainClass, arguments)
+  }
+}
 
 /** An object that runs Scala code.  It has three possible
   * sources for the code to run: pre-compiled code, a script file,
@@ -25,7 +39,7 @@ class MainGenericRunner {
     false
   }
   def errorFn(str: String): Boolean = {
-    Console println str
+    Console.err println str
     false
   }
 
@@ -44,6 +58,10 @@ class MainGenericRunner {
     def isI   = !settings.loadfiles.isDefault
     def dashi = settings.loadfiles.value
 
+    // Deadlocks on startup under -i unless we disable async.
+    if (isI)
+      settings.Yreplsync.value = true
+
     def combinedCode  = {
       val files   = if (isI) dashi map (file => File(file).slurp()) else Nil
       val str     = if (isE) List(dashe) else Nil
@@ -57,11 +75,9 @@ class MainGenericRunner {
       case AsScript =>
         ScriptRunner.runScriptAndCatch(settings, thingToRun, command.arguments)
       case AsJar    =>
-        ObjectRunner.runAndCatch(
-          File(thingToRun).toURL +: settings.classpathURLs,
-          new io.Jar(thingToRun).mainClass getOrElse sys.error("Cannot find main class for jar: " + thingToRun),
-          command.arguments
-        )
+        JarRunner.runJar(settings, thingToRun, command.arguments)
+      case Error =>
+        Right(false)
       case _  =>
         // We start the repl when no arguments are given.
         Right(new ILoop process settings)

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,7 +12,7 @@ package factory
 /** This class logs what the nodefactory is actually doing.
  *  If you want to see what happens during loading, use it like this:
 {{{
-object testLogged extends Application {
+object testLogged extends App {
   val x = new scala.xml.parsing.NoBindingFactoryAdapter
         with scala.xml.factory.LoggedNodeFactory[scala.xml.Elem]
         with scala.util.logging.ConsoleLogger

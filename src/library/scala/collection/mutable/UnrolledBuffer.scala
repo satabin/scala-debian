@@ -1,8 +1,18 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
 package scala.collection.mutable
 
-import collection.Iterator
-import collection.generic._
-import annotation.tailrec
+import scala.collection.AbstractIterator
+import scala.collection.Iterator
+import scala.collection.generic._
+import scala.annotation.tailrec
+import scala.reflect.ClassTag
 
 /** A buffer that stores elements in an unrolled linked list.
  *
@@ -27,16 +37,17 @@ import annotation.tailrec
  *  should still be avoided for such a purpose.
  *
  *  @define coll unrolled buffer
- *  @define Coll UnrolledBuffer
+ *  @define Coll `UnrolledBuffer`
  *  @author Aleksandar Prokopec
  *
  */
 @SerialVersionUID(1L)
-class UnrolledBuffer[T](implicit val manifest: ClassManifest[T])
-extends collection.mutable.Buffer[T]
-   with collection.mutable.BufferLike[T, UnrolledBuffer[T]]
-   with GenericClassManifestTraversableTemplate[T, UnrolledBuffer]
-   with collection.mutable.Builder[T, UnrolledBuffer[T]]
+class UnrolledBuffer[T](implicit val tag: ClassTag[T])
+extends scala.collection.mutable.AbstractBuffer[T]
+   with scala.collection.mutable.Buffer[T]
+   with scala.collection.mutable.BufferLike[T, UnrolledBuffer[T]]
+   with GenericClassTagTraversableTemplate[T, UnrolledBuffer]
+   with scala.collection.mutable.Builder[T, UnrolledBuffer[T]]
    with Serializable
 {
   import UnrolledBuffer.Unrolled
@@ -57,7 +68,7 @@ extends collection.mutable.Buffer[T]
 
   private[collection] def calcNextLength(sz: Int) = sz
 
-  def classManifestCompanion = UnrolledBuffer
+  def classTagCompanion = UnrolledBuffer
 
   /** Concatenates the targer unrolled buffer to this unrolled buffer.
    *
@@ -94,7 +105,7 @@ extends collection.mutable.Buffer[T]
     sz = 0
   }
 
-  def iterator = new Iterator[T] {
+  def iterator: Iterator[T] = new AbstractIterator[T] {
     var pos: Int = -1
     var node: Unrolled[T] = headptr
     scan()
@@ -137,12 +148,12 @@ extends collection.mutable.Buffer[T]
     } else throw new IndexOutOfBoundsException(idx.toString)
 
   def +=:(elem: T) = {
-    headptr = headptr.prepend(elem)
+    headptr = headptr prepend elem
     sz += 1
     this
   }
 
-  def insertAll(idx: Int, elems: collection.Traversable[T]) =
+  def insertAll(idx: Int, elems: scala.collection.Traversable[T]) =
     if (idx >= 0 && idx <= sz) {
       headptr.insertAll(idx, elems, this)
       sz += elems.size
@@ -150,8 +161,8 @@ extends collection.mutable.Buffer[T]
 
   private def writeObject(out: java.io.ObjectOutputStream) {
     out.defaultWriteObject
-    out.writeInt(sz)
-    for (elem <- this) out.writeObject(elem)
+    out writeInt sz
+    for (elem <- this) out writeObject elem
   }
 
   private def readObject(in: java.io.ObjectInputStream) {
@@ -169,15 +180,17 @@ extends collection.mutable.Buffer[T]
     }
   }
 
+  override def clone(): UnrolledBuffer[T] = new UnrolledBuffer[T] ++= this
+
   override def stringPrefix = "UnrolledBuffer"
 }
 
 
-object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
+object UnrolledBuffer extends ClassTagTraversableFactory[UnrolledBuffer] {
   /** $genericCanBuildFromInfo */
-  implicit def canBuildFrom[T](implicit m: ClassManifest[T]): CanBuildFrom[Coll, T, UnrolledBuffer[T]] =
+  implicit def canBuildFrom[T](implicit t: ClassTag[T]): CanBuildFrom[Coll, T, UnrolledBuffer[T]] =
     new GenericCanBuildFrom[T]
-  def newBuilder[T](implicit m: ClassManifest[T]): Builder[T, UnrolledBuffer[T]] = new UnrolledBuffer[T]
+  def newBuilder[T](implicit t: ClassTag[T]): Builder[T, UnrolledBuffer[T]] = new UnrolledBuffer[T]
 
   val waterline = 50
   val waterlineDelim = 100
@@ -185,7 +198,7 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
 
   /** Unrolled buffer node.
    */
-  class Unrolled[T: ClassManifest] private[collection] (var size: Int, var array: Array[T], var next: Unrolled[T], val buff: UnrolledBuffer[T] = null) {
+  class Unrolled[T: ClassTag] private[collection] (var size: Int, var array: Array[T], var next: Unrolled[T], val buff: UnrolledBuffer[T] = null) {
     private[collection] def this() = this(0, new Array[T](unrolledlength), null, null)
     private[collection] def this(b: UnrolledBuffer[T]) = this(0, new Array[T](unrolledlength), null, b)
 
@@ -198,7 +211,7 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
       this
     } else {
       next = new Unrolled[T](0, new Array[T](nextlength), null, buff)
-      next.append(elem)
+      next append elem
     }
     def foreach[U](f: T => U) {
       var unrolled = this
@@ -232,7 +245,7 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
       // allocate a new node and store element
       // then make it point to this
       val newhead = new Unrolled[T](buff)
-      newhead.append(elem)
+      newhead append elem
       newhead.next = this
       newhead
     }
@@ -272,7 +285,7 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
       if (next eq null) true else false // checks if last node was thrown out
     } else false
 
-    @tailrec final def insertAll(idx: Int, t: collection.Traversable[T], buffer: UnrolledBuffer[T]): Unit = if (idx < size) {
+    @tailrec final def insertAll(idx: Int, t: scala.collection.Traversable[T], buffer: UnrolledBuffer[T]): Unit = if (idx < size) {
       // divide this node at the appropriate position and insert all into head
       // update new next
       val newnextnode = new Unrolled[T](0, new Array(array.length), null, buff)
@@ -314,4 +327,3 @@ object UnrolledBuffer extends ClassManifestTraversableFactory[UnrolledBuffer] {
   }
 
 }
-

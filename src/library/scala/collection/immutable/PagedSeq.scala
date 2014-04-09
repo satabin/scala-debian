@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,6 +13,7 @@ package immutable
 
 import java.io._
 import scala.util.matching.Regex
+import scala.reflect.ClassTag
 
 /** The `PagedSeq` object defines a lazy implementations of
  *  a random access sequence.
@@ -25,7 +26,7 @@ object PagedSeq {
   final val UndeterminedEnd = Int.MaxValue
 
   /** Constructs a paged sequence from an iterator */
-  def fromIterator[T: ClassManifest](source: Iterator[T]): PagedSeq[T] =
+  def fromIterator[T: ClassTag](source: Iterator[T]): PagedSeq[T] =
     new PagedSeq[T]((data: Array[T], start: Int, len: Int) => {
       var i = 0
       while (i < len && source.hasNext) {
@@ -36,7 +37,7 @@ object PagedSeq {
     })
 
   /** Constructs a paged sequence from an iterable */
-  def fromIterable[T: ClassManifest](source: Iterable[T]): PagedSeq[T] =
+  def fromIterable[T: ClassTag](source: Iterable[T]): PagedSeq[T] =
     fromIterator(source.iterator)
 
   /** Constructs a paged character sequence from a string iterator */
@@ -98,7 +99,7 @@ object PagedSeq {
 
   /** Constructs a paged character sequence from a scala.io.Source value
    */
-  def fromSource(source: io.Source) =
+  def fromSource(source: scala.io.Source) =
     fromLines(source.getLines())
 }
 
@@ -115,21 +116,22 @@ import PagedSeq._
  *  It returns the number of elements produced, or -1 if end of logical input stream was reached
  *  before reading any element.
  *
- *  @tparam T     the type of the elements contained in this paged sequence, with a `ClassManifest` context bound.
+ *  @tparam T     the type of the elements contained in this paged sequence, with an `ClassTag` context bound.
  *
  *  @author Martin Odersky
  *  @since  2.7
- *  @define Coll PagedSeq
+ *  @define Coll `PagedSeq`
  *  @define coll paged sequence
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-class PagedSeq[T: ClassManifest] protected(
+class PagedSeq[T: ClassTag] protected(
   more: (Array[T], Int, Int) => Int,
   first1: Page[T],
   start: Int,
   end: Int)
-extends scala.collection.IndexedSeq[T]
+extends scala.collection.AbstractSeq[T]
+   with scala.collection.IndexedSeq[T]
 {
   def this(more: (Array[T], Int, Int) => Int) = this(more, new Page[T](0), 0, UndeterminedEnd)
 
@@ -204,7 +206,7 @@ extends scala.collection.IndexedSeq[T]
 
 /** Page containing up to PageSize characters of the input sequence.
  */
-private class Page[T: ClassManifest](val num: Int) {
+private class Page[T: ClassTag](val num: Int) {
 
   private final val PageSize = 4096
 

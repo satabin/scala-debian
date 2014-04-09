@@ -1,14 +1,16 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-package scala.math
+package scala
+package math
 
 import java.util.Comparator
+import scala.language.{implicitConversions, higherKinds}
 
 /** Ordering is a trait whose instances each represent a strategy for sorting
   * instances of a type.
@@ -24,10 +26,10 @@ import java.util.Comparator
   * val pairs = Array(("a", 5, 2), ("c", 3, 1), ("b", 1, 3))
   *
   * // sort by 2nd element
-  * Sorting.quickSort(pairs)(Ordering.by[(String, Int, Int), Int](_._2)
+  * Sorting.quickSort(pairs)(Ordering.by[(String, Int, Int), Int](_._2))
   *
   * // sort by the 3rd element, then 1st
-  * Sorting.quickSort(pairs)(Ordering[(Int, String)].on[(String, Int, Int)]((_._3, _._1))
+  * Sorting.quickSort(pairs)(Ordering[(Int, String)].on(x => (x._3, x._1)))
   * }}}
   *
   * An Ordering[T] is implemented by specifying compare(a:T, b:T), which
@@ -164,7 +166,7 @@ object Ordering extends LowPriorityOrderingImplicits {
     /** Not in the standard scope due to the potential for divergence:
       * For instance `implicitly[Ordering[Any]]` diverges in its presence.
       */
-    implicit def seqDerivedOrdering[CC[X] <: collection.Seq[X], T](implicit ord: Ordering[T]): Ordering[CC[T]] =
+    implicit def seqDerivedOrdering[CC[X] <: scala.collection.Seq[X], T](implicit ord: Ordering[T]): Ordering[CC[T]] =
       new Ordering[CC[T]] {
         def compare(x: CC[T], y: CC[T]): Int = {
           val xe = x.iterator
@@ -262,12 +264,52 @@ object Ordering extends LowPriorityOrderingImplicits {
   implicit object Long extends LongOrdering
 
   trait FloatOrdering extends Ordering[Float] {
+    outer =>
+
     def compare(x: Float, y: Float) = java.lang.Float.compare(x, y)
+
+    override def lteq(x: Float, y: Float): Boolean = x <= y
+    override def gteq(x: Float, y: Float): Boolean = x >= y
+    override def lt(x: Float, y: Float): Boolean = x < y
+    override def gt(x: Float, y: Float): Boolean = x > y
+    override def equiv(x: Float, y: Float): Boolean = x == y
+    override def max(x: Float, y: Float): Float = math.max(x, y)
+    override def min(x: Float, y: Float): Float = math.min(x, y)
+
+    override def reverse: Ordering[Float] = new FloatOrdering {
+      override def reverse = outer
+      override def compare(x: Float, y: Float) = outer.compare(y, x)
+
+      override def lteq(x: Float, y: Float): Boolean = outer.lteq(y, x)
+      override def gteq(x: Float, y: Float): Boolean = outer.gteq(y, x)
+      override def lt(x: Float, y: Float): Boolean = outer.lt(y, x)
+      override def gt(x: Float, y: Float): Boolean = outer.gt(y, x)
+    }
   }
   implicit object Float extends FloatOrdering
 
   trait DoubleOrdering extends Ordering[Double] {
+    outer =>
+
     def compare(x: Double, y: Double) = java.lang.Double.compare(x, y)
+
+    override def lteq(x: Double, y: Double): Boolean = x <= y
+    override def gteq(x: Double, y: Double): Boolean = x >= y
+    override def lt(x: Double, y: Double): Boolean = x < y
+    override def gt(x: Double, y: Double): Boolean = x > y
+    override def equiv(x: Double, y: Double): Boolean = x == y
+    override def max(x: Double, y: Double): Double = math.max(x, y)
+    override def min(x: Double, y: Double): Double = math.min(x, y)
+
+    override def reverse: Ordering[Double] = new DoubleOrdering {
+      override def reverse = outer
+      override def compare(x: Double, y: Double) = outer.compare(y, x)
+
+      override def lteq(x: Double, y: Double): Boolean = outer.lteq(y, x)
+      override def gteq(x: Double, y: Double): Boolean = outer.gteq(y, x)
+      override def lt(x: Double, y: Double): Boolean = outer.lt(y, x)
+      override def gt(x: Double, y: Double): Boolean = outer.gt(y, x)
+    }
   }
   implicit object Double extends DoubleOrdering
 

@@ -3,7 +3,7 @@ package doc
 package model
 
 import scala.collection._
-import util.{RangePosition, OffsetPosition, SourceFile}
+import scala.reflect.internal.util.{RangePosition, OffsetPosition, SourceFile}
 
 /** The goal of this trait is , using makeTree,
   * to browse a tree to
@@ -19,7 +19,7 @@ trait TreeFactory { thisTreeFactory: ModelFactory with TreeFactory =>
   val global: Global
   import global._
 
-  def makeTree(rhs: Tree): Option[TreeEntity] = {
+  def makeTree(rhs: Tree): TreeEntity = {
 
     var expr = new StringBuilder
     var refs = new immutable.TreeMap[Int, (Entity, Int)] // start, (Entity to be linked to , end)
@@ -52,7 +52,7 @@ trait TreeFactory { thisTreeFactory: ModelFactory with TreeFactory =>
                 if (asym.isSetter) asym = asym.getter(asym.owner)
                 makeTemplate(asym.owner) match {
                   case docTmpl: DocTemplateImpl =>
-                    val mbrs: List[MemberImpl] = makeMember(asym,docTmpl)
+                    val mbrs: Option[MemberImpl] = findMember(asym, docTmpl)
                     mbrs foreach { mbr => refs += ((start, (mbr,end))) }
                   case _ =>
                 }
@@ -80,17 +80,16 @@ trait TreeFactory { thisTreeFactory: ModelFactory with TreeFactory =>
 
         traverser.traverse(rhs)
 
-        Some(new TreeEntity {
+        new TreeEntity {
           val expression = expr.toString
           val refEntity = refs
-        })
+        }
       }
-      case pos: OffsetPosition =>
-        Some(new TreeEntity {
+      case _ =>
+        new TreeEntity {
           val expression = rhs.toString
           val refEntity = new immutable.TreeMap[Int, (Entity, Int)]
-        })
-      case _ => None
+        }
     }
   }
 }

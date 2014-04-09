@@ -1,5 +1,5 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -26,21 +26,21 @@ trait Variances {
   private def cut(v: Int): Int =
     if (v == VARIANCES) v else 0
 
-  /** Compute variance of type parameter `tparam' in types of all symbols `sym'. */
+  /** Compute variance of type parameter `tparam` in types of all symbols `sym`. */
   def varianceInSyms(syms: List[Symbol])(tparam: Symbol): Int =
     (VARIANCES /: syms) ((v, sym) => v & varianceInSym(sym)(tparam))
 
-  /** Compute variance of type parameter `tparam' in type of symbol `sym'. */
+  /** Compute variance of type parameter `tparam` in type of symbol `sym`. */
   def varianceInSym(sym: Symbol)(tparam: Symbol): Int =
     if (sym.isAliasType) cut(varianceInType(sym.info)(tparam))
     else varianceInType(sym.info)(tparam)
 
-  /** Compute variance of type parameter `tparam' in all types `tps'. */
+  /** Compute variance of type parameter `tparam` in all types `tps`. */
   def varianceInTypes(tps: List[Type])(tparam: Symbol): Int =
     (VARIANCES /: tps) ((v, tp) => v & varianceInType(tp)(tparam))
 
-  /** Compute variance of type parameter `tparam' in all type arguments
-   *  <code>tps</code> which correspond to formal type parameters `tparams1'.
+  /** Compute variance of type parameter `tparam` in all type arguments
+   *  <code>tps</code> which correspond to formal type parameters `tparams1`.
    */
   def varianceInArgs(tps: List[Type], tparams1: List[Symbol])(tparam: Symbol): Int = {
     var v: Int = VARIANCES;
@@ -53,12 +53,12 @@ trait Variances {
     v
   }
 
-  /** Compute variance of type parameter `tparam' in all type annotations `annots'. */
+  /** Compute variance of type parameter `tparam` in all type annotations `annots`. */
   def varianceInAttribs(annots: List[AnnotationInfo])(tparam: Symbol): Int = {
     (VARIANCES /: annots) ((v, annot) => v & varianceInAttrib(annot)(tparam))
   }
 
-  /** Compute variance of type parameter `tparam' in type annotation `annot'. */
+  /** Compute variance of type parameter `tparam` in type annotation `annot`. */
   def varianceInAttrib(annot: AnnotationInfo)(tparam: Symbol): Int = {
     varianceInType(annot.atp)(tparam)
   }
@@ -67,10 +67,14 @@ trait Variances {
   def varianceInType(tp: Type)(tparam: Symbol): Int = tp match {
     case ErrorType | WildcardType | NoType | NoPrefix | ThisType(_) | ConstantType(_) =>
       VARIANCES
+    case BoundedWildcardType(bounds) =>
+      varianceInType(bounds)(tparam)
     case SingleType(pre, sym) =>
       varianceInType(pre)(tparam)
     case TypeRef(pre, sym, args) =>
       if (sym == tparam) COVARIANT
+      // tparam cannot occur in tp's args if tp is a type constructor (those don't have args)
+      else if (tp.isHigherKinded) varianceInType(pre)(tparam)
       else varianceInType(pre)(tparam) & varianceInArgs(args, sym.typeParams)(tparam)
     case TypeBounds(lo, hi) =>
       flip(varianceInType(lo)(tparam)) & varianceInType(hi)(tparam)

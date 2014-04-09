@@ -1,5 +1,5 @@
-class ann(i: Int) extends Annotation
-class cfann(x: String) extends ClassfileAnnotation
+class ann(i: Int) extends scala.annotation.Annotation
+class cfann(x: String) extends annotation.ClassfileAnnotation
 
 // annotations on abstract types
 abstract class C1[@serializable @cloneable +T, U, V[_]]
@@ -25,7 +25,7 @@ object Test {
   //bug #1214
   val y = new (Integer @ann(0))(2)
 
-  import scala.reflect.BeanProperty
+  import scala.beans.BeanProperty
 
   // bug #637
   trait S { def getField(): Int }
@@ -44,7 +44,7 @@ object Test {
 
 // test forward references to getters / setters
 class BeanPropertyTests {
-  @scala.reflect.BeanProperty lazy val lv1 = 0
+  @scala.beans.BeanProperty lazy val lv1 = 0
 
   def foo() {
     val bp1 = new BeanPropertyTests1
@@ -58,13 +58,13 @@ class BeanPropertyTests {
     bp1.setV2(100)
   }
 
-  @scala.reflect.BeanProperty var v1 = 0
+  @scala.beans.BeanProperty var v1 = 0
 
 }
 
 class BeanPropertyTests1 {
-  @scala.reflect.BeanProperty lazy val lv2 = "0"
-  @scala.reflect.BeanProperty var v2 = 0
+  @scala.beans.BeanProperty lazy val lv2 = "0"
+  @scala.beans.BeanProperty var v2 = 0
 }
 
 // test mixin of getters / setters, and implementing abstract
@@ -78,8 +78,8 @@ class C extends T with BeanF {
 }
 
 trait T {
-  @scala.reflect.BeanProperty var f = "nei"
-  @scala.reflect.BooleanBeanProperty var g = false
+  @scala.beans.BeanProperty var f = "nei"
+  @scala.beans.BooleanBeanProperty var g = false
 }
 
 trait BeanF {
@@ -91,9 +91,9 @@ trait BeanF {
 }
 
 
-class Ann3(arr: Array[String]) extends ClassfileAnnotation
-class Ann4(i: Int) extends ClassfileAnnotation
-class Ann5(value: Class[_]) extends ClassfileAnnotation
+class Ann3(arr: Array[String]) extends annotation.ClassfileAnnotation
+class Ann4(i: Int) extends annotation.ClassfileAnnotation
+class Ann5(value: Class[_]) extends annotation.ClassfileAnnotation
 
 object Test3 {
   final val i = 1083

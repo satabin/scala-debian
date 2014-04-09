@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -63,7 +63,7 @@ trait Map[A, B]
 /** $factoryInfo
  *  The current default implementation of a $Coll is a `HashMap`.
  *  @define coll mutable map
- *  @define Coll mutable.Map
+ *  @define Coll `mutable.Map`
  */
 object Map extends MutableMapFactory[Map] {
   /** $canBuildFromInfo */
@@ -71,7 +71,7 @@ object Map extends MutableMapFactory[Map] {
 
   def empty[A, B]: Map[A, B] = new HashMap[A, B]
 
-  class WithDefault[A, B](underlying: Map[A, B], d: A => B) extends collection.Map.WithDefault(underlying, d) with Map[A, B] {
+  class WithDefault[A, B](underlying: Map[A, B], d: A => B) extends scala.collection.Map.WithDefault(underlying, d) with Map[A, B] {
     override def += (kv: (A, B)) = {underlying += kv; this}
     def -= (key: A) = {underlying -= key; this}
     override def empty = new WithDefault(underlying.empty, d)
@@ -86,3 +86,6 @@ object Map extends MutableMapFactory[Map] {
     override def withDefaultValue(d: B): mutable.Map[A, B] = new WithDefault[A, B](underlying, x => d)
   }
 }
+
+/** Explicit instantiation of the `Map` trait to reduce class file size in subclasses. */
+private[scala] abstract class AbstractMap[A, B] extends scala.collection.AbstractMap[A, B] with Map[A, B]

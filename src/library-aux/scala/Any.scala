@@ -10,11 +10,30 @@ package scala
 
 /** Class `Any` is the root of the Scala class hierarchy.  Every class in a Scala
  *  execution environment inherits directly or indirectly from this class.
+ *
+ * Starting with Scala 2.10 it is possible to directly extend `Any` using ''universal traits''.
+ * A ''universal trait'' is a trait that extends `Any`, only has `def`s as members, and does no initialization.
+ *
+ * The main use case for universal traits is to allow basic inheritance of methods for [[scala.AnyVal value classes]].
+ * For example,
+ *
+ * {{{
+ *     trait Printable extends Any {
+ *       def print(): Unit = println(this)
+ *     }
+ *     class Wrapper(val underlying: Int) extends AnyVal with Printable
+ *
+ *     val w = new Wrapper(3)
+ *     w.print()
+ * }}}
+ *
+ * See the [[http://docs.scala-lang.org/sips/pending/value-classes.html value classes guide]] for more
+ * details on the interplay of universal traits and value classes.
  */
 abstract class Any {
   /** Compares the receiver object (`this`) with the argument object (`that`) for equivalence.
    *
-   *  The default implementations of this method is an [[http://en.wikipedia.org/wiki/Equivalence_relation equivalence relation]]:
+   *  Any implementation of this method should be an [[http://en.wikipedia.org/wiki/Equivalence_relation equivalence relation]]:
    *
    *  - It is reflexive: for any instance `x` of type `Any`, `x.equals(x)` should return `true`.
    *  - It is symmetric: for any instances `x` and `y` of type `Any`, `x.equals(y)` should return `true` if and
@@ -44,7 +63,7 @@ abstract class Any {
    *
    *  @return   the hash code value for this object.
    */
-  def hashCode: Int
+  def hashCode(): Int
 
   /** Returns a string representation of the object.
    *
@@ -52,15 +71,16 @@ abstract class Any {
    *
    *  @return a string representation of the object.
    */
-  def toString: String
+  def toString(): String
 
   /** Returns the runtime class representation of the object.
    *
-   *  @return a class object corresponding to the static type of the receiver
+   *  @return a class object corresponding to the runtime type of the receiver.
    */
   def getClass(): Class[_]
 
   /** Test two objects for equality.
+   *  The expression `x == that` is equivalent to `if (x eq null) that eq null else x.equals(that)`.
    *
    *  @param  that  the object to compare against this object for equality.
    *  @return       `true` if the receiver object is equivalent to the argument; `false` otherwise.
@@ -74,15 +94,17 @@ abstract class Any {
    */
   final def != (that: Any): Boolean = !(this == that)
 
-  /** Equivalent to `x.hashCode` except for boxed numeric types.
+  /** Equivalent to `x.hashCode` except for boxed numeric types and `null`.
    *  For numerics, it returns a hash value which is consistent
    *  with value equality: if two value type instances compare
    *  as true, then ## will produce the same hash value for each
    *  of them.
+   *  For `null` returns a hashcode where `null.hashCode` throws a
+   *  `NullPointerException`.
    *
    *  @return   a hash value consistent with ==
    */
-  final def ## : Int = sys.error("##")
+  final def ##(): Int = sys.error("##")
 
   /** Test whether the dynamic type of the receiver object is `T0`.
    *

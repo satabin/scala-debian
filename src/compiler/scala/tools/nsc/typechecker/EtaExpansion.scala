@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -47,7 +47,7 @@ trait EtaExpansion { self: Analyzer =>
    *    tree is already attributed
    *  </p>
    */
-  def etaExpand(unit : CompilationUnit, tree: Tree): Tree = {
+  def etaExpand(unit : CompilationUnit, tree: Tree, typer: Typer): Tree = {
     val tpe = tree.tpe
     var cnt = 0 // for NoPosition
     def freshName() = {
@@ -63,15 +63,22 @@ trait EtaExpansion { self: Analyzer =>
      *  @return     ...
      */
     def liftoutPrefix(tree: Tree): Tree = {
-      def liftout(tree: Tree): Tree =
-        if (treeInfo.isPureExpr(tree)) tree
+      def liftout(tree: Tree, byName: Boolean): Tree =
+        if (treeInfo.isExprSafeToInline(tree)) tree
         else {
           val vname: Name = freshName()
           // Problem with ticket #2351 here
           defs += atPos(tree.pos) {
-            ValDef(Modifiers(SYNTHETIC), vname.toTermName, TypeTree(), tree)
+            val rhs = if (byName) {
+              val res = typer.typed(Function(List(), tree))
+              new ChangeOwnerTraverser(typer.context.owner, res.symbol) traverse tree // SI-6274
+              res
+            } else tree
+            ValDef(Modifiers(SYNTHETIC), vname.toTermName, TypeTree(), rhs)
           }
-          Ident(vname) setPos tree.pos.focus
+          atPos(tree.pos.focus) {
+            if (byName) Apply(Ident(vname), List()) else Ident(vname)
+          }
         }
       val tree1 = tree match {
         // a partial application using named arguments has the following form:
@@ -80,16 +87,22 @@ trait EtaExpansion { self: Analyzer =>
         //   [...]
         //   val x$n = argn
         //   qual$1.fun(x$1, ..)..(.., x$n) }
-        // Eta-expansion has to be performed on `fun'
+        // Eta-expansion has to be performed on `fun`
         case Block(stats, fun) =>
           defs ++= stats
           liftoutPrefix(fun)
         case Apply(fn, args) =>
-          treeCopy.Apply(tree, liftoutPrefix(fn), args mapConserve (liftout)) setType null
+          val byName: Int => Option[Boolean] = fn.tpe.params.map(p => definitions.isByNameParamType(p.tpe)).lift
+          val newArgs = mapWithIndex(args) { (arg, i) =>
+            // with repeated params, there might be more or fewer args than params
+            liftout(arg, byName(i).getOrElse(false))
+          }
+          treeCopy.Apply(tree, liftoutPrefix(fn), newArgs) setType null
         case TypeApply(fn, args) =>
           treeCopy.TypeApply(tree, liftoutPrefix(fn), args) setType null
         case Select(qual, name) =>
-          treeCopy.Select(tree, liftout(qual), name) setSymbol NoSymbol setType null
+          val name = tree.symbol.name // account for renamed imports, SI-7233
+          treeCopy.Select(tree, liftout(qual, false), name) setSymbol NoSymbol setType null
         case Ident(name) =>
           tree
       }
@@ -101,11 +114,20 @@ trait EtaExpansion { self: Analyzer =>
      */
     def expand(tree: Tree, tpe: Type): Tree = tpe match {
       case mt @ MethodType(paramSyms, restpe) if !mt.isImplicit =>
-        val params = paramSyms map (sym =>
-          ValDef(Modifiers(SYNTHETIC | PARAM),
-                 sym.name.toTermName, TypeTree(sym.tpe) , EmptyTree))
+        val params: List[(ValDef, Boolean)] = paramSyms.map {
+          sym =>
+            val origTpe = sym.tpe
+            val isRepeated = definitions.isRepeatedParamType(origTpe)
+            // SI-4176 Don't leak A* in eta-expanded function types. See t4176b.scala
+            val droppedStarTpe = if (settings.etaExpandKeepsStar.value) origTpe else dropRepeatedParamType(origTpe)
+            val valDef = ValDef(Modifiers(SYNTHETIC | PARAM), sym.name.toTermName, TypeTree(droppedStarTpe), EmptyTree)
+            (valDef, isRepeated)
+        }
         atPos(tree.pos.makeTransparent) {
-          Function(params, expand(Apply(tree, params map gen.paramToArg), restpe))
+          val args = params.map {
+            case (valDef, isRepeated) => gen.paramToArg(Ident(valDef.name), isRepeated)
+          }
+          Function(params.map(_._1), expand(Apply(tree, args), restpe))
         }
       case _ =>
         tree

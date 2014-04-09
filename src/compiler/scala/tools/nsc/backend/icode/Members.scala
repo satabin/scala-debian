@@ -1,8 +1,7 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
-
 
 package scala.tools.nsc
 package backend
@@ -10,7 +9,7 @@ package icode
 
 import java.io.PrintWriter
 import scala.collection.{ mutable, immutable }
-import mutable.{ HashMap, ListBuffer }
+import scala.reflect.internal.util.{ SourceFile, NoSourceFile }
 import symtab.Flags.{ DEFERRED }
 
 trait ReferenceEquality {
@@ -18,27 +17,34 @@ trait ReferenceEquality {
   override def equals(that: Any) = this eq that.asInstanceOf[AnyRef]
 }
 
-trait Members { self: ICodes =>
+trait Members {
+  self: ICodes =>
+
   import global._
+
+  object NoCode extends Code(null, "NoCode") {
+    override def blocksList: List[BasicBlock] = Nil
+  }
 
   /**
    * This class represents the intermediate code of a method or
    * other multi-block piece of code, like exception handlers.
    */
-  class Code(label: String, method: IMethod) {
-    def this(method: IMethod) = this(method.symbol.simpleName.toString, method)
-
+  class Code(method: IMethod, name: String) {
+    def this(method: IMethod) = this(method, method.symbol.decodedName.toString.intern)
     /** The set of all blocks */
-    val blocks: ListBuffer[BasicBlock] = new ListBuffer
+    val blocks = mutable.ListBuffer[BasicBlock]()
 
     /** The start block of the method */
-    var startBlock: BasicBlock = null
-
-    /** The stack produced by this method */
-    var producedStack: TypeStack = null
+    var startBlock: BasicBlock = NoBasicBlock
 
     private var currentLabel: Int = 0
     private var _touched = false
+
+    def blocksList: List[BasicBlock] = blocks.toList
+    def instructions                 = blocksList flatMap (_.iterator)
+    def blockCount                   = blocks.size
+    def instructionCount             = (blocks map (_.length)).sum
 
     def touched = _touched
     def touched_=(b: Boolean): Unit = {
@@ -71,7 +77,7 @@ trait Members { self: ICodes =>
     }
 
     /** This methods returns a string representation of the ICode */
-    override def toString() : String = "ICode '" + label + "'";
+    override def toString = "ICode '" + name + "'";
 
     /* Compute a unique new label */
     def nextLabel: Int = {
@@ -81,7 +87,7 @@ trait Members { self: ICodes =>
 
     /* Create a new block and append it to the list
      */
-    def newBlock: BasicBlock = {
+    def newBlock(): BasicBlock = {
       touched = true
       val block = new BasicBlock(nextLabel, method);
       blocks += block;
@@ -104,7 +110,6 @@ trait Members { self: ICodes =>
     var fields: List[IField] = Nil
     var methods: List[IMethod] = Nil
     var cunit: CompilationUnit = _
-    var bootstrapClass: Option[String] = None
 
     def addField(f: IField): this.type = {
       fields = f :: fields;
@@ -134,6 +139,8 @@ trait Members { self: ICodes =>
   /** Represent a field in ICode */
   class IField(val symbol: Symbol) extends IMember { }
 
+  object NoIMethod extends IMethod(NoSymbol) { }
+
   /**
    * Represents a method in ICode. Local variables contain
    * both locals and parameters, similar to the way the JVM
@@ -145,15 +152,26 @@ trait Members { self: ICodes =>
    * finished (GenICode does that).
    */
   class IMethod(val symbol: Symbol) extends IMember {
-    var code: Code = null
+    var code: Code = NoCode
+
+    def newBlock() = code.newBlock
+    def startBlock = code.startBlock
+    def lastBlock  = { assert(blocks.nonEmpty, symbol); blocks.last }
+    def blocks = code.blocksList
+    def linearizedBlocks(lin: Linearizer = self.linearizer): List[BasicBlock] = lin linearize this
+
+    def foreachBlock[U](f: BasicBlock  => U): Unit = blocks foreach f
+    def foreachInstr[U](f: Instruction => U): Unit = foreachBlock(_.toList foreach f)
+
     var native = false
 
     /** The list of exception handlers, ordered from innermost to outermost. */
     var exh: List[ExceptionHandler] = Nil
-    var sourceFile: String = _
+    var sourceFile: SourceFile = NoSourceFile
     var returnType: TypeKind = _
-
     var recursive: Boolean = false
+    var bytecodeHasEHs = false // set by ICodeReader only, used by Inliner to prevent inlining (SI-6188)
+    var bytecodeHasInvokeDynamic = false // set by ICodeReader only, used by Inliner to prevent inlining until we have proper invoke dynamic support
 
     /** local variables and method parameters */
     var locals: List[Local] = Nil
@@ -161,18 +179,17 @@ trait Members { self: ICodes =>
     /** method parameters */
     var params: List[Local] = Nil
 
-    def hasCode = code != null
+    def hasCode = code ne NoCode
     def setCode(code: Code): IMethod = {
       this.code = code;
       this
     }
 
-    def addLocal(l: Local): Local =
-      locals find (_ == l) getOrElse {
-        locals ::= l
-        l
-      }
+    final def updateRecursive(called: Symbol): Unit = {
+      recursive ||= (called == symbol)
+    }
 
+    def addLocal(l: Local): Local = findOrElse(locals)(_ == l) { locals ::= l ; l }
 
     def addParam(p: Local): Unit =
       if (params contains p) ()
@@ -197,14 +214,22 @@ trait Members { self: ICodes =>
 
     override def toString() = symbol.fullName
 
+    def matchesSignature(other: IMethod) = {
+      (symbol.name == other.symbol.name) &&
+      (params corresponds other.params)(_.kind == _.kind) &&
+      (returnType == other.returnType)
+    }
+
     import opcodes._
     def checkLocals(): Unit = {
-      def localsSet = code.blocks.flatten collect {
-        case LOAD_LOCAL(l)  => l
-        case STORE_LOCAL(l) => l
-      } toSet
+      def localsSet = (code.blocks flatMap { bb =>
+        bb.iterator collect {
+          case LOAD_LOCAL(l)  => l
+          case STORE_LOCAL(l) => l
+        }
+      }).toSet
 
-      if (code != null) {
+      if (hasCode) {
         log("[checking locals of " + this + "]")
         locals filterNot localsSet foreach { l =>
           log("Local " + l + " is not declared in " + this)
@@ -218,11 +243,11 @@ trait Members { self: ICodes =>
      *
      * This method should be most effective after heavy inlining.
      */
-    def normalize(): Unit = if (this.code ne null) {
+    def normalize(): Unit = if (this.hasCode) {
       val nextBlock: mutable.Map[BasicBlock, BasicBlock] = mutable.HashMap.empty
       for (b <- code.blocks.toList
         if b.successors.length == 1;
-        val succ = b.successors.head;
+        succ = b.successors.head;
         if succ ne b;
         if succ.predecessors.length == 1;
         if succ.predecessors.head eq b;
@@ -238,11 +263,23 @@ trait Members { self: ICodes =>
           var succ = bb
           do {
             succ = nextBlock(succ);
-            bb.removeLastInstruction
-            succ.toList foreach { i => bb.emit(i, i.pos) }
-            code.removeBlock(succ)
+            val lastInstr = bb.lastInstruction
+            /* Ticket SI-5672
+             * Besides removing the control-flow instruction at the end of `bb` (usually a JUMP), we have to pop any values it pushes.
+             * Examples:
+             *   `SWITCH` consisting of just the default case, or
+             *   `CJUMP(targetBlock, targetBlock, _, _)` ie where success and failure targets coincide (this one consumes two stack values).
+             */
+            val oldTKs = lastInstr.consumedTypes
+            assert(lastInstr.consumed == oldTKs.size, "Someone forgot to override consumedTypes() in " +  lastInstr)
+
+              bb.removeLastInstruction
+              for(tk <- oldTKs.reverse) { bb.emit(DROP(tk), lastInstr.pos) }
+              succ.toList foreach { i => bb.emit(i, i.pos) }
+              code.removeBlock(succ)
+              exh foreach { e => e.covered = e.covered - succ }
+
             nextBlock -= bb
-            exh foreach { e => e.covered = e.covered - succ }
           } while (nextBlock.isDefinedAt(succ))
           bb.close
         } else
@@ -252,9 +289,8 @@ trait Members { self: ICodes =>
     }
 
     def dump() {
-      val printer = new TextPrinter(new PrintWriter(Console.out, true),
-                                    new DumpLinearizer)
-      printer.printMethod(this)
+      Console.println("dumping IMethod(" + symbol + ")")
+      newTextPrinter() printMethod this
     }
   }
 

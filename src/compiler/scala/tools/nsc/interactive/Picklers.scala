@@ -1,17 +1,19 @@
 /* NSC -- new Scala compiler
- * Copyright 2009-2011 Scala Solutions and LAMP/EPFL
+ * Copyright 2009-2013 Typesafe/Scala Solutions and LAMP/EPFL
  * @author Martin Odersky
  */
 package scala.tools.nsc
 package interactive
 
-import util.{SourceFile, BatchSourceFile, InterruptReq}
+import util.InterruptReq
+import scala.reflect.internal.util.{SourceFile, BatchSourceFile}
 import io.{AbstractFile, PlainFile}
 
-import util.{Position, RangePosition, NoPosition, OffsetPosition, TransparentPosition, EmptyAction}
+import util.EmptyAction
+import scala.reflect.internal.util.{Position, RangePosition, NoPosition, OffsetPosition, TransparentPosition}
 import io.{Pickler, CondPickler}
 import io.Pickler._
-import collection.mutable
+import scala.collection.mutable
 import mutable.ListBuffer
 
 trait Picklers { self: Global =>
@@ -85,7 +87,7 @@ trait Picklers { self: Global =>
   implicit lazy val position: Pickler[Position] = transparentPosition | rangePosition | offsetPosition | noPosition
 
   implicit lazy val namePickler: Pickler[Name] =
-    pkl[String] .wrapped {
+    pkl[String] .wrapped[Name] {
       str => if ((str.length > 1) && (str endsWith "!")) newTypeName(str.init) else newTermName(str)
     } {
       name => if (name.isTypeName) name.toString+"!" else name.toString
@@ -101,7 +103,7 @@ trait Picklers { self: Global =>
           if (sym1.isOverloaded) {
             val index = sym1.alternatives.indexOf(sym)
             assert(index >= 0, sym1+" not found in alternatives "+sym1.alternatives)
-            buf += index.toString
+            buf += newTermName(index.toString)
           }
         }
       }
@@ -115,7 +117,7 @@ trait Picklers { self: Global =>
         if (sym.isOverloaded) makeSymbol(sym.alternatives(rest.head.toString.toInt), rest.tail)
         else makeSymbol(sym, rest)
     }
-    pkl[List[Name]] .wrapped { makeSymbol(definitions.RootClass, _) } { ownerNames(_, new ListBuffer).toList }
+    pkl[List[Name]] .wrapped { makeSymbol(rootMirror.RootClass, _) } { ownerNames(_, new ListBuffer).toList }
   }
 
   implicit def workEvent: Pickler[WorkEvent] = {
@@ -163,9 +165,14 @@ trait Picklers { self: Global =>
       .wrapped { case sym ~ source => new AskLinkPosItem(sym, source, new Response) } { item => item.sym ~ item.source }
       .asClass (classOf[AskLinkPosItem])
 
+  implicit def askDocCommentItem: CondPickler[AskDocCommentItem] =
+    (pkl[Symbol] ~ pkl[SourceFile] ~ pkl[Symbol] ~ pkl[List[(Symbol,SourceFile)]])
+      .wrapped { case sym ~ source ~ site ~ fragments => new AskDocCommentItem(sym, source, site, fragments, new Response) } { item => item.sym ~ item.source ~ item.site ~ item.fragments }
+      .asClass (classOf[AskDocCommentItem])
+
   implicit def askLoadedTypedItem: CondPickler[AskLoadedTypedItem] =
     pkl[SourceFile]
-      .wrapped { source => new AskLoadedTypedItem(source, new Response) } { _.source }
+      .wrapped { source => new AskLoadedTypedItem(source, false, new Response) } { _.source }
       .asClass (classOf[AskLoadedTypedItem])
 
   implicit def askParsedEnteredItem: CondPickler[AskParsedEnteredItem] =
@@ -180,5 +187,5 @@ trait Picklers { self: Global =>
 
   implicit def action: Pickler[() => Unit] =
     reloadItem | askTypeAtItem | askTypeItem | askTypeCompletionItem | askScopeCompletionItem |
-    askToDoFirstItem | askLinkPosItem | askLoadedTypedItem | askParsedEnteredItem | emptyAction
+    askToDoFirstItem | askLinkPosItem | askDocCommentItem | askLoadedTypedItem | askParsedEnteredItem | emptyAction
 }

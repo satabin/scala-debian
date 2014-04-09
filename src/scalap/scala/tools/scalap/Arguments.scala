@@ -1,6 +1,6 @@
 /*     ___ ____ ___   __   ___   ___
 **    / _// __// _ | / /  / _ | / _ \  Scala classfile decoder
-**  __\ \/ /__/ __ |/ /__/ __ |/ ___/  (c) 2003-2011, LAMP/EPFL
+**  __\ \/ /__/ __ |/ /__/ __ |/ ___/  (c) 2003-2013, LAMP/EPFL
 ** /____/\___/_/ |_/____/_/ |_/_/      http://scala-lang.org/
 **
 */
@@ -48,7 +48,7 @@ object Arguments {
 
     def parseBinding(str: String, separator: Char): (String, String) = (str indexOf separator) match {
       case -1   => argumentError("missing '" + separator + "' in binding '" + str + "'") ; Pair("", "")
-      case idx  => Pair(str take idx trim, str drop (idx + 1) trim)
+      case idx  => Pair((str take idx).trim, (str drop (idx + 1)).trim)
     }
 
     def parse(args: Array[String]): Arguments = {

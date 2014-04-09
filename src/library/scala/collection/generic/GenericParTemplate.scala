@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2010-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,27 +8,20 @@
 
 package scala.collection.generic
 
-
-
 import scala.collection.parallel.Combiner
 import scala.collection.parallel.ParIterable
 import scala.collection.parallel.ParMap
 import scala.collection.parallel.TaskSupport
 
-
-import annotation.unchecked.uncheckedVariance
-
-
-
-
-
+import scala.annotation.unchecked.uncheckedVariance
+import scala.language.higherKinds
 
 /** A template trait for collections having a companion.
  *
  *  @tparam A    the element type of the collection
  *  @tparam CC   the type constructor representing the collection class
+ *  @author Aleksandar Prokopec
  *  @since 2.8
- *  @author prokopec
  */
 trait GenericParTemplate[+A, +CC[X] <: ParIterable[X]]
 extends GenericTraversableTemplate[A, CC]
@@ -36,7 +29,7 @@ extends GenericTraversableTemplate[A, CC]
 {
   def companion: GenericCompanion[CC] with GenericParCompanion[CC]
 
-  protected[this] override def newBuilder: collection.mutable.Builder[A, CC[A]] = newCombiner
+  protected[this] override def newBuilder: scala.collection.mutable.Builder[A, CC[A]] = newCombiner
 
   protected[this] override def newCombiner: Combiner[A, CC[A]] = {
     val cb = companion.newCombiner[A]
@@ -67,9 +60,4 @@ trait GenericParMapTemplate[K, +V, +CC[X, Y] <: ParMap[X, Y]] extends GenericPar
     cb
   }
 }
-
-
-
-
-
 

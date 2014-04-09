@@ -1,6 +1,6 @@
 /*     ___ ____ ___   __   ___   ___
 **    / _// __// _ | / /  / _ | / _ \    Scala classfile decoder
-**  __\ \/ /__/ __ |/ /__/ __ |/ ___/    (c) 2003-2011, LAMP/EPFL
+**  __\ \/ /__/ __ |/ /__/ __ |/ ___/    (c) 2003-2013, LAMP/EPFL
 ** /____/\___/_/ |_/____/_/ |_/_/        http://scala-lang.org/
 **
 */
@@ -12,7 +12,7 @@ package rules
 package scalasig
 
 import ClassFileParser.{ ConstValueIndex, Annotation }
-import scala.reflect.generic.ByteCodecs
+import scala.reflect.internal.pickling.ByteCodecs
 
 object ScalaSigParser {
   import Main.{ SCALA_SIG, SCALA_SIG_ANNOTATION, BYTES_VALUE }
@@ -264,7 +264,7 @@ object ScalaSigEntryParsers extends RulesWithState with MemoisableRules {
       48 -~ typeRef ~ (symbolRef*) ^~^ ExistentialType) as "type"
 
   lazy val literal = oneOf(
-      24 -^ (),
+      24 -^ (()),
       25 -~ longValue ^^ (_ != 0L),
       26 -~ longValue ^^ (_.toByte),
       27 -~ longValue ^^ (_.toShort),
@@ -350,5 +350,5 @@ object ScalaSigEntryParsers extends RulesWithState with MemoisableRules {
    *   AnnotArg       = Tree | Constant
    *   ConstAnnotArg  = Constant | AnnotInfo | AnnotArgArray
    *
-   *   len is remaining length after `len'.
+   *   len is remaining length after `len`.
    */

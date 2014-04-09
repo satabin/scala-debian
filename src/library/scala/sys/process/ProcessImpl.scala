@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -84,7 +84,7 @@ private[process] trait ProcessImpl {
 
   private[process] abstract class CompoundProcess extends BasicProcess {
     def destroy()   = destroyer()
-    def exitValue() = getExitValue() getOrElse sys.error("No exit code: process destroyed.")
+    def exitValue() = getExitValue() getOrElse scala.sys.error("No exit code: process destroyed.")
     def start()     = getExitValue
 
     protected lazy val (getExitValue, destroyer) = {
@@ -222,7 +222,10 @@ private[process] trait ProcessImpl {
       p.exitValue()
     }
     override def destroy() = {
-      try p.destroy()
+      try{
+        outputThreads foreach (_.stop())
+        p.destroy()
+      }
       finally inputThread.interrupt()
     }
   }

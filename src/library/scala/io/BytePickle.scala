@@ -1,16 +1,14 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.io
 
-import scala.collection.mutable.{HashMap, ArrayBuffer}
+import scala.collection.mutable
 
 /**
  * Pickler combinators.
@@ -21,6 +19,7 @@ import scala.collection.mutable.{HashMap, ArrayBuffer}
  * @author  Philipp Haller
  * @version 1.1
  */
+@deprecated("This class will be removed.", "2.10.0")
 object BytePickle {
   abstract class SPU[T] {
     def appP(a: T, state: PicklerState): PicklerState
@@ -44,12 +43,12 @@ object BytePickle {
   def uunpickle[T](p: PU[T], stream: Array[Byte]): T =
     p.appU(stream)._1
 
-  class PicklerEnv extends HashMap[Any, Int] {
+  class PicklerEnv extends mutable.HashMap[Any, Int] {
     private var cnt: Int = 64
     def nextLoc() = { cnt += 1; cnt }
   }
 
-  class UnPicklerEnv extends HashMap[Int, Any] {
+  class UnPicklerEnv extends mutable.HashMap[Int, Any] {
     private var cnt: Int = 64
     def nextLoc() = { cnt += 1; cnt }
   }
@@ -231,7 +230,7 @@ object BytePickle {
     Array.concat(a, Array(b.toByte))
 
   def nat2Bytes(x: Int): Array[Byte] = {
-    val buf = new ArrayBuffer[Byte]
+    val buf = new mutable.ArrayBuffer[Byte]
     def writeNatPrefix(x: Int) {
       val y = x >>> 7;
       if (y != 0) writeNatPrefix(y);
@@ -271,7 +270,7 @@ object BytePickle {
   }
 
   def string: SPU[String] = share(wrap(
-    (a: Array[Byte]) => Codec fromUTF8 a mkString,
+    (a: Array[Byte]) => (Codec fromUTF8 a).mkString,
     (s: String) => Codec toUTF8 s,
     bytearray
   ))

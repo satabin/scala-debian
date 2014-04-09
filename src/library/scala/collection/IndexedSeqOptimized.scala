@@ -1,14 +1,13 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
-package scala.collection
+package scala
+package collection
 
 import generic._
 import mutable.ArrayBuffer
@@ -22,7 +21,7 @@ import scala.annotation.tailrec
  *  @define willNotTerminateInf
  *  @define mayNotTerminateInf
  */
-trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
+trait IndexedSeqOptimized[+A, +Repr] extends Any with IndexedSeqLike[A, Repr] { self =>
 
   override /*IterableLike*/
   def isEmpty: Boolean = { length == 0 }
@@ -104,7 +103,7 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
   override /*IterableLike*/
   def slice(from: Int, until: Int): Repr = {
     val lo    = math.max(from, 0)
-    val hi    = math.min(until, length)
+    val hi    = math.min(math.max(until, 0), length)
     val elems = math.max(hi - lo, 0)
     val b     = newBuilder
     b.sizeHint(elems)
@@ -219,10 +218,10 @@ trait IndexedSeqOptimized[+A, +Repr] extends IndexedSeqLike[A, Repr] { self =>
   }
 
   override /*SeqLike*/
-  def reverseIterator: Iterator[A] = new Iterator[A] {
+  def reverseIterator: Iterator[A] = new AbstractIterator[A] {
     private var i = self.length
     def hasNext: Boolean = 0 < i
-    def next: A =
+    def next(): A =
       if (0 < i) {
         i -= 1
         self(i)

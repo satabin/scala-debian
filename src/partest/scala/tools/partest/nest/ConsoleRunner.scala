@@ -1,5 +1,5 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  * @author Philipp Haller
  */
 
@@ -16,12 +16,14 @@ import scala.tools.nsc.Properties.{ versionMsg, setProp }
 import scala.tools.nsc.util.CommandLineParser
 import scala.tools.nsc.io
 import io.{ Path }
+import scala.collection.{ mutable, immutable }
 
 class ConsoleRunner extends DirectRunner {
   import PathSettings.{ srcDir, testRoot }
 
   case class TestSet(kind: String, filter: Path => Boolean, msg: String)
-  def stdFilter(p: Path) = p.isDirectory || (p hasExtension "scala")
+  private def stdFilter(p: Path) = p.isDirectory || (p hasExtension "scala")
+  private def antFilter(p: Path) = p.isFile && (p endsWith "build.xml")
 
   val testSets = {
     val pathFilter: Path => Boolean = x => x.isDirectory || (x hasExtension "scala")
@@ -38,7 +40,9 @@ class ConsoleRunner extends DirectRunner {
       TestSet("scalacheck", stdFilter, "Testing ScalaCheck tests"),
       TestSet("scalap", _.isDirectory, "Run scalap decompiler tests"),
       TestSet("specialized", stdFilter, "Testing specialized tests"),
-      TestSet("presentation", _.isDirectory, "Testing presentation compiler tests.")
+      TestSet("instrumented", stdFilter, "Testing instrumented tests"),
+      TestSet("presentation", _.isDirectory, "Testing presentation compiler tests."),
+      TestSet("ant", antFilter, "Run Ant task tests.")
     )
   }
 
@@ -102,8 +106,6 @@ class ConsoleRunner extends DirectRunner {
     if (parsed isSet "--ansi") NestUI initialize NestUI.MANY
     if (parsed isSet "--timeout") fileManager.timeout = parsed("--timeout")
     if (parsed isSet "--debug") setProp("partest.debug", "true")
-
-    setProperties() // must be done after processing command line arguments such as --debug
 
     def addTestFile(file: File) = {
       if (!file.exists)
@@ -169,13 +171,10 @@ class ConsoleRunner extends DirectRunner {
     if (grepMessage != "")
       NestUI.normal(grepMessage + "\n")
 
-    val start = System.currentTimeMillis
-    val (successes, failures) = testCheckAll(enabledTestSets)
-    val end = System.currentTimeMillis
-
+    val ((successes, failures), elapsedMillis) = timed(testCheckAll(enabledTestSets))
     val total = successes + failures
 
-    val elapsedSecs = (end - start)/1000
+    val elapsedSecs = elapsedMillis/1000
     val elapsedMins = elapsedSecs/60
     val elapsedHrs  = elapsedMins/60
     val dispMins = elapsedMins - elapsedHrs  * 60
@@ -186,7 +185,6 @@ class ConsoleRunner extends DirectRunner {
       form(elapsedHrs)+":"+form(dispMins)+":"+form(dispSecs)
     }
 
-    println
     if (failures == 0)
       NestUI.success("All of "+total+" tests were successful (elapsed time: "+dispElapsed+")\n")
     else
@@ -211,10 +209,18 @@ class ConsoleRunner extends DirectRunner {
    * @return (success count, failure count)
    */
   def testCheckAll(enabledSets: List[TestSet]): (Int, Int) = {
-    def kindOf(f: File) = (srcDir relativize Path(f).normalize).segments.head
+    def kindOf(f: File) = {
+      (srcDir relativize Path(f).toCanonical).segments match {
+        case (".." :: "scaladoc" :: xs) => xs.head
+        case xs => xs.head
+      }
+    }
 
     val (valid, invalid) = testFiles partition (x => testSetKinds contains kindOf(x))
-    invalid foreach (x => NestUI.failure("Invalid test file '%s', skipping.\n" format x))
+    invalid foreach (x => NestUI.failure(
+      "Invalid test file '%s', skipping.\n".format(x) +
+      "(Test kind '%s' not in known set '%s')".format(kindOf(x), testSetKinds))
+    )
 
     val grouped = (valid groupBy kindOf).toList sortBy (x => testSetKinds indexOf x._1)
     val runTestsFileLists =

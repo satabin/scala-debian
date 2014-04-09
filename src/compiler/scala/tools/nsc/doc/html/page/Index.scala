@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  * @author  David Bernard, Manohar Jonnalagedda
  */
 
@@ -14,7 +14,7 @@ import scala.collection._
 import scala.xml._
 import scala.util.parsing.json.{JSONObject, JSONArray}
 
-class Index(universe: doc.Universe, index: doc.Index) extends HtmlPage {
+class Index(universe: doc.Universe, val index: doc.Index) extends HtmlPage {
 
   def path = List("index.html")
 
@@ -24,17 +24,23 @@ class Index(universe: doc.Universe, index: doc.Index) extends HtmlPage {
     ( if (!s.docversion.isDefault) (" " + s.docversion.value) else "" )
   }
 
-  def headers =
+  val headers =
     <xml:group>
       <link href={ relativeLinkTo{List("index.css", "lib")} }  media="screen" type="text/css" rel="stylesheet"/>
-      <script type="text/javascript" src={ relativeLinkTo{List("jquery.js", "lib")} }></script>
-      <script type="text/javascript" src={ relativeLinkTo{List("jquery-ui.js", "lib")} }></script>
-      <script type="text/javascript" src={ relativeLinkTo{List("jquery.layout.js", "lib")} }></script>
-      <script type="text/javascript" src={ relativeLinkTo{List("index.js", "lib")} }></script>
-      <script type="text/javascript" src={ relativeLinkTo{List("scheduler.js", "lib")} }></script>
     </xml:group>
 
-  def body =
+  private val scripts = {
+    val sources =
+      (List("jquery.js", "jquery-ui.js", "jquery.layout.js", "scheduler.js", "index.js").map {
+        x => relativeLinkTo(List(x, "lib"))
+      }) :+ "index.js"
+
+    sources map {
+      src => <script defer="defer" type="text/javascript" src={src}></script>
+    }
+  }
+
+  val body =
     <body>
       <div id="library">
         <img class='class icon' src={ relativeLinkTo{List("class.png", "lib")} }/>
@@ -44,14 +50,33 @@ class Index(universe: doc.Universe, index: doc.Index) extends HtmlPage {
       </div>
       { browser }
       <div id="content" class="ui-layout-center">
-        <iframe name="template" src={ relativeLinkTo{List("package.html")} }/>
+        <iframe id="template" name="template" src={ relativeLinkTo{List("package.html")} }/>
       </div>
+      { scripts }
     </body>
+
+  def letters: NodeSeq =
+    '_' +: ('a' to 'z') map {
+      char => {
+        val label = if (char == '_') '#' else char.toUpper
+
+        index.firstLetterIndex.get(char) match {
+          case Some(_) =>
+            <a target="template" href={ "index/index-" + char + ".html" }>{
+              label
+            }</a>
+          case None => <span>{ label }</span>
+        }
+      }
+    }
 
   def browser =
     <div id="browser" class="ui-layout-west">
       <div class="ui-west-center">
-      <div id="filter"></div>
+      <div id="filter">
+          <div id="textfilter"></div>
+          <div id="letters">{ letters }</div>
+      </div>
       <div class="pack" id="tpl">{
         def packageElem(pack: model.Package): NodeSeq = {
           <xml:group>
@@ -61,12 +86,14 @@ class Index(universe: doc.Universe, index: doc.Index) extends HtmlPage {
             }
             <ol class="templates">{
               val tpls: Map[String, Seq[DocTemplateEntity]] =
-                (pack.templates filter (t => !t.isPackage && !isExcluded(t) )) groupBy (_.name)
+                (pack.templates collect {
+                  case t: DocTemplateEntity if !t.isPackage && !universe.settings.hardcoded.isExcluded(t.qualifiedName) => t
+                }) groupBy (_.name)
 
               val placeholderSeq: NodeSeq = <div class="placeholder"></div>
 
               def createLink(entity: DocTemplateEntity, includePlaceholder: Boolean, includeText: Boolean) = {
-                val entityType = docEntityKindToString(entity)
+                val entityType = kindToString(entity)
                 val linkContent = (
                   { if (includePlaceholder) placeholderSeq else NodeSeq.Empty }
                   ++
@@ -105,7 +132,7 @@ class Index(universe: doc.Universe, index: doc.Index) extends HtmlPage {
           </xml:group>
         }
         packageElem(universe.rootPackage)
-      }</div></div><script src="index.js"></script>
+      }</div></div>
     </div>
 
   def packageQualifiedName(ety: DocTemplateEntity): String =

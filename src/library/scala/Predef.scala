@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,8 +12,9 @@ import scala.collection.{ mutable, immutable, generic }
 import immutable.StringOps
 import mutable.ArrayOps
 import generic.CanBuildFrom
-import annotation.{ elidable, implicitNotFound }
-import annotation.elidable.ASSERTION
+import scala.annotation.{ elidable, implicitNotFound }
+import scala.annotation.elidable.ASSERTION
+import scala.language.{implicitConversions, existentials}
 
 /** The `Predef` object provides definitions that are accessible in all Scala
  *  compilation units without explicit qualification.
@@ -95,23 +96,41 @@ object Predef extends LowPriorityImplicits {
   type Set[A]     = immutable.Set[A]
   val Map         = immutable.Map
   val Set         = immutable.Set
-  val AnyRef      = new SpecializableCompanion {}   // a dummy used by the specialization annotation
+  // @deprecated("Use scala.AnyRef instead", "2.10.0")
+  // def AnyRef = scala.AnyRef
 
   // Manifest types, companions, and incantations for summoning
+  @annotation.implicitNotFound(msg = "No ClassManifest available for ${T}.")
+  @deprecated("Use scala.reflect.ClassTag instead", "2.10.0")
   type ClassManifest[T] = scala.reflect.ClassManifest[T]
-  type Manifest[T]      = scala.reflect.Manifest[T]
+  // TODO undeprecated until Scala reflection becomes non-experimental
+  // @deprecated("This notion doesn't have a corresponding concept in 2.10, because scala.reflect.runtime.universe.TypeTag can capture arbitrary types. Use type tags instead of manifests, and there will be no need in opt manifests.", "2.10.0")
   type OptManifest[T]   = scala.reflect.OptManifest[T]
+  @annotation.implicitNotFound(msg = "No Manifest available for ${T}.")
+  // TODO undeprecated until Scala reflection becomes non-experimental
+  // @deprecated("Use scala.reflect.ClassTag (to capture erasures) or scala.reflect.runtime.universe.TypeTag (to capture types) or both instead", "2.10.0")
+  type Manifest[T]      = scala.reflect.Manifest[T]
+  @deprecated("Use scala.reflect.ClassTag instead", "2.10.0")
   val ClassManifest     = scala.reflect.ClassManifest
+  // TODO undeprecated until Scala reflection becomes non-experimental
+  // @deprecated("Use scala.reflect.ClassTag (to capture erasures) or scala.reflect.runtime.universe.TypeTag (to capture types) or both instead", "2.10.0")
   val Manifest          = scala.reflect.Manifest
+  // TODO undeprecated until Scala reflection becomes non-experimental
+  // @deprecated("This notion doesn't have a corresponding concept in 2.10, because scala.reflect.runtime.universe.TypeTag can capture arbitrary types. Use type tags instead of manifests, and there will be no need in opt manifests.", "2.10.0")
   val NoManifest        = scala.reflect.NoManifest
 
+  // TODO undeprecated until Scala reflection becomes non-experimental
+  // @deprecated("Use scala.reflect.classTag[T] and scala.reflect.runtime.universe.typeTag[T] instead", "2.10.0")
   def manifest[T](implicit m: Manifest[T])           = m
+  @deprecated("Use scala.reflect.classTag[T] instead", "2.10.0")
   def classManifest[T](implicit m: ClassManifest[T]) = m
+  // TODO undeprecated until Scala reflection becomes non-experimental
+  // @deprecated("This notion doesn't have a corresponding concept in 2.10, because scala.reflect.runtime.universe.TypeTag can capture arbitrary types. Use type tags instead of manifests, and there will be no need in opt manifests.", "2.10.0")
   def optManifest[T](implicit m: OptManifest[T])     = m
 
   // Minor variations on identity functions
   def identity[A](x: A): A         = x    // @see `conforms` for the implicit version
-  def implicitly[T](implicit e: T) = e    // for summoning implicit values from the nether world
+  @inline def implicitly[T](implicit e: T) = e    // for summoning implicit values from the nether world -- TODO: when dependent method types are on by default, give this result type `e.type`, so that inliner has better chance of knowing which method to inline in calls like `implicitly[MatchingStrategy[Option]].zero`
   @inline def locally[T](x: T): T  = x    // to communicate intent and avoid unmoored statements
 
   // Apparently needed for the xml library
@@ -119,16 +138,16 @@ object Predef extends LowPriorityImplicits {
 
   // Deprecated
 
-  @deprecated("Use sys.error(message) instead", "2.9.0")
+  @deprecated("Use `sys.error(message)` instead", "2.9.0")
   def error(message: String): Nothing = sys.error(message)
 
-  @deprecated("Use sys.exit() instead", "2.9.0")
+  @deprecated("Use `sys.exit()` instead", "2.9.0")
   def exit(): Nothing = sys.exit()
 
-  @deprecated("Use sys.exit(status) instead", "2.9.0")
+  @deprecated("Use `sys.exit(status)` instead", "2.9.0")
   def exit(status: Int): Nothing = sys.exit(status)
 
-  @deprecated("Use formatString.format(args: _*) or arg.formatted(formatString) instead", "2.9.0")
+  @deprecated("Use `formatString.format(args: _*)` or `arg.formatted(formatString)` instead", "2.9.0")
   def format(text: String, xs: Any*) = augmentString(text).format(xs: _*)
 
   // errors and asserts -------------------------------------------------
@@ -138,7 +157,7 @@ object Predef extends LowPriorityImplicits {
    *  is at least `ASSERTION`.
    *
    *  @see elidable
-   *  @param p   the expression to test
+   *  @param assertion   the expression to test
    */
   @elidable(ASSERTION)
   def assert(assertion: Boolean) {
@@ -151,8 +170,8 @@ object Predef extends LowPriorityImplicits {
    *  is at least `ASSERTION`.
    *
    *  @see elidable
-   *  @param p   the expression to test
-   *  @param msg a String to include in the failure message
+   *  @param assertion   the expression to test
+   *  @param message     a String to include in the failure message
    */
   @elidable(ASSERTION) @inline
   final def assert(assertion: Boolean, message: => Any) {
@@ -167,7 +186,7 @@ object Predef extends LowPriorityImplicits {
    *  will not be generated if `-Xelide-below` is at least `ASSERTION`.
    *
    *  @see elidable
-   *  @param p   the expression to test
+   *  @param assumption   the expression to test
    */
   @elidable(ASSERTION)
   def assume(assumption: Boolean) {
@@ -182,8 +201,8 @@ object Predef extends LowPriorityImplicits {
    *  will not be generated if `-Xelide-below` is at least `ASSERTION`.
    *
    *  @see elidable
-   *  @param p   the expression to test
-   *  @param msg a String to include in the failure message
+   *  @param assumption   the expression to test
+   *  @param message      a String to include in the failure message
    */
   @elidable(ASSERTION) @inline
   final def assume(assumption: Boolean, message: => Any) {
@@ -195,7 +214,7 @@ object Predef extends LowPriorityImplicits {
    *  This method is similar to `assert`, but blames the caller of the method
    *  for violating the condition.
    *
-   *  @param p   the expression to test
+   *  @param requirement   the expression to test
    */
   def require(requirement: Boolean) {
     if (!requirement)
@@ -206,21 +225,31 @@ object Predef extends LowPriorityImplicits {
    *  This method is similar to `assert`, but blames the caller of the method
    *  for violating the condition.
    *
-   *  @param p   the expression to test
-   *  @param msg a String to include in the failure message
+   *  @param requirement   the expression to test
+   *  @param message       a String to include in the failure message
    */
   @inline final def require(requirement: Boolean, message: => Any) {
     if (!requirement)
       throw new IllegalArgumentException("requirement failed: "+ message)
   }
 
-  final class Ensuring[A](val x: A) {
-    def ensuring(cond: Boolean): A = { assert(cond); x }
-    def ensuring(cond: Boolean, msg: => Any): A = { assert(cond, msg); x }
-    def ensuring(cond: A => Boolean): A = { assert(cond(x)); x }
-    def ensuring(cond: A => Boolean, msg: => Any): A = { assert(cond(x), msg); x }
+  final class Ensuring[A](val __resultOfEnsuring: A) extends AnyVal {
+    // `__resultOfEnsuring` must be a public val to allow inlining.
+    // See comments in ArrowAssoc for more.
+    @deprecated("Use `__resultOfEnsuring` instead", "2.10.0")
+    def x = __resultOfEnsuring
+
+    def ensuring(cond: Boolean): A = { assert(cond); __resultOfEnsuring }
+    def ensuring(cond: Boolean, msg: => Any): A = { assert(cond, msg); __resultOfEnsuring }
+    def ensuring(cond: A => Boolean): A = { assert(cond(__resultOfEnsuring)); __resultOfEnsuring }
+    def ensuring(cond: A => Boolean, msg: => Any): A = { assert(cond(__resultOfEnsuring), msg); __resultOfEnsuring }
   }
-  implicit def any2Ensuring[A](x: A): Ensuring[A] = new Ensuring(x)
+  @inline implicit def any2Ensuring[A](x: A): Ensuring[A] = new Ensuring(x)
+
+  /** `???` can be used for marking methods that remain to be implemented.
+   *  @throws  A `NotImplementedError`
+   */
+  def ??? : Nothing = throw new NotImplementedError
 
   // tupling ------------------------------------------------------------
 
@@ -236,11 +265,20 @@ object Predef extends LowPriorityImplicits {
     def unapply[A, B, C](x: Tuple3[A, B, C]): Option[Tuple3[A, B, C]] = Some(x)
   }
 
-  final class ArrowAssoc[A](val x: A) {
-    @inline def -> [B](y: B): Tuple2[A, B] = Tuple2(x, y)
+  final class ArrowAssoc[A](val __leftOfArrow: A) extends AnyVal {
+    // `__leftOfArrow` must be a public val to allow inlining. The val
+    // used to be called `x`, but now goes by `__leftOfArrow`, as that
+    // reduces the chances of a user's writing `foo.__leftOfArrow` and
+    // being confused why they get an ambiguous implicit conversion
+    // error. (`foo.x` used to produce this error since both
+    // any2Ensuring and any2ArrowAssoc pimped an `x` onto everything)
+    @deprecated("Use `__leftOfArrow` instead", "2.10.0")
+    def x = __leftOfArrow
+
+    @inline def -> [B](y: B): Tuple2[A, B] = Tuple2(__leftOfArrow, y)
     def →[B](y: B): Tuple2[A, B] = ->(y)
   }
-  implicit def any2ArrowAssoc[A](x: A): ArrowAssoc[A] = new ArrowAssoc(x)
+  @inline implicit def any2ArrowAssoc[A](x: A): ArrowAssoc[A] = new ArrowAssoc(x)
 
   // printing and reading -----------------------------------------------
 
@@ -250,7 +288,7 @@ object Predef extends LowPriorityImplicits {
   def printf(text: String, xs: Any*) = Console.print(text.format(xs: _*))
 
   def readLine(): String = Console.readLine()
-  def readLine(text: String, args: Any*) = Console.readLine(text, args)
+  def readLine(text: String, args: Any*) = Console.readLine(text, args: _*)
   def readBoolean() = Console.readBoolean()
   def readByte() = Console.readByte()
   def readShort() = Console.readShort()
@@ -266,69 +304,63 @@ object Predef extends LowPriorityImplicits {
 
   // views --------------------------------------------------------------
 
-  implicit def exceptionWrapper(exc: Throwable) = new runtime.RichException(exc)
+  implicit def exceptionWrapper(exc: Throwable)                                 = new runtime.RichException(exc)
+  implicit def tuple2ToZippedOps[T1, T2](x: (T1, T2))                           = new runtime.Tuple2Zipped.Ops(x)
+  implicit def tuple3ToZippedOps[T1, T2, T3](x: (T1, T2, T3))                   = new runtime.Tuple3Zipped.Ops(x)
+  implicit def seqToCharSequence(xs: scala.collection.IndexedSeq[Char]): CharSequence = new runtime.SeqCharSequence(xs)
+  implicit def arrayToCharSequence(xs: Array[Char]): CharSequence               = new runtime.ArrayCharSequence(xs, 0, xs.length)
 
-  implicit def zipped2ToTraversable[El1, El2](zz: Tuple2[_, _]#Zipped[_, El1, _, El2]): Traversable[(El1, El2)] =
-    new Traversable[(El1, El2)] {
-      def foreach[U](f: ((El1, El2)) => U): Unit = zz foreach Function.untupled(f)
-    }
-
-  implicit def zipped3ToTraversable[El1, El2, El3](zz: Tuple3[_, _, _]#Zipped[_, El1, _, El2, _, El3]): Traversable[(El1, El2, El3)] =
-    new Traversable[(El1, El2, El3)] {
-      def foreach[U](f: ((El1, El2, El3)) => U): Unit = zz foreach Function.untupled(f)
-    }
-
-  implicit def genericArrayOps[T](xs: Array[T]): ArrayOps[T] = xs match {
-    case x: Array[AnyRef]  => refArrayOps[AnyRef](x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Int]     => intArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Double]  => doubleArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Long]    => longArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Float]   => floatArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Char]    => charArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Byte]    => byteArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Short]   => shortArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Boolean] => booleanArrayOps(x).asInstanceOf[ArrayOps[T]]
-    case x: Array[Unit]    => unitArrayOps(x).asInstanceOf[ArrayOps[T]]
+  implicit def genericArrayOps[T](xs: Array[T]): ArrayOps[T] = (xs match {
+    case x: Array[AnyRef]  => refArrayOps[AnyRef](x)
+    case x: Array[Boolean] => booleanArrayOps(x)
+    case x: Array[Byte]    => byteArrayOps(x)
+    case x: Array[Char]    => charArrayOps(x)
+    case x: Array[Double]  => doubleArrayOps(x)
+    case x: Array[Float]   => floatArrayOps(x)
+    case x: Array[Int]     => intArrayOps(x)
+    case x: Array[Long]    => longArrayOps(x)
+    case x: Array[Short]   => shortArrayOps(x)
+    case x: Array[Unit]    => unitArrayOps(x)
     case null              => null
-  }
+  }).asInstanceOf[ArrayOps[T]]
 
-  implicit def refArrayOps[T <: AnyRef](xs: Array[T]): ArrayOps[T] = new ArrayOps.ofRef[T](xs)
-  implicit def intArrayOps(xs: Array[Int]): ArrayOps[Int] = new ArrayOps.ofInt(xs)
-  implicit def doubleArrayOps(xs: Array[Double]): ArrayOps[Double] = new ArrayOps.ofDouble(xs)
-  implicit def longArrayOps(xs: Array[Long]): ArrayOps[Long] = new ArrayOps.ofLong(xs)
-  implicit def floatArrayOps(xs: Array[Float]): ArrayOps[Float] = new ArrayOps.ofFloat(xs)
-  implicit def charArrayOps(xs: Array[Char]): ArrayOps[Char] = new ArrayOps.ofChar(xs)
-  implicit def byteArrayOps(xs: Array[Byte]): ArrayOps[Byte] = new ArrayOps.ofByte(xs)
-  implicit def shortArrayOps(xs: Array[Short]): ArrayOps[Short] = new ArrayOps.ofShort(xs)
   implicit def booleanArrayOps(xs: Array[Boolean]): ArrayOps[Boolean] = new ArrayOps.ofBoolean(xs)
-  implicit def unitArrayOps(xs: Array[Unit]): ArrayOps[Unit] = new ArrayOps.ofUnit(xs)
+  implicit def byteArrayOps(xs: Array[Byte]): ArrayOps[Byte]          = new ArrayOps.ofByte(xs)
+  implicit def charArrayOps(xs: Array[Char]): ArrayOps[Char]          = new ArrayOps.ofChar(xs)
+  implicit def doubleArrayOps(xs: Array[Double]): ArrayOps[Double]    = new ArrayOps.ofDouble(xs)
+  implicit def floatArrayOps(xs: Array[Float]): ArrayOps[Float]       = new ArrayOps.ofFloat(xs)
+  implicit def intArrayOps(xs: Array[Int]): ArrayOps[Int]             = new ArrayOps.ofInt(xs)
+  implicit def longArrayOps(xs: Array[Long]): ArrayOps[Long]          = new ArrayOps.ofLong(xs)
+  implicit def refArrayOps[T <: AnyRef](xs: Array[T]): ArrayOps[T]    = new ArrayOps.ofRef[T](xs)
+  implicit def shortArrayOps(xs: Array[Short]): ArrayOps[Short]       = new ArrayOps.ofShort(xs)
+  implicit def unitArrayOps(xs: Array[Unit]): ArrayOps[Unit]          = new ArrayOps.ofUnit(xs)
 
   // Primitive Widenings --------------------------------------------------------------
 
-  implicit def byte2short(x: Byte): Short = x.toShort
-  implicit def byte2int(x: Byte): Int = x.toInt
-  implicit def byte2long(x: Byte): Long = x.toLong
-  implicit def byte2float(x: Byte): Float = x.toFloat
-  implicit def byte2double(x: Byte): Double = x.toDouble
+  @deprecated("Use `.toShort` for explicit conversion and `Byte.byte2short` for implicit conversion", "2.10.0") def byte2short(x: Byte): Short = x.toShort
+  @deprecated("Use `.toInt` for explicit conversion and `Byte.byte2int` for implicit conversion", "2.10.0") def byte2int(x: Byte): Int = x.toInt
+  @deprecated("Use `.toLong` for explicit conversion and `Byte.byte2long for implicit conversion", "2.10.0") def byte2long(x: Byte): Long = x.toLong
+  @deprecated("Use `.toFloat` for explicit conversion and `Byte.byte2float` for implicit conversion", "2.10.0") def byte2float(x: Byte): Float = x.toFloat
+  @deprecated("Use `.toDouble` for explicit conversion and `Byte.byte2double` for implicit conversion", "2.10.0") def byte2double(x: Byte): Double = x.toDouble
 
-  implicit def short2int(x: Short): Int = x.toInt
-  implicit def short2long(x: Short): Long = x.toLong
-  implicit def short2float(x: Short): Float = x.toFloat
-  implicit def short2double(x: Short): Double = x.toDouble
+  @deprecated("Use `.toInt` for explicit conversion and `Short.short2int` for implicit conversion", "2.10.0") def short2int(x: Short): Int = x.toInt
+  @deprecated("Use `.toLong` for explicit conversion and `Short.short2long` for implicit conversion", "2.10.0") def short2long(x: Short): Long = x.toLong
+  @deprecated("Use `.toFloat` for explicit conversion and `Short.short2float` for implicit conversion", "2.10.0") def short2float(x: Short): Float = x.toFloat
+  @deprecated("Use `.toDouble` for explicit conversion and `Short.short2double` for implicit conversion", "2.10.0") def short2double(x: Short): Double = x.toDouble
 
-  implicit def char2int(x: Char): Int = x.toInt
-  implicit def char2long(x: Char): Long = x.toLong
-  implicit def char2float(x: Char): Float = x.toFloat
-  implicit def char2double(x: Char): Double = x.toDouble
+  @deprecated("Use `.toInt` for explicit conversion and `Char.char2int` for implicit conversion", "2.10.0") def char2int(x: Char): Int = x.toInt
+  @deprecated("Use `.toLong` for explicit conversion and `Char.char2long` for implicit conversion", "2.10.0") def char2long(x: Char): Long = x.toLong
+  @deprecated("Use `.toFloat` for explicit conversion and `Char.char2float` for implicit conversion", "2.10.0") def char2float(x: Char): Float = x.toFloat
+  @deprecated("Use `.toDouble` for explicit conversion and `Char.char2double` for implicit conversion", "2.10.0") def char2double(x: Char): Double = x.toDouble
 
-  implicit def int2long(x: Int): Long = x.toLong
-  implicit def int2float(x: Int): Float = x.toFloat
-  implicit def int2double(x: Int): Double = x.toDouble
+  @deprecated("Use `.toLong` for explicit conversion and `Int.int2long` for implicit conversion", "2.10.0") def int2long(x: Int): Long = x.toLong
+  @deprecated("Use `.toFloat` for explicit conversion and `Int.int2float` for implicit conversion", "2.10.0") def int2float(x: Int): Float = x.toFloat
+  @deprecated("Use `.toDouble` for explicit conversion and `Int.int2double` for implicit conversion", "2.10.0") def int2double(x: Int): Double = x.toDouble
 
-  implicit def long2float(x: Long): Float = x.toFloat
-  implicit def long2double(x: Long): Double = x.toDouble
+  @deprecated("Use `.toFloat` for explicit conversion and `Long.long2float` for implicit conversion", "2.10.0") def long2float(x: Long): Float = x.toFloat
+  @deprecated("Use `.toDouble` for explicit conversion and `Long.long2double` for implicit conversion", "2.10.0") def long2double(x: Long): Double = x.toDouble
 
-  implicit def float2double(x: Float): Double = x.toDouble
+  @deprecated("Use `.toDouble` for explicit conversion and `Float.float2double` for implicit conversion", "2.10.0") def float2double(x: Float): Double = x.toDouble
 
   // "Autoboxing" and "Autounboxing" ---------------------------------------------------
 
@@ -365,28 +397,17 @@ object Predef extends LowPriorityImplicits {
 
   // Strings and CharSequences --------------------------------------------------------------
 
+  @inline implicit def any2stringfmt(x: Any) = new runtime.StringFormat(x)
+  @inline implicit def augmentString(x: String): StringOps = new StringOps(x)
   implicit def any2stringadd(x: Any) = new runtime.StringAdd(x)
-  implicit def augmentString(x: String): StringOps = new StringOps(x)
   implicit def unaugmentString(x: StringOps): String = x.repr
 
-  implicit def stringCanBuildFrom: CanBuildFrom[String, Char, String] =
-    new CanBuildFrom[String, Char, String] {
-      def apply(from: String) = apply()
-      def apply() = mutable.StringBuilder.newBuilder
-    }
+  @deprecated("Use `StringCanBuildFrom`", "2.10.0")
+  def stringCanBuildFrom: CanBuildFrom[String, Char, String] = StringCanBuildFrom
 
-  implicit def seqToCharSequence(xs: collection.IndexedSeq[Char]): CharSequence = new CharSequence {
-    def length: Int = xs.length
-    def charAt(index: Int): Char = xs(index)
-    def subSequence(start: Int, end: Int): CharSequence = seqToCharSequence(xs.slice(start, end))
-    override def toString: String = xs.mkString("")
-  }
-
-  implicit def arrayToCharSequence(xs: Array[Char]): CharSequence = new CharSequence {
-    def length: Int = xs.length
-    def charAt(index: Int): Char = xs(index)
-    def subSequence(start: Int, end: Int): CharSequence = arrayToCharSequence(xs.slice(start, end))
-    override def toString: String = xs.mkString("")
+  implicit val StringCanBuildFrom: CanBuildFrom[String, Char, String] = new CanBuildFrom[String, Char, String] {
+    def apply(from: String) = apply()
+    def apply()             = mutable.StringBuilder.newBuilder
   }
 
   // Type Constraints --------------------------------------------------------------
@@ -426,22 +447,15 @@ object Predef extends LowPriorityImplicits {
      implicit def tpEquals[A]: A =:= A = singleton_=:=.asInstanceOf[A =:= A]
   }
 
-  // less useful due to #2781
-  @deprecated("Use From => To instead", "2.9.0")
-  sealed abstract class <%<[-From, +To] extends (From => To) with Serializable
-  object <%< {
-    implicit def conformsOrViewsAs[A <% B, B]: A <%< B = new (A <%< B) {def apply(x: A) = x}
-  }
-
   /** A type for which there is always an implicit value.
-   *  @see fallbackCanBuildFrom in Array.scala
+   *  @see [[scala.Array$]], method `fallbackCanBuildFrom`
    */
   class DummyImplicit
 
   object DummyImplicit {
 
     /** An implicit value yielding a `DummyImplicit`.
-     *   @see fallbackCanBuildFrom in Array.scala
+     *   @see [[scala.Array$]], method `fallbackCanBuildFrom`
      */
     implicit def dummyImplicit: DummyImplicit = new DummyImplicit
   }

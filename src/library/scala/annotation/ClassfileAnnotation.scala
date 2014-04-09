@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,11 +8,9 @@
 
 package scala.annotation
 
-/** <p>
- *    A base class for classfile annotations. These are stored as
- *    <a href="http://java.sun.com/j2se/1.5.0/docs/guide/language/annotations.html"
- *    target="_top">Java annotations</a> in classfiles.
- *  </p>
+/** A base class for classfile annotations. These are stored as
+ *  [[http://docs.oracle.com/javase/7/docs/technotes/guides/language/annotations.html#_top Java annotations]]]
+ *  in classfiles.
  *
  *  @author  Martin Odersky
  *  @version 1.1, 2/02/2007

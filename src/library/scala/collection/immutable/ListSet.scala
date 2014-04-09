@@ -1,18 +1,16 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.collection
 package immutable
 
 import generic._
-import annotation.{tailrec, bridge}
+import scala.annotation.{tailrec, bridge}
 import mutable.{ ListBuffer, Builder }
 
 /** $factoryInfo
@@ -35,7 +33,7 @@ object ListSet extends ImmutableSetFactory[ListSet] {
    */
   class ListSetBuilder[Elem](initial: ListSet[Elem]) extends Builder[Elem, ListSet[Elem]] {
     def this() = this(empty[Elem])
-    protected val elems = new mutable.ListBuffer[Elem] ++= initial reverse
+    protected val elems = (new mutable.ListBuffer[Elem] ++= initial).reverse
     protected val seen  = new mutable.HashSet[Elem] ++= initial
 
     def +=(x: Elem): this.type = {
@@ -65,7 +63,8 @@ object ListSet extends ImmutableSetFactory[ListSet] {
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-class ListSet[A] extends Set[A]
+class ListSet[A] extends AbstractSet[A]
+                    with Set[A]
                     with GenericSetTemplate[A, ListSet]
                     with SetLike[A, ListSet[A]]
                     with Serializable{ self =>
@@ -78,10 +77,10 @@ class ListSet[A] extends Set[A]
   override def size: Int = 0
   override def isEmpty: Boolean = true;
 
-  /** Checks if this set contains element <code>elem</code>.
+  /** Checks if this set contains element `elem`.
    *
    *  @param  elem    the element to check for membership.
-   *  @return true, iff <code>elem</code> is contained in this set.
+   *  @return `'''true'''`, iff `elem` is contained in this set.
    */
   def contains(elem: A): Boolean = false
 
@@ -101,9 +100,7 @@ class ListSet[A] extends Set[A]
    */
   override def ++(xs: GenTraversableOnce[A]): ListSet[A] =
     if (xs.isEmpty) this
-    else new ListSet.ListSetBuilder(this) ++= xs.seq result
-
-  @bridge def ++(xs: TraversableOnce[A]): ListSet[A] = ++(xs: GenTraversableOnce[A]): ListSet[A]
+    else (new ListSet.ListSetBuilder(this) ++= xs.seq).result
 
   private[ListSet] def unchecked_+(e: A): ListSet[A] = new Node(e)
   private[ListSet] def unchecked_outer: ListSet[A] =
@@ -114,13 +111,13 @@ class ListSet[A] extends Set[A]
    *  @throws Predef.NoSuchElementException
    *  @return the new iterator
    */
-  def iterator: Iterator[A] = new Iterator[A] {
+  def iterator: Iterator[A] = new AbstractIterator[A] {
     var that: ListSet[A] = self
     def hasNext = that.nonEmpty
     def next: A =
       if (hasNext) {
-        val res = that.elem
-        that = that.next
+        val res = that.head
+        that = that.tail
         res
       }
       else Iterator.empty.next
@@ -129,18 +126,18 @@ class ListSet[A] extends Set[A]
   /**
    *  @throws Predef.NoSuchElementException
    */
-  protected def elem: A = throw new NoSuchElementException("Set has no elements");
+  override def head: A = throw new NoSuchElementException("Set has no elements");
 
   /**
    *  @throws Predef.NoSuchElementException
    */
-  protected def next: ListSet[A] = throw new NoSuchElementException("Next of an empty set");
+  override def tail: ListSet[A] = throw new NoSuchElementException("Next of an empty set");
 
   override def stringPrefix = "ListSet"
 
   /** Represents an entry in the `ListSet`.
    */
-  protected class Node(override protected val elem: A) extends ListSet[A] with Serializable {
+  protected class Node(override val head: A) extends ListSet[A] with Serializable {
     override private[ListSet] def unchecked_outer = self
 
     /** Returns the number of elements in this set.
@@ -158,26 +155,25 @@ class ListSet[A] extends Set[A]
      */
     override def isEmpty: Boolean = false
 
-    /** Checks if this set contains element <code>elem</code>.
+    /** Checks if this set contains element `elem`.
      *
-     *  @param  elem    the element to check for membership.
-     *  @return true, iff <code>elem</code> is contained in this set.
+     *  @param  e       the element to check for membership.
+     *  @return `'''true'''`, iff `elem` is contained in this set.
      */
     override def contains(e: A) = containsInternal(this, e)
     @tailrec private def containsInternal(n: ListSet[A], e: A): Boolean =
-      !n.isEmpty && (n.elem == e || containsInternal(n.unchecked_outer, e))
+      !n.isEmpty && (n.head == e || containsInternal(n.unchecked_outer, e))
 
     /** This method creates a new set with an additional element.
      */
     override def +(e: A): ListSet[A] = if (contains(e)) this else new Node(e)
 
-    /** <code>-</code> can be used to remove a single element from
-     *  a set.
+    /** `-` can be used to remove a single element from a set.
      */
-    override def -(e: A): ListSet[A] = if (e == elem) self else {
-      val tail = self - e; new tail.Node(elem)
+    override def -(e: A): ListSet[A] = if (e == head) self else {
+      val tail = self - e; new tail.Node(head)
     }
 
-    override protected def next: ListSet[A] = self
+    override def tail: ListSet[A] = self
   }
 }

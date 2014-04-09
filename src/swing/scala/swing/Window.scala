@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -27,6 +27,14 @@ abstract class Window extends UIElement with RootPanel with Publisher { outer =>
 
   protected trait InterfaceMixin extends javax.swing.RootPaneContainer
 
+  protected trait SuperMixin extends AWTWindow {
+    override protected def processWindowEvent(e: java.awt.event.WindowEvent) {
+      super.processWindowEvent(e)
+      if (e.getID() == java.awt.event.WindowEvent.WINDOW_CLOSING)
+        closeOperation()
+    }
+  }
+
   /**
    * This method is called when the window is closing, after all other window
    * event listeners have been processed.
@@ -43,7 +51,7 @@ abstract class Window extends UIElement with RootPanel with Publisher { outer =>
     peer.getRootPane.setDefaultButton(b.peer)
   }
   def defaultButton_=(b: Option[Button]) {
-    peer.getRootPane.setDefaultButton(b map (_.peer) orNull)
+    peer.getRootPane.setDefaultButton(b.map(_.peer).orNull)
   }
 
   def dispose() { peer.dispose() }
@@ -53,7 +61,7 @@ abstract class Window extends UIElement with RootPanel with Publisher { outer =>
   def setLocationRelativeTo(c: UIElement) { peer.setLocationRelativeTo(c.peer) }
   def centerOnScreen() { peer.setLocationRelativeTo(null) }
   def location_=(p: Point) { peer.setLocation(p) }
-  override def size_=(size: Dimension) { peer.setSize(size) }
+  def size_=(size: Dimension) { peer.setSize(size) }
   def bounds_=(rect: Rectangle) { peer.setBounds(rect) }
 
   def owner: Window = UIElement.cachedWrapper[Window](peer.getOwner)

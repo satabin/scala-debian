@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -30,6 +30,7 @@
  */
 package scala.util.matching
 
+import scala.collection.AbstractIterator
 import java.util.regex.{ Pattern, Matcher }
 
 /** This class provides methods for creating and using regular expressions.
@@ -144,6 +145,7 @@ import java.util.regex.{ Pattern, Matcher }
  */
 @SerialVersionUID(-2094783597747625537L)
 class Regex(regex: String, groupNames: String*) extends Serializable {
+  outer =>
 
   import Regex._
 
@@ -178,17 +180,16 @@ class Regex(regex: String, groupNames: String*) extends Serializable {
    *  @return       The matches
    */
   def unapplySeq(target: Any): Option[List[String]] = target match {
-    case s: java.lang.CharSequence =>
-      val m = pattern.matcher(s)
-      if (m.matches) Some((1 to m.groupCount).toList map m.group)
+    case s: CharSequence =>
+      val m = pattern matcher s
+      if (runMatcher(m)) Some((1 to m.groupCount).toList map m.group)
       else None
-    case Match(s) =>
-      unapplySeq(s)
-    case _ =>
-      None
+    case m: Match        => unapplySeq(m.matched)
+    case _               => None
   }
+  protected def runMatcher(m: Matcher) = m.matches()
 
-  /** Return all matches of this regexp in given character sequence as a [[scala.util.mathcing.Regex.MatchIterator]],
+  /** Return all matches of this regexp in given character sequence as a [[scala.util.matching.Regex.MatchIterator]],
    *  which is a special [[scala.collection.Iterator]] that returns the
    *  matched strings, but can also be converted into a normal iterator
    *  that returns objects of type [[scala.util.matching.Regex.Match]]
@@ -196,10 +197,29 @@ class Regex(regex: String, groupNames: String*) extends Serializable {
    *  match, subgroups, etc.
    *
    *  @param source The text to match against.
-   *  @return       A [[scala.util.matching.Reegex.MatchIterator]] of all matches.
+   *  @return       A [[scala.util.matching.Regex.MatchIterator]] of all matches.
    *  @example      {{{for (words <- """\w+""".r findAllIn "A simple example.") yield words}}}
    */
   def findAllIn(source: java.lang.CharSequence) = new Regex.MatchIterator(source, this, groupNames)
+
+
+  /** Return all matches of this regexp in given character sequence as a
+   *  [[scala.collection.Iterator]] of [[scala.util.matching.Regex.Match]].
+   *
+   *  @param source The text to match against.
+   *  @return       A [[scala.collection.Iterator]] of [[scala.util.matching.Regex.Match]] for all matches.
+   *  @example      {{{for (words <- """\w+""".r findAllMatchIn "A simple example.") yield words.start}}}
+   */
+  def findAllMatchIn(source: java.lang.CharSequence): Iterator[Match] = {
+    val matchIterator = findAllIn(source)
+    new Iterator[Match] {
+      def hasNext = matchIterator.hasNext
+      def next: Match = {
+        matchIterator.next;
+        new Match(matchIterator.source, matchIterator.matcher, matchIterator.groupNames).force
+      }
+    }
+  }
 
   /** Return optionally first matching string of this regexp in given character sequence,
    *  or None if it does not exist.
@@ -353,8 +373,33 @@ class Regex(regex: String, groupNames: String*) extends Serializable {
   def split(toSplit: java.lang.CharSequence): Array[String] =
     pattern.split(toSplit)
 
+  /** Create a new Regex with the same pattern, but no requirement that
+   *  the entire String matches in extractor patterns.  For instance, the strings
+   *  shown below lead to successful matches, where they would not otherwise.
+   *
+   *  {{{
+   *  val dateP1 = """(\d\d\d\d)-(\d\d)-(\d\d)""".r.unanchored
+   *
+   *  val dateP1(year, month, day) = "Date 2011-07-15"
+   *
+   *  val copyright: String = "Date of this document: 2011-07-15" match {
+   *    case dateP1(year, month, day) => "Copyright "+year
+   *    case _                        => "No copyright"
+   *  }
+   *  }}}
+   *
+   *  @return        The new unanchored regex
+   */
+  def unanchored: UnanchoredRegex = new Regex(regex, groupNames: _*) with UnanchoredRegex { override def anchored = outer }
+  def anchored: Regex             = this
+
   /** The string defining the regular expression */
   override def toString = regex
+}
+
+trait UnanchoredRegex extends Regex {
+  override protected def runMatcher(m: Matcher) = m.find()
+  override def unanchored = this
 }
 
 /** This object defines inner classes that describe
@@ -519,9 +564,9 @@ object Regex {
   /** A class to step through a sequence of regex matches
    */
   class MatchIterator(val source: java.lang.CharSequence, val regex: Regex, val groupNames: Seq[String])
-  extends Iterator[String] with MatchData { self =>
+  extends AbstractIterator[String] with Iterator[String] with MatchData { self =>
 
-    protected val matcher = regex.pattern.matcher(source)
+    protected[Regex] val matcher = regex.pattern.matcher(source)
     private var nextSeen = false
 
     /** Is there another match? */
@@ -531,13 +576,13 @@ object Regex {
     }
 
     /** The next matched substring of `source` */
-    def next: String = {
+    def next(): String = {
       if (!hasNext) throw new NoSuchElementException
       nextSeen = false
       matcher.group
     }
 
-    override def toString = super[Iterator].toString
+    override def toString = super[AbstractIterator].toString
 
     /** The index of the first matched character */
     def start: Int = matcher.start
@@ -555,13 +600,13 @@ object Regex {
     def groupCount = matcher.groupCount
 
     /** Convert to an iterator that yields MatchData elements instead of Strings */
-    def matchData = new Iterator[Match] {
+    def matchData: Iterator[Match] = new AbstractIterator[Match] {
       def hasNext = self.hasNext
       def next = { self.next; new Match(source, matcher, groupNames).force }
     }
 
     /** Convert to an iterator that yields MatchData elements instead of Strings and has replacement support */
-    private[matching] def replacementData = new Iterator[Match] with Replacement {
+    private[matching] def replacementData = new AbstractIterator[Match] with Replacement {
       def matcher = self.matcher
       def hasNext = self.hasNext
       def next = { self.next; new Match(source, matcher, groupNames).force }

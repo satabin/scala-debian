@@ -1,12 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
-
 
 package scala.collection
 package immutable
@@ -15,16 +13,13 @@ import generic._
 import mutable.{ ArrayBuffer, Builder }
 
 /** $factoryInfo
- *  @define Coll immutable.Stack
+ *  @define Coll `immutable.Stack`
  *  @define coll immutable stack
  */
 object Stack extends SeqFactory[Stack] {
   /** $genericCanBuildFromInfo */
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Stack[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Stack[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   def newBuilder[A]: Builder[A, Stack[A]] = new ArrayBuffer[A] mapResult (buf => new Stack(buf.toList))
-
-  @deprecated("Use Stack.empty instead", "2.8.0")
-  val Empty: Stack[Nothing] = Stack()
 }
 
 /** This class implements immutable stacks using a list-based data
@@ -42,7 +37,7 @@ object Stack extends SeqFactory[Stack] {
  *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-immutable-collection-classes.html#immutable_stacks "Scala's Collection Library overview"]]
  *  section on `Immutable stacks` for more information.
  *
- *  @define Coll immutable.Stack
+ *  @define Coll `immutable.Stack`
  *  @define coll immutable stack
  *  @define orderDependent
  *  @define orderDependentFold
@@ -51,7 +46,8 @@ object Stack extends SeqFactory[Stack] {
  */
 @SerialVersionUID(1976480595012942526L)
 class Stack[+A] protected (protected val elems: List[A])
-                    extends LinearSeq[A]
+                 extends AbstractSeq[A]
+                    with LinearSeq[A]
                     with GenericTraversableTemplate[A, Stack]
                     with LinearSeqOptimized[A, Stack[A]]
                     with Serializable {
@@ -88,7 +84,7 @@ class Stack[+A] protected (protected val elems: List[A])
    *  the stack. The last element returned by the traversable object
    *  will be on top of the new stack.
    *
-   *  @param   elems      the iterator object.
+   *  @param   xs      the iterator object.
    *  @return the stack with the new elements on top.
    */
   def pushAll[B >: A](xs: TraversableOnce[B]): Stack[B] =
@@ -105,7 +101,7 @@ class Stack[+A] protected (protected val elems: List[A])
     else throw new NoSuchElementException("top of empty stack")
 
   /** Removes the top element from the stack.
-   *  Note: should return <code>(A, Stack[A])</code> as for queues (mics)
+   *  Note: should return `(A, Stack[A])` as for queues (mics)
    *
    *  @throws Predef.NoSuchElementException
    *  @return the new stack without the former top element.
@@ -132,4 +128,3 @@ class Stack[+A] protected (protected val elems: List[A])
    */
   override def toString() = elems.mkString("Stack(", ", ", ")")
 }
-

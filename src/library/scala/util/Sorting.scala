@@ -6,19 +6,20 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.util
+package scala
+package util
 
-import scala.reflect.ClassManifest
-import scala.math.Ordering
+import scala.reflect.{ ClassTag, classTag }
+import scala.math.{ Ordering, max, min }
 
 /** The Sorting object provides functions that can sort various kinds of
   * objects. You can provide a comparison function, or you can request a sort
-  * of items that are viewable as <code>Ordered</code>. Some sorts that
+  * of items that are viewable as [[scala.math.Ordered]]. Some sorts that
   * operate directly on a subset of value types are also provided. These
   * implementations are derived from those in the Sun JDK.
   *
-  * Note that stability doesn't matter for value types, so use the quickSort
-  * variants for those. <code>stableSort</code> is intended to be used with
+  * Note that stability doesn't matter for value types, so use the `quickSort`
+  * variants for those. `stableSort` is intended to be used with
   * objects when the prior ordering should be preserved, where possible.
   *
   * @author  Ross Judson
@@ -39,34 +40,32 @@ object Sorting {
 
   /** Sort an array of K where K is Ordered, preserving the existing order
     * where the values are equal. */
-  def stableSort[K: ClassManifest: Ordering](a: Array[K]) {
+  def stableSort[K: ClassTag: Ordering](a: Array[K]) {
     stableSort(a, 0, a.length-1, new Array[K](a.length), Ordering[K].lt _)
   }
 
-  /** Sorts an array of <code>K</code> given an ordering function
-   *  <code>f</code>. <code>f</code> should return <code>true</code> iff
-   *  its first parameter is strictly less than its second parameter.
+  /** Sorts an array of `K` given an ordering function `f`.
+   *  `f` should return `true` iff its first parameter is strictly less than its second parameter.
    */
-  def stableSort[K: ClassManifest](a: Array[K], f: (K, K) => Boolean) {
+  def stableSort[K: ClassTag](a: Array[K], f: (K, K) => Boolean) {
     stableSort(a, 0, a.length-1, new Array[K](a.length), f)
   }
 
   /** Sorts an arbitrary sequence into an array, given a comparison function
-   *  that should return <code>true</code> iff parameter one is strictly less
-   *  than parameter two.
+   *  that should return `true` iff parameter one is strictly less than parameter two.
    *
    *  @param  a the sequence to be sorted.
    *  @param  f the comparison function.
    *  @return the sorted sequence of items.
    */
-  def stableSort[K: ClassManifest](a: Seq[K], f: (K, K) => Boolean): Array[K] = {
+  def stableSort[K: ClassTag](a: Seq[K], f: (K, K) => Boolean): Array[K] = {
     val ret = a.toArray
     stableSort(ret, f)
     ret
   }
 
   /** Sorts an arbitrary sequence of items that are viewable as ordered. */
-  def stableSort[K: ClassManifest: Ordering](a: Seq[K]): Array[K] =
+  def stableSort[K: ClassTag: Ordering](a: Seq[K]): Array[K] =
     stableSort(a, Ordering[K].lt _)
 
   /** Stably sorts a sequence of items given an extraction function that will
@@ -76,8 +75,8 @@ object Sorting {
    *  @param  f the comparison function.
    *  @return the sorted sequence of items.
    */
-  def stableSort[K: ClassManifest, M: Ordering](a: Seq[K], f: K => M): Array[K] =
-    stableSort(a)(implicitly[ClassManifest[K]], Ordering[M] on f)
+  def stableSort[K: ClassTag, M: Ordering](a: Seq[K], f: K => M): Array[K] =
+    stableSort(a)(implicitly[ClassTag[K]], Ordering[M] on f)
 
   private def sort1[K: Ordering](x: Array[K], off: Int, len: Int) {
     val ord = Ordering[K]
@@ -125,7 +124,7 @@ object Sorting {
           var l = off
           var n = off + len - 1
           if (len > 40) {        // Big arrays, pseudomedian of 9
-            var s = len / 8
+            val s = len / 8
             l = med3(l, l+s, l+2*s)
             m = med3(m-s, m, m+s)
             n = med3(n-2*s, n-s, n)
@@ -226,7 +225,7 @@ object Sorting {
           var l = off
           var n = off + len - 1
           if (len > 40) {        // Big arrays, pseudomedian of 9
-            var s = len / 8
+            val s = len / 8
             l = med3(l, l+s, l+2*s)
             m = med3(m-s, m, m+s)
             n = med3(n-2*s, n-s, n)
@@ -330,7 +329,7 @@ object Sorting {
           var l = off
           var n = off + len - 1
           if (len > 40) {        // Big arrays, pseudomedian of 9
-            var s = len / 8
+            val s = len / 8
             l = med3(l, l+s, l+2*s)
             m = med3(m-s, m, m+s)
             n = med3(n-2*s, n-s, n)
@@ -438,7 +437,7 @@ object Sorting {
           var l = off
           var n = off + len - 1
           if (len > 40) {        // Big arrays, pseudomedian of 9
-            var s = len / 8
+            val s = len / 8
             l = med3(l, l+s, l+2*s)
             m = med3(m-s, m, m+s)
             n = med3(n-2*s, n-s, n)
@@ -500,7 +499,7 @@ object Sorting {
     sort2(off, len)
   }
 
-  private def stableSort[K : ClassManifest](a: Array[K], lo: Int, hi: Int, scratch: Array[K], f: (K,K) => Boolean) {
+  private def stableSort[K : ClassTag](a: Array[K], lo: Int, hi: Int, scratch: Array[K], f: (K,K) => Boolean) {
     if (lo < hi) {
       val mid = (lo+hi) / 2
       stableSort(a, lo, mid, scratch, f)

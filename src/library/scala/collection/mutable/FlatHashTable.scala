@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -24,7 +24,7 @@ package mutable
 trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
   import FlatHashTable._
 
-  private final val tableDebug = false
+  private final def tableDebug = false
 
   @transient private[collection] var _loadFactor = defaultLoadFactor
 
@@ -44,9 +44,21 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
    */
   @transient protected var sizemap: Array[Int] = null
 
+  @transient protected var seedvalue: Int = tableSizeSeed
+
   import HashTable.powerOfTwo
+
   protected def capacity(expectedSize: Int) = if (expectedSize == 0) 1 else powerOfTwo(expectedSize)
+
+  /** The initial size of the hash table.
+   */
+  def initialSize: Int = 32
+
   private def initialCapacity = capacity(initialSize)
+
+  protected def randomSeed = seedGenerator.get.nextInt()
+
+  protected def tableSizeSeed = Integer.bitCount(table.length - 1)
 
   /**
    * Initializes the collection from the input stream. `f` will be called for each element
@@ -58,22 +70,24 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
   private[collection] def init(in: java.io.ObjectInputStream, f: A => Unit) {
     in.defaultReadObject
 
-    _loadFactor = in.readInt
+    _loadFactor = in.readInt()
     assert(_loadFactor > 0)
 
-    val size = in.readInt
+    val size = in.readInt()
     tableSize = 0
     assert(size >= 0)
 
     table = new Array(capacity(sizeForThreshold(size, _loadFactor)))
     threshold = newThreshold(_loadFactor, table.size)
 
-    val smDefined = in.readBoolean
+    seedvalue = in.readInt()
+
+    val smDefined = in.readBoolean()
     if (smDefined) sizeMapInit(table.length) else sizemap = null
 
     var index = 0
     while (index < size) {
-      val elem = in.readObject.asInstanceOf[A]
+      val elem = in.readObject().asInstanceOf[A]
       f(elem)
       addEntry(elem)
       index += 1
@@ -89,42 +103,43 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     out.defaultWriteObject
     out.writeInt(_loadFactor)
     out.writeInt(tableSize)
+    out.writeInt(seedvalue)
     out.writeBoolean(isSizeMapDefined)
     iterator.foreach(out.writeObject)
   }
 
   /** Finds an entry in the hash table if such an element exists. */
-  def findEntry(elem: A): Option[A] = {
-    var h = index(elemHashCode(elem))
-    var entry = table(h)
-    while (null != entry && entry != elem) {
-      h = (h + 1) % table.length
-      entry = table(h)
-    }
+  protected def findEntry(elem: A): Option[A] = {
+    val entry = findEntryImpl(elem)
     if (null == entry) None else Some(entry.asInstanceOf[A])
   }
 
   /** Checks whether an element is contained in the hash table. */
-  def containsEntry(elem: A): Boolean = {
+  protected def containsEntry(elem: A): Boolean = {
+    null != findEntryImpl(elem)
+  }
+
+  private def findEntryImpl(elem: A): AnyRef = {
     var h = index(elemHashCode(elem))
     var entry = table(h)
     while (null != entry && entry != elem) {
       h = (h + 1) % table.length
       entry = table(h)
     }
-    null != entry
+    entry
   }
 
   /** Add entry if not yet in table.
    *  @return Returns `true` if a new entry was added, `false` otherwise.
    */
-  def addEntry(elem: A) : Boolean = {
+  protected def addEntry(elem: A) : Boolean = {
     var h = index(elemHashCode(elem))
     var entry = table(h)
     while (null != entry) {
       if (entry == elem) return false
       h = (h + 1) % table.length
       entry = table(h)
+      //Statistics.collisions += 1
     }
     table(h) = elem.asInstanceOf[AnyRef]
     tableSize = tableSize + 1
@@ -134,7 +149,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
   }
 
   /** Removes an entry from the hash table, returning an option value with the element, or `None` if it didn't exist. */
-  def removeEntry(elem: A) : Option[A] = {
+  protected def removeEntry(elem: A) : Option[A] = {
     if (tableDebug) checkConsistent()
     def precedes(i: Int, j: Int) = {
       val d = table.length >> 1
@@ -169,7 +184,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     None
   }
 
-  def iterator = new Iterator[A] {
+  protected def iterator: Iterator[A] = new AbstractIterator[A] {
     private var i = 0
     def hasNext: Boolean = {
       while (i < table.length && (null == table(i))) i += 1
@@ -185,6 +200,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     table = new Array[AnyRef](table.length * 2)
     tableSize = 0
     nnSizeMapReset(table.length)
+    seedvalue = tableSizeSeed
     threshold = newThreshold(_loadFactor, table.length)
     var i = 0
     while (i < oldtable.length) {
@@ -267,6 +283,10 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     println(sizemap.mkString("szmap: [", ", ", "]"))
   }
 
+  private[collection] def printContents() {
+    println(table.mkString("[", ", ", "]"))
+  }
+
   protected def sizeMapDisable() = sizemap = null
 
   protected def isSizeMapDefined = sizemap ne null
@@ -276,10 +296,24 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
   /* End of size map handling code */
 
   protected final def index(hcode: Int) = {
+    // version 1 (no longer used - did not work with parallel hash tables)
     // improve(hcode) & (table.length - 1)
-    val improved = improve(hcode)
+
+    // version 2 (allows for parallel hash table construction)
+    val improved = improve(hcode, seedvalue)
     val ones = table.length - 1
     (improved >>> (32 - java.lang.Integer.bitCount(ones))) & ones
+
+    // version 3 (solves SI-5293 in most cases, but such a case would still arise for parallel hash tables)
+    // val hc = improve(hcode)
+    // val bbp = blockbitpos
+    // val ones = table.length - 1
+    // val needed = Integer.bitCount(ones)
+    // val blockbits = ((hc >>> bbp) & 0x1f) << (needed - 5)
+    // val rest = ((hc >>> (bbp + 5)) << bbp) | (((1 << bbp) - 1) & hc)
+    // val restmask = (1 << (needed - 5)) - 1
+    // val improved = blockbits | (rest & restmask)
+    // improved
   }
 
   protected def clearTable() {
@@ -294,6 +328,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
     table,
     tableSize,
     threshold,
+    seedvalue,
     sizemap
   )
 
@@ -303,6 +338,7 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
       table = c.table
       tableSize = c.tableSize
       threshold = c.threshold
+      seedvalue = c.seedvalue
       sizemap = c.sizemap
     }
     if (alwaysInitSizeMap && sizemap == null) sizeMapInitAndRebuild
@@ -311,21 +347,26 @@ trait FlatHashTable[A] extends FlatHashTable.HashUtils[A] {
 }
 
 
-
 private[collection] object FlatHashTable {
+
+  /** Creates a specific seed to improve hashcode of a hash table instance
+   *  and ensure that iteration order vulnerabilities are not 'felt' in other
+   *  hash tables.
+   *
+   *  See SI-5293.
+   */
+  final def seedGenerator = new ThreadLocal[scala.util.Random] {
+    override def initialValue = new scala.util.Random
+  }
 
   /** The load factor for the hash table; must be < 500 (0.5)
    */
-  private[collection] def defaultLoadFactor: Int = 450
-  private[collection] final def loadFactorDenum = 1000
+  def defaultLoadFactor: Int = 450
+  final def loadFactorDenum = 1000
 
-  /** The initial size of the hash table.
-   */
-  private[collection] def initialSize: Int = 16
+  def sizeForThreshold(size: Int, _loadFactor: Int) = scala.math.max(32, (size.toLong * loadFactorDenum / _loadFactor).toInt)
 
-  private[collection] def sizeForThreshold(size: Int, _loadFactor: Int) = (size.toLong * loadFactorDenum / _loadFactor).toInt
-
-  private[collection] def newThreshold(_loadFactor: Int, size: Int) = {
+  def newThreshold(_loadFactor: Int, size: Int) = {
     val lf = _loadFactor
     assert(lf < (loadFactorDenum / 2), "loadFactor too large; must be < 0.5")
     (size.toLong * lf / loadFactorDenum ).toInt
@@ -336,6 +377,7 @@ private[collection] object FlatHashTable {
     val table: Array[AnyRef],
     val tableSize: Int,
     val threshold: Int,
+    val seedvalue: Int,
     val sizemap: Array[Int]
   )
 
@@ -348,16 +390,22 @@ private[collection] object FlatHashTable {
       if (elem == null) throw new IllegalArgumentException("Flat hash tables cannot contain null elements.")
       else elem.hashCode()
 
-    protected final def improve(hcode: Int) = {
-      // var h: Int = hcode + ~(hcode << 9)
-      // h = h ^ (h >>> 14)
-      // h = h + (h << 4)
-      // h ^ (h >>> 10)
-      var i = hcode * 0x9e3775cd
-      i = java.lang.Integer.reverseBytes(i)
-      i * 0x9e3775cd
+    protected final def improve(hcode: Int, seed: Int) = {
+      //var h: Int = hcode + ~(hcode << 9)
+      //h = h ^ (h >>> 14)
+      //h = h + (h << 4)
+      //h ^ (h >>> 10)
+
+      val improved= scala.util.hashing.byteswap32(hcode)
+
+      // for the remainder, see SI-5293
+      // to ensure that different bits are used for different hash tables, we have to rotate based on the seed
+      val rotation = seed % 32
+      val rotated = (improved >>> rotation) | (improved << (32 - rotation))
+      rotated
     }
   }
 
 }
+
 

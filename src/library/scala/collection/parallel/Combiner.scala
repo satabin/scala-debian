@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -33,9 +33,21 @@ import scala.collection.generic.Sizing
  *  @since 2.9
  */
 trait Combiner[-Elem, +To] extends Builder[Elem, To] with Sizing with Parallel {
-//self: EnvironmentPassingCombiner[Elem, To] =>
-  private[collection] final val tasksupport = getTaskSupport
-
+  
+  @transient
+  @volatile
+  var _combinerTaskSupport = defaultTaskSupport
+  
+  def combinerTaskSupport = {
+    val cts = _combinerTaskSupport
+    if (cts eq null) {
+      _combinerTaskSupport = defaultTaskSupport
+      defaultTaskSupport
+    } else cts
+  }
+  
+  def combinerTaskSupport_=(cts: TaskSupport) = _combinerTaskSupport = cts
+  
   /** Combines the contents of the receiver builder and the `other` builder,
    *  producing a new builder containing both their elements.
    *
@@ -63,6 +75,21 @@ trait Combiner[-Elem, +To] extends Builder[Elem, To] with Sizing with Parallel {
    */
   def combine[N <: Elem, NewTo >: To](other: Combiner[N, NewTo]): Combiner[N, NewTo]
 
+  /** Returns `true` if this combiner has a thread-safe `+=` and is meant to be shared
+   *  across several threads constructing the collection.
+   *
+   *  By default, this method returns `false`.
+   */
+  def canBeShared: Boolean = false
+  
+  /** Constructs the result and sets the appropriate tasksupport object to the resulting collection
+   *  if this is applicable.
+   */
+  def resultWithTaskSupport: To = {
+    val res = result
+    setTaskSupport(res, combinerTaskSupport)
+  }
+  
 }
 
 

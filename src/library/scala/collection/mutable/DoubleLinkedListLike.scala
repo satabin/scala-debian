@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,7 +11,7 @@
 package scala.collection
 package mutable
 
-import annotation.migration
+import scala.annotation.migration
 
 /** This extensible class may be used as a basis for implementing double
  *  linked lists. Type variable `A` refers to the element type
@@ -52,7 +52,7 @@ import annotation.migration
  *  @tparam A    type of the elements contained in the double linked list
  *  @tparam This the type of the actual linked list holding the elements
  *
- *  @define Coll DoubleLinkedList
+ *  @define Coll `DoubleLinkedList`
  *  @define coll double linked list
  */
 trait DoubleLinkedListLike[A, This <: Seq[A] with DoubleLinkedListLike[A, This]] extends SeqLike[A, This] with LinkedListLike[A, This] { self =>

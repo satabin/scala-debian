@@ -1,27 +1,28 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
 
 package scala.util.parsing.input
 
 import java.io.BufferedReader
 import scala.collection.immutable.PagedSeq
 
-/** An object to create a StreamReader from a <code>java.io.Reader</code>.
- *
- * @param in the <code>java.io.Reader</code> that provides the underlying
- *           stream of characters for this Reader.
+/** An object to create a `StreamReader` from a `java.io.Reader`.
  *
  * @author Miles Sabin
  */
 object StreamReader {
   final val EofCh = '\032'
 
+  /** Create a `StreamReader` from a `java.io.Reader`.
+   *
+   * @param in the `java.io.Reader` that provides the underlying
+   *           stream of characters for this Reader.
+   */  
   def apply(in: java.io.Reader): StreamReader = {
     new StreamReader(PagedSeq.fromReader(in), 0, 1)
   }
@@ -32,13 +33,13 @@ object StreamReader {
  *
  *  NOTE:
  *  StreamReaders do not really fulfill the new contract for readers, which
- *  requires a `source' CharSequence representing the full input.
+ *  requires a `source` CharSequence representing the full input.
  *  Instead source is treated line by line.
  *  As a consequence, regex matching cannot extend beyond a single line
  *  when a StreamReader are used for input.
  *
  *  If you need to match regexes spanning several lines you should consider
- *  class <code>PagedSeqReader</code> instead.
+ *  class `PagedSeqReader` instead.
  *
  *  @author Miles Sabin
  *  @author Martin Odersky

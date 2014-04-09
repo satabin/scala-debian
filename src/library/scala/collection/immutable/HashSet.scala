@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,17 +8,17 @@
 
 
 
-package scala.collection
+package scala
+package collection
 package immutable
 
-import annotation.unchecked.{ uncheckedVariance => uV }
+import scala.annotation.unchecked.{ uncheckedVariance => uV }
 import generic._
-import collection.parallel.immutable.ParHashSet
+import scala.collection.parallel.immutable.ParHashSet
 
 /** This class implements immutable sets using a hash trie.
  *
- *  '''Note:''' the builder of a hash set returns specialized representations `EmptySet`,`Set1`,..., `Set4`
- *  for sets of `size <= 4`.
+ *  '''Note:''' The builder of this hash set may return specialized representations for small sets.
  *
  *  @tparam A      the type of the elements contained in this hash set.
  *
@@ -26,11 +26,12 @@ import collection.parallel.immutable.ParHashSet
  *  @author  Tiark Rompf
  *  @version 2.8
  *  @since   2.3
- *  @define Coll immutable.HashSet
+ *  @define Coll `immutable.HashSet`
  *  @define coll immutable hash set
  */
 @SerialVersionUID(2L)
-class HashSet[A] extends Set[A]
+class HashSet[A] extends AbstractSet[A]
+                    with Set[A]
                     with GenericSetTemplate[A, HashSet]
                     with SetLike[A, HashSet[A]]
                     with CustomParallelizable[A, ParHashSet[A]]
@@ -84,12 +85,12 @@ class HashSet[A] extends Set[A]
 }
 
 /** $factoryInfo
- *  @define Coll immutable.HashSet
+ *  @define Coll `immutable.HashSet`
  *  @define coll immutable hash set
  *
  *  @author  Tiark Rompf
  *  @since   2.3
- *  @define Coll immutable.HashSet
+ *  @define Coll `immutable.HashSet`
  *  @define coll immutable hash set
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
@@ -102,9 +103,33 @@ object HashSet extends ImmutableSetFactory[HashSet] {
 
   private object EmptyHashSet extends HashSet[Any] { }
 
+  // utility method to create a HashTrieSet from two leaf HashSets (HashSet1 or HashSetCollision1) with non-colliding hash code)
+  private def makeHashTrieSet[A](hash0:Int, elem0:HashSet[A], hash1:Int, elem1:HashSet[A], level:Int) : HashTrieSet[A] = {
+    val index0 = (hash0 >>> level) & 0x1f
+    val index1 = (hash1 >>> level) & 0x1f
+    if(index0 != index1) {
+      val bitmap = (1 << index0) | (1 << index1)
+      val elems = new Array[HashSet[A]](2)
+      if(index0 < index1) {
+        elems(0) = elem0
+        elems(1) = elem1
+      } else {
+        elems(0) = elem1
+        elems(1) = elem0
+      }
+      new HashTrieSet[A](bitmap, elems, elem0.size + elem1.size)
+    } else {
+      val elems = new Array[HashSet[A]](1)
+      val bitmap = (1 << index0)
+      val child = makeHashTrieSet(hash0, elem0, hash1, elem1, level + 5)
+      elems(0) = child
+      new HashTrieSet[A](bitmap, elems, child.size)
+    }
+  }
+
   // TODO: add HashSet2, HashSet3, ...
 
-  class HashSet1[A](private[HashSet] var key: A, private[HashSet] var hash: Int) extends HashSet[A] {
+  class HashSet1[A](private[HashSet] val key: A, private[HashSet] val hash: Int) extends HashSet[A] {
     override def size = 1
 
     override def get0(key: A, hash: Int, level: Int): Boolean =
@@ -114,9 +139,7 @@ object HashSet extends ImmutableSetFactory[HashSet] {
       if (hash == this.hash && key == this.key) this
       else {
         if (hash != this.hash) {
-          //new HashTrieSet[A](level+5, this, new HashSet1(key, hash))
-          val m = new HashTrieSet[A](0,new Array[HashSet[A]](0),0) // TODO: could save array alloc
-          m.updated0(this.key, this.hash, level).updated0(key, hash, level)
+          makeHashTrieSet(this.hash, this, hash, new HashSet1(key, hash), level)
         } else {
           // 32-bit hash collision (rare, but not impossible)
           new HashSetCollision1(hash, ListSet.empty + this.key + key)
@@ -130,7 +153,7 @@ object HashSet extends ImmutableSetFactory[HashSet] {
     override def foreach[U](f: A => U): Unit = f(key)
   }
 
-  private[immutable] class HashSetCollision1[A](private[HashSet] var hash: Int, var ks: ListSet[A])
+  private[immutable] class HashSetCollision1[A](private[HashSet] val hash: Int, val ks: ListSet[A])
             extends HashSet[A] {
 
     override def size = ks.size
@@ -140,21 +163,17 @@ object HashSet extends ImmutableSetFactory[HashSet] {
 
     override def updated0(key: A, hash: Int, level: Int): HashSet[A] =
       if (hash == this.hash) new HashSetCollision1(hash, ks + key)
-      else {
-        var m: HashSet[A] = new HashTrieSet[A](0,new Array[HashSet[A]](0),0)
-        // might be able to save some ops here, but it doesn't seem to be worth it
-        for (k <- ks)
-          m = m.updated0(k, this.hash, level)
-        m.updated0(key, hash, level)
-      }
+      else makeHashTrieSet(this.hash, this, hash, new HashSet1(key, hash), level)
 
     override def removed0(key: A, hash: Int, level: Int): HashSet[A] =
       if (hash == this.hash) {
         val ks1 = ks - key
-        if (!ks1.isEmpty)
-          new HashSetCollision1(hash, ks1)
-        else
+        if(ks1.isEmpty)
           HashSet.empty[A]
+        else if(ks1.tail.isEmpty)
+          new HashSet1(ks1.head, hash)
+        else
+          new HashSetCollision1(hash, ks1)
       } else this
 
     override def iterator: Iterator[A] = ks.iterator
@@ -177,8 +196,11 @@ object HashSet extends ImmutableSetFactory[HashSet] {
 
   }
 
-  class HashTrieSet[A](private var bitmap: Int, private[collection] var elems: Array[HashSet[A]], private var size0: Int)
+  class HashTrieSet[A](private val bitmap: Int, private[collection] val elems: Array[HashSet[A]], private val size0: Int)
         extends HashSet[A] {
+    assert(Integer.bitCount(bitmap) == elems.length)
+    // assertion has to remain disabled until SI-6197 is solved
+    // assert(elems.length > 1 || (elems.length == 1 && elems(0).isInstanceOf[HashTrieSet[_]]))
 
     override def size = size0
 
@@ -200,13 +222,16 @@ object HashSet extends ImmutableSetFactory[HashSet] {
       val mask = (1 << index)
       val offset = Integer.bitCount(bitmap & (mask-1))
       if ((bitmap & mask) != 0) {
-        val elemsNew = new Array[HashSet[A]](elems.length)
-        Array.copy(elems, 0, elemsNew, 0, elems.length)
-        val sub = elems(offset)
         // TODO: might be worth checking if sub is HashTrieSet (-> monomorphic call site)
+        val sub = elems(offset)
         val subNew = sub.updated0(key, hash, level + 5)
-        elemsNew(offset) = subNew
-        new HashTrieSet(bitmap, elemsNew, size + (subNew.size - sub.size))
+        if (sub eq subNew) this
+        else {
+          val elemsNew = new Array[HashSet[A]](elems.length)
+          Array.copy(elems, 0, elemsNew, 0, elems.length)
+          elemsNew(offset) = subNew
+          new HashTrieSet(bitmap, elemsNew, size + (subNew.size - sub.size))
+        }
       } else {
         val elemsNew = new Array[HashSet[A]](elems.length + 1)
         Array.copy(elems, 0, elemsNew, 0, offset)
@@ -225,14 +250,20 @@ object HashSet extends ImmutableSetFactory[HashSet] {
         val sub = elems(offset)
         // TODO: might be worth checking if sub is HashTrieMap (-> monomorphic call site)
         val subNew = sub.removed0(key, hash, level + 5)
-        if (subNew.isEmpty) {
+        if (sub eq subNew) this
+        else if (subNew.isEmpty) {
           val bitmapNew = bitmap ^ mask
           if (bitmapNew != 0) {
             val elemsNew = new Array[HashSet[A]](elems.length - 1)
             Array.copy(elems, 0, elemsNew, 0, offset)
             Array.copy(elems, offset + 1, elemsNew, offset, elems.length - offset - 1)
             val sizeNew = size - sub.size
-            new HashTrieSet(bitmapNew, elemsNew, sizeNew)
+            // if we have only one child, which is not a HashTrieSet but a self-contained set like
+            // HashSet1 or HashSetCollision1, return the child instead
+            if (elemsNew.length == 1 && !elemsNew(0).isInstanceOf[HashTrieSet[_]])
+              elemsNew(0)
+            else
+              new HashTrieSet(bitmapNew, elemsNew, sizeNew)
           } else
             HashSet.empty[A]
         } else {

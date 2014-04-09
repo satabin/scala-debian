@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
@@ -18,44 +18,72 @@ abstract class Flatten extends InfoTransform {
   /** the following two members override abstract members in Transform */
   val phaseName: String = "flatten"
 
+  /** Updates the owning scope with the given symbol; returns the old symbol.
+   */
+  private def replaceSymbolInCurrentScope(sym: Symbol): Symbol = afterFlatten {
+    val scope = sym.owner.info.decls
+    val old   = scope lookup sym.name andAlso scope.unlink
+    scope enter sym
+
+    if (old eq NoSymbol)
+      log(s"lifted ${sym.fullLocationString}")
+    else
+      log(s"lifted ${sym.fullLocationString} after unlinking existing $old from scope.")
+
+    old
+  }
+
   private def liftClass(sym: Symbol) {
-    if (!(sym hasFlag LIFTED)) {
+    if (!sym.isLifted) {
       sym setFlag LIFTED
-      atPhase(phase.next) {
-        if (settings.debug.value) log("re-enter " + sym + " in " + sym.owner)
-        assert(sym.owner.isPackageClass, sym) //debug
-        val scope = sym.owner.info.decls
-        val old = scope lookup sym.name
-        if (old != NoSymbol) scope unlink old
-        scope enter sym
-      }
+      debuglog("re-enter " + sym.fullLocationString)
+      replaceSymbolInCurrentScope(sym)
+    }
+  }
+  private def liftSymbol(sym: Symbol) {
+    liftClass(sym)
+    if (sym.needsImplClass)
+      liftClass(erasure implClass sym)
+  }
+  // This is a short-term measure partially working around objects being
+  // lifted out of parameterized classes, leaving them referencing
+  // invisible type parameters.
+  private def isFlattenablePrefix(pre: Type) = {
+    val clazz = pre.typeSymbol
+    clazz.isClass && !clazz.isPackageClass && {
+      // Cannot flatten here: class A[T] { object B }
+      // was "at erasurePhase.prev"
+      beforeErasure(clazz.typeParams.isEmpty)
     }
   }
 
   private val flattened = new TypeMap {
     def apply(tp: Type): Type = tp match {
-      case TypeRef(pre, sym, args) if (pre.typeSymbol.isClass && !pre.typeSymbol.isPackageClass) =>
-        assert(args.isEmpty)
-        assert(sym.toplevelClass != NoSymbol, sym.ownerChain)
-        typeRef(sym.toplevelClass.owner.thisType, sym, args)
+      case TypeRef(pre, sym, args) if isFlattenablePrefix(pre) =>
+        assert(args.isEmpty && sym.enclosingTopLevelClass != NoSymbol, sym.ownerChain)
+        typeRef(sym.enclosingTopLevelClass.owner.thisType, sym, Nil)
       case ClassInfoType(parents, decls, clazz) =>
         var parents1 = parents
-        val decls1 = new Scope
-        if (clazz.isPackageClass) {
-          atPhase(phase.next)(decls.toList foreach (sym => decls1 enter sym))
-        } else {
-          val oldowner = clazz.owner
-          atPhase(phase.next)(oldowner.info)
-          parents1 = parents mapConserve (this)
-          for (sym <- decls.toList) {
-            if (sym.isTerm && !sym.isStaticModule) {
-              decls1 enter sym
-              if (sym.isModule) sym.moduleClass setFlag LIFTED
-            } else if (sym.isClass) {
-              liftClass(sym)
-              if (sym.needsImplClass) liftClass(erasure.implClass(sym))
+        val decls1 = scopeTransform(clazz) {
+          val decls1 = newScope
+          if (clazz.isPackageClass) {
+            afterFlatten { decls foreach (decls1 enter _) }
+          }
+          else {
+            val oldowner = clazz.owner
+            afterFlatten { oldowner.info }
+            parents1 = parents mapConserve (this)
+
+            for (sym <- decls) {
+              if (sym.isTerm && !sym.isStaticModule) {
+                decls1 enter sym
+                if (sym.isModule)
+                  sym.moduleClass setFlag LIFTED
+              } else if (sym.isClass)
+                liftSymbol(sym)
             }
           }
+          decls1
         }
         ClassInfoType(parents1, decls1, clazz)
       case MethodType(params, restp) =>
@@ -74,7 +102,6 @@ abstract class Flatten extends InfoTransform {
   protected def newTransformer(unit: CompilationUnit): Transformer = new Flattener
 
   class Flattener extends Transformer {
-
     /** Buffers for lifted out classes */
     private val liftedDefs = perRunCaches.newMap[Symbol, ListBuffer[Tree]]()
 
@@ -82,7 +109,7 @@ abstract class Flatten extends InfoTransform {
       tree match {
         case PackageDef(_, _) =>
           liftedDefs(tree.symbol.moduleClass) = new ListBuffer
-        case Template(_, _, _) if tree.symbol.owner.hasPackageFlag =>
+        case Template(_, _, _) if tree.symbol.isDefinedInPackage =>
           liftedDefs(tree.symbol.owner) = new ListBuffer
         case _ =>
       }
@@ -93,14 +120,10 @@ abstract class Flatten extends InfoTransform {
       val sym = tree.symbol
       val tree1 = tree match {
         case ClassDef(_, _, _, _) if sym.isNestedClass =>
-          liftedDefs(sym.toplevelClass.owner) += tree
+          liftedDefs(sym.enclosingTopLevelClass.owner) += tree
           EmptyTree
         case Select(qual, name) if (sym.isStaticModule && !sym.owner.isPackageClass) =>
-          atPhase(phase.next) {
-            atPos(tree.pos) {
-              gen.mkAttributedRef(sym)
-            }
-          }
+          afterFlatten(atPos(tree.pos)(gen.mkAttributedRef(sym)))
         case _ =>
           tree
       }

@@ -17,23 +17,23 @@ object Product4 {
 /** Product4 is a cartesian product of 4 components.
  *  @since 2.3
  */
-trait Product4[+T1, +T2, +T3, +T4] extends Product {
+trait Product4[+T1, +T2, +T3, +T4] extends Any with Product {
   /** The arity of this product.
    *  @return 4
    */
   override def productArity = 4
 
-
+  
   /** Returns the n-th projection of this product if 0 < n <= productArity,
    *  otherwise throws an `IndexOutOfBoundsException`.
    *
    *  @param n number of the projection to be returned
-   *  @return  same as `._(n+1)`, for example `productElement(1)` is the same as `._1`.
+   *  @return  same as `._(n+1)`, for example `productElement(0)` is the same as `._1`.
    *  @throws  IndexOutOfBoundsException
    */
 
   @throws(classOf[IndexOutOfBoundsException])
-  override def productElement(n: Int) = n match {
+  override def productElement(n: Int) = n match { 
     case 0 => _1
     case 1 => _2
     case 2 => _3

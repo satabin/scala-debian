@@ -1,13 +1,13 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
 package scala.tools.nsc
 package symtab
 
+import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc.io.AbstractFile
-import scala.tools.nsc.util.BatchSourceFile
 
 /** A subclass of SymbolLoaders that implements browsing behavior.
  *  This class should be used whenever file dependencies and recompile sets
@@ -64,15 +64,25 @@ abstract class BrowsingLoaders extends SymbolLoaders {
           addPackagePrefix(pre)
           packagePrefix += ("." + name)
         case Ident(name) =>
-          if (packagePrefix.length != 0) packagePrefix += "."
-          packagePrefix += name
+          if (name != nme.EMPTY_PACKAGE_NAME) { // mirrors logic in Namers, see createPackageSymbol
+            if (packagePrefix.length != 0) packagePrefix += "."
+            packagePrefix += name
+          }
         case _ =>
           throw new MalformedInput(pkg.pos.point, "illegal tree node in package prefix: "+pkg)
       }
+
+      private def inPackagePrefix(pkg: Tree)(op: => Unit): Unit = {
+        val oldPrefix = packagePrefix
+        addPackagePrefix(pkg)
+        op
+        packagePrefix = oldPrefix
+      }
+
       override def traverse(tree: Tree): Unit = tree match {
         case PackageDef(pkg, body) =>
-          addPackagePrefix(pkg)
-          body foreach traverse
+          inPackagePrefix(pkg) { body foreach traverse }
+
         case ClassDef(_, name, _, _) =>
           if (packagePrefix == root.fullName) {
             enterClass(root, name.toString, new SourcefileLoader(src))
@@ -84,7 +94,7 @@ abstract class BrowsingLoaders extends SymbolLoaders {
             entered += 1
             if (name == nme.PACKAGEkw) {
               println("open package module: "+module)
-              loaders.openPackageModule(module)()
+              openPackageModule(module, root)
             }
           } else println("prefixes differ: "+packagePrefix+","+root.fullName)
         case _ =>
@@ -105,7 +115,7 @@ abstract class BrowsingLoaders extends SymbolLoaders {
    */
   override def enterToplevelsFromSource(root: Symbol, name: String, src: AbstractFile) {
     try {
-      if (root == definitions.RootClass || root == definitions.EmptyPackageClass)
+      if (root.isEffectiveRoot || !src.name.endsWith(".scala")) // RootClass or EmptyPackageClass
         super.enterToplevelsFromSource(root, name, src)
       else
         browseTopLevel(root, src)

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -18,11 +18,6 @@ package transform
  */
 abstract class BasicTransformer extends Function1[Node,Node]
 {
-  /**
-   *  @param n  ...
-   *  @param ns ...
-   *  @return   ...
-   */
   protected def unchanged(n: Node, ns: Seq[Node]) =
     ns.length == 1 && (ns.head == n)
 

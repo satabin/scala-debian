@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala Ant Tasks                      **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,6 +12,7 @@ package scala.tools.ant.sabbus
 import java.io.File
 import org.apache.tools.ant.Task
 import org.apache.tools.ant.types.{Path, Reference}
+import org.apache.tools.ant.types.Commandline.Argument
 
 trait CompilationPathProperty {
   this: Task =>
@@ -41,10 +42,13 @@ trait TaskArgs extends CompilationPathProperty {
   }
 
   def setParams(input: String) {
-    params = params match {
-      case None => Some(input)
-      case Some(ps) => Some(ps + " " + input)
-    }
+    extraArgs ++= input.split(' ').map { s => val a = new Argument; a.setValue(s); a }
+  }
+
+  def createCompilerArg(): Argument = {
+    val a = new Argument
+    extraArgs :+= a
+    a
   }
 
   def setTarget(input: String) {
@@ -84,11 +88,16 @@ trait TaskArgs extends CompilationPathProperty {
   }
 
   protected var id: Option[String] = None
-  protected var params: Option[String] = None
+  protected var extraArgs: Seq[Argument] = Seq()
   protected var compTarget: Option[String] = None
   protected var sourcePath: Option[Path] = None
   protected var compilerPath: Option[Path] = None
   protected var destinationDir: Option[File] = None
+
+  def extraArgsFlat: Seq[String] = extraArgs flatMap { a =>
+    val parts = a.getParts
+    if(parts eq null) Seq[String]() else parts.toSeq
+  }
 
   def isMSIL = compTarget exists (_ == "msil")
 }

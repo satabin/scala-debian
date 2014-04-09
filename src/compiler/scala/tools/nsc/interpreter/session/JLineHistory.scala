@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Paul Phillips
  */
 
@@ -45,11 +45,5 @@ object JLineHistory {
     override def toString = "History(size = " + size + ", index = " + index + ")"
   }
 
-  def apply(): JLineHistory =
-    try   { new JLineFileHistory }
-    catch { case x: Exception =>
-      Console.println("Error creating file history: memory history only. " + x)
-      util.Exceptional(x).show()
-      new SimpleHistory()
-    }
+  def apply(): JLineHistory = try new JLineFileHistory catch { case x: Exception => new SimpleHistory() }
 }

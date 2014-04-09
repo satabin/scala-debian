@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Scala Distribution
 Bundle-SymbolicName: org.scala-ide.scala.compiler;singleton:=true
-Bundle-Version: 2.9.2.alpha
+Bundle-Version: 2.10.0.alpha
 Eclipse-LazyStart: true
 Bundle-ClassPath: 
  .,
@@ -40,7 +40,13 @@ Export-Package:
  scala.tools.nsc.util,
  scala.tools.util,
  scala.reflect.internal,
+ scala.reflect.internal.pickling,
  scala.reflect.internal.settings,
+ scala.reflect.internal.util,
+ scala.reflect.macros,
+ scala.reflect.runtime,
+ scala.reflect.internal.transform,
+ scala.reflect.api,
  ch.epfl.lamp.compiler.msil,
  ch.epfl.lamp.compiler.msil.emit,
  ch.epfl.lamp.compiler.msil.util,

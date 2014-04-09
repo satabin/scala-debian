@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,8 +13,7 @@ package scala.runtime.remoting
 import java.lang.ref.{Reference, WeakReference, ReferenceQueue}
 import java.rmi.{NoSuchObjectException, Remote}
 import java.rmi.server.UnicastRemoteObject
-
-import scala.collection.mutable.HashSet
+import scala.collection.mutable
 
 /**
  *
@@ -25,7 +24,7 @@ import scala.collection.mutable.HashSet
 private [runtime] class RemoteGC {
 
   private val refQueue = new ReferenceQueue[Remote]
-  private val refSet = new HashSet[Reference[T] forSome { type T <: Remote }]
+  private val refSet = new mutable.HashSet[Reference[T] forSome { type T <: Remote }]
 
   private var liveRefs = 0
 

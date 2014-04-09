@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -9,7 +9,7 @@
 package scala
 
 import scala.collection.immutable
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /** The package object `scala.sys` contains methods for reading
  *  and altering core aspects of the virtual machine as well as the
@@ -50,7 +50,7 @@ package object sys {
   /** A bidirectional, mutable Map representing the current system Properties.
    *
    *  @return   a SystemProperties.
-   *  @see      `scala.sys.SystemProperties`
+   *  @see      [[scala.sys.SystemProperties]]
    */
   def props: SystemProperties = new SystemProperties
 
@@ -69,8 +69,8 @@ package object sys {
    *
    *  Note that shutdown hooks are NOT guaranteed to be run.
    *
-   *  @param    the body of code to run at shutdown
-   *  @return   the Thread which will run the shutdown hook.
+   *  @param    body  the body of code to run at shutdown
+   *  @return   the   Thread which will run the shutdown hook.
    */
   def addShutdownHook(body: => Unit): ShutdownHookThread = ShutdownHookThread(body)
 

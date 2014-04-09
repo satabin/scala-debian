@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -28,8 +28,8 @@ trait SeqLike[A, +This <: SeqLike[A, This] with Seq[A]]
 
   /** Replaces element at given index with a new value.
    *
-   *  @param n       the index of the element to replace.
-   *  @param lem     the new value.
+   *  @param idx      the index of the element to replace.
+   *  @param elem     the new value.
    *  @throws   IndexOutOfBoundsException if the index is not valid.
    */
   def update(idx: Int, elem: A)

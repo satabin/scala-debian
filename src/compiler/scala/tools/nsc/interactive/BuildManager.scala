@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2009-2011 Scxala Solutions and LAMP/EPFL
+ * Copyright 2009-2013 Typesafe/Scala Solutions and LAMP/EPFL
  * @author Iulian Dragos
  * @author Hubert Plocinicak
  */
@@ -9,10 +9,11 @@ package interactive
 import scala.collection._
 
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
-import util.FakePos
+import scala.reflect.internal.util.FakePos
 
 import dependencies._
 import io.AbstractFile
+import scala.language.implicitConversions
 
 trait BuildManager {
 
@@ -33,7 +34,7 @@ trait BuildManager {
   /** Load saved dependency information. */
   def loadFrom(file: AbstractFile, toFile: String => AbstractFile) : Boolean
 
-  /** Save dependency information to `file'. */
+  /** Save dependency information to `file`. */
   def saveTo(file: AbstractFile, fromFile: AbstractFile => String)
 
   def compiler: scala.tools.nsc.Global

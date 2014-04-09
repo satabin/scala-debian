@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,8 +11,7 @@
 package scala.xml
 package parsing
 
-import collection.mutable
-import mutable.HashMap
+import scala.collection.mutable
 import scala.io.Source
 import scala.util.logging.Logged
 import scala.xml.dtd._
@@ -32,7 +31,7 @@ abstract class MarkupHandler extends Logged
   val isValidating: Boolean = false
 
   var decls: List[Decl] = Nil
-  var ent: mutable.Map[String, EntityDecl] = new HashMap[String, EntityDecl]()
+  var ent: mutable.Map[String, EntityDecl] = new mutable.HashMap[String, EntityDecl]()
 
   def lookupElemDecl(Label: String): ElemDecl = {
     for (z @ ElemDecl(Label, _) <- decls)
@@ -65,7 +64,6 @@ abstract class MarkupHandler extends Logged
    *  @param pos      the position in the source file
    *  @param pre      the prefix
    *  @param label    the local name
-   *  @param attrs    the attributes (metadata)
    */
   def elemEnd(pos: Int, pre: String, label: String): Unit = ()
 
@@ -76,10 +74,10 @@ abstract class MarkupHandler extends Logged
    *  @param pre      the prefix
    *  @param label    the local name
    *  @param attrs    the attributes (metadata)
+   *  @param empty    `true` if the element was previously empty; `false` otherwise.
    *  @param args     the children of this element
-   *  @return         ...
    */
-  def elem(pos: Int, pre: String, label: String, attrs: MetaData, scope: NamespaceBinding, args: NodeSeq): NodeSeq
+  def elem(pos: Int, pre: String, label: String, attrs: MetaData, scope: NamespaceBinding, empty: Boolean, args: NodeSeq): NodeSeq
 
   /** callback method invoked by MarkupParser after parsing PI.
    */

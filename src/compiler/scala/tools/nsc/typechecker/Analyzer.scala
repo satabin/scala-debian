@@ -1,12 +1,12 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
 package scala.tools.nsc
 package typechecker
 
-import util.Statistics._
+import scala.reflect.internal.util.Statistics
 
 /** The main attribution phase.
  */
@@ -20,8 +20,12 @@ trait Analyzer extends AnyRef
             with EtaExpansion
             with SyntheticMethods
             with Unapplies
+            with Macros
             with NamesDefaults
             with TypeDiagnostics
+            with ContextErrors
+            with StdAttachments
+            with AnalyzerPlugins
 {
   val global : Global
   import global._
@@ -55,7 +59,7 @@ trait Analyzer extends AnyRef
         override def traverse(tree: Tree): Unit = tree match {
           case ModuleDef(_, _, _) =>
             if (tree.symbol.name == nme.PACKAGEkw) {
-              loaders.openPackageModule(tree.symbol)()
+              openPackageModule(tree.symbol, tree.symbol.owner)
             }
           case ClassDef(_, _, _, _) => () // make it fast
           case _ => super.traverse(tree)
@@ -69,6 +73,7 @@ trait Analyzer extends AnyRef
   }
 
   object typerFactory extends SubComponent {
+    import scala.reflect.internal.TypesStats.typerNanos
     val global: Analyzer.this.global.type = Analyzer.this.global
     val phaseName = "typer"
     val runsAfter = List[String]()
@@ -81,13 +86,13 @@ trait Analyzer extends AnyRef
       // compiler run). This is good enough for the resident compiler, which was the most affected.
       undoLog.clear()
       override def run() {
-        val start = startTimer(typerNanos)
+        val start = if (Statistics.canEnable) Statistics.startTimer(typerNanos) else null
         global.echoPhaseSummary(this)
         currentRun.units foreach applyPhase
         undoLog.clear()
         // need to clear it after as well or 10K+ accumulated entries are
         // uncollectable the rest of the way.
-        stopTimer(typerNanos, start)
+        if (Statistics.canEnable) Statistics.stopTimer(typerNanos, start)
       }
       def apply(unit: CompilationUnit) {
         try {

@@ -53,8 +53,8 @@ if [ -z "$EXT_CLASSPATH" ] ; then
             fi
         done
     elif [ -f "$SCALA_HOME/build/pack/lib/scala-partest.jar" ] ; then
-        for lib in `echo "partest library compiler"`; do
-            ext="$SCALA_HOME/build/pack/lib/scala-$lib.jar"
+        for lib in `echo "scala-partest scala-library scala-reflect scala-compiler diffutils"`; do
+            ext="$SCALA_HOME/build/pack/lib/$lib.jar"
             if [ -z "$EXT_CLASSPATH" ] ; then
                 EXT_CLASSPATH="$ext"
             else
@@ -74,12 +74,22 @@ if $cygwin; then
     EXT_CLASSPATH=`cygpath --path --$format "$EXT_CLASSPATH"`
 fi
 
-[ -n "$JAVA_OPTS" ] || JAVA_OPTS="-Xmx1024M -Xms16M"
-[ -n "$SCALAC_OPTS" ] || SCALAC_OPTS="-deprecation"
+# last arg wins, so if JAVA_OPTS already contains one of these options
+# the supplied argument will be used.
+# At this writing it is reported test/partest --all requires 108m permgen.
+JAVA_OPTS="-Xmx1024M -Xms64M -XX:MaxPermSize=128M $JAVA_OPTS"
 
 partestDebugStr=""
 if [ ! -z "${PARTEST_DEBUG}" ] ; then
   partestDebugStr="-Dpartest.debug=${PARTEST_DEBUG}"
 fi
 
-${JAVACMD:=java} $JAVA_OPTS -cp "$EXT_CLASSPATH" ${partestDebugStr} -Dscala.home="${SCALA_HOME}" -Dpartest.javacmd="${JAVACMD}" -Dpartest.java_opts="${JAVA_OPTS}" -Dpartest.scalac_opts="${SCALAC_OPTS}" -Dpartest.javac_cmd="${JAVA_HOME}/bin/javac" scala.tools.partest.nest.NestRunner  "$@"
+${JAVACMD:=java} \
+  $JAVA_OPTS -cp "$EXT_CLASSPATH" \
+  ${partestDebugStr} \
+  -Dscala.home="${SCALA_HOME}" \
+  -Dpartest.javacmd="${JAVACMD}" \
+  -Dpartest.java_opts="${JAVA_OPTS}" \
+  -Dpartest.scalac_opts="${SCALAC_OPTS}" \
+  -Dpartest.javac_cmd="${JAVA_HOME}/bin/javac" \
+  scala.tools.partest.nest.NestRunner "$@"

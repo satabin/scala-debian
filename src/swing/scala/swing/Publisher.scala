@@ -1,17 +1,15 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.swing
 
-import scala.collection._
-import scala.collection.mutable.{Buffer, HashSet, Set}
+import scala.collection.mutable
+import mutable.Buffer
 import event.Event
 
 /** <p>
@@ -33,7 +31,7 @@ trait Publisher extends Reactor {
 
   protected val listeners = new RefSet[Reaction] {
     import scala.ref._
-    val underlying = new HashSet[Reference[Reaction]]
+    val underlying = new mutable.HashSet[Reference[Reaction]]
     protected def Ref(a: Reaction) = a match {
       case a: StronglyReferenced => new StrongReference[Reaction](a) with super.Ref[Reaction]
       case _ => new WeakReference[Reaction](a, referenceQueue) with super.Ref[Reaction]
@@ -46,7 +44,7 @@ trait Publisher extends Reactor {
   /**
    * Notify all registered reactions.
    */
-  def publish(e: Event) { for (l <- listeners) l(e) }
+  def publish(e: Event) { for (l <- listeners) if (l.isDefinedAt(e)) l(e) }
 
   listenTo(this)
 }
@@ -164,8 +162,8 @@ abstract class RefBuffer[A <: AnyRef] extends Buffer[A] with SingleRefCollection
   protected[this] def removeReference(ref: Reference[A]) { underlying -= ref }
 }
 
-private[swing] abstract class RefSet[A <: AnyRef] extends Set[A] with SingleRefCollection[A] { self =>
-  protected val underlying: Set[Reference[A]]
+private[swing] abstract class RefSet[A <: AnyRef] extends mutable.Set[A] with SingleRefCollection[A] { self =>
+  protected val underlying: mutable.Set[Reference[A]]
 
   def -=(el: A): this.type = { underlying -= Ref(el); purgeReferences(); this }
   def +=(el: A): this.type = { purgeReferences(); underlying += Ref(el); this }

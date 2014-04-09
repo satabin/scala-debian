@@ -1,5 +1,5 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  * @author Philipp Haller
  */
 
@@ -48,20 +48,34 @@ class ReflectiveRunner {
         new ConsoleFileManager
 
     import fileManager.
-      { latestCompFile, latestLibFile, latestPartestFile, latestFjbgFile, latestScalapFile }
+      { latestCompFile, latestReflectFile, latestLibFile, latestPartestFile, latestFjbgFile, latestScalapFile, latestActorsFile }
     val files =
-      Array(latestCompFile, latestLibFile, latestPartestFile, latestFjbgFile, latestScalapFile) map (x => io.File(x))
+      Array(latestCompFile, latestReflectFile, latestLibFile, latestPartestFile, latestFjbgFile, latestScalapFile, latestActorsFile) map (x => io.File(x))
 
     val sepUrls   = files map (_.toURL)
-    val sepLoader = new URLClassLoader(sepUrls, null)
+    // this seems to be the core classloader that determines which classes can be found when running partest from the test/partest script
+    var sepLoader = new URLClassLoader(sepUrls, null)
+
+    // this is a workaround for https://issues.scala-lang.org/browse/SI-5433
+    // we hack into the classloader that will become parent classloader for scalac
+    // this way we ensure that reflective macro lookup will pick correct Code.lift
+    // it's also used to inject diffutils into the classpath when running partest from the test/partest script
+    sepLoader = new URLClassLoader((PathSettings.srcCodeLib +: (PathSettings.diffUtils +: files)) map (_.toURL), null)
 
     if (isPartestDebug)
       println("Loading classes from:\n" + sepUrls.mkString("\n"))
 
-    val paths = classPath match {
-      case Some(cp) => Nil
-      case _        => files.toList map (_.path)
-    }
+    // @partest maintainer: it seems to me that commented lines are incorrect
+    // if classPath is not empty, then it has been provided by the --classpath option
+    // which points to the root of Scala home (see ConsoleFileManager's testClasses and the true flag in the ctor for more information)
+    // this doesn't mean that we had custom Java classpath set, so we don't have to override latestXXXFiles from the file manager
+    //
+    //val paths = classPath match {
+    //  case Some(cp) => Nil
+    //  case _        => files.toList map (_.path)
+    //}
+    val paths = files.toList map (_.path)
+
     val newClasspath = ClassPath.join(paths: _*)
 
     setProp("java.class.path", newClasspath)

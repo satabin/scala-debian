@@ -22,11 +22,11 @@ class B { };
 class Contra {
   // Not an Ordering<Character>.
   static Ordering<Object> charOrd = scala.math.Ordering.Char$.MODULE$;
-
+  
   public boolean useCharOrd() {
     return charOrd.compare(new Object(), new Object()) == 0;
   }
-
+  
   static Numeric<?> intNum = scala.math.Numeric.IntIsIntegral$.MODULE$;
 }
 

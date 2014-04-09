@@ -1,14 +1,12 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Iulian Dragos
  */
-
 
 package scala.tools.nsc
 package backend.jvm
 
 import scala.collection.{ mutable, immutable }
-
 import ch.epfl.lamp.fjbg._
 
 trait GenJVMUtil {
@@ -34,16 +32,13 @@ trait GenJVMUtil {
     DOUBLE -> new JObjectType("java.lang.Double")
   )
 
-  private val javaNameCache = {
-    val map = new mutable.WeakHashMap[Symbol, String]()
-    map ++= List(
-      NothingClass        -> RuntimeNothingClass.fullName('/'),
-      RuntimeNothingClass -> RuntimeNothingClass.fullName('/'),
-      NullClass           -> RuntimeNullClass.fullName('/'),
-      RuntimeNullClass    -> RuntimeNullClass.fullName('/')
-    )
-    map
-  }
+  // Don't put this in per run caches.
+  private val javaNameCache = new mutable.WeakHashMap[Symbol, Name]() ++= List(
+    NothingClass        -> binarynme.RuntimeNothing,
+    RuntimeNothingClass -> binarynme.RuntimeNothing,
+    NullClass           -> binarynme.RuntimeNull,
+    RuntimeNullClass    -> binarynme.RuntimeNull
+  )
 
   /** This trait may be used by tools who need access to
    *  utility methods like javaName and javaType. (for instance,
@@ -59,14 +54,6 @@ trait GenJVMUtil {
       LE -> JExtendedCode.COND_LE,
       GE -> JExtendedCode.COND_GE
     )
-    val negate = immutable.Map[TestOp, TestOp](
-      EQ -> NE,
-      NE -> EQ,
-      LT -> GE,
-      GT -> LE,
-      LE -> GT,
-      GE -> LT
-    )
 
     /** Specialized array conversion to prevent calling
      *  java.lang.reflect.Array.newInstance via TraversableOnce.toArray
@@ -74,7 +61,6 @@ trait GenJVMUtil {
 
     def mkArray(xs: Traversable[JType]): Array[JType] = { val a = new Array[JType](xs.size); xs.copyToArray(a); a }
     def mkArray(xs: Traversable[String]): Array[String] = { val a = new Array[String](xs.size); xs.copyToArray(a); a }
-
 
     /** Return the a name of this symbol that can be used on the Java
      *  platform.  It removes spaces from names.
@@ -92,10 +78,10 @@ trait GenJVMUtil {
     def javaName(sym: Symbol): String =
       javaNameCache.getOrElseUpdate(sym, {
         if (sym.isClass || (sym.isModule && !sym.isMethod))
-          sym.fullName('/') + moduleSuffix(sym)
+          sym.javaBinaryName
         else
-          sym.simpleName.toString.trim() + moduleSuffix(sym)
-      })
+          sym.javaSimpleName
+      }).toString
 
     def javaType(t: TypeKind): JType = (t: @unchecked) match {
       case UNIT            => JType.VOID
@@ -135,7 +121,7 @@ trait GenJVMUtil {
         case DoubleTag  => jcode emitPUSH const.doubleValue
         case StringTag  => jcode emitPUSH const.stringValue
         case NullTag    => jcode.emitACONST_NULL()
-        case ClassTag   =>
+        case ClazzTag   =>
           val kind = toTypeKind(const.typeValue)
           val toPush =
             if (kind.isValueType) classLiteral(kind)

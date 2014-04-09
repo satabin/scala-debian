@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,26 +10,29 @@ package scala.io
 
 /** The object Position provides convenience methods to encode
  *  line and column number in one single integer.  The encoded line
- *  (column) numbers range from 0 to LINE_MASK (COLUMN_MASK),
- *  where 0 indicates that the line (column) is undefined and 1
- *  represents the first line (column).
+ *  (column) numbers range from 0 to `LINE_MASK` (`COLUMN_MASK`),
+ *  where `0` indicates that the line (column) is undefined and
+ *  `1` represents the first line (column).
  *
- *  Line (Column) numbers greater than LINE_MASK (COLUMN_MASK) are
- *  replaced by LINE_MASK (COLUMN_MASK). Furthermore, if the encoded
- *  line number is LINE_MASK, the column number is always set to 0.
+ *  Line (Column) numbers greater than `LINE_MASK` (`COLUMN_MASK`) are
+ *  replaced by `LINE_MASK` (`COLUMN_MASK`). Furthermore, if the encoded
+ *  line number is `LINE_MASK`, the column number is always set to 0.
  *
  *  The following properties hold:
  *
- *  the undefined position is 0:   encode(0,0) == 0
- *  encodings are non-negative :   encode(line,column) >= 0
+ *  the undefined position is 0:   `encode(0,0) == 0`
+ *  encodings are non-negative :   `encode(line,column) >= 0`
  *  position order is preserved:
- *
+ *  {{{
  *  (line1 <= line2) || (line1 == line2 && column1 <= column2)
- *                     implies
+ *  }}}
+ *  implies
+ *  {{{
  *  encode(line1,column1) <= encode(line2,column2)
- *
+ *  }}}
  *  @author Burak Emir (translated from work by Matthias Zenger and others)
  */
+@deprecated("This class will be removed.", "2.10.0")
 abstract class Position {
   /** Definable behavior for overflow conditions.
    */
@@ -51,7 +54,7 @@ abstract class Position {
     if (line >= LINE_MASK)
       LINE_MASK << COLUMN_BITS
     else
-      (line << COLUMN_BITS) | math.min(COLUMN_MASK, column)
+      (line << COLUMN_BITS) | scala.math.min(COLUMN_MASK, column)
   }
 
   /** Returns the line number of the encoded position. */

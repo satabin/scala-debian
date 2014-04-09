@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -21,6 +21,8 @@ trait TypeStacks {
    * stack of the ICode.
    */
   type Rep = List[TypeKind]
+
+  object NoTypeStack extends TypeStack(Nil) { }
 
   class TypeStack(var types: Rep) {
     if (types.nonEmpty)

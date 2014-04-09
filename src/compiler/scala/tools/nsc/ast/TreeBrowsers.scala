@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -18,6 +18,7 @@ import scala.concurrent.Lock
 import scala.text._
 import symtab.Flags._
 import symtab.SymbolTable
+import scala.language.implicitConversions
 
 /**
  * Tree browsers can show the AST in a graphical and interactive
@@ -33,17 +34,16 @@ abstract class TreeBrowsers {
 
   val borderSize = 10
 
-
   def create(): SwingBrowser = new SwingBrowser();
 
   /** Pseudo tree class, so that all JTree nodes are treated uniformly */
   case class ProgramTree(units: List[UnitTree]) extends Tree {
-    override def toString(): String = "Program"
+    override def toString: String = "Program"
   }
 
   /** Pseudo tree class, so that all JTree nodes are treated uniformly */
   case class UnitTree(unit: CompilationUnit) extends Tree {
-    override def toString(): String = unit.toString()
+    override def toString: String = unit.toString
   }
 
   /**
@@ -140,7 +140,7 @@ abstract class TreeBrowsers {
       UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
     }
     catch {
-      case _ => UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName())
+      case _: Throwable => UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName())
     }
 
     val frame = new JFrame("Scala AST after " + phaseName + " phase")
@@ -200,7 +200,7 @@ abstract class TreeBrowsers {
                                         row: Int, hasFocus: Boolean) = {
             val (cls, name) = TreeInfo.treeName(value.asInstanceOf[Tree])
             if (name != EMPTY)
-              cls + "[" + name.toString() + "]"
+              cls + "[" + name + "]"
             else
               cls
         }
@@ -208,7 +208,7 @@ abstract class TreeBrowsers {
 
       jTree.addTreeSelectionListener(new javax.swing.event.TreeSelectionListener() {
         def valueChanged(e: javax.swing.event.TreeSelectionEvent): Unit = {
-          textArea.setText(e.getPath().getLastPathComponent().toString())
+          textArea.setText(e.getPath().getLastPathComponent().toString)
           infoPanel.update(e.getPath().getLastPathComponent())
         }
       })
@@ -330,21 +330,21 @@ abstract class TreeBrowsers {
             str.append(t.symbol.tpe).append("\n")
             buf = new StringWriter()
             TypePrinter.toDocument(t.symbol.tpe).format(getWidth() / getColumnWidth(), buf)
-            str.append(buf.toString())
+            str.append(buf.toString)
           }
           str.append("\n\nSymbol info: \n")
           TreeInfo.symbolTypeDoc(t).format(getWidth() / getColumnWidth(), buf)
-          str.append(buf.toString())
+          str.append(buf.toString)
           str.append("\n\nSymbol Attributes: \n").append(TreeInfo.symbolAttributes(t))
           str.append("\ntree.tpe: ")
           if (t.tpe ne null) {
-            str.append(t.tpe.toString()).append("\n")
+            str.append(t.tpe.toString).append("\n")
             buf = new StringWriter()
             TypePrinter.toDocument(t.tpe).format(getWidth() / getColumnWidth(), buf)
-            str.append(buf.toString())
+            str.append(buf.toString)
           }
       }
-      setText(str.toString())
+      setText(str.toString)
     }
   }
 
@@ -353,144 +353,17 @@ abstract class TreeBrowsers {
    *  Tree.
    */
   object TreeInfo {
-
     /** Return the case class name and the Name, if the node defines one */
-    def treeName(t: Tree): (String, Name) = t match {
-      case ProgramTree(units) =>
-        ("Program", EMPTY)
-
-      case UnitTree(unit) =>
-        ("CompilationUnit", unit.toString())
-
-      case DocDef(comment, definition) =>
-        ("DocDef", EMPTY)
-
-      case ClassDef(mods, name, tparams, impl) =>
-        ("ClassDef", name)
-
-      case PackageDef(packaged, impl) =>
-        ("PackageDef", EMPTY)
-
-      case ModuleDef(mods, name, impl) =>
-        ("ModuleDef", name)
-
-      case ValDef(mods, name, tpe, rhs) =>
-        ("ValDef", name)
-
-      case DefDef(mods, name, tparams, vparams, tpe, rhs) =>
-        ("DefDef", name)
-
-      case TypeDef(mods, name, tparams, rhs) =>
-        ("TypeDef", name)
-
-      case Import(expr, selectors) =>
-        ("Import", EMPTY)
-
-      case CaseDef(pat, guard, body) =>
-        ("CaseDef", EMPTY)
-
-      case Template(parents, self, body) =>
-        ("Template", EMPTY)
-
-      case LabelDef(name, params, rhs) =>
-        ("LabelDef", name)
-
-      case Block(stats, expr) =>
-        ("Block", EMPTY)
-
-      case Alternative(trees) =>
-        ("Alternative", EMPTY)
-
-      case Bind(name, rhs) =>
-        ("Bind", name)
-
-      case UnApply(fun, args) =>
-        ("UnApply", EMPTY)
-
-      case Match(selector, cases) =>
-        ("Visitor", EMPTY)
-
-      case Function(vparams, body) =>
-        ("Function", EMPTY)
-
-      case Assign(lhs, rhs) =>
-        ("Assign", EMPTY)
-
-      case If(cond, thenp, elsep) =>
-        ("If", EMPTY)
-
-      case Return(expr) =>
-        ("Return", EMPTY)
-
-      case Throw(expr) =>
-        ("Throw", EMPTY)
-
-      case New(init) =>
-        ("New", EMPTY)
-
-      case Typed(expr, tpe) =>
-        ("Typed", EMPTY)
-
-      case TypeApply(fun, args) =>
-        ("TypeApply", EMPTY)
-
-      case Apply(fun, args) =>
-        ("Apply", EMPTY)
-
-      case ApplyDynamic(qual, args) =>
-        ("Apply", EMPTY)
-
-      case Super(qualif, mix) =>
-        ("Super", "mix: " + mix.toString())
-
-      case This(qualifier) =>
-        ("This", qualifier)
-
-      case Select(qualifier, selector) =>
-        ("Select", selector)
-
-      case Ident(name) =>
-        ("Ident", name)
-
-      case Literal(value) =>
-        ("Literal", EMPTY)
-
-      case TypeTree() =>
-        ("TypeTree", EMPTY)
-
-      case Annotated(annot, arg) =>
-        ("Annotated", EMPTY)
-
-      case SingletonTypeTree(ref) =>
-        ("SingletonType", EMPTY)
-
-      case SelectFromTypeTree(qualifier, selector) =>
-        ("SelectFromType", selector)
-
-      case CompoundTypeTree(template) =>
-        ("CompoundType", EMPTY)
-
-      case AppliedTypeTree(tpe, args) =>
-        ("AppliedType", EMPTY)
-
-      case TypeBoundsTree(lo, hi) =>
-        ("TypeBoundsTree", EMPTY)
-
-      case ExistentialTypeTree(tpt, whereClauses) =>
-        ("ExistentialTypeTree", EMPTY)
-
-      case Try(block, catcher, finalizer) =>
-        ("Try", EMPTY)
-
-      case EmptyTree =>
-        ("Empty", EMPTY)
-
-      case ArrayValue(elemtpt, trees) =>
-        ("ArrayValue", EMPTY)
-
-      case Star(t) =>
-        ("Star", EMPTY)
-    }
+    def treeName(t: Tree): (String, Name) = ((t.productPrefix, t match {
+      case UnitTree(unit)                  => newTermName("" + unit)
+      case Super(_, mix)                   => newTermName("mix: " + mix)
+      case This(qual)                      => qual
+      case Select(_, selector)             => selector
+      case Ident(name)                     => name
+      case SelectFromTypeTree(_, selector) => selector
+      case x: DefTree                      => x.name
+      case _                               => EMPTY
+    }))
 
     /** Return a list of children for the given tree node */
     def children(t: Tree): List[Tree] = t match {
@@ -705,7 +578,7 @@ abstract class TreeBrowsers {
       case SingleType(pre, sym) =>
         Document.group(
           Document.nest(4, "SingleType(" :/:
-                      toDocument(pre) :: ", " :/: sym.name.toString() :: ")")
+                      toDocument(pre) :: ", " :/: sym.name.toString :: ")")
         )
 
       case ConstantType(value) =>
@@ -715,7 +588,7 @@ abstract class TreeBrowsers {
         Document.group(
           Document.nest(4, "TypeRef(" :/:
                         toDocument(pre) :: ", " :/:
-                        sym.name.toString() + sym.idString :: ", " :/:
+                        sym.name.toString + sym.idString :: ", " :/:
                         "[ " :: toDocument(args) ::"]" :: ")")
         )
 
@@ -736,7 +609,7 @@ abstract class TreeBrowsers {
         Document.group(
           Document.nest(4,"ClassInfoType(" :/:
                         toDocument(parents) :: ", " :/:
-                        clazz.name.toString() + clazz.idString :: ")")
+                        clazz.name.toString + clazz.idString :: ")")
         )
 
       case MethodType(params, result) =>
@@ -786,7 +659,7 @@ abstract class TreeBrowsers {
                         toDocument(thistpe) :/: ", " :/:
                         toDocument(supertpe) ::")"))
       case _ =>
-        sys.error("Unknown case: " + t.toString() +", "+ t.getClass)
+        sys.error("Unknown case: " + t.toString +", "+ t.getClass)
     }
   }
 

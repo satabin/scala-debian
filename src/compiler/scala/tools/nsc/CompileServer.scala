@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -7,7 +7,7 @@ package scala.tools.nsc
 
 import java.io.{ BufferedOutputStream, FileOutputStream, PrintStream }
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
-import scala.tools.nsc.util.FakePos //Position
+import scala.reflect.internal.util.FakePos //Position
 import scala.tools.util.SocketServer
 import settings.FscSettings
 
@@ -29,9 +29,7 @@ class StandardCompileServer extends SocketServer {
   var shutdown = false
   var verbose = false
 
-  val versionMsg = "Fast Scala compiler " +
-    Properties.versionString + " -- " +
-    Properties.copyrightString
+  val versionMsg = "Fast " + Properties.versionMsg
 
   val MaxCharge = 0.8
 
@@ -87,18 +85,18 @@ class StandardCompileServer extends SocketServer {
     val input           = in.readLine()
 
     def fscError(msg: String): Unit = out println (
-      FakePos("fsc"),
-      msg + "\n  fsc -help  gives more information"
+      FakePos("fsc") + msg + "\n  fsc -help  gives more information"
     )
     if (input == null || password != guessedPassword)
       return
 
     val args        = input.split("\0", -1).toList
     val newSettings = new FscSettings(fscError)
-    this.verbose    = newSettings.verbose.value
     val command     = newOfflineCompilerCommand(args, newSettings)
+    this.verbose    = newSettings.verbose.value
 
     info("Settings after normalizing paths: " + newSettings)
+    if (!command.files.isEmpty) info("Input files after normalizing paths: " + (command.files mkString ","))
     printMemoryStats()
 
     // Update the idle timeout if given
@@ -139,13 +137,13 @@ class StandardCompileServer extends SocketServer {
     }
 
     if (command.shouldStopWithInfo)
-      reporter.info(null, command.getInfoMessage(newGlobal(newSettings, reporter)), true)
+      reporter.echo(command.getInfoMessage(newGlobal(newSettings, reporter)))
     else if (command.files.isEmpty)
-      reporter.info(null, command.usageMsg, true)
+      reporter.echo(command.usageMsg)
     else {
       if (isCompilerReusable) {
         info("[Reusing existing Global instance.]")
-        compiler.settings = newSettings
+        compiler.currentSettings = newSettings
         compiler.reporter = reporter
       }
       else {
@@ -157,7 +155,7 @@ class StandardCompileServer extends SocketServer {
         case ex @ FatalError(msg) =>
           reporter.error(null, "fatal error: " + msg)
           clearCompiler()
-        case ex =>
+        case ex: Throwable =>
           warn("Compile server encountered fatal condition: " + ex)
           shutdown = true
           throw ex
@@ -176,10 +174,22 @@ object CompileServer extends StandardCompileServer {
   /** A directory holding redirected output */
   private lazy val redirectDir = (compileSocket.tmpDir / "output-redirects").createDirectory()
 
-  private def redirect(setter: PrintStream => Unit, filename: String): Unit =
-    setter(new PrintStream((redirectDir / filename).createFile().bufferedOutput()))
+  private def createRedirect(filename: String) =
+    new PrintStream((redirectDir / filename).createFile().bufferedOutput())
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]) = 
+    execute(() => (), args)
+  
+  /**
+   * Used for internal testing. The callback is called upon
+   * server start, notifying the caller that the server is
+   * ready to run. WARNING: the callback runs in the
+   * server's thread, blocking the server from doing any work
+   * until the callback is finished. Callbacks should be kept
+   * simple and clients should not try to interact with the
+   * server while the callback is processing.
+   */
+  def execute(startupCallback : () => Unit, args: Array[String]) {
     val debug = args contains "-v"
 
     if (debug) {
@@ -187,14 +197,16 @@ object CompileServer extends StandardCompileServer {
       echo("Redirect dir is " + redirectDir)
     }
 
-    redirect(System.setOut, "scala-compile-server-out.log")
-    redirect(System.setErr, "scala-compile-server-err.log")
-    System.err.println("...starting server on socket "+port+"...")
-    System.err.flush()
-    compileSocket.setPort(port)
-    run()
-
-    compileSocket.deletePort(port)
-    sys.exit(0)
+    Console.withErr(createRedirect("scala-compile-server-err.log")) {
+      Console.withOut(createRedirect("scala-compile-server-out.log")) {
+        Console.err.println("...starting server on socket "+port+"...")
+        Console.err.flush()
+        compileSocket setPort port
+        startupCallback()
+        run()
+    
+        compileSocket deletePort port
+      }
+    }
   }
 }

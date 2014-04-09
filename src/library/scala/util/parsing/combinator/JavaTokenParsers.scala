@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,6 +8,8 @@
 
 
 package scala.util.parsing.combinator
+
+import scala.annotation.migration
 
 /** `JavaTokenParsers` differs from [[scala.util.parsing.combinator.RegexParsers]]
  *  by adding the following definitions:
@@ -19,11 +21,12 @@ package scala.util.parsing.combinator
  *  - `floatingPointNumber`
  */
 trait JavaTokenParsers extends RegexParsers {
-  /** Anything starting with an ASCII alphabetic character or underscore,
-   *  followed by zero or more repetitions of regex's `\w`.
+  /** Anything that is a valid Java identifier, according to
+   * <a href="http://docs.oracle.com/javase/specs/jls/se7/html/jls-3.html#jls-3.8">The Java Language Spec</a>.
+   * Generally, this means a letter, followed by zero or more letters or numbers.
    */
   def ident: Parser[String] =
-    """[a-zA-Z_]\w*""".r
+    """\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*""".r
   /** An integer, without sign or with a negative sign. */
   def wholeNumber: Parser[String] =
     """-?\d+""".r
@@ -39,12 +42,13 @@ trait JavaTokenParsers extends RegexParsers {
   /** Double quotes (`"`) enclosing a sequence of:
    *
    *  - Any character except double quotes, control characters or backslash (`\`)
-   *  - A backslash followed by a slash, another backslash, or one of the letters
-   *    `b`, `f`, `n`, `r` or `t`.
+   *  - A backslash followed by another backslash, a single or double quote, or one
+   *    of the letters `b`, `f`, `n`, `r` or `t`
    *  - `\` followed by `u` followed by four hexadecimal digits
    */
+  @migration("`stringLiteral` allows escaping single and double quotes, but not forward slashes any longer.", "2.10.0")
   def stringLiteral: Parser[String] =
-    ("\""+"""([^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*"""+"\"").r
+    ("\""+"""([^"\p{Cntrl}\\]|\\[\\'"bfnrt]|\\u[a-fA-F0-9]{4})*"""+"\"").r
   /** A number following the rules of `decimalNumber`, with the following
    *  optional additions:
    *

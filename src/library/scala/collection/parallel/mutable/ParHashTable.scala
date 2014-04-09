@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,8 +13,8 @@ package parallel.mutable
 
 
 
-import collection.mutable.HashEntry
-import collection.parallel.IterableSplitter
+import scala.collection.mutable.HashEntry
+import scala.collection.parallel.IterableSplitter
 
 
 
@@ -22,14 +22,14 @@ import collection.parallel.IterableSplitter
  *  enriching the data structure by fulfilling certain requirements
  *  for their parallel construction and iteration.
  */
-trait ParHashTable[K, Entry >: Null <: HashEntry[K, Entry]] extends collection.mutable.HashTable[K, Entry] {
+trait ParHashTable[K, Entry >: Null <: HashEntry[K, Entry]] extends scala.collection.mutable.HashTable[K, Entry] {
 
   override def alwaysInitSizeMap = true
 
   /** A parallel iterator returning all the entries.
    */
   abstract class EntryIterator[T, +IterRepr <: IterableSplitter[T]]
-    (private var idx: Int, private val until: Int, private val totalsize: Int, private var es: Entry)
+  (private var idx: Int, private val until: Int, private val totalsize: Int, private var es: Entry)
   extends IterableSplitter[T] with SizeMapUtils {
     private val itertable = table
     private var traversed = 0
@@ -42,7 +42,7 @@ trait ParHashTable[K, Entry >: Null <: HashEntry[K, Entry]] extends collection.m
       es ne null
     }
 
-    def next: T = {
+    def next(): T = {
       val res = es
       es = es.next
       scan()
@@ -104,7 +104,7 @@ trait ParHashTable[K, Entry >: Null <: HashEntry[K, Entry]] extends collection.m
         // otherwise, this is the last entry in the table - all what remains is the chain
         // so split the rest of the chain
         val arr = convertToArrayBuffer(es)
-        val arrpit = new collection.parallel.BufferSplitter[T](arr, 0, arr.length, signalDelegate)
+        val arrpit = new scala.collection.parallel.BufferSplitter[T](arr, 0, arr.length, signalDelegate)
         arrpit.split
       }
     } else Seq(this.asInstanceOf[IterRepr])

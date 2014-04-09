@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,13 +10,15 @@
 
 package scala.actors
 
+import scala.language.implicitConversions
+
 private[actors] trait Combinators {
 
   /**
    * Enables the composition of suspendable closures using `andThen`,
    * `loop`, `loopWhile`, etc.
    */
-  implicit def mkBody[a](body: => a): Actor.Body[a]
+  implicit def mkBody[a](body: => a): InternalActor.Body[a]
 
   /**
    * Repeatedly executes `body`.

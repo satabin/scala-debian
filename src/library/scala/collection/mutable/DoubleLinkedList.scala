@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -26,7 +26,7 @@ import generic._
  *
  *  @tparam A     the type of the elements contained in this double linked list.
  *
- *  @define Coll DoubleLinkedList
+ *  @define Coll `DoubleLinkedList`
  *  @define coll double linked list
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
  *    `That` is always `DoubleLinkedList[B]` because an implicit of type `CanBuildFrom[DoubleLinkedList, B, DoubleLinkedList[B]]`
@@ -41,7 +41,8 @@ import generic._
  *  @define willNotTerminateInf
  */
 @SerialVersionUID(-8144992287952814767L)
-class DoubleLinkedList[A]() extends LinearSeq[A]
+class DoubleLinkedList[A]() extends AbstractSeq[A]
+                            with LinearSeq[A]
                             with GenericTraversableTemplate[A, DoubleLinkedList]
                             with DoubleLinkedListLike[A, DoubleLinkedList[A]]
                             with Serializable {
@@ -62,15 +63,22 @@ class DoubleLinkedList[A]() extends LinearSeq[A]
   }
 
   override def companion: GenericCompanion[DoubleLinkedList] = DoubleLinkedList
+
+  // Accurately clone this collection.  See SI-6296
+  override def clone(): DoubleLinkedList[A] = {
+    val builder = newBuilder
+    builder ++= this
+    builder.result
+  }
 }
 
 /** $factoryInfo
  *  @define coll double linked list
- *  @define Coll DoubleLinkedList
+ *  @define Coll `DoubleLinkedList`
  */
 object DoubleLinkedList extends SeqFactory[DoubleLinkedList] {
   /** $genericCanBuildFromInfo */
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, DoubleLinkedList[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, DoubleLinkedList[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
 
   def newBuilder[A]: Builder[A, DoubleLinkedList[A]] =
     new Builder[A, DoubleLinkedList[A]] {

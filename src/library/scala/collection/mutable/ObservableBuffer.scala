@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |                                         **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -31,6 +31,11 @@ trait ObservableBuffer[A] extends Buffer[A] with Publisher[Message[A] with Undoa
     publish(new Include(End, element) with Undoable {
       def undo() { trimEnd(1) }
     })
+    this
+  }
+
+  abstract override def ++=(xs: TraversableOnce[A]): this.type = {
+    for (x <- xs) this += x
     this
   }
 
@@ -65,4 +70,18 @@ trait ObservableBuffer[A] extends Buffer[A] with Publisher[Message[A] with Undoa
       def undo() { throw new UnsupportedOperationException("cannot undo") }
     })
   }
+
+  abstract override def insertAll(n: Int, elems: scala.collection.Traversable[A]) {
+    super.insertAll(n, elems)
+    var curr = n - 1
+    val msg = elems.foldLeft(new Script[A]() with Undoable {
+      def undo() { throw new UnsupportedOperationException("cannot undo") }
+    }) {
+      case (msg, elem) =>
+        curr += 1
+        msg += Include(Index(curr), elem)
+    }
+    publish(msg)
+  }
+
 }

@@ -1,11 +1,10 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
 
 package scala.xml
 
@@ -43,17 +42,13 @@ class PrettyPrinter(width: Int, step: Int) {
   }
 
   /** Try to cut at whitespace.
-   *
-   *  @param s   ...
-   *  @param ind ...
-   *  @return    ...
    */
   protected def cut(s: String, ind: Int): List[Item] = {
     val tmp = width - cur
     if (s.length <= tmp)
       return List(Box(ind, s))
     val sb = new StringBuilder()
-    var i = s.indexOf(' ')
+    var i = s indexOf ' '
     if (i > tmp || i == -1) throw new BrokenException() // cannot break
 
     var last: List[Int] = Nil
@@ -75,10 +70,6 @@ class PrettyPrinter(width: Int, step: Int) {
   }
 
   /** Try to make indented box, if possible, else para.
-   *
-   *  @param ind ...
-   *  @param s   ...
-   *  @return    ...
    */
   protected def makeBox(ind: Int, s: String) =
     if (cur + s.length > width) {            // fits in this line
@@ -100,10 +91,6 @@ class PrettyPrinter(width: Int, step: Int) {
     cur = 0
   }
 
-  /**
-   *  @param n ...
-   *  @return  ...
-   */
   protected def leafTag(n: Node) = {
     def mkLeaf(sb: StringBuilder) {
       sb append '<'
@@ -150,21 +137,20 @@ class PrettyPrinter(width: Int, step: Int) {
   private def doPreserve(node: Node) =
     node.attribute(XML.namespace, XML.space).map(_.toString == XML.preserve) getOrElse false
 
-  /** @param tail: what we'd like to sqeeze in */
   protected def traverse(node: Node, pscope: NamespaceBinding, ind: Int): Unit =  node match {
 
       case Text(s) if s.trim() == "" =>
         ;
       case _:Atom[_] | _:Comment | _:EntityRef | _:ProcInstr =>
-        makeBox( ind, node.toString().trim() )
+        makeBox( ind, node.toString.trim() )
       case g @ Group(xs) =>
         traverse(xs.iterator, pscope, ind)
       case _ =>
         val test = {
           val sb = new StringBuilder()
-          Utility.toXML(node, pscope, sb, false)
+          Utility.serialize(node, pscope, sb, false)
           if (doPreserve(node)) sb.toString
-          else TextBuffer.fromString(sb.toString()).toText(0).data
+          else TextBuffer.fromString(sb.toString).toText(0).data
         }
         if (childrenAreLeaves(node) && fits(test)) {
           makeBox(ind, test)
@@ -211,13 +197,13 @@ class PrettyPrinter(width: Int, step: Int) {
    *  given namespace to prefix mapping to the given string buffer.
    *
    * @param n    the node to be serialized
-   * @param pmap the namespace to prefix mapping
    * @param sb   the stringbuffer to append to
    */
-  def format(n: Node, sb: StringBuilder ): Unit = // entry point
+  def format(n: Node, sb: StringBuilder) { // entry point
     format(n, null, sb)
+  }
 
-  def format(n: Node, pscope: NamespaceBinding, sb: StringBuilder): Unit = { // entry point
+  def format(n: Node, pscope: NamespaceBinding, sb: StringBuilder) { // entry point
     var lastwasbreak = false
     reset()
     traverse(n, pscope, 0)
@@ -227,21 +213,21 @@ class PrettyPrinter(width: Int, step: Int) {
         if (!lastwasbreak) sb.append('\n')  // on windows: \r\n ?
         lastwasbreak = true
         cur = 0
-//        while( cur < last ) {
-//          sb.append(' ');
-//          cur = cur + 1;
+//        while (cur < last) {
+//          sb append ' '
+//          cur += 1
 //        }
 
       case Box(i, s) =>
         lastwasbreak = false
         while (cur < i) {
-          sb.append(' ')
+          sb append ' '
           cur += 1
         }
         sb.append(s)
       case Para( s ) =>
         lastwasbreak = false
-        sb.append(s)
+        sb append s
     }
   }
 
@@ -250,9 +236,9 @@ class PrettyPrinter(width: Int, step: Int) {
   /** Returns a formatted string containing well-formed XML with
    *  given namespace to prefix mapping.
    *
-   *  @param n    the node to be serialized
-   *  @param pmap the namespace to prefix mapping
-   *  @return     ...
+   *  @param n      the node to be serialized
+   *  @param pscope the namespace to prefix mapping
+   *  @return      the formatted string
    */
   def format(n: Node, pscope: NamespaceBinding = null): String =
     sbToString(format(n, pscope, _))

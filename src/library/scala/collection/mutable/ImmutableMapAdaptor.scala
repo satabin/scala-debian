@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -11,7 +11,7 @@
 package scala.collection
 package mutable
 
-import annotation.migration
+import scala.annotation.migration
 
 /** This class can be used as an adaptor to create mutable maps from
  *  immutable map implementations. Only method `empty` has
@@ -25,7 +25,9 @@ import annotation.migration
  *  @since   1
  */
 class ImmutableMapAdaptor[A, B](protected var imap: immutable.Map[A, B])
-extends Map[A, B] with Serializable
+extends AbstractMap[A, B]
+   with Map[A, B]
+   with Serializable
 {
 
   override def size: Int = imap.size
@@ -40,22 +42,19 @@ extends Map[A, B] with Serializable
 
   override def isDefinedAt(key: A) = imap.isDefinedAt(key)
 
-  override def keySet: collection.Set[A] = imap.keySet
+  override def keySet: scala.collection.Set[A] = imap.keySet
 
   override def keysIterator: Iterator[A] = imap.keysIterator
 
   @migration("`keys` returns Iterable[A] rather than Iterator[A].", "2.8.0")
-  override def keys: collection.Iterable[A] = imap.keys
+  override def keys: scala.collection.Iterable[A] = imap.keys
 
   override def valuesIterator: Iterator[B] = imap.valuesIterator
 
   @migration("`values` returns Iterable[B] rather than Iterator[B].", "2.8.0")
-  override def values: collection.Iterable[B] = imap.values
+  override def values: scala.collection.Iterable[B] = imap.values
 
   def iterator: Iterator[(A, B)] = imap.iterator
-
-  @deprecated("use `iterator' instead", "2.8.0")
-  override def elements = iterator
 
   override def toList: List[(A, B)] = imap.toList
 

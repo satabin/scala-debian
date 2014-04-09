@@ -1,22 +1,23 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
 package scala.xml
 
-/** Attribute defines the interface shared by both
- *  PrefixedAttribute and UnprefixedAttribute
+/** This singleton object contains the `apply` and `unapply` methods for
+ *  convenient construction and deconstruction.
+ *
+ *  @author  Burak Emir
+ *  @version 1.0
  */
-
 object Attribute {
   def unapply(x: Attribute) = x match {
-    case PrefixedAttribute(_, key, value, next) => Some(key, value, next)
-    case UnprefixedAttribute(key, value, next)  => Some(key, value, next)
+    case PrefixedAttribute(_, key, value, next) => Some((key, value, next))
+    case UnprefixedAttribute(key, value, next)  => Some((key, value, next))
     case _                                      => None
   }
 
@@ -34,11 +35,17 @@ object Attribute {
 
   def apply(pre: Option[String], key: String, value: Seq[Node], next: MetaData): Attribute =
     pre match {
-      case None     => new UnprefixedAttribute(key, value, next)
-      case Some(p)  => new PrefixedAttribute(p, key, value, next)
+      case None    => new UnprefixedAttribute(key, value, next)
+      case Some(p) => new PrefixedAttribute(p, key, value, next)
     }
 }
 
+/** The `Attribute` trait defines the interface shared by both
+ *  [[scala.xml.PrefixedAttribute]] and [[scala.xml.UnprefixedAttribute]].
+ *
+ *  @author  Burak Emir
+ *  @version 1.0
+ */
 abstract trait Attribute extends MetaData {
   def pre: String        // will be null if unprefixed
   val key: String
@@ -54,11 +61,13 @@ abstract trait Attribute extends MetaData {
     else copy(next remove key)
 
   def remove(namespace: String, scope: NamespaceBinding, key: String) =
-    if (isPrefixed && this.key == key && (scope getURI pre) == namespace) next
-    else next.remove(namespace, scope, key)
+    if (this.key == key && (scope getURI pre) == namespace) next
+    else copy(next.remove(namespace, scope, key))
 
   def isPrefixed: Boolean = pre != null
+
   def getNamespace(owner: Node): String
+
   def wellformed(scope: NamespaceBinding): Boolean = {
     val arg = if (isPrefixed) scope getURI pre else null
     (next(arg, scope, key) == null) && (next wellformed scope)
@@ -77,7 +86,7 @@ abstract trait Attribute extends MetaData {
 
   /** Appends string representation of only this attribute to stringbuffer.
    */
-  def toString1(sb: StringBuilder) {
+  protected def toString1(sb: StringBuilder) {
     if (value == null)
       return
     if (isPrefixed)
@@ -86,6 +95,6 @@ abstract trait Attribute extends MetaData {
     sb append key append '='
     val sb2 = new StringBuilder()
     Utility.sequenceToXML(value, TopScope, sb2, true)
-    Utility.appendQuoted(sb2.toString(), sb)
+    Utility.appendQuoted(sb2.toString, sb)
   }
 }

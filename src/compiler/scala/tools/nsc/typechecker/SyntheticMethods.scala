@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
@@ -32,302 +32,375 @@ import scala.collection.mutable.ListBuffer
 trait SyntheticMethods extends ast.TreeDSL {
   self: Analyzer =>
 
-  import global._                  // the global environment
-  import definitions._             // standard classes and methods
+  import global._
+  import definitions._
+  import CODE._
 
-  /** In general case classes/objects are not given synthetic equals methods if some
-   *  non-AnyRef implementation is inherited.  However if you let a case object inherit
-   *  an implementation from a case class, it creates an asymmetric equals with all the
-   *  associated badness: see ticket #883.  So if it sees such a thing this has happened
-   *  (by virtue of the symbol being in createdMethodSymbols) it re-overrides it with
-   *  reference equality.
-   *
-   *  TODO: remove once (deprecated) case class inheritance is dropped form nsc.
-   */
-  private val createdMethodSymbols = new mutable.HashSet[Symbol]
-
-  /** Clear the cache of createdMethodSymbols.  */
-  def resetSynthetics() {
-    createdMethodSymbols.clear()
+  private lazy val productSymbols    = List(Product_productPrefix, Product_productArity, Product_productElement, Product_iterator, Product_canEqual)
+  private lazy val valueSymbols      = List(Any_hashCode, Any_equals)
+  private lazy val caseSymbols       = List(Object_hashCode, Object_toString) ::: productSymbols
+  private lazy val caseValueSymbols  = Any_toString :: valueSymbols ::: productSymbols
+  private lazy val caseObjectSymbols = Object_equals :: caseSymbols
+  private def symbolsToSynthesize(clazz: Symbol): List[Symbol] = {
+    if (clazz.isCase) {
+      if (clazz.isDerivedValueClass) caseValueSymbols
+      else if (clazz.isModuleClass) caseSymbols
+      else caseObjectSymbols
+    }
+    else if (clazz.isDerivedValueClass) valueSymbols
+    else Nil
   }
+  private lazy val renamedCaseAccessors = perRunCaches.newMap[Symbol, mutable.Map[TermName, TermName]]()
+  /** Does not force the info of `caseclazz` */
+  final def caseAccessorName(caseclazz: Symbol, paramName: TermName) =
+    (renamedCaseAccessors get caseclazz).fold(paramName)(_(paramName))
 
-  /** Add the synthetic methods to case classes.  Note that a lot of the
-   *  complexity herein is a consequence of case classes inheriting from
-   *  case classes, which has been deprecated as of Sep 11 2009.  So when
-   *  the opportunity for removal arises, this can be simplified.
+  /** Add the synthetic methods to case classes.
    */
-  def addSyntheticMethods(templ: Template, clazz: Symbol, context: Context): Template = {
-    val localTyper = newTyper(
-      if (reporter.hasErrors) context makeSilent false else context
+  def addSyntheticMethods(templ: Template, clazz0: Symbol, context: Context): Template = {
+    val syntheticsOk = (phase.id <= currentRun.typerPhase.id) && {
+      symbolsToSynthesize(clazz0) filter (_ matchingSymbol clazz0.info isSynthetic) match {
+        case Nil  => true
+        case syms => log("Not adding synthetic methods: already has " + syms.mkString(", ")) ; false
+      }
+    }
+    if (!syntheticsOk)
+      return templ
+
+    val synthesizer = new ClassMethodSynthesis(
+      clazz0,
+      newTyper( if (reporter.hasErrors) context makeSilent false else context )
+    )
+    import synthesizer._
+
+    if (clazz0 == AnyValClass || isPrimitiveValueClass(clazz0)) return {
+      if ((clazz0.info member nme.getClass_).isDeferred) {
+        // XXX dummy implementation for now
+        val getClassMethod = createMethod(nme.getClass_, getClassReturnType(clazz.tpe))(_ => NULL)
+        deriveTemplate(templ)(_ :+ getClassMethod)
+      }
+      else templ
+    }
+
+    def accessors = clazz.caseFieldAccessors
+    val arity = accessors.size
+    // If this is ProductN[T1, T2, ...], accessorLub is the lub of T1, T2, ..., .
+    // !!! Hidden behind -Xexperimental due to bummer type inference bugs.
+    // Refining from Iterator[Any] leads to types like
+    //
+    //    Option[Int] { def productIterator: Iterator[String] }
+    //
+    // appearing legitimately, but this breaks invariant places
+    // like Tags and Arrays which are not robust and infer things
+    // which they shouldn't.
+    val accessorLub  = (
+      if (opt.experimental) {
+        global.weakLub(accessors map (_.tpe.finalResultType))._1 match {
+          case RefinedType(parents, decls) if !decls.isEmpty => intersectionType(parents)
+          case tp                                            => tp
+        }
+      }
+      else AnyClass.tpe
     )
 
-    def hasOverridingImplementation(meth: Symbol): Boolean = {
+    def forwardToRuntime(method: Symbol): Tree =
+      forwardMethod(method, getMember(ScalaRunTimeModule, (method.name prepend "_")))(mkThis :: _)
+
+    def callStaticsMethod(name: String)(args: Tree*): Tree = {
+      val method = termMember(RuntimeStaticsModule, name)
+      Apply(gen.mkAttributedRef(method), args.toList)
+    }
+
+    // Any concrete member, including private
+    def hasConcreteImpl(name: Name) =
+      clazz.info.member(name).alternatives exists (m => !m.isDeferred)
+
+    def hasOverridingImplementation(meth: Symbol) = {
       val sym = clazz.info nonPrivateMember meth.name
-      def isOverride(s: Symbol) = {
-        s != meth && !s.isDeferred && !s.isSynthetic && !createdMethodSymbols(s) &&
-        (clazz.thisType.memberType(s) matches clazz.thisType.memberType(meth))
+      sym.alternatives exists { m0 =>
+        (m0 ne meth) && !m0.isDeferred && !m0.isSynthetic && (m0.owner != AnyValClass) && (typeInClazz(m0) matches typeInClazz(meth))
       }
-      sym.alternatives exists isOverride
     }
-
-    def syntheticMethod(name: Name, flags: Int, tpeCons: Symbol => Type) =
-      newSyntheticMethod(name, flags | OVERRIDE, tpeCons)
-
-    def newSyntheticMethod(name: Name, flags: Int, tpeCons: Symbol => Type) = {
-      val method = clazz.newMethod(clazz.pos.focus, name.toTermName) setFlag flags
-      createdMethodSymbols += method
-      method setInfo tpeCons(method)
-      clazz.info.decls.enter(method)
+    def readConstantValue[T](name: String, default: T = null.asInstanceOf[T]): T = {
+      clazzMember(newTermName(name)).info match {
+        case NullaryMethodType(ConstantType(Constant(value))) => value.asInstanceOf[T]
+        case _                                                => default
+      }
     }
-
-    def makeNoArgConstructor(res: Type) =
-      (sym: Symbol) => MethodType(Nil, res)
-    def makeTypeConstructor(args: List[Type], res: Type) =
-      (sym: Symbol) => MethodType(sym newSyntheticValueParams args, res)
-    def makeEqualityMethod(name: Name) =
-      syntheticMethod(name, 0, makeTypeConstructor(List(AnyClass.tpe), BooleanClass.tpe))
-
-    import CODE._
-
-    def productPrefixMethod: Tree = typer.typed {
-      val method = syntheticMethod(nme.productPrefix, 0, sym => NullaryMethodType(StringClass.tpe))
-      DEF(method) === LIT(clazz.name.decode)
+    def productIteratorMethod = {
+      createMethod(nme.productIterator, iteratorOfType(accessorLub))(_ =>
+        gen.mkMethodCall(ScalaRunTimeModule, nme.typedProductIterator, List(accessorLub), List(mkThis))
+      )
     }
-
-    def productArityMethod(nargs: Int): Tree = {
-      val method = syntheticMethod(nme.productArity, 0, sym => NullaryMethodType(IntClass.tpe))
-      typer typed { DEF(method) === LIT(nargs) }
+    def projectionMethod(accessor: Symbol, num: Int) = {
+      createMethod(nme.productAccessorName(num), accessor.tpe.resultType)(_ => REF(accessor))
     }
 
     /** Common code for productElement and (currently disabled) productElementName
      */
-    def perElementMethod(accs: List[Symbol], methodName: Name, resType: Type, caseFn: Symbol => Tree): Tree = {
-      val symToTpe  = makeTypeConstructor(List(IntClass.tpe), resType)
-      val method    = syntheticMethod(methodName, 0, symToTpe)
-      val arg       = method ARG 0
-      val default   = List(DEFAULT ==> THROW(IndexOutOfBoundsExceptionClass, arg))
-      val cases     =
-        for ((sym, i) <- accs.zipWithIndex) yield
-          CASE(LIT(i)) ==> caseFn(sym)
+    def perElementMethod(name: Name, returnType: Type)(caseFn: Symbol => Tree): Tree =
+      createSwitchMethod(name, accessors.indices, returnType)(idx => caseFn(accessors(idx)))
 
-      typer typed {
-        DEF(method) === {
-          arg MATCH { cases ::: default : _* }
-        }
-      }
-    }
-    def productElementMethod(accs: List[Symbol]): Tree =
-      perElementMethod(accs, nme.productElement, AnyClass.tpe, x => Ident(x))
+    // def productElementNameMethod = perElementMethod(nme.productElementName, StringClass.tpe)(x => LIT(x.name.toString))
 
-    // def productElementNameMethod(accs: List[Symbol]): Tree =
-    //   perElementMethod(accs, nme.productElementName, StringClass.tpe, x => Literal(x.name.toString))
+    var syntheticCanEqual = false
 
-    def moduleToStringMethod: Tree = {
-      val method = syntheticMethod(nme.toString_, FINAL, makeNoArgConstructor(StringClass.tpe))
-      typer typed { DEF(method) === LIT(clazz.name.decode) }
-    }
-    def moduleHashCodeMethod: Tree = {
-      val method = syntheticMethod(nme.hashCode_, FINAL, makeNoArgConstructor(IntClass.tpe))
-      // The string being used as hashcode basis is also productPrefix.
-      val code   = clazz.name.decode.hashCode
-
-      typer typed { DEF(method) === LIT(code) }
-    }
-
-    def forwardingMethod(name: Name, targetName: Name): Tree = {
-      val target      = getMember(ScalaRunTimeModule, targetName)
-      val paramtypes  = target.tpe.paramTypes drop 1
-      val method      = syntheticMethod(name, 0, makeTypeConstructor(paramtypes, target.tpe.resultType))
-
-      typer typed {
-        DEF(method) === {
-          Apply(REF(target), This(clazz) :: (method ARGNAMES))
-        }
-      }
-    }
-
-    /** The equality method for case modules:
-     *   def equals(that: Any) = this eq that
-     */
-    def equalsModuleMethod: Tree = {
-      val method = makeEqualityMethod(nme.equals_)
-      val that   = method ARG 0
-
-      localTyper typed {
-        DEF(method) === (This(clazz) ANY_EQ that)
-      }
-    }
-
-    /** The canEqual method for case classes.  Note that if we spot
-     *  a user-supplied equals implementation, we simply return true
-     *  so as not to interfere.
+    /** The canEqual method for case classes.
+     *    def canEqual(that: Any) = that.isInstanceOf[This]
      */
     def canEqualMethod: Tree = {
-      val method  = makeEqualityMethod(nme.canEqual_)
-      val that    = method ARG 0
-
-      typer typed (DEF(method) === (that IS_OBJ clazz.tpe))
+      syntheticCanEqual = true
+      createMethod(nme.canEqual_, List(AnyClass.tpe), BooleanClass.tpe)(m =>
+        Ident(m.firstParam) IS_OBJ classExistentialType(clazz))
     }
 
-    /** The equality method for case classes.  The argument is an Any,
-     *  but because of boxing it will always be an Object, so a check
-     *  is neither necessary nor useful before the cast.
+    /** that match { case _: this.C => true ; case _ => false }
+     *  where `that` is the given method's first parameter.
      *
-     *   def equals(that: Any) =
-     *     (this eq that.asInstanceOf[AnyRef]) ||
-     *     (that match {
-     *       case x @ this.C(this.arg_1, ..., this.arg_n) => x canEqual this
-     *       case _                                       => false
-     *     })
+     *  An isInstanceOf test is insufficient because it has weaker
+     *  requirements than a pattern match. Given an inner class Foo and
+     *  two different instantiations of the container, an x.Foo and and a y.Foo
+     *  are both .isInstanceOf[Foo], but the one does not match as the other.
      */
-    def equalsClassMethod: Tree = {
-      val method           = makeEqualityMethod(nme.equals_)
-      val that             = method ARG 0
-      val constrParamTypes = clazz.primaryConstructor.tpe.paramTypes
-
-      // returns (Apply, Bind)
-      def makeTrees(acc: Symbol, cpt: Type): (Tree, Bind) = {
-        val varName     = context.unit.freshTermName(acc.name + "$")
-        val isRepeated  = isRepeatedParamType(cpt)
-        val binding     = if (isRepeated) Star(WILD()) else WILD()
-        val eqMethod: Tree  =
-          if (isRepeated) gen.mkRuntimeCall(nme.sameElements, List(Ident(varName), Ident(acc)))
-          else (Ident(varName) DOT nme.EQ)(Ident(acc))
-
-        (eqMethod, Bind(varName, binding))
-      }
-
-      // Creates list of parameters and a guard for each
-      val (guards, params) = (clazz.caseFieldAccessors, constrParamTypes).zipped map makeTrees unzip
-
-      // Verify with canEqual method before returning true.
-      def canEqualCheck() = {
-        val that: Tree              = (method ARG 0) AS clazz.tpe
-        val canEqualOther: Symbol   = clazz.info nonPrivateMember nme.canEqual_
-
-        typer typed {
-          (that DOT canEqualOther)(This(clazz))
-        }
-      }
-
-      // Pattern is classname applied to parameters, and guards are all logical and-ed
-      val (guard, pat) = (AND(guards: _*), Ident(clazz.name.toTermName) APPLY params)
-
-      localTyper typed {
-        DEF(method) === {
-          (This(clazz) ANY_EQ that) OR (that MATCH(
-            (CASE(pat) IF guard)  ==> canEqualCheck()        ,
-            DEFAULT               ==> FALSE
-          ))
-        }
-      }
-    }
-
-    def newAccessorMethod(tree: Tree): Tree = tree match {
-      case DefDef(_, _, _, _, _, rhs) =>
-        var newAcc = tree.symbol.cloneSymbol
-        newAcc.name = context.unit.freshTermName(tree.symbol.name + "$")
-        newAcc setFlag SYNTHETIC resetFlag (ACCESSOR | PARAMACCESSOR | PRIVATE | PROTECTED)
-        newAcc.privateWithin = NoSymbol
-        newAcc = newAcc.owner.info.decls enter newAcc
-        val result = typer typed { DEF(newAcc) === rhs.duplicate }
-        log("new accessor method " + result)
-        result
-    }
-
-    def needsReadResolve = (
-      // only nested objects inside objects should get readResolve automatically
-      // otherwise after de-serialization we get null references for lazy accessors (nested object -> lazy val + class def)
-      // since the bitmap gets serialized but the moduleVar not
-      clazz.isSerializable && (clazz.owner.isPackageClass || clazz.owner.isModuleClass)
-    )
-
-    // A buffer collecting additional methods for the template body
-    val ts = new ListBuffer[Tree]
-
-    if (!phase.erasedTypes) try {
-      if (clazz.isCase) {
-        val isTop = clazz.ancestors forall (x => !x.isCase)
-
-        if (isTop) {
-          // If this case class has fields with less than public visibility, their getter at this
-          // point also has those permissions.  In that case we create a new, public accessor method
-          // with a new name and remove the CASEACCESSOR flag from the existing getter.  This complicates
-          // the retrieval of the case field accessors (see def caseFieldAccessors in Symbols.)
-          def needsService(s: Symbol) = s.isMethod && s.isCaseAccessor && !s.isPublic
-          for (stat <- templ.body ; if stat.isDef && needsService(stat.symbol)) {
-            ts += newAccessorMethod(stat)
-            stat.symbol resetFlag CASEACCESSOR
-          }
-        }
-
-        // methods for case classes only
-        def classMethods = List(
-          Object_hashCode -> (() => forwardingMethod(nme.hashCode_, "_" + nme.hashCode_)),
-          Object_toString -> (() => forwardingMethod(nme.toString_, "_" + nme.toString_)),
-          Object_equals   -> (() => equalsClassMethod)
+    def thatTest(eqmeth: Symbol): Tree = {
+      Match(
+        Ident(eqmeth.firstParam),
+        List(
+          CaseDef(Typed(Ident(nme.WILDCARD), TypeTree(clazz.tpe)), EmptyTree, TRUE),
+          CaseDef(WILD.empty, EmptyTree, FALSE)
         )
-        // methods for case objects only
-        def objectMethods = List(
-          Object_hashCode -> (() => moduleHashCodeMethod),
-          Object_toString -> (() => moduleToStringMethod)
-        )
-        // methods for both classes and objects
-        def everywhereMethods = {
-          val accessors = clazz.caseFieldAccessors
-          List(
-            Product_productPrefix   -> (() => productPrefixMethod),
-            Product_productArity    -> (() => productArityMethod(accessors.length)),
-            Product_productElement  -> (() => productElementMethod(accessors)),
-            // This is disabled pending a reimplementation which doesn't add any
-            // weight to case classes (i.e. inspects the bytecode.)
-            // Product_productElementName  -> (() => productElementNameMethod(accessors)),
-            Product_canEqual        -> (() => canEqualMethod)
-          )
-        }
-
-        if (clazz.isModuleClass) {
-          // if there's a synthetic method in a parent case class, override its equality
-          // with eq (see #883)
-          val otherEquals = clazz.info.nonPrivateMember(Object_equals.name)
-          if (otherEquals.owner != clazz && createdMethodSymbols(otherEquals)) ts += equalsModuleMethod
-        }
-
-        val methods = (if (clazz.isModuleClass) objectMethods else classMethods) ++ everywhereMethods
-        for ((m, impl) <- methods ; if !hasOverridingImplementation(m))
-          ts += impl()
-      }
-
-      if (clazz.isModuleClass) {
-        def hasReadResolve = {
-          val sym = clazz.info member nme.readResolve // any member, including private
-          sym.isTerm && !sym.isDeferred
-        }
-
-        /** If you serialize a singleton and then deserialize it twice,
-         *  you will have two instances of your singleton, unless you implement
-         *  the readResolve() method (see http://www.javaworld.com/javaworld/
-         *  jw-04-2003/jw-0425-designpatterns_p.html)
-         */
-        if (!hasReadResolve && needsReadResolve){
-          // PP: To this day I really can't figure out what this next comment is getting at:
-          // the !!! normally means there is something broken, but if so, what is it?
-          //
-          // !!! the synthetic method "readResolve" should be private, but then it is renamed !!!
-          val method = newSyntheticMethod(nme.readResolve, PROTECTED, makeNoArgConstructor(ObjectClass.tpe))
-          ts += typer typed (DEF(method) === REF(clazz.sourceModule))
-        }
-      }
-    } catch {
-      case ex: TypeError =>
-        if (!reporter.hasErrors) throw ex
-    }
-
-    if (phase.id <= currentRun.typerPhase.id) {
-      treeCopy.Template(templ, templ.parents, templ.self,
-        if (ts.isEmpty) templ.body else templ.body ++ ts // avoid copying templ.body if empty
       )
     }
-    else templ
+
+    /** (that.asInstanceOf[this.C])
+     *  where that is the given methods first parameter.
+     */
+    def thatCast(eqmeth: Symbol): Tree =
+      gen.mkCast(Ident(eqmeth.firstParam), clazz.tpe)
+
+    /** The equality method core for case classes and inline clases.
+     *  1+ args:
+     *    (that.isInstanceOf[this.C]) && {
+     *        val x$1 = that.asInstanceOf[this.C]
+     *        (this.arg_1 == x$1.arg_1) && (this.arg_2 == x$1.arg_2) && ... && (x$1 canEqual this)
+     *       }
+     *  Drop canBuildFrom part if class is final and canBuildFrom is synthesized
+     */
+    def equalsCore(eqmeth: Symbol, accessors: List[Symbol]) = {
+      val otherName = context.unit.freshTermName(clazz.name + "$")
+      val otherSym  = eqmeth.newValue(otherName, eqmeth.pos, SYNTHETIC) setInfo clazz.tpe
+      val pairwise  = accessors map (acc => fn(Select(mkThis, acc), acc.tpe member nme.EQ, Select(Ident(otherSym), acc)))
+      val canEq     = gen.mkMethodCall(otherSym, nme.canEqual_, Nil, List(mkThis))
+      val tests     = if (clazz.isDerivedValueClass || clazz.isFinal && syntheticCanEqual) pairwise else pairwise :+ canEq
+
+      thatTest(eqmeth) AND Block(
+        ValDef(otherSym, thatCast(eqmeth)),
+        AND(tests: _*)
+      )
+    }
+
+    /** The equality method for case classes.
+     *  0 args:
+     *    def equals(that: Any) = that.isInstanceOf[this.C] && that.asInstanceOf[this.C].canEqual(this)
+     *  1+ args:
+     *    def equals(that: Any) = (this eq that.asInstanceOf[AnyRef]) || {
+     *      (that.isInstanceOf[this.C]) && {
+     *        val x$1 = that.asInstanceOf[this.C]
+     *        (this.arg_1 == x$1.arg_1) && (this.arg_2 == x$1.arg_2) && ... && (x$1 canEqual this)
+     *       }
+     *    }
+     */
+    def equalsCaseClassMethod: Tree = createMethod(nme.equals_, List(AnyClass.tpe), BooleanClass.tpe) { m =>
+      if (accessors.isEmpty)
+        if (clazz.isFinal) thatTest(m)
+        else thatTest(m) AND ((thatCast(m) DOT nme.canEqual_)(mkThis))
+      else
+        (mkThis ANY_EQ Ident(m.firstParam)) OR equalsCore(m, accessors)
+    }
+
+    /** The equality method for value classes
+     *  def equals(that: Any) = (this.asInstanceOf[AnyRef]) eq that.asInstanceOf[AnyRef]) || {
+     *    (that.isInstanceOf[this.C]) && {
+     *     val x$1 = that.asInstanceOf[this.C]
+     *     (this.underlying == that.underlying
+     */
+    def equalsDerivedValueClassMethod: Tree = createMethod(nme.equals_, List(AnyClass.tpe), BooleanClass.tpe) { m =>
+      equalsCore(m, List(clazz.derivedValueClassUnbox))
+    }
+
+    /** The hashcode method for value classes
+     * def hashCode(): Int = this.underlying.hashCode
+     */
+    def hashCodeDerivedValueClassMethod: Tree = createMethod(nme.hashCode_, Nil, IntClass.tpe) { m =>
+      Select(mkThisSelect(clazz.derivedValueClassUnbox), nme.hashCode_)
+    }
+
+    /** The _1, _2, etc. methods to implement ProductN, disabled
+     *  until we figure out how to introduce ProductN without cycles.
+     */
+     def productNMethods = {
+      val accs = accessors.toIndexedSeq
+      1 to arity map (num => productProj(arity, num) -> (() => projectionMethod(accs(num - 1), num)))
+    }
+
+    // methods for both classes and objects
+    def productMethods = {
+      List(
+        Product_productPrefix   -> (() => constantNullary(nme.productPrefix, clazz.name.decode)),
+        Product_productArity    -> (() => constantNullary(nme.productArity, arity)),
+        Product_productElement  -> (() => perElementMethod(nme.productElement, accessorLub)(mkThisSelect)),
+        Product_iterator        -> (() => productIteratorMethod),
+        Product_canEqual        -> (() => canEqualMethod)
+        // This is disabled pending a reimplementation which doesn't add any
+        // weight to case classes (i.e. inspects the bytecode.)
+        // Product_productElementName  -> (() => productElementNameMethod(accessors)),
+      )
+    }
+
+    def hashcodeImplementation(sym: Symbol): Tree = {
+      sym.tpe.finalResultType.typeSymbol match {
+        case UnitClass | NullClass                         => Literal(Constant(0))
+        case BooleanClass                                  => If(Ident(sym), Literal(Constant(1231)), Literal(Constant(1237)))
+        case IntClass | ShortClass | ByteClass | CharClass => Ident(sym)
+        case LongClass                                     => callStaticsMethod("longHash")(Ident(sym))
+        case DoubleClass                                   => callStaticsMethod("doubleHash")(Ident(sym))
+        case FloatClass                                    => callStaticsMethod("floatHash")(Ident(sym))
+        case _                                             => callStaticsMethod("anyHash")(Ident(sym))
+      }
+    }
+
+    def specializedHashcode = {
+      createMethod(nme.hashCode_, Nil, IntClass.tpe) { m =>
+        val accumulator = m.newVariable(newTermName("acc"), m.pos, SYNTHETIC) setInfo IntClass.tpe
+        val valdef      = ValDef(accumulator, Literal(Constant(0xcafebabe)))
+        val mixes       = accessors map (acc =>
+          Assign(
+            Ident(accumulator),
+            callStaticsMethod("mix")(Ident(accumulator), hashcodeImplementation(acc))
+          )
+        )
+        val finish = callStaticsMethod("finalizeHash")(Ident(accumulator), Literal(Constant(arity)))
+
+        Block(valdef :: mixes, finish)
+      }
+    }
+    def chooseHashcode = {
+      if (accessors exists (x => isPrimitiveValueType(x.tpe.finalResultType)))
+        specializedHashcode
+      else
+        forwardToRuntime(Object_hashCode)
+    }
+
+    def valueClassMethods = List(
+      Any_hashCode -> (() => hashCodeDerivedValueClassMethod),
+      Any_equals -> (() => equalsDerivedValueClassMethod)
+    )
+
+    def caseClassMethods = productMethods ++ /*productNMethods ++*/ Seq(
+      Object_hashCode -> (() => chooseHashcode),
+      Object_toString -> (() => forwardToRuntime(Object_toString)),
+      Object_equals   -> (() => equalsCaseClassMethod)
+    )
+
+    def valueCaseClassMethods = productMethods ++ /*productNMethods ++*/ valueClassMethods ++ Seq(
+      Any_toString -> (() => forwardToRuntime(Object_toString))
+    )
+
+    def caseObjectMethods = productMethods ++ Seq(
+      Object_hashCode -> (() => constantMethod(nme.hashCode_, clazz.name.decode.hashCode)),
+      Object_toString -> (() => constantMethod(nme.toString_, clazz.name.decode))
+      // Not needed, as reference equality is the default.
+      // Object_equals   -> (() => createMethod(Object_equals)(m => This(clazz) ANY_EQ Ident(m.firstParam)))
+    )
+
+    /** If you serialize a singleton and then deserialize it twice,
+     *  you will have two instances of your singleton unless you implement
+     *  readResolve.  Here it is implemented for all objects which have
+     *  no implementation and which are marked serializable (which is true
+     *  for all case objects.)
+     */
+    def needsReadResolve = (
+         clazz.isModuleClass
+      && clazz.isSerializable
+      && !hasConcreteImpl(nme.readResolve)
+    )
+
+    def synthesize(): List[Tree] = {
+      val methods = (
+        if (clazz.isCase)
+          if (clazz.isDerivedValueClass) valueCaseClassMethods
+          else if (clazz.isModuleClass) caseObjectMethods
+          else caseClassMethods
+        else if (clazz.isDerivedValueClass) valueClassMethods
+        else Nil
+      )
+
+      /** Always generate overrides for equals and hashCode in value classes,
+       *  so they can appear in universal traits without breaking value semantics.
+       */
+      def impls = {
+        def shouldGenerate(m: Symbol) = {
+          !hasOverridingImplementation(m) || {
+            clazz.isDerivedValueClass && (m == Any_hashCode || m == Any_equals) && {
+              if (settings.lint.value) {
+                (clazz.info nonPrivateMember m.name) filter (m => (m.owner != AnyClass) && (m.owner != clazz) && !m.isDeferred) andAlso { m =>
+                  currentUnit.warning(clazz.pos, s"Implementation of ${m.name} inherited from ${m.owner} overridden in $clazz to enforce value class semantics")
+                }
+              }
+              true
+            }
+          }
+        }
+        for ((m, impl) <- methods ; if shouldGenerate(m)) yield impl()
+      }
+      def extras = (
+        if (needsReadResolve) {
+          // Aha, I finally decoded the original comment.
+          // This method should be generated as private, but apparently if it is, then
+          // it is name mangled afterward.  (Wonder why that is.) So it's only protected.
+          // For sure special methods like "readResolve" should not be mangled.
+          List(createMethod(nme.readResolve, Nil, ObjectClass.tpe)(m => { m setFlag PRIVATE ; REF(clazz.sourceModule) }))
+        }
+        else Nil
+      )
+
+      try impls ++ extras
+      catch { case _: TypeError if reporter.hasErrors => Nil }
+    }
+
+    /** If this case class has any less than public accessors,
+     *  adds new accessors at the correct locations to preserve ordering.
+     *  Note that this must be done before the other method synthesis
+     *  because synthesized methods need refer to the new symbols.
+     *  Care must also be taken to preserve the case accessor order.
+     */
+    def caseTemplateBody(): List[Tree] = {
+      val lb = ListBuffer[Tree]()
+      def isRewrite(sym: Symbol) = sym.isCaseAccessorMethod && !sym.isPublic
+
+      for (ddef @ DefDef(_, _, _, _, _, _) <- templ.body ; if isRewrite(ddef.symbol)) {
+        val original = ddef.symbol
+        val newAcc = deriveMethod(ddef.symbol, name => context.unit.freshTermName(name + "$")) { newAcc =>
+          newAcc.makePublic
+          newAcc resetFlag (ACCESSOR | PARAMACCESSOR)
+          ddef.rhs.duplicate
+        }
+        // TODO: shouldn't the next line be: `original resetFlag CASEACCESSOR`?
+        ddef.symbol resetFlag CASEACCESSOR
+        lb += logResult("case accessor new")(newAcc)
+        val renamedInClassMap = renamedCaseAccessors.getOrElseUpdate(clazz, mutable.Map() withDefault(x => x))
+        renamedInClassMap(original.name.toTermName) = newAcc.symbol.name.toTermName
+      }
+
+      (lb ++= templ.body ++= synthesize()).toList
+    }
+
+    deriveTemplate(templ)(body =>
+      if (clazz.isCase) caseTemplateBody()
+      else synthesize() match {
+        case Nil  => body // avoiding unnecessary copy
+        case ms   => body ++ ms
+      }
+    )
   }
 }

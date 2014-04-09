@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,9 +12,8 @@ package scala.collection
 package generic
 
 import mutable.Builder
-import annotation.unchecked.uncheckedVariance
-
-
+import scala.annotation.unchecked.uncheckedVariance
+import scala.language.higherKinds
 
 /** This trait represents collections classes which require
  *  ordered element types.

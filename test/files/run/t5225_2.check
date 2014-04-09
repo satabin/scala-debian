@@ -1,0 +1,4 @@
+{
+  def foo(@new `package`.cloneable() x: Int) = "";
+  ()
+}

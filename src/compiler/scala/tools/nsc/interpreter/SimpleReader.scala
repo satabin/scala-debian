@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Stepan Koltsov
  */
 
@@ -18,7 +18,6 @@ extends InteractiveReader
 {
   val history = NoHistory
   val completion = NoCompletion
-  val keyBindings: List[KeyBinding] = Nil
 
   def init() = ()
   def reset() = ()

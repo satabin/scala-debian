@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  * @author Anders Bach Nielsen
  * @version 1.0
  */
@@ -8,6 +8,7 @@ package scala.tools.nsc
 
 import java.io.{ BufferedWriter, FileWriter }
 import scala.collection.mutable
+import scala.language.postfixOps
 
 /**
  * PhaseAssembly
@@ -185,7 +186,7 @@ trait PhaseAssembly {
      *  dependency on something that is dropped.
      */
     def removeDanglingNodes() {
-      for (node <- nodes.valuesIterator filter (_.phaseobj.isEmpty)) {
+      for (node <- nodes.values filter (_.phaseobj.isEmpty)) {
         val msg = "dropping dependency on node with no phase object: "+node.phasename
         informProgress(msg)
         nodes -= node.phasename

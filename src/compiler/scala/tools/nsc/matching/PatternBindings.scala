@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * Author: Paul Phillips
  */
 
@@ -7,8 +7,8 @@ package scala.tools.nsc
 package matching
 
 import transform.ExplicitOuter
-import collection.immutable.TreeMap
 import PartialFunction._
+import scala.language.postfixOps
 
 trait PatternBindings extends ast.TreeDSL
 {
@@ -20,9 +20,10 @@ trait PatternBindings extends ast.TreeDSL
   import Debug._
 
   /** EqualsPattern **/
-  def isEquals(tpe: Type)             = cond(tpe) { case TypeRef(_, EqualsPatternClass, _) => true }
+  def isEquals(tpe: Type)             = tpe.typeSymbol == EqualsPatternClass
   def mkEqualsRef(tpe: Type)          = typeRef(NoPrefix, EqualsPatternClass, List(tpe))
-  def decodedEqualsType(tpe: Type)    = condOpt(tpe) { case TypeRef(_, EqualsPatternClass, List(arg)) => arg } getOrElse (tpe)
+  def decodedEqualsType(tpe: Type)    =
+    if (tpe.typeSymbol == EqualsPatternClass) tpe.typeArgs.head else tpe
 
   // A subtype test which creates fresh existentials for type
   // parameters on the right hand side.
@@ -37,7 +38,7 @@ trait PatternBindings extends ast.TreeDSL
     case _                  => newTree
   }
 
-  // used as argument to `EqualsPatternClass'
+  // used as argument to `EqualsPatternClass`
   case class PseudoType(o: Tree) extends SimpleTypeProxy {
     override def underlying: Type = o.tpe
     override def safeToString: String = "PseudoType("+o+")"

@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -13,7 +13,7 @@ import java.security.SecureRandom
 import io.{ File, Path, Directory, Socket }
 import scala.util.control.Exception.catching
 import scala.tools.util.CompileOutputCommon
-import scala.tools.util.StringOps.splitWhere
+import scala.reflect.internal.util.StringOps.splitWhere
 import scala.sys.process._
 
 trait HasCompileSocket {
@@ -72,7 +72,7 @@ class CompileSocket extends CompileOutputCommon {
   /** A temporary directory to use */
   val tmpDir = {
     val udir  = Option(Properties.userName) getOrElse "shared"
-    val f     = (Path(Properties.tmpDir) / "scala-devel" / udir).createDirectory()
+    val f     = (Path(Properties.tmpDir) / ("scala-devel" + udir)).createDirectory()
 
     if (f.isDirectory && f.canWrite) {
       info("[Temp directory: " + f + "]")
@@ -93,7 +93,7 @@ class CompileSocket extends CompileOutputCommon {
 
   /** Start a new server. */
   private def startNewServer(vmArgs: String) = {
-    val cmd = serverCommand(vmArgs split " " toSeq)
+    val cmd = serverCommand((vmArgs split " ").toSeq)
     info("[Executing command: %s]" format cmd.mkString(" "))
 
     // Hiding inadequate daemonized implementation from public API for now
@@ -206,7 +206,7 @@ class CompileSocket extends CompileOutputCommon {
       Thread sleep 100
       ff.length
     }
-    if (Iterator continually check take 50 find (_ > 0) isEmpty) {
+    if ((Iterator continually check take 50 find (_ > 0)).isEmpty) {
       ff.delete()
       fatal("Unable to establish connection to server.")
     }

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -20,6 +20,7 @@ import scala.collection.{ mutable, immutable }
  *  @author Burak Emir
  *  @version 1.0
  */
+@deprecated("This class will be removed", "2.10.0")
 abstract class DetWordAutom[T <: AnyRef] {
   val nstates: Int
   val finals: Array[Int]

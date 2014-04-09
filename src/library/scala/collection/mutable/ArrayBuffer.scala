@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -29,7 +29,7 @@ import parallel.mutable.ParArray
  *
  *  @tparam A    the type of this arraybuffer's elements.
  *
- *  @define Coll ArrayBuffer
+ *  @define Coll `ArrayBuffer`
  *  @define coll arraybuffer
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
  *    `That` is always `ArrayBuffer[B]` because an implicit of type `CanBuildFrom[ArrayBuffer, B, ArrayBuffer[B]]`
@@ -45,7 +45,8 @@ import parallel.mutable.ParArray
  */
 @SerialVersionUID(1529165946227428979L)
 class ArrayBuffer[A](override protected val initialSize: Int)
-  extends Buffer[A]
+  extends AbstractBuffer[A]
+     with Buffer[A]
      with GenericTraversableTemplate[A, ArrayBuffer]
      with BufferLike[A, ArrayBuffer[A]]
      with IndexedSeqOptimized[A, ArrayBuffer[A]]
@@ -65,7 +66,7 @@ class ArrayBuffer[A](override protected val initialSize: Int)
   override def sizeHint(len: Int) {
     if (len > size && len >= 1) {
       val newarray = new Array[AnyRef](len)
-      compat.Platform.arraycopy(array, 0, newarray, 0, size0)
+      scala.compat.Platform.arraycopy(array, 0, newarray, 0, size0)
       array = newarray
     }
   }
@@ -92,7 +93,7 @@ class ArrayBuffer[A](override protected val initialSize: Int)
    *  @return      the updated buffer.
    */
   override def ++=(xs: TraversableOnce[A]): this.type = xs match {
-    case v: collection.IndexedSeqLike[_, _] =>
+    case v: scala.collection.IndexedSeqLike[_, _] =>
       val n = v.length
       ensureSize(size0 + n)
       v.copyToArray(array.asInstanceOf[scala.Array[Any]], size0, n)
@@ -106,7 +107,7 @@ class ArrayBuffer[A](override protected val initialSize: Int)
    *  the identity of the buffer. It takes time linear in
    *  the buffer size.
    *
-   *  @param elem  the element to append.
+   *  @param elem  the element to prepend.
    *  @return      the updated buffer.
    */
   def +=:(elem: A): this.type = {
@@ -168,12 +169,6 @@ class ArrayBuffer[A](override protected val initialSize: Int)
     result
   }
 
-  /** Return a clone of this buffer.
-   *
-   *  @return an `ArrayBuffer` with the same elements.
-   */
-  override def clone(): ArrayBuffer[A] = new ArrayBuffer[A] ++= this
-
   def result: ArrayBuffer[A] = this
 
   /** Defines the prefix of the string representation.
@@ -186,11 +181,11 @@ class ArrayBuffer[A](override protected val initialSize: Int)
  *
  *  $factoryInfo
  *  @define coll array buffer
- *  @define Coll ArrayBuffer
+ *  @define Coll `ArrayBuffer`
  */
 object ArrayBuffer extends SeqFactory[ArrayBuffer] {
   /** $genericCanBuildFromInfo */
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ArrayBuffer[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, ArrayBuffer[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   def newBuilder[A]: Builder[A, ArrayBuffer[A]] = new ArrayBuffer[A]
 }
 

@@ -1,12 +1,12 @@
 /* NSC -- new Scala compiler
- * Copyright 2009-2011 Scala Solutions and LAMP/EPFL
+ * Copyright 2009-2013 Typesafe/Scala Solutions and LAMP/EPFL
  * @author Martin Odersky
  */
 package scala.tools.nsc
 package interactive
 
-import scala.tools.nsc.util.{SourceFile, Position, NoPosition}
-import collection.mutable.ArrayBuffer
+import scala.reflect.internal.util.{SourceFile, Position, NoPosition}
+import scala.collection.mutable.ArrayBuffer
 
 trait RichCompilationUnits { self: Global =>
 

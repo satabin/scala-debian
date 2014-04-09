@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
@@ -16,14 +16,14 @@ trait Imports {
   import memberHandlers._
 
   def isNoImports = settings.noimports.value
-  def isNoPredef  = false   // settings.nopredef.value
+  def isNoPredef  = settings.nopredef.value
 
   /** Synthetic import handlers for the language defined imports. */
   private def makeWildcardImportHandler(sym: Symbol): ImportHandler = {
     val hd :: tl = sym.fullName.split('.').toList map newTermName
     val tree = Import(
       tl.foldLeft(Ident(hd): Tree)((x, y) => Select(x, y)),
-      List(ImportSelector(nme.WILDCARD, -1, null, -1))
+      ImportSelector.wildList
     )
     tree setSymbol sym
     new ImportHandler(tree)
@@ -34,8 +34,9 @@ trait Imports {
   def languageWildcards: List[Type] = languageWildcardSyms map (_.tpe)
   def languageWildcardHandlers = languageWildcardSyms map makeWildcardImportHandler
 
-  def importedTerms  = onlyTerms(importHandlers flatMap (_.importedNames))
-  def importedTypes  = onlyTypes(importHandlers flatMap (_.importedNames))
+  def allImportedNames = importHandlers flatMap (_.importedNames)
+  def importedTerms    = onlyTerms(allImportedNames)
+  def importedTypes    = onlyTypes(allImportedNames)
 
   /** Types which have been wildcard imported, such as:
    *    val x = "abc" ; import x._  // type java.lang.String
@@ -49,10 +50,7 @@ trait Imports {
    *  into the compiler scopes.
    */
   def sessionWildcards: List[Type] = {
-    importHandlers flatMap {
-      case x if x.importsWildcard => x.targetType
-      case _                      => None
-    } distinct
+    importHandlers filter (_.importsWildcard) map (_.targetType) distinct
   }
   def wildcardTypes = languageWildcards ++ sessionWildcards
 
@@ -63,14 +61,15 @@ trait Imports {
   def importedTypeSymbols    = importedSymbols collect { case x: TypeSymbol => x }
   def implicitSymbols        = importedSymbols filter (_.isImplicit)
 
-  def importedTermNamed(name: String) = importedTermSymbols find (_.name.toString == name)
+  def importedTermNamed(name: String): Symbol =
+    importedTermSymbols find (_.name.toString == name) getOrElse NoSymbol
 
   /** Tuples of (source, imported symbols) in the order they were imported.
    */
   def importedSymbolsBySource: List[(Symbol, List[Symbol])] = {
     val lang    = languageWildcardSyms map (sym => (sym, membersAtPickler(sym)))
-    val session = importHandlers filter (_.targetType.isDefined) map { mh =>
-      (mh.targetType.get.typeSymbol, mh.importedSymbols)
+    val session = importHandlers filter (_.targetType != NoType) map { mh =>
+      (mh.targetType.typeSymbol, mh.importedSymbols)
     }
 
     lang ++ session
@@ -192,5 +191,5 @@ trait Imports {
     prevRequestList flatMap (req => req.handlers map (req -> _))
 
   private def membersAtPickler(sym: Symbol): List[Symbol] =
-    atPickler(sym.info.nonPrivateMembers)
+    beforePickler(sym.info.nonPrivateMembers.toList)
 }

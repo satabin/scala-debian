@@ -1,5 +1,5 @@
 /* NEST (New Scala Test)
- * Copyright 2007-2011 LAMP/EPFL
+ * Copyright 2007-2013 LAMP/EPFL
  */
 
 package scala.tools.partest
@@ -28,7 +28,7 @@ object PathSettings {
   }
 
   // Directory <root>/test/files
-  lazy val srcDir = Directory(testRoot / srcDirName normalize)
+  lazy val srcDir = Directory(testRoot / srcDirName toCanonical)
 
   // Directory <root>/test/files/lib
   lazy val srcLibDir = Directory(srcDir / "lib")
@@ -38,6 +38,21 @@ object PathSettings {
 
   lazy val srcSpecLib: File = findJar(srcSpecLibDir, "instrumented") getOrElse {
     sys.error("No instrumented.jar found in %s".format(srcSpecLibDir))
+  }
+
+  // Directory <root>/test/files/codelib
+  lazy val srcCodeLibDir = Directory(srcDir / "codelib")
+
+  lazy val srcCodeLib: File = (
+    findJar(srcCodeLibDir, "code")
+      orElse findJar(Directory(testRoot / "files" / "codelib"), "code") // work with --srcpath pending
+      getOrElse sys.error("No code.jar found in %s".format(srcCodeLibDir))
+  )
+
+  lazy val instrumentationAgentLib: File = {
+    findJar(buildPackLibDir.files, "scala-partest-javaagent") getOrElse {
+      sys.error("No partest-javaagent jar found in '%s' or '%s'".format(buildPackLibDir, srcLibDir))
+    }
   }
 
   // Directory <root>/build
@@ -57,6 +72,9 @@ object PathSettings {
     findJar(buildPackLibDir.files ++ srcLibDir.files, "scalacheck") getOrElse {
       sys.error("No scalacheck jar found in '%s' or '%s'".format(buildPackLibDir, srcLibDir))
     }
+
+  lazy val diffUtils: File =
+    findJar(buildPackLibDir.files, "diffutils") getOrElse sys.error(s"No diffutils.jar found in '$buildPackLibDir'.")
 }
 
 class PathSettings() {

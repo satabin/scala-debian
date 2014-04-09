@@ -1,5 +1,5 @@
 /* FJBG -- Fast Java Bytecode Generator
- * Copyright 2002-2011 LAMP/EPFL
+ * Copyright 2002-2013 LAMP/EPFL
  * @author  Michel Schinz
  */
 
@@ -25,8 +25,6 @@ public class JClass extends JMember {
     protected final String[] interfaceNames;
     protected final String sourceFileName;
     protected final JConstantPool pool;
-
-    protected JBootstrapInvokeDynamic bootstrapClassAttr = null;
 
     public final static String[] NO_INTERFACES = new String[0];
 
@@ -305,12 +303,6 @@ public class JClass extends JMember {
         dStream.close();
         bStream.close();
         fStream.close();
-    }
-
-    public void setBootstrapClass(String bootstrapClass) {
-    	assert bootstrapClassAttr == null;
-    	bootstrapClassAttr = new JBootstrapInvokeDynamic(context, this, bootstrapClass);
-    	addAttribute(bootstrapClassAttr);
     }
 
     /**

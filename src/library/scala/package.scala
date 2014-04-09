@@ -1,15 +1,15 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-import annotation.bridge
 
 /**
  * Core Scala types. They are always available without an explicit import.
+ * @contentDiagram hideNodes "scala.Serializable"
  */
 package object scala {
   type Throwable = java.lang.Throwable
@@ -27,9 +27,18 @@ package object scala {
   type NoSuchElementException          = java.util.NoSuchElementException
   type NumberFormatException           = java.lang.NumberFormatException
   type AbstractMethodError             = java.lang.AbstractMethodError
+  type InterruptedException            = java.lang.InterruptedException
+
+  // A dummy used by the specialization annotation.
+  val AnyRef = new Specializable {
+    override def toString = "object AnyRef"
+  }
 
   @deprecated("instead of `@serializable class C`, use `class C extends Serializable`", "2.9.0")
   type serializable = annotation.serializable
+
+  @deprecated("instead of `@cloneable class C`, use `class C extends Cloneable`", "2.10.0")
+  type cloneable = annotation.cloneable
 
   type TraversableOnce[+A] = scala.collection.TraversableOnce[A]
 
@@ -58,6 +67,9 @@ package object scala {
   type ::[A] = scala.collection.immutable.::[A]
   val :: = scala.collection.immutable.::
 
+  val +: = scala.collection.+:
+  val :+ = scala.collection.:+
+
   type Stream[+A] = scala.collection.immutable.Stream[A]
   val Stream = scala.collection.immutable.Stream
   val #:: = scala.collection.immutable.Stream.#::
@@ -70,15 +82,6 @@ package object scala {
 
   type Range = scala.collection.immutable.Range
   val Range = scala.collection.immutable.Range
-
-  // Migrated from Predef
-  @deprecated("Use Thread.currentThread instead", "2.9.0")
-  def currentThread = java.lang.Thread.currentThread()
-
-  // Moved back into Predef to avoid unnecessary indirection by
-  // way of the scala package object within the standard library,
-  // but bridged for compatibility.
-  @bridge def $scope = scala.xml.TopScope
 
   // Numeric types which were moved into scala.math.*
 
@@ -106,6 +109,15 @@ package object scala {
   type PartialOrdering[T] = scala.math.PartialOrdering[T]
   type PartiallyOrdered[T] = scala.math.PartiallyOrdered[T]
 
+  type Either[+A, +B] = scala.util.Either[A, B]
+  val Either = scala.util.Either
+
+  type Left[+A, +B] = scala.util.Left[A, B]
+  val Left = scala.util.Left
+
+  type Right[+A, +B] = scala.util.Right[A, B]
+  val Right = scala.util.Right
+
   // Annotations which we might move to annotation.*
 /*
   type SerialVersionUID = annotation.SerialVersionUID
@@ -123,77 +135,4 @@ package object scala {
   type unchecked = annotation.unchecked.unchecked
   type volatile = annotation.volatile
   */
-  @deprecated("Use Tuple1(x) to create a 1-tuple.", "2.8.0")
-  def Tuple[A1](x1: A1) = Tuple1(x1)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2](x1: A1, x2: A2) = Tuple2(x1, x2)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3](x1: A1, x2: A2, x3: A3) = Tuple3(x1, x2, x3)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4](x1: A1, x2: A2, x3: A3, x4: A4) = Tuple4(x1, x2, x3, x4)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5) = Tuple5(x1, x2, x3, x4, x5)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6) = Tuple6(x1, x2, x3, x4, x5, x6)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7) = Tuple7(x1, x2, x3, x4, x5, x6, x7)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8) = Tuple8(x1, x2, x3, x4, x5, x6, x7, x8)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9) = Tuple9(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10) = Tuple10(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11) = Tuple11(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12) = Tuple12(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13) = Tuple13(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14) = Tuple14(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15) = Tuple15(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15, x16: A16) = Tuple16(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15, x16: A16, x17: A17) = Tuple17(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15, x16: A16, x17: A17, x18: A18) = Tuple18(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15, x16: A16, x17: A17, x18: A18, x19: A19) = Tuple19(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15, x16: A16, x17: A17, x18: A18, x19: A19, x20: A20) = Tuple20(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15, x16: A16, x17: A17, x18: A18, x19: A19, x20: A20, x21: A21) = Tuple21(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21)
-  @deprecated("Use ((x1, x2, ...)) syntax to create Tuples", "2.8.0")
-  def Tuple[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22](x1: A1, x2: A2, x3: A3, x4: A4, x5: A5, x6: A6, x7: A7, x8: A8, x9: A9, x10: A10, x11: A11, x12: A12, x13: A13, x14: A14, x15: A15, x16: A16, x17: A17, x18: A18, x19: A19, x20: A20, x21: A21, x22: A22) = Tuple22(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22)
-
-  @deprecated("use java.lang.Integer instead", "2.6.0")
-  type Integer = java.lang.Integer
-  @deprecated("use java.lang.Character instead", "2.6.0")
-  type Character = java.lang.Character
-
-  @deprecated("use Iterable instead", "2.8.0")
-  type Collection[+A] = Iterable[A]
-  @deprecated("use Iterable instead", "2.8.0")
-  val Collection = Iterable
-
-  @deprecated("use Seq instead", "2.8.0")
-  type Sequence[+A] = scala.collection.Seq[A]
-  @deprecated("use Seq instead", "2.8.0")
-  val Sequence = scala.collection.Seq
-
-  @deprecated("use IndexedSeq instead", "2.8.0")
-  type RandomAccessSeq[+A] = scala.collection.IndexedSeq[A]
-  @deprecated("use IndexedSeq instead", "2.8.0")
-  val RandomAccessSeq = scala.collection.IndexedSeq
-
-  @deprecated("use scala.annotation.Annotation instead", "2.9.0")
-  type Annotation = scala.annotation.Annotation
-  @deprecated("use scala.annotation.ClassfileAnnotation instead", "2.9.0")
-  type ClassfileAnnotation = scala.annotation.ClassfileAnnotation
-  @deprecated("use scala.annotation.StaticAnnotation instead", "2.9.0")
-  type StaticAnnotation = scala.annotation.StaticAnnotation
-  @deprecated("use scala.annotation.TypeConstraint instead", "2.9.0")
-  type TypeConstraint = scala.annotation.TypeConstraint
 }

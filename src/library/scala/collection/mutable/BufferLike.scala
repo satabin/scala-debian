@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,7 +13,7 @@ package mutable
 
 import generic._
 import script._
-import annotation.{migration, bridge}
+import scala.annotation.{migration, bridge}
 
 /** A template trait for buffers of type `Buffer[A]`.
  *
@@ -58,13 +58,13 @@ import annotation.{migration, bridge}
  *  mutates the collection in place, unlike similar but
  *  undeprecated methods throughout the collections hierarchy.
  */
-@cloneable
 trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
                 extends Growable[A]
                    with Shrinkable[A]
                    with Scriptable[A]
                    with Subtractable[A, This]
                    with SeqLike[A, This]
+                   with scala.Cloneable
 { self : This =>
 
   // Abstract methods from Seq:
@@ -93,7 +93,7 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    *  @throws   IndexOutOfBoundsException if the index `n` is not in the valid range
    *            `0 <= n <= length`.
    */
-  def insertAll(n: Int, elems: collection.Traversable[A])
+  def insertAll(n: Int, elems: scala.collection.Traversable[A])
 
    /** Removes the element at a given index from this buffer.
     *
@@ -214,51 +214,6 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    */
   def readOnly: scala.collection.Seq[A] = toSeq
 
-  /** Adds a number of elements in an array
-   *
-   *  @param src    the array
-   *  @param start  the first element to append
-   *  @param len    the number of elements to append
-   */
-  @deprecated("replace by: `buf ++= src.view(start, end)`", "2.8.0")
-  def ++=(src: Array[A], start: Int, len: Int) {
-    var i = start
-    val end = i + len
-    while (i < end) {
-      this += src(i)
-      i += 1
-    }
-  }
-
-  /** Adds a single element to this collection and returns
-   *  the collection itself.
-   *
-   *  $compatMutate
-   *  You are strongly recommended to use '+=' instead.
-   *
-   *  @param elem  the element to add.
-   */
-  @deprecated("Use += instead if you intend to add by side effect to an existing collection.\n"+
-              "Use `clone() +=' if you intend to create a new collection.", "2.8.0")
-  def + (elem: A): This = { +=(elem); repr }
-
-  /** Adds two or more elements to this collection and returns
-   *  the collection itself.
-   *
-   *  $compatMutate
-   *  You are strongly recommended to use '++=' instead.
-   *
-   *  @param elem1 the first element to add.
-   *  @param elem2 the second element to add.
-   *  @param elems the remaining elements to add.
-   */
-  @deprecated("Use ++= instead if you intend to add by side effect to an existing collection.\n"+
-              "Use `clone() ++=' if you intend to create a new collection.", "2.8.0")
-  def + (elem1: A, elem2: A, elems: A*): This = {
-    this += elem1 += elem2 ++= elems
-    repr
-  }
-
   /** Creates a new collection containing both the elements of this collection and the provided
    *  traversable object.
    *
@@ -267,9 +222,6 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
    */
   @migration("`++` creates a new buffer. Use `++=` to add an element from this buffer and return that buffer itself.", "2.8.0")
   def ++(xs: GenTraversableOnce[A]): This = clone() ++= xs.seq
-
-  @bridge
-  def ++(xs: TraversableOnce[A]): This = ++(xs: GenTraversableOnce[A])
 
   /** Creates a new collection with all the elements of this collection except `elem`.
    *
@@ -301,5 +253,13 @@ trait BufferLike[A, +This <: BufferLike[A, This] with Buffer[A]]
   @migration("`--` creates a new buffer. Use `--=` to remove an element from this buffer and return that buffer itself.", "2.8.0")
   override def --(xs: GenTraversableOnce[A]): This = clone() --= xs.seq
 
-  @bridge def --(xs: TraversableOnce[A]): This = --(xs: GenTraversableOnce[A])
+  /** Return a clone of this buffer.
+   *
+   *  @return a `Buffer` with the same elements.
+   */
+  override def clone(): This = {
+    val bf = newBuilder
+    bf ++= this
+    bf.result.asInstanceOf[This]
+  }
 }

@@ -1,6 +1,6 @@
 /*     ___ ____ ___   __   ___   ___
 **    / _// __// _ | / /  / _ | / _ \  Scala classfile decoder
-**  __\ \/ /__/ __ |/ /__/ __ |/ ___/  (c) 2003-2011, LAMP/EPFL
+**  __\ \/ /__/ __ |/ /__/ __ |/ ___/  (c) 2003-2013, LAMP/EPFL
 ** /____/\___/_/ |_/____/_/ |_/_/      http://scala-lang.org/
 **
 */
@@ -8,11 +8,12 @@
 package scala.tools.scalap
 
 import java.io.{ PrintStream, OutputStreamWriter, ByteArrayOutputStream }
+import scala.reflect.NameTransformer
 import scalax.rules.scalasig._
-import tools.nsc.util.{ ClassPath, JavaClassPath }
-import tools.util.PathResolver
+import scala.tools.nsc.util.{ ClassPath, JavaClassPath }
+import scala.tools.util.PathResolver
 import ClassPath.DefaultJavaContext
-import tools.nsc.io.{ PlainFile, AbstractFile }
+import scala.tools.nsc.io.{ PlainFile, AbstractFile }
 
 /**The main object used to execute scalap on the command-line.
  *
@@ -96,9 +97,14 @@ class Main {
    */
   def process(args: Arguments, path: ClassPath[AbstractFile])(classname: String): Unit = {
     // find the classfile
-    val encName = Names.encode(
-      if (classname == "scala.AnyRef") "java.lang.Object"
-      else classname)
+    val encName = classname match {
+      case "scala.AnyRef" => "java.lang.Object"
+      case _ =>
+        // we have to encode every fragment of a name separately, otherwise the NameTransformer
+        // will encode using unicode escaping dot separators as well
+        // we can afford allocations because this is not a performance critical code
+        classname.split('.').map(NameTransformer.encode).mkString(".")
+    }
     val cls = path.findClass(encName)
     if (cls.isDefined && cls.get.binary.isDefined) {
       val cfile = cls.get.binary.get
@@ -131,9 +137,9 @@ class Main {
     def asClasspathString = ""
 
     val context     = DefaultJavaContext
-    val classes     = IndexedSeq[ClassRep]()
-    val packages    = IndexedSeq[ClassPath[AbstractFile]]()
-    val sourcepaths = IndexedSeq[AbstractFile]()
+    val classes     = IndexedSeq()
+    val packages    = IndexedSeq()
+    val sourcepaths = IndexedSeq()
   }
 }
 
@@ -178,7 +184,7 @@ object Main extends Main {
     val cparg = List("-classpath", "-cp") map (arguments getArgument _) reduceLeft (_ orElse _)
     val path = cparg match {
       case Some(cp) => new JavaClassPath(DefaultJavaContext.classesInExpandedPath(cp), DefaultJavaContext)
-      case _        => PathResolver.fromPathString("")
+      case _        => PathResolver.fromPathString(".") // include '.' in the default classpath SI-6669
     }
     // print the classpath if output is verbose
     if (verbose)

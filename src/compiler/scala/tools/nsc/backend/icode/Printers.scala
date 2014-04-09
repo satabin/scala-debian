@@ -1,17 +1,15 @@
 /* NSC -- new scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
-
 
 package scala.tools.nsc
 package backend
 package icode
 
 import java.io.PrintWriter
-
 import scala.tools.nsc.symtab.Flags
-import scala.tools.nsc.util.Position
+import scala.reflect.internal.util.Position
 
 trait Printers { self: ICodes =>
   import global._
@@ -84,7 +82,7 @@ trait Printers { self: ICodes =>
       if (!m.isAbstractMethod) {
         println(" {")
         println("locals: " + m.locals.mkString("", ", ", ""))
-        println("startBlock: " + m.code.startBlock)
+        println("startBlock: " + m.startBlock)
         println("blocks: " + m.code.blocks.mkString("[", ",", "]"))
         println
         lin.linearize(m) foreach printBlock
@@ -105,7 +103,7 @@ trait Printers { self: ICodes =>
 
     def printExceptionHandler(e: ExceptionHandler) {
       indent;
-      println("catch (" + e.cls.simpleName + ") in " + e.covered + " starting at: " + e.startBlock);
+      println("catch (" + e.cls.simpleName + ") in " + e.covered.toSeq.sortBy(_.label) + " starting at: " + e.startBlock);
       println("consisting of blocks: " + e.blocks);
       undent;
       println("with finalizer: " + e.finalizer);

@@ -1,12 +1,12 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
 package scala.tools.nsc
 package util
 
-import Chars._
+import scala.reflect.internal.Chars._
 
 abstract class CharArrayReader { self =>
 

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2010-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,20 +8,16 @@
 
 package scala.collection.generic
 
+import scala.collection.mutable.Builder
+import scala.collection.parallel.Combiner
+import scala.collection.parallel.ParSet
+import scala.collection.parallel.ParSetLike
+import scala.language.higherKinds
 
-
-
-
-import collection.mutable.Builder
-import collection.parallel.Combiner
-import collection.parallel.ParSet
-import collection.parallel.ParSetLike
-
-
-
-
-
-
+/**
+ *  @author Aleksandar Prokopec
+ *  @since 2.8
+ */
 abstract class ParSetFactory[CC[X] <: ParSet[X] with ParSetLike[X, CC[X], _] with GenericParTemplate[X, CC]]
   extends GenSetFactory[CC]
      with GenericParCompanion[CC]
@@ -35,8 +31,4 @@ abstract class ParSetFactory[CC[X] <: ParSet[X] with ParSetLike[X, CC[X], _] wit
     override def apply() = newCombiner[A]
   }
 }
-
-
-
-
 

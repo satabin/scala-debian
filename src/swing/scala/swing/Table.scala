@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -275,6 +275,11 @@ class Table extends Component with Scrollable.Wrapper {
    * necessarily the same as for the model.
    */
   def apply(row: Int, column: Int): Any = model.getValueAt(row, viewToModelColumn(column))
+
+  // TODO: this is Java 6 stuff
+  // def apply(row: Int, column: Int): Any = model.getValueAt(viewToModelRow(row), viewToModelColumn(column))
+  //def viewToModelRow(idx: Int) = peer.convertRowIndexToModel(idx)
+  //def modelToViewRow(idx: Int) = peer.convertRowIndexToView(idx)
 
   def viewToModelColumn(idx: Int) = peer.convertColumnIndexToModel(idx)
   def modelToViewColumn(idx: Int) = peer.convertColumnIndexToView(idx)

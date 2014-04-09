@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Paul Phillips
  */
 
@@ -7,6 +7,8 @@ package scala.tools.nsc
 package symtab
 
 import scala.collection.{ mutable, immutable }
+import scala.language.implicitConversions
+import scala.language.postfixOps
 
 /** Printing the symbol graph (for those symbols attached to an AST node)
  *  after each phase.
@@ -131,7 +133,7 @@ trait SymbolTrackers {
           else " (" + Flags.flagsToString(masked) + ")"
       }
       def symString(sym: Symbol) = (
-        if (settings.debug.value && sym.hasRawInfo && sym.rawInfo.isComplete) {
+        if (settings.debug.value && sym.hasCompleteInfo) {
           val s = sym.defString take 240
           if (s.length == 240) s + "..." else s
         }

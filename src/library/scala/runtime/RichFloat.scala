@@ -1,15 +1,18 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-package scala.runtime
+package scala
+package runtime
 
-final class RichFloat(val self: Float) extends FractionalProxy[Float] {
-  protected val integralNum = Numeric.FloatAsIfIntegral
+final class RichFloat(val self: Float) extends AnyVal with FractionalProxy[Float] {
+  protected def num         = scala.math.Numeric.FloatIsFractional
+  protected def ord         = scala.math.Ordering.Float
+  protected def integralNum = scala.math.Numeric.FloatAsIfIntegral
 
   def round: Int   = math.round(self)
   def ceil: Float  = math.ceil(self).toFloat
@@ -18,16 +21,14 @@ final class RichFloat(val self: Float) extends FractionalProxy[Float] {
   /** Converts an angle measured in degrees to an approximately equivalent
    *  angle measured in radians.
    *
-   *  @param  x an angle, in degrees
-   *  @return the measurement of the angle <code>x</code> in radians.
+   *  @return the measurement of the angle `x` in radians.
    */
   def toRadians: Float = math.toRadians(self).toFloat
 
   /** Converts an angle measured in radians to an approximately equivalent
    *  angle measured in degrees.
    *
-   *  @param  x angle, in radians
-   *  @return the measurement of the angle <code>x</code> in degrees.
+   *  @return the measurement of the angle `x` in degrees.
    */
   def toDegrees: Float = math.toDegrees(self).toFloat
 
@@ -36,4 +37,16 @@ final class RichFloat(val self: Float) extends FractionalProxy[Float] {
   def isInfinity: Boolean = java.lang.Float.isInfinite(self)
   def isPosInfinity: Boolean = isInfinity && self > 0.0f
   def isNegInfinity: Boolean = isInfinity && self < 0.0f
+
+  override def isValidByte = self.toByte.toFloat == self
+  override def isValidShort = self.toShort.toFloat == self
+  override def isValidChar = self.toChar.toFloat == self
+  override def isValidInt = { val i = self.toInt; i.toFloat == self && i != Int.MaxValue }
+  // override def isValidLong = { val l = self.toLong; l.toFloat == self && l != Long.MaxValue }
+  // override def isValidFloat = !java.lang.Float.isNaN(self)
+  // override def isValidDouble = !java.lang.Float.isNaN(self)
+  override def isWhole = {
+    val l = self.toLong
+    l.toFloat == self || l == Long.MaxValue && self < Float.PositiveInfinity || l == Long.MinValue && self > Float.NegativeInfinity
+  }
 }

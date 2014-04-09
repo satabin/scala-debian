@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,8 +12,8 @@ package scala.xml
 /** an XML node for processing instructions (PI)
  *
  * @author Burak Emir
- * @param  target target name of this PI
- * @param  text   text contained in this node, may not contain "?>"
+ * @param  target     target name of this PI
+ * @param  proctext   text contained in this node, may not contain "?>"
  */
 case class ProcInstr(target: String, proctext: String) extends SpecialNode
 {

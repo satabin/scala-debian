@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -38,7 +38,6 @@ extends GenSeqView[T, Coll]
    with ParSeqLike[T, This, ThisSeq]
 {
 self =>
-  import tasksupport._
 
   trait Transformed[+S] extends ParSeqView[S, Coll, CollSeq]
   with super[ParIterableView].Transformed[S] with super[GenSeqViewLike].Transformed[S] {
@@ -92,10 +91,18 @@ self =>
     override def seq = self.seq.patch(from, patch, replaced).asInstanceOf[SeqView[U, CollSeq]]
   }
 
+  // !!!
+  //
+  // What is up with this trait and method, why are they here doing
+  // nothing but throwing exceptions, without even being deprecated?
+  // They're not implementing something abstract; why aren't they
+  // just removed?
+  //
   // use Patched instead
   trait Prepended[U >: T] extends super.Prepended[U] with Transformed[U] {
     unsupported
   }
+  protected def newPrepended[U >: T](elem: U): Transformed[U] = unsupported
 
   /* wrapper virtual ctors */
 
@@ -122,7 +129,6 @@ self =>
     val patch = _patch;
     val replaced = _replaced
   } with Patched[U]
-  protected def newPrepended[U >: T](elem: U): Transformed[U] = unsupported
 
   /* operation overrides */
 
@@ -163,7 +169,7 @@ self =>
   override def scanRight[S, That](z: S)(op: (T, S) => S)(implicit bf: CanBuildFrom[This, S, That]): That = newForced(thisParSeq.scanRight(z)(op)).asInstanceOf[That]
   override def groupBy[K](f: T => K): immutable.ParMap[K, This] = thisParSeq.groupBy(f).map(kv => (kv._1, newForced(kv._2).asInstanceOf[This]))
   override def force[U >: T, That](implicit bf: CanBuildFrom[Coll, U, That]) = bf ifParallel { pbf =>
-    executeAndWaitResult(new Force(pbf, splitter).mapResult(_.result).asInstanceOf[Task[That, _]])
+    tasksupport.executeAndWaitResult(new Force(pbf, splitter).mapResult(_.result).asInstanceOf[Task[That, _]])
   } otherwise {
     val b = bf(underlying)
     b ++= this.iterator

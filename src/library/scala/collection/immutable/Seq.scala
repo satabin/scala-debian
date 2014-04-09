@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -19,7 +19,7 @@ import parallel.immutable.ParSeq
  *  that are guaranteed immutable.
  *
  *  $seqInfo
- *  @define Coll immutable.Seq
+ *  @define Coll `immutable.Seq`
  *  @define coll immutable sequence
  */
 trait Seq[+A] extends Iterable[A]
@@ -36,11 +36,11 @@ trait Seq[+A] extends Iterable[A]
 }
 
 /** $factoryInfo
- *  @define Coll immutable.Seq
+ *  @define Coll `immutable.Seq`
  *  @define coll immutable sequence
  */
 object Seq extends SeqFactory[Seq] {
   /** genericCanBuildFromInfo */
-  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Seq[A]] = new GenericCanBuildFrom[A]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Seq[A]] = ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   def newBuilder[A]: Builder[A, Seq[A]] = new mutable.ListBuffer
 }

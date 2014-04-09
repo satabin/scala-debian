@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  *
  * @author  Paul Phillips
  */
@@ -9,6 +9,7 @@ package ast
 
 import PartialFunction._
 import symtab.Flags
+import scala.language.implicitConversions
 
 /** A DSL for generating scala code.  The goal is that the
  *  code generating code should look a lot like the code it
@@ -27,12 +28,6 @@ trait TreeDSL {
     def nullSafe[T](f: Tree => Tree, ifNull: Tree): Tree => Tree =
       tree => IF (tree MEMBER_== NULL) THEN ifNull ELSE f(tree)
 
-    // strip bindings to find what lies beneath
-    final def unbind(x: Tree): Tree = x match {
-      case Bind(_, y) => unbind(y)
-      case y          => y
-    }
-
     def returning[T](x: T)(f: T => Unit): T = util.returning(x)(f)
 
     object LIT extends (Any => Literal) {
@@ -50,13 +45,15 @@ trait TreeDSL {
     def NULL          = LIT(null)
     def UNIT          = LIT(())
 
-    object WILD {
-      def apply(tpe: Type = null) =
-        if (tpe == null) Ident(nme.WILDCARD)
-        else Ident(nme.WILDCARD) setType tpe
+    // for those preferring boring, predictable lives, without the thrills of tree-sharing
+    // (but with the perk of typed trees)
+    def TRUE_typed  = LIT(true) setType ConstantType(Constant(true))
+    def FALSE_typed = LIT(false) setType ConstantType(Constant(false))
 
-      def unapply(other: Any) =
-        cond(other) { case Ident(nme.WILDCARD)  => true }
+    object WILD {
+      def empty               = Ident(nme.WILDCARD)
+      def apply(tpe: Type)    = Ident(nme.WILDCARD) setType tpe
+      def unapply(other: Any) = cond(other) { case Ident(nme.WILDCARD) => true }
     }
 
     def fn(lhs: Tree, op:   Name, args: Tree*)  = Apply(Select(lhs, op), args.toList)
@@ -77,7 +74,7 @@ trait TreeDSL {
       /** Note - calling ANY_== in the matcher caused primitives to get boxed
        *  for the comparison, whereas looking up nme.EQ does not.  See #3570 for
        *  an example of how target.tpe can be non-null, yet it claims not to have
-       *  a mmeber called nme.EQ.  Not sure if that should happen, but we can be
+       *  a member called nme.EQ.  Not sure if that should happen, but we can be
        *  robust by dragging in Any regardless.
        */
       def MEMBER_== (other: Tree)   = {
@@ -99,8 +96,14 @@ trait TreeDSL {
       def INT_==  (other: Tree)     = fn(target, getMember(IntClass, nme.EQ), other)
       def INT_!=  (other: Tree)     = fn(target, getMember(IntClass, nme.NE), other)
 
-      def BOOL_&& (other: Tree)     = fn(target, getMember(BooleanClass, nme.ZAND), other)
-      def BOOL_|| (other: Tree)     = fn(target, getMember(BooleanClass, nme.ZOR), other)
+      // generic operations on ByteClass, IntClass, LongClass
+      def GEN_|   (other: Tree, kind: ClassSymbol)  = fn(target, getMember(kind, nme.OR), other)
+      def GEN_&   (other: Tree, kind: ClassSymbol)  = fn(target, getMember(kind, nme.AND), other)
+      def GEN_==  (other: Tree, kind: ClassSymbol)  = fn(target, getMember(kind, nme.EQ), other)
+      def GEN_!=  (other: Tree, kind: ClassSymbol)  = fn(target, getMember(kind, nme.NE), other)
+
+      def BOOL_&& (other: Tree)     = fn(target, Boolean_and, other)
+      def BOOL_|| (other: Tree)     = fn(target, Boolean_or, other)
 
       /** Apply, Select, Match **/
       def APPLY(params: Tree*)      = Apply(target, params.toList)
@@ -123,10 +126,7 @@ trait TreeDSL {
        *
        *  See ticket #2168 for one illustration of AS vs. AS_ANY.
        */
-      def AS(tpe: Type)       = TypeApply(Select(target, Any_asInstanceOf), List(TypeTree(tpe)))
-      def AS_ANY(tpe: Type)   = gen.mkAsInstanceOf(target, tpe)
-      def AS_ATTR(tpe: Type)  = gen.mkAttributedCast(target, tpe)
-
+      def AS(tpe: Type)       = gen.mkAsInstanceOf(target, tpe, any = true, wrapInApply = false)
       def IS(tpe: Type)       = gen.mkIsInstanceOf(target, tpe, true)
       def IS_OBJ(tpe: Type)   = gen.mkIsInstanceOf(target, tpe, false)
 
@@ -214,7 +214,7 @@ trait TreeDSL {
     class DefSymStart(val sym: Symbol) extends SymVODDStart with DefCreator {
       def symType  = sym.tpe.finalResultType
       def tparams  = sym.typeParams map TypeDef
-      def vparamss = sym.paramss map (xs => xs map ValDef)
+      def vparamss = mapParamss(sym)(ValDef)
     }
     class ValSymStart(val sym: Symbol) extends SymVODDStart with ValCreator {
       def symType = sym.tpe
@@ -234,7 +234,7 @@ trait TreeDSL {
     }
     class DefTreeStart(val name: Name) extends TreeVODDStart with DefCreator {
       def tparams: List[TypeDef] = Nil
-      def vparamss: List[List[ValDef]] = List(Nil)
+      def vparamss: List[List[ValDef]] = ListOfNil
     }
 
     class IfStart(cond: Tree, thenp: Tree) {
@@ -249,7 +249,7 @@ trait TreeDSL {
     }
 
     def CASE(pat: Tree): CaseStart  = new CaseStart(pat, EmptyTree)
-    def DEFAULT: CaseStart          = new CaseStart(WILD(), EmptyTree)
+    def DEFAULT: CaseStart          = new CaseStart(WILD.empty, EmptyTree)
 
     class SymbolMethods(target: Symbol) {
       def BIND(body: Tree) = Bind(target, body)
@@ -265,15 +265,11 @@ trait TreeDSL {
     }
 
     /** Top level accessible. */
-    def MATCHERROR(arg: Tree) = Throw(New(TypeTree(MatchErrorClass.tpe), List(List(arg))))
-    /** !!! should generalize null guard from match error here. */
-    def THROW(sym: Symbol): Throw = Throw(New(TypeTree(sym.tpe), List(Nil)))
-    def THROW(sym: Symbol, msg: Tree): Throw = Throw(New(TypeTree(sym.tpe), List(List(msg.TOSTRING()))))
+    def MATCHERROR(arg: Tree) = Throw(MatchErrorClass.tpe, arg)
+    def THROW(sym: Symbol, msg: Tree): Throw = Throw(sym.tpe, msg.TOSTRING())
 
-    def NEW(tpe: Tree, args: Tree*)   = New(tpe, List(args.toList))
-    def NEW(sym: Symbol, args: Tree*) =
-      if (args.isEmpty) New(TypeTree(sym.tpe))
-      else New(TypeTree(sym.tpe), List(args.toList))
+    def NEW(tpt: Tree, args: Tree*): Tree   = New(tpt, List(args.toList))
+    def NEW(sym: Symbol, args: Tree*): Tree = New(sym.tpe, args: _*)
 
     def DEF(name: Name, tp: Type): DefTreeStart     = DEF(name) withType tp
     def DEF(name: Name): DefTreeStart               = new DefTreeStart(name)
@@ -302,8 +298,8 @@ trait TreeDSL {
     def IF(tree: Tree)    = new IfStart(tree, EmptyTree)
     def TRY(tree: Tree)   = new TryStart(tree, Nil, EmptyTree)
     def BLOCK(xs: Tree*)  = Block(xs.init.toList, xs.last)
-    def NOT(tree: Tree)   = Select(tree, getMember(BooleanClass, nme.UNARY_!))
-    def SOME(xs: Tree*)   = Apply(scalaDot(nme.Some), List(makeTupleTerm(xs.toList, true)))
+    def NOT(tree: Tree)   = Select(tree, Boolean_not)
+    def SOME(xs: Tree*)   = Apply(SomeClass.companionSymbol, makeTupleTerm(xs.toList, true))
 
     /** Typed trees from symbols. */
     def THIS(sym: Symbol)             = gen.mkAttributedThis(sym)
@@ -311,21 +307,15 @@ trait TreeDSL {
     def REF(sym: Symbol)              = gen.mkAttributedRef(sym)
     def REF(pre: Type, sym: Symbol)   = gen.mkAttributedRef(pre, sym)
 
-    /** Some of this is basically verbatim from TreeBuilder, but we do not want
-     *  to get involved with him because he's an untyped only sort.
-     */
-    private def tupleName(count: Int, f: (String) => Name = newTermName(_: String)) =
-      scalaDot(f("Tuple" + count))
-
     def makeTupleTerm(trees: List[Tree], flattenUnary: Boolean): Tree = trees match {
       case Nil                        => UNIT
       case List(tree) if flattenUnary => tree
-      case _                          => Apply(tupleName(trees.length), trees)
+      case _                          => Apply(TupleClass(trees.length).companionModule, trees: _*)
     }
     def makeTupleType(trees: List[Tree], flattenUnary: Boolean): Tree = trees match {
       case Nil                        => gen.scalaUnitConstr
       case List(tree) if flattenUnary => tree
-      case _                          => AppliedTypeTree(tupleName(trees.length, newTypeName), trees)
+      case _                          => AppliedTypeTree(REF(TupleClass(trees.length)), trees)
     }
 
     /** Implicits - some of these should probably disappear **/

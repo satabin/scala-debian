@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2007-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2007-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -12,6 +12,7 @@ package scala.math
 import java.{ lang => jl }
 import java.math.{ MathContext, BigDecimal => BigDec }
 import scala.collection.immutable.NumericRange
+import scala.language.implicitConversions
 
 
 /**
@@ -33,8 +34,10 @@ object BigDecimal {
   /** Cache ony for defaultMathContext using BigDecimals in a small range. */
   private lazy val cache = new Array[BigDecimal](maxCached - minCached + 1)
 
-  object RoundingMode extends Enumeration(java.math.RoundingMode.values map (_.toString) : _*) with Serializable {
+  object RoundingMode extends Enumeration {
     type RoundingMode = Value
+    // These are supposed to be the same as java.math.RoundingMode.values,
+    // though it seems unwise to rely on the correspondence.
     val UP, DOWN, CEILING, FLOOR, HALF_UP, HALF_DOWN, HALF_EVEN, UNNECESSARY = Value
   }
 
@@ -156,6 +159,7 @@ object BigDecimal {
  *  @author  Stephane Micheloud
  *  @version 1.0
  */
+@deprecatedInheritance("This class will be made final.", "2.10.0")
 class BigDecimal(
   val bigDecimal: BigDec,
   val mc: MathContext)
@@ -181,12 +185,34 @@ extends ScalaNumber with ScalaNumericConversions with Serializable {
   override def equals (that: Any): Boolean = that match {
     case that: BigDecimal     => this equals that
     case that: BigInt         => this.toBigIntExact exists (that equals _)
-    case _: Float | _: Double => unifiedPrimitiveEquals(that)
-    case _                    => fitsInLong && unifiedPrimitiveEquals(that)
+    case that: Double         => isValidDouble && toDouble == that
+    case that: Float          => isValidFloat && toFloat == that
+    case _                    => isValidLong && unifiedPrimitiveEquals(that)
   }
-  private def fitsInLong = isWhole && this <= Long.MaxValue && this >= Long.MinValue
+  override def isValidByte  = noArithmeticException(toByteExact)
+  override def isValidShort = noArithmeticException(toShortExact)
+  override def isValidChar  = isValidInt && toIntExact >= Char.MinValue && toIntExact <= Char.MaxValue
+  override def isValidInt   = noArithmeticException(toIntExact)
+  def isValidLong  = noArithmeticException(toLongExact)
+  /** Returns `true` iff this can be represented exactly by [[scala.Float]]; otherwise returns `false`.
+    */
+  def isValidFloat = {
+    val f = toFloat
+    !f.isInfinity && bigDecimal.compareTo(new java.math.BigDecimal(f)) == 0
+  }
+  /** Returns `true` iff this can be represented exactly by [[scala.Double]]; otherwise returns `false`.
+    */
+  def isValidDouble = {
+    val d = toDouble
+    !d.isInfinity && bigDecimal.compareTo(new java.math.BigDecimal(d)) == 0
+  }
 
-  protected[math] def isWhole = (this remainder 1) == BigDecimal(0)
+  private def noArithmeticException(body: => Unit): Boolean = {
+    try   { body ; true }
+    catch { case _: ArithmeticException => false }
+  }
+
+  def isWhole() = (this remainder 1) == BigDecimal(0)
   def underlying = bigDecimal
 
   /** Compares this BigDecimal with the specified BigDecimal for equality.
@@ -215,11 +241,11 @@ extends ScalaNumber with ScalaNumericConversions with Serializable {
 
   /** Addition of BigDecimals
    */
-  def +  (that: BigDecimal): BigDecimal = this.bigDecimal.add(that.bigDecimal, mc)
+  def +  (that: BigDecimal): BigDecimal = this.bigDecimal.add(that.bigDecimal)
 
   /** Subtraction of BigDecimals
    */
-  def -  (that: BigDecimal): BigDecimal = this.bigDecimal.subtract(that.bigDecimal, mc)
+  def -  (that: BigDecimal): BigDecimal = this.bigDecimal.subtract(that.bigDecimal)
 
   /** Multiplication of BigDecimals
    */
@@ -233,14 +259,14 @@ extends ScalaNumber with ScalaNumericConversions with Serializable {
    *  divideToIntegralValue and the remainder.
    */
   def /% (that: BigDecimal): (BigDecimal, BigDecimal) =
-    this.bigDecimal.divideAndRemainder(that.bigDecimal, mc) match {
+    this.bigDecimal.divideAndRemainder(that.bigDecimal) match {
       case Array(q, r)  => (q, r)
     }
 
   /** Divide to Integral value.
    */
   def quot (that: BigDecimal): BigDecimal =
-    this.bigDecimal.divideToIntegralValue(that.bigDecimal, mc)
+    this.bigDecimal.divideToIntegralValue(that.bigDecimal)
 
   /** Returns the minimum of this and that
    */
@@ -252,7 +278,7 @@ extends ScalaNumber with ScalaNumericConversions with Serializable {
 
   /** Remainder after dividing this by that.
    */
-  def remainder (that: BigDecimal): BigDecimal = this.bigDecimal.remainder(that.bigDecimal, mc)
+  def remainder (that: BigDecimal): BigDecimal = this.bigDecimal.remainder(that.bigDecimal)
 
   /** Remainder after dividing this by that.
    */
@@ -264,11 +290,11 @@ extends ScalaNumber with ScalaNumericConversions with Serializable {
 
   /** Returns a BigDecimal whose value is the negation of this BigDecimal
    */
-  def unary_- : BigDecimal = this.bigDecimal.negate(mc)
+  def unary_- : BigDecimal = this.bigDecimal.negate()
 
   /** Returns the absolute value of this BigDecimal
    */
-  def abs: BigDecimal = this.bigDecimal abs mc
+  def abs: BigDecimal = this.bigDecimal.abs
 
   /** Returns the sign of this BigDecimal, i.e.
    *   -1 if it is less than 0,

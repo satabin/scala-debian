@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -34,7 +34,7 @@ import generic._
  *
  *  @author  Paul Phillips
  *  @version 2.8
- *  @define Coll NumericRange
+ *  @define Coll `NumericRange`
  *  @define coll numeric range
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
@@ -42,7 +42,7 @@ import generic._
 abstract class NumericRange[T]
   (val start: T, val end: T, val step: T, val isInclusive: Boolean)
   (implicit num: Integral[T])
-extends IndexedSeq[T] with Serializable {
+extends AbstractSeq[T] with IndexedSeq[T] with Serializable {
   /** Note that NumericRange must be invariant so that constructs
    *  such as "1L to 10 by 5" do not infer the range type as AnyVal.
    */
@@ -124,7 +124,21 @@ extends IndexedSeq[T] with Serializable {
     if (idx < 0 || idx >= length) throw new IndexOutOfBoundsException(idx.toString)
     else locationAfterN(idx)
   }
-
+  
+  import NumericRange.defaultOrdering
+  
+  override def min[T1 >: T](implicit ord: Ordering[T1]): T =
+    if (ord eq defaultOrdering(num)) {
+      if (num.signum(step) > 0) start
+      else last
+    } else super.min(ord)
+  
+  override def max[T1 >: T](implicit ord: Ordering[T1]): T = 
+    if (ord eq defaultOrdering(num)) {
+      if (num.signum(step) > 0) last
+      else start
+    } else super.max(ord)
+  
   // Motivated by the desire for Double ranges with BigDecimal precision,
   // we need some way to map a Range and get another Range.  This can't be
   // done in any fully general way because Ranges are not arbitrary
@@ -172,6 +186,13 @@ extends IndexedSeq[T] with Serializable {
     try containsTyped(x.asInstanceOf[T])
     catch { case _: ClassCastException => false }
 
+  final override def sum[B >: T](implicit num: Numeric[B]): B = {
+    import num.Ops
+    if (isEmpty) this.num fromInt 0
+    else if (numRangeElements == 1) head
+    else ((this.num fromInt numRangeElements) * (head + last) / (this.num fromInt 2))
+  }
+
   override lazy val hashCode = super.hashCode()
   override def equals(other: Any) = other match {
     case x: NumericRange[_] =>
@@ -192,6 +213,7 @@ extends IndexedSeq[T] with Serializable {
 /** A companion object for numeric ranges.
  */
 object NumericRange {
+  
   /** Calculates the number of elements in a range given start, end, step, and
    *  whether or not it is inclusive.  Throws an exception if step == 0 or
    *  the number of elements exceeds the maximum Int.
@@ -207,7 +229,7 @@ object NumericRange {
     else {
       val diff      = num.minus(end, start)
       val jumps     = num.toLong(num.quot(diff, step))
-      val remainder = num.toLong(num.rem(diff, step))
+      val remainder = num.rem(diff, step)
       val longCount = jumps + (
         if (!isInclusive && zero == remainder) 0 else 1
       )
@@ -250,5 +272,18 @@ object NumericRange {
     new Exclusive(start, end, step)
   def inclusive[T](start: T, end: T, step: T)(implicit num: Integral[T]): Inclusive[T] =
     new Inclusive(start, end, step)
+  
+  private[collection] val defaultOrdering = Map[Numeric[_], Ordering[_]](
+    Numeric.BigIntIsIntegral -> Ordering.BigInt,
+    Numeric.IntIsIntegral -> Ordering.Int,
+    Numeric.ShortIsIntegral -> Ordering.Short,
+    Numeric.ByteIsIntegral -> Ordering.Byte,
+    Numeric.CharIsIntegral -> Ordering.Char,
+    Numeric.LongIsIntegral -> Ordering.Long,
+    Numeric.FloatAsIfIntegral -> Ordering.Float,
+    Numeric.DoubleAsIfIntegral -> Ordering.Double,
+    Numeric.BigDecimalAsIfIntegral -> Ordering.BigDecimal
+  )
+  
 }
 

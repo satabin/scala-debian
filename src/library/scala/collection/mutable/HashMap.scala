@@ -1,22 +1,16 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
 
-
-
 package scala.collection
 package mutable
 
 import generic._
-
-
 import scala.collection.parallel.mutable.ParHashMap
-
-
 
 /** This class implements mutable maps using a hashtable.
  *
@@ -27,7 +21,7 @@ import scala.collection.parallel.mutable.ParHashMap
  *  @tparam A    the type of the keys contained in this hash map.
  *  @tparam B    the type of the values assigned to keys in this hash map.
  *
- *  @define Coll mutable.HashMap
+ *  @define Coll `mutable.HashMap`
  *  @define coll mutable hash map
  *  @define thatinfo the class of the returned collection. In the standard library configuration,
  *    `That` is always `HashMap[A, B]` if the elements contained in the resulting collection are
@@ -43,7 +37,8 @@ import scala.collection.parallel.mutable.ParHashMap
  */
 @SerialVersionUID(1L)
 class HashMap[A, B] private[collection] (contents: HashTable.Contents[A, DefaultEntry[A, B]])
-extends Map[A, B]
+extends AbstractMap[A, B]
+   with Map[A, B]
    with MapLike[A, B, HashMap[A, B]]
    with HashTable[A, DefaultEntry[A, B]]
    with CustomParallelizable[(A, B), ParHashMap[A, B]]
@@ -54,22 +49,31 @@ extends Map[A, B]
   type Entry = DefaultEntry[A, B]
 
   override def empty: HashMap[A, B] = HashMap.empty[A, B]
-  override def clear() = clearTable()
+  override def clear() { clearTable() }
   override def size: Int = tableSize
 
   def this() = this(null)
 
   override def par = new ParHashMap[A, B](hashTableContents)
 
+  // contains and apply overridden to avoid option allocations.
+  override def contains(key: A): Boolean = findEntry(key) != null
+
+  override def apply(key: A): B = {
+    val result = findEntry(key)
+    if (result eq null) default(key)
+    else result.value
+  }
+
   def get(key: A): Option[B] = {
     val e = findEntry(key)
-    if (e == null) None
+    if (e eq null) None
     else Some(e.value)
   }
 
   override def put(key: A, value: B): Option[B] = {
-    val e = findEntry(key)
-    if (e == null) { addEntry(new Entry(key, value)); None }
+    val e = findOrAddEntry(key, value)
+    if (e eq null) None
     else { val v = e.value; e.value = value; Some(v) }
   }
 
@@ -82,9 +86,8 @@ extends Map[A, B]
   }
 
   def += (kv: (A, B)): this.type = {
-    val e = findEntry(kv._1)
-    if (e == null) addEntry(new Entry(kv._1, kv._2))
-    else e.value = kv._2
+    val e = findOrAddEntry(kv._1, kv._2)
+    if (e ne null) e.value = kv._2
     this
   }
 
@@ -95,27 +98,27 @@ extends Map[A, B]
   override def foreach[C](f: ((A, B)) => C): Unit = foreachEntry(e => f(e.key, e.value))
 
   /* Override to avoid tuple allocation in foreach */
-  override def keySet: collection.Set[A] = new DefaultKeySet {
+  override def keySet: scala.collection.Set[A] = new DefaultKeySet {
     override def foreach[C](f: A => C) = foreachEntry(e => f(e.key))
   }
 
   /* Override to avoid tuple allocation in foreach */
-  override def values: collection.Iterable[B] = new DefaultValuesIterable {
+  override def values: scala.collection.Iterable[B] = new DefaultValuesIterable {
     override def foreach[C](f: B => C) = foreachEntry(e => f(e.value))
   }
 
   /* Override to avoid tuple allocation */
-  override def keysIterator: Iterator[A] = new Iterator[A] {
-    val iter = entriesIterator
+  override def keysIterator: Iterator[A] = new AbstractIterator[A] {
+    val iter    = entriesIterator
     def hasNext = iter.hasNext
-    def next() = iter.next.key
+    def next()  = iter.next.key
   }
 
   /* Override to avoid tuple allocation */
-  override def valuesIterator: Iterator[B] = new Iterator[B] {
-    val iter = entriesIterator
+  override def valuesIterator: Iterator[B] = new AbstractIterator[B] {
+    val iter    = entriesIterator
     def hasNext = iter.hasNext
-    def next() = iter.next.value
+    def next()  = iter.next.value
   }
 
   /** Toggles whether a size map is used to track hash map statistics.
@@ -124,18 +127,25 @@ extends Map[A, B]
     if (!isSizeMapDefined) sizeMapInitAndRebuild
   } else sizeMapDisable
 
+  protected def createNewEntry[B1](key: A, value: B1): Entry = {
+    new Entry(key, value.asInstanceOf[B])
+  }
+
   private def writeObject(out: java.io.ObjectOutputStream) {
-    serializeTo(out, _.value)
+    serializeTo(out, { entry =>
+      out.writeObject(entry.key)
+      out.writeObject(entry.value)
+    })
   }
 
   private def readObject(in: java.io.ObjectInputStream) {
-    init[B](in, new Entry(_, _))
+    init(in, createNewEntry(in.readObject().asInstanceOf[A], in.readObject()))
   }
 
 }
 
 /** $factoryInfo
- *  @define Coll mutable.HashMap
+ *  @define Coll `mutable.HashMap`
  *  @define coll mutable hash map
  */
 object HashMap extends MutableMapFactory[HashMap] {

@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2002-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2002-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -109,7 +109,7 @@ object Platform {
    * `System.getProperty("line.separator")`
    * with a default value of "\n".
    */
-  val EOL = util.Properties.lineSeparator
+  val EOL = scala.util.Properties.lineSeparator
 
   /** The current time in milliseconds. The time is counted since 1 January 1970
     * UTC.

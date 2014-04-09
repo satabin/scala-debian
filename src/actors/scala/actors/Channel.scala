@@ -1,20 +1,18 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
 \*                                                                      */
-
 
 package scala.actors
 
 import scala.concurrent.SyncVar
 
 /**
- *  Used to pattern match on values that were sent
- *  to some channel <code>Chan<sub>n</sub></code> by the current
- *  actor <code>self</code>.
+ * Used to pattern match on values that were sent to some channel `Chan,,n,,`
+ * by the current actor `self`.
  *
  *  @example {{{
  *  receive {
@@ -28,16 +26,15 @@ import scala.concurrent.SyncVar
 case class ! [a](ch: Channel[a], msg: a)
 
 /**
- * Provides a means for typed communication among
- * actors. Only the actor creating an instance of a
- * <code>Channel</code> may receive from it.
+ * Provides a means for typed communication among actors. Only the
+ * actor creating an instance of a `Channel` may receive from it.
  *
  * @author Philipp Haller
  *
  * @define actor channel
  * @define channel channel
  */
-class Channel[Msg](val receiver: Actor) extends InputChannel[Msg] with OutputChannel[Msg] with CanReply[Msg, Any] {
+class Channel[Msg](val receiver: InternalActor) extends InputChannel[Msg] with OutputChannel[Msg] with CanReply[Msg, Any] {
 
   type Future[+P] = scala.actors.Future[P]
 

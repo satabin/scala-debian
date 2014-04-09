@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -13,6 +13,7 @@ import java.util.regex.Pattern
 import scala.util.matching.Regex
 import scala.util.parsing.input._
 import scala.collection.immutable.PagedSeq
+import scala.language.implicitConversions
 
 /** The ''most important'' differences between `RegexParsers` and
  *  [[scala.util.parsing.combinator.Parsers]] are:
@@ -23,7 +24,7 @@ import scala.collection.immutable.PagedSeq
  *  - There's an implicit conversion from [[scala.util.matching.Regex]] to `Parser[String]`,
  *    so that regex expressions can be used as parser combinators.
  *  - The parsing methods call the method `skipWhitespace` (defaults to `true`) and, if true,
- *    skip any whitespace before before each parser is called.
+ *    skip any whitespace before each parser is called.
  *  - Protected val `whiteSpace` returns a regex that identifies whitespace.
  *
  *  For example, this creates a very simple calculator receiving `String` input:

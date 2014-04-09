@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -11,4 +11,10 @@ import settings.MutableSettings
  */
 class Settings(errorFn: String => Unit) extends MutableSettings(errorFn) {
   def this() = this(Console.println)
+
+  override def withErrorFn(errorFn: String => Unit): Settings = {
+    val settings = new Settings(errorFn)
+    copyInto(settings)
+    settings
+  }
 }

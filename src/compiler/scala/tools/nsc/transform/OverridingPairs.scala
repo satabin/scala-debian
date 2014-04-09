@@ -1,15 +1,15 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
 package scala.tools.nsc
 package transform
 
-import collection.mutable.HashMap
+import scala.collection.mutable
 import symtab.Flags._
 import util.HashSet
-import annotation.tailrec
+import scala.annotation.tailrec
 
 /** A class that yields a kind of iterator (`Cursor`),
  *  which yields all pairs of overriding/overridden symbols
@@ -45,8 +45,14 @@ abstract class OverridingPairs {
      *  Types always match. Term symbols match if their membertypes
      *  relative to <base>.this do
      */
-    protected def matches(sym1: Symbol, sym2: Symbol): Boolean =
-      sym1.isType || (self.memberType(sym1) matches self.memberType(sym2))
+    protected def matches(sym1: Symbol, sym2: Symbol): Boolean = {
+      def tp_s(s: Symbol) = self.memberType(s) + "/" + self.memberType(s).getClass
+      val result = sym1.isType || (self.memberType(sym1) matches self.memberType(sym2))
+      debuglog("overriding-pairs? %s matches %s (%s vs. %s) == %s".format(
+        sym1.fullLocationString, sym2.fullLocationString, tp_s(sym1), tp_s(sym2), result))
+
+      result
+    }
 
     /** An implementation of BitSets as arrays (maybe consider collection.BitSet
      *  for that?) The main purpose of this is to implement
@@ -74,7 +80,7 @@ abstract class OverridingPairs {
     }
 
     /** The symbols that can take part in an overriding pair */
-    private val decls = new Scope
+    private val decls = newScope
 
     // fill `decls` with overriding shadowing overridden */
     { def fillDecls(bcs: List[Symbol], deferredflag: Int) {
@@ -98,8 +104,11 @@ abstract class OverridingPairs {
 
     /** A map from baseclasses of <base> to ints, with smaller ints meaning lower in
      *  linearization order.
+     *  symbols that are not baseclasses map to -1.
      */
-    private val index = new HashMap[Symbol, Int]
+    private val index = new mutable.HashMap[Symbol, Int] {
+      override def default(key: Symbol) = -1
+    }
 
     // Note: overridingPairs can be called at odd instances by the Eclipse plugin
     // Soemtimes symbols are not yet defined and we get missing keys.
@@ -127,29 +136,30 @@ abstract class OverridingPairs {
     { for (i <- List.range(0, size))
         subParents(i) = new BitSet(size);
       for (p <- parents) {
-        index get p.typeSymbol match {
-          case Some(pIndex) =>
-            for (bc <- p.baseClasses)
-              if (p.baseType(bc) =:= self.baseType(bc))
-                index get bc match {
-                  case Some(bcIndex) =>
-                    include(subParents(bcIndex), pIndex)
-                  case None =>
-                }
-              else if (settings.debug.value)
-                log("SKIPPING "+p+" -> "+p.baseType(bc)+" / "+self.baseType(bc)+" from "+base)
-          case None =>
-        }
+        val pIndex = index(p.typeSymbol)
+        if (pIndex >= 0)
+          for (bc <- p.baseClasses)
+            if (p.baseType(bc) =:= self.baseType(bc)) {
+              val bcIndex = index(bc)
+              if (bcIndex >= 0)
+                include(subParents(bcIndex), pIndex)
+            }
       }
    }
 
     /** Do `sym1` and `sym2` have a common subclass in `parents`?
      *  In that case we do not follow their overriding pairs
      */
-    private def hasCommonParentAsSubclass(sym1: Symbol, sym2: Symbol) = (
-      for (index1 <- index get sym1.owner ; index2 <- index get sym2.owner) yield
-        intersectionContainsElementLeq(subParents(index1), subParents(index2), index1 min index2)
-    ).exists(_ == true)
+    private def hasCommonParentAsSubclass(sym1: Symbol, sym2: Symbol) = {
+      val index1 = index(sym1.owner)
+      (index1 >= 0) && {
+        val index2 = index(sym2.owner)
+        (index2 >= 0) && {
+          intersectionContainsElementLeq(
+            subParents(index1), subParents(index2), index1 min index2)
+        }
+      }
+    }
 
     /** The scope entries that have already been visited as overridden
      *  (maybe excluded because of hasCommonParentAsSubclass).

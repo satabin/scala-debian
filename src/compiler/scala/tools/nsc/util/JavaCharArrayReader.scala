@@ -1,12 +1,12 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
 package scala.tools.nsc
 package util
 
-import Chars._
+import scala.reflect.internal.Chars._
 
 class JavaCharArrayReader(buf: IndexedSeq[Char], start: Int, /* startline: int, startcol: int, */
                       decodeUni: Boolean, error: String => Unit) extends Iterator[Char] with Cloneable {
@@ -58,7 +58,7 @@ class JavaCharArrayReader(buf: IndexedSeq[Char], start: Int, /* startline: int, 
 
   def last: Char = if (bp > start + 2) buf(bp - 2) else ' ' // XML literals
 
-  def next: Char = {
+  def next(): Char = {
     //cline = nextline
     //ccol = nextcol
     val buf = this.buf.asInstanceOf[collection.mutable.WrappedArray[Char]].array

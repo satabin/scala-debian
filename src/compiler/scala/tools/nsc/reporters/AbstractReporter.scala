@@ -1,14 +1,14 @@
 /* NSC -- new Scala compiler
- * Copyright 2002-2011 LAMP/EPFL
+ * Copyright 2002-2013 LAMP/EPFL
  * @author Martin Odersky
  */
 
 package scala.tools.nsc
 package reporters
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 import scala.tools.nsc.Settings
-import scala.tools.nsc.util.Position
+import scala.reflect.internal.util.Position
 
 /**
  * This reporter implements filtering.
@@ -18,7 +18,7 @@ abstract class AbstractReporter extends Reporter {
   def display(pos: Position, msg: String, severity: Severity): Unit
   def displayPrompt(): Unit
 
-  private val positions = new HashMap[Position, Severity]
+  private val positions = new mutable.HashMap[Position, Severity]
 
   override def reset() {
     super.reset
@@ -35,15 +35,25 @@ abstract class AbstractReporter extends Reporter {
       else _severity
 
     if (severity == INFO) {
-      if (isVerbose || force)
+      if (isVerbose || force) {
+        severity.count += 1
         display(pos, msg, severity)
+      }
     }
     else {
       val hidden = testAndLog(pos, severity)
       if (severity == WARNING && noWarnings) ()
       else {
-        if (!hidden || isPromptSet) display(pos, msg, severity)
-        if (isPromptSet) displayPrompt
+        if (!hidden || isPromptSet) {
+          severity.count += 1
+          display(pos, msg, severity)
+        } else if (settings.debug.value) {
+          severity.count += 1
+          display(pos, "[ suppressed ] " + msg, severity)
+        }
+
+        if (isPromptSet)
+          displayPrompt
       }
     }
   }

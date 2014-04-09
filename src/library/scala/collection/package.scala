@@ -1,3 +1,11 @@
+/*                     __                                               *\
+**     ________ ___   / /  ___     Scala API                            **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
+**  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
+** /____/\___/_/ |_/____/_/ | |                                         **
+**                          |/                                          **
+\*                                                                      */
+
 package scala
 
 /**
@@ -6,7 +14,7 @@ package scala
  * == Guide ==
  *
  * A detailed guide for the collections library is available
- * at [[http://www.scala-lang.org/docu/files/collections-api]].
+ * at [[http://docs.scala-lang.org/overviews/collections/introduction.html]].
  *
  * == Using Collections ==
  *
@@ -37,7 +45,7 @@ package scala
  *
  * The most common way to create a collection is to use the companion objects as factories.
  * Of these, the three most common
- * are [[scala.collection.immutable.Seq]], [[scala.collection.immutable.Set]], and [[scala.collection.immutable.Map]].  Their
+ * are [[scala.collection.Seq]], [[scala.collection.immutable.Set]], and [[scala.collection.immutable.Map]].  Their
  * companion objects are all available
  * as type aliases the either the [[scala]] package or in `scala.Predef`, and can be used
  * like so:
@@ -53,13 +61,13 @@ package scala
  * }}}
  *
  * It is also typical to use the [[scala.collection.immutable]] collections over those
- * in [[scala.collection.mutable]]; The types aliased in the [[scala]] package and
+ * in [[scala.collection.mutable]]; The types aliased in
  * the `scala.Predef` object are the immutable versions.
  *
  * Also note that the collections library was carefully designed to include several implementations of
  * each of the three basic collection types. These implementations have specific performance
  * characteristics which are described
- * in [[http://www.scala-lang.org/docu/files/collections-api the guide]].
+ * in [[http://docs.scala-lang.org/overviews/collections/performance-characteristics.html the guide]].
  *
  * === Converting between Java Collections ===
  *

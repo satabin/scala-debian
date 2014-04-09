@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -18,11 +18,11 @@ import generic._
  *  @tparam A     type of the elements contained in the array like object.
  *  @tparam Repr  the type of the actual collection containing the elements.
  *
- *  @define Coll ArrayLike
+ *  @define Coll `ArrayLike`
  *  @version 2.8
  *  @since   2.8
  */
-trait ArrayLike[A, +Repr] extends IndexedSeqOptimized[A, Repr] { self =>
+trait ArrayLike[A, +Repr] extends Any with IndexedSeqOptimized[A, Repr] { self =>
 
   /** Creates a possible nested `IndexedSeq` which consists of all the elements
    *  of this array. If the elements are arrays themselves, the `deep` transformation
@@ -38,30 +38,12 @@ trait ArrayLike[A, +Repr] extends IndexedSeqOptimized[A, Repr] { self =>
    *
    *  @return    An possibly nested indexed sequence of consisting of all the elements of the array.
    */
-  def deep: scala.collection.IndexedSeq[Any] = new scala.collection.IndexedSeq[Any] {
+  def deep: scala.collection.IndexedSeq[Any] = new scala.collection.AbstractSeq[Any] with scala.collection.IndexedSeq[Any] {
     def length = self.length
     def apply(idx: Int): Any = self.apply(idx) match {
       case x: AnyRef if x.getClass.isArray => WrappedArray.make(x).deep
       case x => x
     }
     override def stringPrefix = "Array"
-  }
-
-  @deprecated("use deep.toString instead", "2.8.0")
-  final def deepToString() =
-    deep.toString
-
-  @deprecated("use deep.mkString instead", "2.8.0")
-  final def deepMkString(start: String, sep: String, end: String): String =
-    deep.mkString(start, sep, end)
-
-  @deprecated("use deep.mkString instead", "2.8.0")
-  final def deepMkString(sep: String): String =
-    deepMkString("", sep, "")
-
-  @deprecated("use array1.deep.equals(array2.deep) instead", "2.8.0")
-  final def deepEquals(that: Any): Boolean = that match {
-    case x: AnyRef if x.getClass.isArray => deep.equals(WrappedArray.make(x).deep)
-    case _ => false
   }
 }

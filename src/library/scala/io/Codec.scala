@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2003-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2003-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,7 +10,8 @@
 package scala.io
 
 import java.nio.charset.{ Charset, CharsetDecoder, CharsetEncoder, CharacterCodingException, CodingErrorAction => Action }
-import annotation.migration
+import scala.annotation.migration
+import scala.language.implicitConversions
 
 // Some notes about encodings for use in refining this implementation.
 //
@@ -37,6 +38,9 @@ class Codec(val charSet: Charset) {
   private[this] var _encodingReplacement: Array[Byte] = null
   private[this] var _decodingReplacement: String      = null
   private[this] var _onCodingException: Handler       = e => throw e
+
+  /** The name of the Codec. */
+  override def toString = name
 
   // these methods can be chained to configure the variables above
   def onMalformedInput(newAction: Action): this.type = { _onMalformedInput = newAction ; this }
@@ -78,8 +82,8 @@ trait LowPriorityCodecImplicits {
 }
 
 object Codec extends LowPriorityCodecImplicits {
-  final val ISO8859 = Charset forName "ISO-8859-1"
-  final val UTF8    = Charset forName "UTF-8"
+  final val ISO8859: Codec = new Codec(Charset forName "ISO-8859-1")
+  final val UTF8: Codec    = new Codec(Charset forName "UTF-8")
 
   /** Optimistically these two possible defaults will be the same thing.
    *  In practice this is not necessarily true, and in fact Sun classifies
@@ -87,7 +91,7 @@ object Codec extends LowPriorityCodecImplicits {
    *  as an accident, with any anomalies considered "not a bug".
    */
   def defaultCharsetCodec                   = apply(Charset.defaultCharset)
-  def fileEncodingCodec                     = apply(util.Properties.encodingString)
+  def fileEncodingCodec                     = apply(scala.util.Properties.encodingString)
   def default                               = defaultCharsetCodec
 
   def apply(encoding: String): Codec        = new Codec(Charset forName encoding)
@@ -98,10 +102,11 @@ object Codec extends LowPriorityCodecImplicits {
   }
 
   @migration("This method was previously misnamed `toUTF8`. Converts from Array[Byte] to Array[Char].", "2.9.0")
-  def fromUTF8(bytes: Array[Byte]): Array[Char] = {
-    val bbuffer = java.nio.ByteBuffer wrap bytes
-    val cbuffer = UTF8 decode bbuffer
-    val chars = new Array[Char](cbuffer.remaining())
+  def fromUTF8(bytes: Array[Byte]): Array[Char] = fromUTF8(bytes, 0, bytes.length)
+  def fromUTF8(bytes: Array[Byte], offset: Int, len: Int): Array[Char] = {
+    val bbuffer = java.nio.ByteBuffer.wrap(bytes, offset, len)
+    val cbuffer = UTF8.charSet decode bbuffer
+    val chars   = new Array[Char](cbuffer.remaining())
     cbuffer get chars
 
     chars
@@ -109,8 +114,16 @@ object Codec extends LowPriorityCodecImplicits {
 
   @migration("This method was previously misnamed `fromUTF8`. Converts from character sequence to Array[Byte].", "2.9.0")
   def toUTF8(cs: CharSequence): Array[Byte] = {
-    val cbuffer = java.nio.CharBuffer wrap cs
-    val bbuffer = UTF8 encode cbuffer
+    val cbuffer = java.nio.CharBuffer.wrap(cs, 0, cs.length)
+    val bbuffer = UTF8.charSet encode cbuffer
+    val bytes = new Array[Byte](bbuffer.remaining())
+    bbuffer get bytes
+
+    bytes
+  }
+  def toUTF8(chars: Array[Char], offset: Int, len: Int): Array[Byte] = {
+    val cbuffer = java.nio.CharBuffer.wrap(chars, offset, len)
+    val bbuffer = UTF8.charSet encode cbuffer
     val bytes = new Array[Byte](bbuffer.remaining())
     bbuffer get bytes
 

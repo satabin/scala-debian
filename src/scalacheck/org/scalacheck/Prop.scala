@@ -1,16 +1,17 @@
 /*-------------------------------------------------------------------------*\
 **  ScalaCheck                                                             **
-**  Copyright (c) 2007-2010 Rickard Nilsson. All rights reserved.          **
+**  Copyright (c) 2007-2011 Rickard Nilsson. All rights reserved.          **
 **  http://www.scalacheck.org                                              **
 **                                                                         **
 **  This software is released under the terms of the Revised BSD License.  **
 **  There is NO WARRANTY. See the file LICENSE for the full text.          **
-\*-------------------------------------------------------------------------*/
+\*------------------------------------------------------------------------ */
 
 package org.scalacheck
 
 import util.{FreqMap,Buildable}
 import scala.collection._
+import scala.annotation.tailrec
 
 /** A property is a generator that generates a property result */
 trait Prop {
@@ -39,17 +40,35 @@ trait Prop {
   /** Convenience method that checks this property and reports the
    *  result on the console. If you need to get the results from the test use
    *  the <code>check</code> methods in <code>Test</code> instead. */
-  def check(): Unit = check(Test.Params())
+  def check: Unit = check(Test.Params())
 
-  /** Convenience method that makes it possible to use a this property
-   *  as an application that checks itself on execution */
-  def main(args: Array[String]): Unit =
+  /** The logic for main, separated out to make it easier to
+   *  avoid System.exit calls.  Returns exit code.
+   */
+  def mainRunner(args: Array[String]): Int = {
     Test.cmdLineParser.parseParams(args) match {
-      case Success(params, _) => Test.check(params, this)
+      case Success(params, _) =>
+        if (Test.check(params, this).passed) 0
+        else 1
       case e: NoSuccess =>
         println("Incorrect options:"+"\n"+e+"\n")
         Test.cmdLineParser.printHelp
+        -1
     }
+  }
+
+  /** Whether main should call System.exit with an exit code.
+   *  Defaults to true; override to change.
+   */
+  def mainCallsExit = false
+
+  /** Convenience method that makes it possible to use this property
+   *  as an application that checks itself on execution */
+  def main(args: Array[String]): Unit = {
+    val code = mainRunner(args)
+    if (mainCallsExit)
+      System exit code
+  }
 
   /** Returns a new property that holds if and only if both this
    *  and the given property hold. If one of the properties doesn't
@@ -83,15 +102,6 @@ trait Prop {
       Result.merge(r1, r2, if(r1.status == r2.status) True else False)
     }
   }
-
-  /** Returns a new property that holds if and only if both this
-   *  and the given property generates a result with the exact
-   *  same status. Note that this means that if one of the properties is
-   *  proved, and the other one passed, then the resulting property
-   *  will fail.
-   *  @deprecated Use <code>==</code> instead */
-  @deprecated("Use == instead.")
-  def ===(p: Prop): Prop = this == p
 
   override def toString = "Prop"
 
@@ -183,7 +193,7 @@ object Prop {
       case (_,Undecided) => r
 
       case (_,Proof) => merge(this, r, this.status)
-      case (Proof,_) => merge(this, r, this.status)
+      case (Proof,_) => merge(this, r, r.status)
 
       case (True,True) => merge(this, r, True)
     }
@@ -318,13 +328,12 @@ object Prop {
   def =?[T](x: T, y: T)(implicit pp: T => Pretty): Prop = ?=(y, x)
 
   /** A property that depends on the generator size */
-  def sizedProp(f: Int => Prop): Prop = Prop(prms => f(prms.genPrms.size)(prms))
-
-  /** Implication
-   *  @deprecated Use the implication operator of the Prop class instead
-   */
-  @deprecated("Use the implication operator of the Prop class instead")
-  def ==>(b: => Boolean, p: => Prop): Prop = (b: Prop) ==> p
+  def sizedProp(f: Int => Prop): Prop = Prop { prms =>
+    // provedToTrue since if the property is proved for
+    // one size, it shouldn't be regarded as proved for
+    // all sizes.
+    provedToTrue(f(prms.genPrms.size)(prms))
+  }
 
   /** Implication with several conditions */
   def imply[T](x: T, f: PartialFunction[T,Prop]): Prop =
@@ -738,4 +747,17 @@ object Prop {
     a8: Arbitrary[A8], s8: Shrink[A8], pp8: A8 => Pretty
   ): Prop = forAll((a: A1) => forAll(f(a, _:A2, _:A3, _:A4, _:A5, _:A6, _:A7, _:A8)))
 
+  /** Ensures that the property expression passed in completes within the given space of time. */
+  def within(maximumMs: Long)(wrappedProp: => Prop): Prop = new Prop {
+    @tailrec private def attempt(prms: Params, endTime: Long): Result = {
+      val result = wrappedProp.apply(prms)
+      if (System.currentTimeMillis > endTime) {
+        (if (result.failure) result else Result(False)).label("Timeout")
+      } else {
+        if (result.success) result
+        else attempt(prms, endTime)
+      }
+    }
+    def apply(prms: Params) = attempt(prms, System.currentTimeMillis + maximumMs)
+  }
 }

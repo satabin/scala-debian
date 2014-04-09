@@ -1,5 +1,5 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
@@ -26,7 +26,6 @@ package icode
 trait TypeKinds { self: ICodes =>
   import global._
   import definitions.{ ArrayClass, AnyRefClass, ObjectClass, NullClass, NothingClass, arrayType }
-  import icodes.{ checkerDebug, NothingReference, NullReference }
 
   /** A map from scala primitive Types to ICode TypeKinds */
   lazy val primitiveTypeMap: Map[Symbol, TypeKind] = {
@@ -45,7 +44,7 @@ trait TypeKinds { self: ICodes =>
   }
   /** Reverse map for toType */
   private lazy val reversePrimitiveMap: Map[TypeKind, Symbol] =
-    primitiveTypeMap map (_.swap) toMap
+    (primitiveTypeMap map (_.swap)).toMap
 
   /** This class represents a type kind. Type kinds
    * represent the types that the VM know (or the ICode
@@ -75,22 +74,19 @@ trait TypeKinds { self: ICodes =>
       case _                                                => false
     }
 
-    /** On the JVM, these types are like Ints for the
-     *  purposes of calculating the lub.
+    /** On the JVM,
+     *    BOOL, BYTE, CHAR, SHORT, and INT
+     *  are like Ints for the purposes of calculating the lub.
      */
-    def isIntSizedType: Boolean = this match {
-      case BOOL | CHAR | BYTE | SHORT | INT => true
-      case _                                => false
-    }
-    def isIntegralType: Boolean = this match {
-      case BYTE | SHORT | INT | LONG | CHAR => true
-      case _                                => false
-    }
-    def isRealType: Boolean = this match {
-      case FLOAT | DOUBLE => true
-      case _              => false
-    }
-    def isNumericType: Boolean = isIntegralType | isRealType
+    def isIntSizedType: Boolean = false
+
+    /** On the JVM, similar to isIntSizedType except that BOOL isn't integral while LONG is. */
+    def isIntegralType: Boolean = false
+
+    /** On the JVM, FLOAT and DOUBLE. */
+    def isRealType: Boolean = false
+
+    final def isNumericType: Boolean = isIntegralType | isRealType
 
     /** Simple subtyping check */
     def <:<(other: TypeKind): Boolean = (this eq other) || (this match {
@@ -98,11 +94,8 @@ trait TypeKinds { self: ICodes =>
       case _                          => this eq other
     })
 
-    /** Is this type a category 2 type in JVM terms? */
-    def isWideType: Boolean = this match {
-      case DOUBLE | LONG  => true
-      case _              => false
-    }
+    /** Is this type a category 2 type in JVM terms? (ie, is it LONG or DOUBLE?) */
+    def isWideType: Boolean = false
 
     /** The number of dimensions for array types. */
     def dimensions: Int = 0
@@ -146,17 +139,13 @@ trait TypeKinds { self: ICodes =>
      *  Here we make the adjustment by rewinding to a pre-erasure state and
      *  sifting through the parents for a class type.
      */
-    def lub0(tk1: TypeKind, tk2: TypeKind): Type = atPhase(currentRun.uncurryPhase) {
+    def lub0(tk1: TypeKind, tk2: TypeKind): Type = beforeUncurry {
       import definitions._
       val tp = global.lub(List(tk1.toType, tk2.toType))
-      val (front, rest) = tp.parents span (_.typeSymbol.hasTraitFlag)
+      val (front, rest) = tp.parents span (_.typeSymbol.isTrait)
 
-      if (front.isEmpty) tp
-      else if (rest.isEmpty) front.head   // all parents are interfaces
-      else rest.head match {
-        case AnyRefClass | ObjectClass  => tp
-        case x                          => x
-      }
+      if (front.isEmpty || rest.isEmpty || rest.head.typeSymbol == ObjectClass) tp
+      else rest.head
     }
 
     def isIntLub = (
@@ -187,6 +176,7 @@ trait TypeKinds { self: ICodes =>
 
   /** A boolean value */
   case object BOOL extends ValueTypeKind {
+    override def isIntSizedType = true
     def maxType(other: TypeKind) = other match {
       case BOOL | REFERENCE(NothingClass)   => BOOL
       case _                                => uncomparable(other)
@@ -200,6 +190,8 @@ trait TypeKinds { self: ICodes =>
 
   /** A 1-byte signed integer */
   case object BYTE extends ValueTypeKind {
+    override def isIntSizedType = true
+    override def isIntegralType = true
     def maxType(other: TypeKind) = {
       if (other == BYTE || other.isNothingType) BYTE
       else if (other == CHAR) INT
@@ -210,6 +202,8 @@ trait TypeKinds { self: ICodes =>
 
   /** A 2-byte signed integer */
   case object SHORT extends ValueTypeKind {
+    override def isIntSizedType = true
+    override def isIntegralType = true
     override def maxType(other: TypeKind) = other match {
       case BYTE | SHORT | REFERENCE(NothingClass) => SHORT
       case CHAR                                   => INT
@@ -220,6 +214,8 @@ trait TypeKinds { self: ICodes =>
 
   /** A 2-byte UNSIGNED integer */
   case object CHAR extends ValueTypeKind {
+    override def isIntSizedType = true
+    override def isIntegralType = true
     override def maxType(other: TypeKind) = other match {
       case CHAR | REFERENCE(NothingClass) => CHAR
       case BYTE | SHORT                   => INT
@@ -230,6 +226,8 @@ trait TypeKinds { self: ICodes =>
 
   /** A 4-byte signed integer */
   case object INT extends ValueTypeKind {
+    override def isIntSizedType = true
+    override def isIntegralType = true
     override def maxType(other: TypeKind) = other match {
       case BYTE | SHORT | CHAR | INT | REFERENCE(NothingClass)  => INT
       case LONG | FLOAT | DOUBLE                                => other
@@ -239,6 +237,8 @@ trait TypeKinds { self: ICodes =>
 
   /** An 8-byte signed integer */
   case object LONG extends ValueTypeKind {
+    override def isIntegralType = true
+    override def isWideType = true
     override def maxType(other: TypeKind): TypeKind =
       if (other.isIntegralType || other.isNothingType) LONG
       else if (other.isRealType) DOUBLE
@@ -247,6 +247,7 @@ trait TypeKinds { self: ICodes =>
 
   /** A 4-byte floating point number */
   case object FLOAT extends ValueTypeKind {
+    override def isRealType = true
     override def maxType(other: TypeKind): TypeKind =
       if (other == DOUBLE) DOUBLE
       else if (other.isNumericType || other.isNothingType) FLOAT
@@ -255,6 +256,8 @@ trait TypeKinds { self: ICodes =>
 
   /** An 8-byte floating point number */
   case object DOUBLE extends ValueTypeKind {
+    override def isRealType = true
+    override def isWideType = true
     override def maxType(other: TypeKind): TypeKind =
       if (other.isNumericType || other.isNothingType) DOUBLE
       else uncomparable(other)
@@ -271,7 +274,7 @@ trait TypeKinds { self: ICodes =>
            "REFERENCE to NoSymbol not allowed!")
 
     /**
-     * Approximate `lub'. The common type of two references is
+     * Approximate `lub`. The common type of two references is
      * always AnyRef. For 'real' least upper bound wrt to subclassing
      * use method 'lub'.
      */
@@ -307,7 +310,7 @@ trait TypeKinds { self: ICodes =>
     }
 
     /**
-     * Approximate `lub'. The common type of two references is
+     * Approximate `lub`. The common type of two references is
      * always AnyRef. For 'real' least upper bound wrt to subclassing
      * use method 'lub'.
      */
@@ -352,7 +355,7 @@ trait TypeKinds { self: ICodes =>
     override def toString = "ConcatClass"
 
     /**
-     * Approximate `lub'. The common type of two references is
+     * Approximate `lub`. The common type of two references is
      * always AnyRef. For 'real' least upper bound wrt to subclassing
      * use method 'lub'.
      */
@@ -380,12 +383,16 @@ trait TypeKinds { self: ICodes =>
     case TypeRef(_, sym, args)           => primitiveOrClassType(sym, args)
     case ClassInfoType(_, _, ArrayClass) => abort("ClassInfoType to ArrayClass!")
     case ClassInfoType(_, _, sym)        => primitiveOrRefType(sym)
+
+    // !!! Iulian says types which make no sense after erasure should not reach here,
+    // which includes the ExistentialType, AnnotatedType, RefinedType.  I don't know
+    // if the first two cases exist because they do or as a defensive measure, but
+    // at the time I added it, RefinedTypes were indeed reaching here.
     case ExistentialType(_, t)           => toTypeKind(t)
     case AnnotatedType(_, t, _)          => toTypeKind(t)
-    // PP to ID: I added RefinedType here, is this OK or should they never be
-    // allowed to reach here?
     case RefinedType(parents, _)         => parents map toTypeKind reduceLeft lub
-    // bq: useful hack when wildcard types come here
+    // For sure WildcardTypes shouldn't reach here either, but when
+    // debugging such situations this may come in handy.
     // case WildcardType                    => REFERENCE(ObjectClass)
     case norm => abort(
       "Unknown type: %s, %s [%s, %s] TypeRef? %s".format(
@@ -413,7 +420,7 @@ trait TypeKinds { self: ICodes =>
     // between "object PackratParsers$class" and "trait PackratParsers"
     if (sym.isImplClass) {
       // pos/spec-List.scala is the sole failure if we don't check for NoSymbol
-      val traitSym = sym.owner.info.decl(nme.interfaceName(sym.name))
+      val traitSym = sym.owner.info.decl(tpnme.interfaceName(sym.name))
       if (traitSym != NoSymbol)
         return REFERENCE(traitSym)
     }

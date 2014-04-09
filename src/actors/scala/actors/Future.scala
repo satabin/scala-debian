@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2005-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2005-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -26,14 +26,6 @@ abstract class Future[+T] extends Responder[T] with Function0[T] {
   @volatile
   private[actors] var fvalue: Option[Any] = None
   private[actors] def fvalueTyped = fvalue.get.asInstanceOf[T]
-
-  @deprecated("this member is going to be removed in a future release", "2.8.0")
-  def ch: InputChannel[Any] = inputChannel
-
-  @deprecated("this member is going to be removed in a future release", "2.8.0")
-  protected def value: Option[Any] = fvalue
-  @deprecated("this member is going to be removed in a future release", "2.8.0")
-  protected def value_=(x: Option[Any]) { fvalue = x }
 
   /** Tests whether the future's result is available.
    *
@@ -102,7 +94,9 @@ private class FutureActor[T](fun: SyncVar[T] => Unit, channel: Channel[T]) exten
 
       loop {
         react {
-          case Eval => reply()
+          // This is calling ReplyReactor#reply(msg: Any).
+          // Was: reply().  Now: reply(()).
+          case Eval => reply(())
         }
       }
     }
@@ -180,7 +174,7 @@ object Futures {
    *                  or timeout + `System.currentTimeMillis()` is negative.
    */
   def awaitAll(timeout: Long, fts: Future[Any]*): List[Option[Any]] = {
-    var resultsMap: collection.mutable.Map[Int, Option[Any]] = new collection.mutable.HashMap[Int, Option[Any]]
+    var resultsMap: scala.collection.mutable.Map[Int, Option[Any]] = new scala.collection.mutable.HashMap[Int, Option[Any]]
 
     var cnt = 0
     val mappedFts = fts.map(ft =>

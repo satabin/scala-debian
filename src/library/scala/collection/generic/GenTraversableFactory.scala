@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -10,6 +10,8 @@
 package scala.collection
 package generic
 
+import scala.language.higherKinds
+
 /** A template for companion objects of `Traversable` and subclasses thereof.
  *  This class provides a set of operations to create `$Coll` objects.
  *  It is typically inherited by companion objects of subclasses of `Traversable`.
@@ -17,7 +19,7 @@ package generic
  *  @since 2.8
  *
  *  @define coll collection
- *  @define Coll Traversable
+ *  @define Coll `Traversable`
  *  @define factoryInfo
  *    This object provides a set of operations to create `$Coll` values.
  *    @author Martin Odersky
@@ -34,7 +36,14 @@ package generic
  *    @see GenericCanBuildFrom
  */
 abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTraversableTemplate[X, CC]]
-  extends GenericCompanion[CC] {
+extends GenericCompanion[CC] {
+
+  // A default implementation of GenericCanBuildFrom which can be cast
+  // to whatever is desired.
+  private class ReusableCBF extends GenericCanBuildFrom[Nothing] {
+    override def apply() = newBuilder[Nothing]
+  }
+  lazy val ReusableCBF: GenericCanBuildFrom[Nothing] = new ReusableCBF
 
   /** A generic implementation of the `CanBuildFrom` trait, which forwards
    *  all calls to `apply(from)` to the `genericBuilder` method of
@@ -63,7 +72,7 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
     val b = newBuilder[A]
     // At present we're using IndexedSeq as a proxy for "has a cheap size method".
     if (xss forall (_.isInstanceOf[IndexedSeq[_]]))
-      b.sizeHint(xss map (_.size) sum)
+      b.sizeHint(xss.map(_.size).sum)
 
     for (xs <- xss.seq) b ++= xs
     b.result
@@ -191,8 +200,8 @@ abstract class GenTraversableFactory[CC[X] <: GenTraversable[X] with GenericTrav
 
   /** Produces a $coll containing a sequence of increasing of integers.
    *
-   *  @param from the first element of the $coll
-   *  @param end the end value of the $coll (the first value NOT contained)
+   *  @param start the first element of the $coll
+   *  @param end   the end value of the $coll (the first value NOT contained)
    *  @return  a $coll with values `start, start + 1, ..., end - 1`
    */
   def range[T: Integral](start: T, end: T): CC[T] = range(start, end, implicitly[Integral[T]].one)

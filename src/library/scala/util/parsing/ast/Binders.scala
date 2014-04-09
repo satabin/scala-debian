@@ -1,6 +1,6 @@
 /*                     __                                               *\
 **     ________ ___   / /  ___     Scala API                            **
-**    / __/ __// _ | / /  / _ |    (c) 2006-2011, LAMP/EPFL             **
+**    / __/ __// _ | / /  / _ |    (c) 2006-2013, LAMP/EPFL             **
 **  __\ \/ /__/ __ |/ /__/ __ |    http://scala-lang.org/               **
 ** /____/\___/_/ |_/____/_/ | |                                         **
 **                          |/                                          **
@@ -8,7 +8,9 @@
 
 package scala.util.parsing.ast
 
-import scala.collection.mutable.Map
+import scala.collection.AbstractIterable
+import scala.collection.mutable
+import scala.language.implicitConversions
 
 //DISCLAIMER: this code is highly experimental!
 
@@ -22,6 +24,7 @@ import scala.collection.mutable.Map
  *
  *  @author Adriaan Moors
  */
+@deprecated("This class will be removed", "2.10.0")
 trait Mappable {
   trait Mapper { def apply[T <% Mappable[T]](x: T): T } /* TODO: having type `Forall T. T => T` is too strict:
   sometimes we want to allow `Forall T >: precision. T => T` for some type `precision`, so that,
@@ -83,9 +86,9 @@ trait Binders extends AbstractSyntax with Mappable {
    *  For example: `[x, y]!1` represents the scope with `id` `1` and binder elements `x` and `y`.
    *  (`id` is solely used for this textual representation.)
    */
-  class Scope[binderType <: NameElement] extends Iterable[binderType]{
-    private val substitution: Map[binderType, Element] =
-      new scala.collection.mutable.LinkedHashMap[binderType, Element] // a LinkedHashMap is ordered by insertion order -- important!
+  class Scope[binderType <: NameElement] extends AbstractIterable[binderType] with Iterable[binderType] {
+    private val substitution: mutable.Map[binderType, Element] =
+      new mutable.LinkedHashMap[binderType, Element] // a LinkedHashMap is ordered by insertion order -- important!
 
     /** Returns a unique number identifying this Scope (only used for representation purposes). */
     val id: Int = _Binder.genId
@@ -127,9 +130,6 @@ trait Binders extends AbstractSyntax with Mappable {
     //       associated to the UnderBinder, but after that, no changes are allowed, except for substitution)?
     /** `canAddElement` indicates whether `b` may be added to this scope.
      *
-     * TODO: strengthen this condition so that no binders may be added after this scope has been
-     *       linked to its `UnderBinder' (i.e., while parsing, BoundElements may be added to the Scope
-     *       associated to the UnderBinder, but after that, no changes are allowed, except for substitution)?
      *
      * @return true if `b` had not been added yet
      */
@@ -200,8 +200,7 @@ trait Binders extends AbstractSyntax with Mappable {
     def alpha_==[t <: NameElement](other: BoundElement[t]): Boolean = scope.indexFor(el) == other.scope.indexFor(other.el)
   }
 
-  /** A variable that escaped its scope (i.e., a free variable) -- we don't deal very well with these yet
-   */
+  /** A variable that escaped its scope (i.e., a free variable) -- we don't deal very well with these yet. */
   class UnboundElement[N <: NameElement](private val el: N) extends NameElement {
     def name = el.name+"@??"
   }
@@ -240,7 +239,7 @@ trait Binders extends AbstractSyntax with Mappable {
        })
     }*/
 
-    def cloneElementWithSubst(subst: scala.collection.immutable.Map[NameElement, NameElement]) = element.gmap(new Mapper { def apply[t <% Mappable[t]](x :t): t = x match{
+    def cloneElementWithSubst(subst: Map[NameElement, NameElement]) = element.gmap(new Mapper { def apply[t <% Mappable[t]](x :t): t = x match{
       case substable: NameElement if subst.contains(substable) => subst.get(substable).asInstanceOf[t] // TODO: wrong... substitution is not (necessarily) the identity function
          //Console.println("substed: "+substable+"-> "+subst.get(substable)+")");
       case x => x // Console.println("subst: "+x+"(keys: "+subst.keys+")");x
@@ -253,9 +252,9 @@ trait Binders extends AbstractSyntax with Mappable {
     }})
 
     def extract: elementT = cloneElementNoBoundElements
-    def extract(subst: scala.collection.immutable.Map[NameElement, NameElement]): elementT = cloneElementWithSubst(subst)
+    def extract(subst: Map[NameElement, NameElement]): elementT = cloneElementWithSubst(subst)
 
-    /** Get a string representation of element, normally we don't allow direct access to element, but just getting a string representation is ok*/
+    /** Get a string representation of element, normally we don't allow direct access to element, but just getting a string representation is ok. */
     def elementToString: String = element.toString
   }
 
@@ -327,11 +326,11 @@ trait Binders extends AbstractSyntax with Mappable {
   // TODO: move this to some utility object higher in the scala hierarchy?
   /** Returns a given result, but executes the supplied closure before returning.
    *  (The effect of this closure does not influence the returned value.)
-   *
-   *  @param result the result to be returned
-   *  @param block  code to be executed, purely for its side-effects
    */
   trait ReturnAndDo[T]{
+    /**
+     *  @param block  code to be executed, purely for its side-effects
+     */
     def andDo(block: => Unit): T
   }
 

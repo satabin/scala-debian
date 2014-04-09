@@ -1,15 +1,17 @@
 /* NSC -- new Scala compiler
- * Copyright 2005-2011 LAMP/EPFL
+ * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
 
 package scala.tools.nsc
 package javac
 
-import scala.tools.nsc.util._
-import Chars._
+import scala.tools.nsc.util.JavaCharArrayReader
+import scala.reflect.internal.util._
+import scala.reflect.internal.Chars._
 import JavaTokens._
 import scala.annotation.switch
+import scala.language.implicitConversions
 
 // Todo merge these better with Scanners
 trait JavaScanners extends ast.parser.ScannersCommon {
@@ -137,7 +139,7 @@ trait JavaScanners extends ast.parser.ScannersCommon {
       kwOffset = offset
       arr
     }
-    final val tokenName = allKeywords map (_.swap) toMap
+    final val tokenName = allKeywords.map(_.swap).toMap
 
 //Token representation -----------------------------------------------------
 
@@ -776,7 +778,7 @@ trait JavaScanners extends ast.parser.ScannersCommon {
      */
     def intVal(negated: Boolean): Long = {
       if (token == CHARLIT && !negated) {
-        if (name.length > 0) name(0) else 0
+        if (name.length > 0) name.charAt(0) else 0
       } else {
         var value: Long = 0
         val divider = if (base == 10) 1 else 2
@@ -785,7 +787,7 @@ trait JavaScanners extends ast.parser.ScannersCommon {
         var i = 0
         val len = name.length
         while (i < len) {
-          val d = digit2int(name(i), base)
+          val d = digit2int(name.charAt(i), base)
           if (d < 0) {
             syntaxError("malformed integer number")
             return 0
@@ -811,7 +813,7 @@ trait JavaScanners extends ast.parser.ScannersCommon {
       val limit: Double =
         if (token == DOUBLELIT) Double.MaxValue else Float.MaxValue
       try {
-        val value: Double = java.lang.Double.valueOf(name.toString()).doubleValue()
+        val value: Double = java.lang.Double.valueOf(name.toString).doubleValue()
         if (value > limit)
           syntaxError("floating point number too large")
         if (negated) -value else value
@@ -919,6 +921,7 @@ trait JavaScanners extends ast.parser.ScannersCommon {
     def warning(pos: Int, msg: String) = unit.warning(pos, msg)
     def error  (pos: Int, msg: String) = unit.  error(pos, msg)
     def incompleteInputError(pos: Int, msg: String) = unit.incompleteInputError(pos, msg)
+    def deprecationWarning(pos: Int, msg: String) = unit.deprecationWarning(pos, msg)
     implicit def p2g(pos: Position): Int = if (pos.isDefined) pos.point else -1
     implicit def g2p(pos: Int): Position = new OffsetPosition(unit.source, pos)
   }
