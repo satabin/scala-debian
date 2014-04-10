@@ -48,7 +48,7 @@ Subject: Adapt SCALA_HOME and TOOL_CLASSPATH to the package layout
 -        fi
 -    done
 -fi
-+TOOL_CLASSPATH="$SCALA_HOME/scala-compiler.jar:$SCALA_HOME/scala-library.jar:$SCALA_HOME/scalap.jar:$SCALA_HOME/scala/jline.jar:$SCALA_HOME/jansi.jar"
++TOOL_CLASSPATH="$SCALA_HOME/scala-compiler.jar:$SCALA_HOME/scala-library.jar:$SCALA_HOME/scala-reflect.jar:$SCALA_HOME/scalap.jar:$SCALA_HOME/scala/jline.jar:$SCALA_HOME/jansi.jar"
  
  if [[ -n "$cygwin" ]]; then
      if [[ "$OS" = "Windows_NT" ]] && cygpath -m .>/dev/null 2>/dev/null ; then
