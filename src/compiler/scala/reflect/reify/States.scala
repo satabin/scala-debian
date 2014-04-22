@@ -4,7 +4,6 @@ trait States {
   self: Reifier =>
 
   import global._
-  import definitions._
 
   /** Encapsulates reifier state
    *
@@ -36,7 +35,7 @@ trait States {
       if (!value && concrete) {
         current match {
           case tpe: Type => CannotReifyWeakType(s" having unresolved type parameter $tpe")
-          case sym: Symbol => CannotReifyWeakType(s" referring to local ${sym.kindString} ${sym.fullName}")
+          case sym: Symbol => CannotReifyWeakType(s" referring to ${sym.kindString} ${sym.fullName} local to the reifee")
           case _ => CannotReifyWeakType("")
         }
       }

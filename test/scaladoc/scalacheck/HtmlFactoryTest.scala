@@ -2,6 +2,8 @@ import org.scalacheck._
 import org.scalacheck.Prop._
 
 import java.net.{URLClassLoader, URLDecoder}
+import scala.collection.mutable
+import scala.xml.NodeSeq
 
 object XMLUtil {
   import scala.xml._
@@ -34,21 +36,25 @@ object Test extends Properties("HtmlFactory") {
     // this test previously relied on the assumption that the current thread's classloader is an url classloader and contains all the classpaths
     // does partest actually guarantee this? to quote Leonard Nimoy: The answer, of course, is no.
     // this test _will_ fail again some time in the future.
-    val paths = Thread.currentThread.getContextClassLoader.asInstanceOf[URLClassLoader].getURLs.map(u => URLDecoder.decode(u.getPath))
-    val morepaths = Thread.currentThread.getContextClassLoader.getParent.asInstanceOf[URLClassLoader].getURLs.map(u => URLDecoder.decode(u.getPath))
-    (paths ++ morepaths).mkString(java.io.File.pathSeparator)
+    // Footnote: java.lang.ClassCastException: org.apache.tools.ant.loader.AntClassLoader5 cannot be cast to java.net.URLClassLoader
+    val loader = Thread.currentThread.getContextClassLoader.asInstanceOf[URLClassLoader]
+    val paths = loader.getURLs.map(u => URLDecoder.decode(u.getPath))
+    paths mkString java.io.File.pathSeparator
   }
 
   def createFactory = {
     val settings = new Settings({Console.err.println(_)})
+    settings.scaladocQuietRun = true
+    settings.nowarn.value = true
     settings.classpath.value = getClasspath
+    settings.docAuthor.value = true
 
     val reporter = new scala.tools.nsc.reporters.ConsoleReporter(settings)
     new DocFactory(reporter, settings)
   }
 
-  def createTemplates(basename: String) = {
-    val result = scala.collection.mutable.Map[String, scala.xml.NodeSeq]()
+  def createTemplates(basename: String): collection.Map[String, NodeSeq] = {
+    val result = mutable.Map[String, NodeSeq]()
 
     createFactory.makeUniverse(Left(List(RESOURCES+basename))) match {
       case Some(universe) => {
@@ -57,7 +63,7 @@ object Test extends Properties("HtmlFactory") {
           result += (page.absoluteLinkTo(page.path) -> page.body)
         })
       }
-      case _ => ;
+      case _ =>
     }
 
     result
@@ -558,12 +564,13 @@ object Test extends Properties("HtmlFactory") {
   property("Comment inheritance: Correct explicit inheritance for override") =
   checkText("explicit-inheritance-override.scala")(
     (Some("InheritDocDerived"),
-     """def function[T](arg1: T, arg2: String): Double
+      """def function[T](arg1: T, arg2: String): Double
         Starting line
         Starting line
         The base comment. And another sentence...
         The base comment. And another sentence...
         Ending line
+        Author: StartAuthor a Scala developer EndAuthor
           T       StartT the type of the first argument EndT
           arg1    Start1 The T term comment End1
           arg2    Start2 The string comment End2
@@ -584,12 +591,13 @@ object Test extends Properties("HtmlFactory") {
   property("Comment inheritance: Correct explicit inheritance for usecase") =
   checkText("explicit-inheritance-usecase.scala")(
     (Some("UseCaseInheritDoc"),
-     """def function[T](arg1: T, arg2: String): Double
+      """def function[T](arg1: T, arg2: String): Double
         [use case] Starting line
         [use case] Starting line
         The base comment. And another sentence...
         The base comment. And another sentence...
         Ending line
+        Author: StartAuthor a Scala developer EndAuthor
           T       StartT the type of the first argument EndT
           arg1    Start1 The T term comment End1
           arg2    Start2 The string comment End2
@@ -658,6 +666,45 @@ object Test extends Properties("HtmlFactory") {
     }
   }
 
+  property("SI-4014: Scaladoc omits @author: no authors") = {
+    val noAuthors = createTemplates("SI-4014_0.scala")("Foo.html")
+
+    noAuthors match {
+      case node: scala.xml.Node => {
+        val s = node.toString
+        ! s.contains("Author")
+      }
+      case _ => false
+    }
+  }
+
+  property("SI-4014: Scaladoc omits @author: one author") = {
+    val oneAuthor = createTemplates("SI-4014_1.scala")("Foo.html")
+
+    oneAuthor match {
+      case node: scala.xml.Node => {
+        val s = node.toString
+        s.contains("<h6>Author:</h6>")
+        s.contains("<p>The Only Author\n</p>")
+      }
+      case _ => false
+    }
+  }
+
+  property("SI-4014: Scaladoc omits @author: two authors") = {
+    val twoAuthors = createTemplates("SI-4014_2.scala")("Foo.html")
+
+    twoAuthors match {
+      case node: scala.xml.Node => {
+        val s = node.toString
+        s.contains("<h6>Authors:</h6>")
+        s.contains("<p>The First Author\n</p>")
+        s.contains("<p>The Second Author\n</p>")
+      }
+      case _ => false
+    }
+  }
+
   {
     val files = createTemplates("basic.scala")
     //println(files)
@@ -680,7 +727,7 @@ object Test extends Properties("HtmlFactory") {
 
     property("package object") = files("com/example/p1/package.html") match {
       case node: scala.xml.Node =>
-        node.toString contains "com.example.p1.package#packageObjectMethod"
+        node.toString contains "com.example.p1#packageObjectMethod"
       case _ => false
     }
 

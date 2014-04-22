@@ -3,109 +3,85 @@ reload: Completions.scala
 askScopeCompletion at Completions.scala(75,2)
 ================================================================================
 [response] askScopeCompletion at (75,2)
-retrieved 49 members
-[accessible:  true] `class Base1test.Base1`
-[accessible:  true] `class Cb1Completion1.this.Cb1`
-[accessible:  true] `class Cc1Completion1.this.Cc1`
-[accessible:  true] `class Cc2Completion1.this.Cc2`
-[accessible:  true] `class Completion1test.Completion1`
-[accessible:  true] `class Ct1Completion1.this.Ct1`
-[accessible:  true] `constructor Completion1()test.Completion1`
-[accessible:  true] `method fb1=> Int`
-[accessible:  true] `method fb3=> Int`
-[accessible:  true] `method fc1=> Int`
-[accessible:  true] `method fc2=> Int`
-[accessible:  true] `method ft1=> Int`
-[accessible:  true] `method ft3=> Int`
-[accessible:  true] `object Completion2test.Completion2.type`
-[accessible:  true] `object Ob1Completion1.this.Ob1.type`
-[accessible:  true] `object Oc1Completion1.this.Oc1.type`
-[accessible:  true] `object Oc2Completion1.this.Oc2.type`
-[accessible:  true] `object Ot1Completion1.this.Ot1.type`
-[accessible:  true] `trait Trait1test.Trait1`
-[accessible:  true] `type tb1Completion1.this.tb1`
-[accessible:  true] `type tb3Completion1.this.tb3`
-[accessible:  true] `type tc1Completion1.this.tc1`
-[accessible:  true] `type tc2Completion1.this.tc2`
-[accessible:  true] `type tt1Completion1.this.tt1`
-[accessible:  true] `type tt3Completion1.this.tt3`
-[accessible:  true] `value vb1Int`
-[accessible:  true] `value vb3Int`
-[accessible:  true] `value vc1Int`
-[accessible:  true] `value vc2Int`
-[accessible:  true] `value vt1Int`
-[accessible:  true] `value vt3Int`
-[accessible:  true] `variable rb1Int`
-[accessible:  true] `variable rb3Int`
-[accessible:  true] `variable rc1Int`
-[accessible:  true] `variable rc2Int`
-[accessible:  true] `variable rt1Int`
-[accessible:  true] `variable rt3Int`
-[accessible: false] `class Cb2Completion1.this.Cb2`
-[accessible: false] `class Ct2Completion1.this.Ct2`
-[accessible: false] `method fb2=> Int`
-[accessible: false] `method ft2=> Int`
-[accessible: false] `object Ob2Completion1.this.Ob2.type`
-[accessible: false] `object Ot2Completion1.this.Ot2.type`
-[accessible: false] `type tb2Completion1.this.tb2`
-[accessible: false] `type tt2Completion1.this.tt2`
-[accessible: false] `value vb2Int`
-[accessible: false] `value vt2Int`
-[accessible: false] `variable rb2Int`
-[accessible: false] `variable rt2Int`
+retrieved 37 members
+abstract class Base1 extends AnyRef
+abstract trait Trait1 extends AnyRef
+class Cb1 extends AnyRef
+class Cc1 extends AnyRef
+class Completion1 extends Base1 with Trait1
+class Ct1 extends AnyRef
+def <init>(): test.Completion1
+def fb1: Int
+def fc1: Int
+def ft1: Int
+object Completion2
+object Ob1
+object Oc1
+object Ot1
+override def fb3: Int
+override def ft3: Int
+override type tb3 = Completion1.this.tb3
+override type tt3 = Completion1.this.tt3
+private class Cc2 extends AnyRef
+private def fc2: Int
+private object Oc2
+private type tc2 = Completion1.this.tc2
+private[this] val vb1: Int
+private[this] val vb3: Int
+private[this] val vc1: Int
+private[this] val vc2: Int
+private[this] val vt1: Int
+private[this] val vt3: Int
+private[this] var rb1: Int
+private[this] var rb3: Int
+private[this] var rc1: Int
+private[this] var rc2: Int
+private[this] var rt1: Int
+private[this] var rt3: Int
+type tb1 = Completion1.this.tb1
+type tc1 = Completion1.this.tc1
+type tt1 = Completion1.this.tt1
 ================================================================================
 
 askScopeCompletion at Completions.scala(104,2)
 ================================================================================
 [response] askScopeCompletion at (104,2)
-retrieved 49 members
-[accessible:  true] `class Base1test.Base1`
-[accessible:  true] `class Cb1test.Completion2.Cb1`
-[accessible:  true] `class Co1test.Completion2.Co1`
-[accessible:  true] `class Co2test.Completion2.Co2`
-[accessible:  true] `class Completion1test.Completion1`
-[accessible:  true] `class Ct1test.Completion2.Ct1`
-[accessible:  true] `constructor Completion2()test.Completion2.type`
-[accessible:  true] `method fb1=> Int`
-[accessible:  true] `method fb3=> Int`
-[accessible:  true] `method fo1=> Int`
-[accessible:  true] `method fo2=> Int`
-[accessible:  true] `method ft1=> Int`
-[accessible:  true] `method ft3=> Int`
-[accessible:  true] `object Completion2test.Completion2.type`
-[accessible:  true] `object Ob1test.Completion2.Ob1.type`
-[accessible:  true] `object Oo1test.Completion2.Oo1.type`
-[accessible:  true] `object Oo2test.Completion2.Oo2.type`
-[accessible:  true] `object Ot1test.Completion2.Ot1.type`
-[accessible:  true] `trait Trait1test.Trait1`
-[accessible:  true] `type tb1test.Completion2.tb1`
-[accessible:  true] `type tb3test.Completion2.tb3`
-[accessible:  true] `type to1test.Completion2.to1`
-[accessible:  true] `type to2test.Completion2.to2`
-[accessible:  true] `type tt1test.Completion2.tt1`
-[accessible:  true] `type tt3test.Completion2.tt3`
-[accessible:  true] `value vb1Int`
-[accessible:  true] `value vb3Int`
-[accessible:  true] `value vo1Int`
-[accessible:  true] `value vo2Int`
-[accessible:  true] `value vt1Int`
-[accessible:  true] `value vt3Int`
-[accessible:  true] `variable rb1Int`
-[accessible:  true] `variable rb3Int`
-[accessible:  true] `variable ro1Int`
-[accessible:  true] `variable ro2Int`
-[accessible:  true] `variable rt1Int`
-[accessible:  true] `variable rt3Int`
-[accessible: false] `class Cb2test.Completion2.Cb2`
-[accessible: false] `class Ct2test.Completion2.Ct2`
-[accessible: false] `method fb2=> Int`
-[accessible: false] `method ft2=> Int`
-[accessible: false] `object Ob2test.Completion2.Ob2.type`
-[accessible: false] `object Ot2test.Completion2.Ot2.type`
-[accessible: false] `type tb2test.Completion2.tb2`
-[accessible: false] `type tt2test.Completion2.tt2`
-[accessible: false] `value vb2Int`
-[accessible: false] `value vt2Int`
-[accessible: false] `variable rb2Int`
-[accessible: false] `variable rt2Int`
+retrieved 37 members
+abstract class Base1 extends AnyRef
+abstract trait Trait1 extends AnyRef
+class Cb1 extends AnyRef
+class Co1 extends AnyRef
+class Completion1 extends Base1 with Trait1
+class Ct1 extends AnyRef
+def <init>(): test.Completion2.type
+def fb1: Int
+def fo1: Int
+def ft1: Int
+object Completion2
+object Ob1
+object Oo1
+object Ot1
+override def fb3: Int
+override def ft3: Int
+override type tb3 = test.Completion2.tb3
+override type tt3 = test.Completion2.tt3
+private class Co2 extends AnyRef
+private def fo2: Int
+private object Oo2
+private type to2 = test.Completion2.to2
+private[this] val vb1: Int
+private[this] val vb3: Int
+private[this] val vo1: Int
+private[this] val vo2: Int
+private[this] val vt1: Int
+private[this] val vt3: Int
+private[this] var rb1: Int
+private[this] var rb3: Int
+private[this] var ro1: Int
+private[this] var ro2: Int
+private[this] var rt1: Int
+private[this] var rt3: Int
+type tb1 = test.Completion2.tb1
+type to1 = test.Completion2.to1
+type tt1 = test.Completion2.tt1
 ================================================================================

@@ -8,7 +8,8 @@
 
 
 
-package scala.collection
+package scala
+package collection
 package immutable
 
 import generic._
@@ -32,7 +33,15 @@ trait Set[A] extends Iterable[A]
                 with Parallelizable[A, ParSet[A]]
 {
   override def companion: GenericCompanion[Set] = Set
+  
+  
+  /** Returns this $coll as an immutable map.
+   *  
+   *  A new map will not be built; lazy collections will stay lazy.
+   */
+  @deprecatedOverriding("Immutable sets should do nothing on toSet but return themselves cast as a Set.", "2.11.0")
   override def toSet[B >: A]: Set[B] = this.asInstanceOf[Set[B]]
+  
   override def seq: Set[A] = this
   protected override def parCombiner = ParSet.newCombiner[A] // if `immutable.SetLike` gets introduced, please move this there!
 }
@@ -44,8 +53,7 @@ trait Set[A] extends Iterable[A]
 object Set extends ImmutableSetFactory[Set] {
   /** $setCanBuildFromInfo */
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Set[A]] = setCanBuildFrom[A]
-  override def empty[A]: Set[A] = EmptySet.asInstanceOf[Set[A]]
-
+  
   /** An optimized representation for immutable empty sets */
   private object EmptySet extends AbstractSet[Any] with Set[Any] with Serializable {
     override def size: Int = 0
@@ -55,6 +63,7 @@ object Set extends ImmutableSetFactory[Set] {
     def iterator: Iterator[Any] = Iterator.empty
     override def foreach[U](f: Any =>  U): Unit = {}
   }
+  private[collection] def emptyInstance: Set[Any] = EmptySet
 
   /** An optimized representation for immutable sets of size 1 */
   @SerialVersionUID(1233385750652442003L)
@@ -72,6 +81,16 @@ object Set extends ImmutableSetFactory[Set] {
       Iterator(elem1)
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1)
+    }
+    override def exists(f: A => Boolean): Boolean = {
+      f(elem1)
+    }
+    override def forall(f: A => Boolean): Boolean = {
+      f(elem1)
+    }
+    override def find(f: A => Boolean): Option[A] = {
+      if (f(elem1)) Some(elem1)
+      else None
     }
   }
 
@@ -92,6 +111,17 @@ object Set extends ImmutableSetFactory[Set] {
       Iterator(elem1, elem2)
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1); f(elem2)
+    }
+    override def exists(f: A => Boolean): Boolean = {
+      f(elem1) || f(elem2)
+    }
+    override def forall(f: A => Boolean): Boolean = {
+      f(elem1) && f(elem2)
+    }
+    override def find(f: A => Boolean): Option[A] = {
+      if (f(elem1)) Some(elem1)
+      else if (f(elem2)) Some(elem2)
+      else None
     }
   }
 
@@ -114,6 +144,18 @@ object Set extends ImmutableSetFactory[Set] {
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1); f(elem2); f(elem3)
     }
+    override def exists(f: A => Boolean): Boolean = {
+      f(elem1) || f(elem2) || f(elem3)
+    }
+    override def forall(f: A => Boolean): Boolean = {
+      f(elem1) && f(elem2) && f(elem3)
+    }
+    override def find(f: A => Boolean): Option[A] = {
+      if (f(elem1)) Some(elem1)
+      else if (f(elem2)) Some(elem2)
+      else if (f(elem3)) Some(elem3)
+      else None
+    }
   }
 
   /** An optimized representation for immutable sets of size 4 */
@@ -135,6 +177,19 @@ object Set extends ImmutableSetFactory[Set] {
       Iterator(elem1, elem2, elem3, elem4)
     override def foreach[U](f: A =>  U): Unit = {
       f(elem1); f(elem2); f(elem3); f(elem4)
+    }
+    override def exists(f: A => Boolean): Boolean = {
+      f(elem1) || f(elem2) || f(elem3) || f(elem4)
+    }
+    override def forall(f: A => Boolean): Boolean = {
+      f(elem1) && f(elem2) && f(elem3) && f(elem4)
+    }
+    override def find(f: A => Boolean): Option[A] = {
+      if (f(elem1)) Some(elem1)
+      else if (f(elem2)) Some(elem2)
+      else if (f(elem3)) Some(elem3)
+      else if (f(elem4)) Some(elem4)
+      else None
     }
   }
 }

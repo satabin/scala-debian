@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package api
 
 import scala.language.implicitConversions
@@ -60,12 +61,6 @@ trait FlagSets { self: Universe =>
    *  @group Flags
    */
   type FlagSet
-
-  /** A tag that preserves the identity of the `FlagSet` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val FlagSetTag: ClassTag[FlagSet]
 
   /** The API of `FlagSet` instances.
    *  The main source of information about flag sets is the [[scala.reflect.api.FlagSets]] page.
@@ -136,8 +131,8 @@ trait FlagSets { self: Universe =>
     /** Flag indicating that tree has `protected` modifier set */
     val PROTECTED: FlagSet
 
-    /** Flag indicating that tree represents a member local to current class
-     *  (i.e. private[this] or protected[this].
+    /** Flag indicating that tree represents a member local to current class,
+     *  i.e. private[this] or protected[this].
      *  This requires having either PRIVATE or PROTECTED set as well.
      */
     val LOCAL: FlagSet
@@ -171,6 +166,90 @@ trait FlagSets { self: Universe =>
 
     /** Flag indicating that tree represents a variable or a member initialized to the default value */
     val DEFAULTINIT: FlagSet
+
+    /** Flag indicating that tree represents an enum.
+     *
+     *  It can only appear at
+     *  - the enum's class
+     *  - enum constants
+     **/
+    val ENUM: FlagSet
+
+    /** Flag indicating that tree represents a parameter of the primary constructor of some class
+     *  or a synthetic member underlying thereof. E.g. here's how 'class C(val x: Int)' is represented:
+     *
+     *      [[syntax trees at end of parser]]// Scala source: tmposDU52
+     *      class C extends scala.AnyRef {
+     *        <paramaccessor> val x: Int = _;
+     *        def <init>(x: Int) = {
+     *          super.<init>();
+     *          ()
+     *        }
+     *      }
+     *      ClassDef(
+     *        Modifiers(), TypeName("C"), List(),
+     *        Template(
+     *          List(Select(Ident(scala), TypeName("AnyRef"))),
+     *          noSelfType,
+     *          List(
+     *            ValDef(Modifiers(PARAMACCESSOR), TermName("x"), Ident(TypeName("Int")), EmptyTree),
+     *            DefDef(
+     *              Modifiers(), nme.CONSTRUCTOR, List(),
+     *              List(List(ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("x"), Ident(TypeName("Int")), EmptyTree))), TypeTree(),
+     *              Block(List(pendingSuperCall), Literal(Constant(())))))))))
+     */
+    val PARAMACCESSOR: FlagSet
+
+    /** Flag indicating that tree represents a parameter of the primary constructor of some case class
+     *  or a synthetic member underlying thereof.  E.g. here's how 'case class C(val x: Int)' is represented:
+     *
+     *      [[syntax trees at end of parser]]// Scala source: tmpnHkJ3y
+     *      case class C extends scala.Product with scala.Serializable {
+     *        <caseaccessor> <paramaccessor> val x: Int = _;
+     *        def <init>(x: Int) = {
+     *          super.<init>();
+     *          ()
+     *        }
+     *      }
+     *      ClassDef(
+     *        Modifiers(CASE), TypeName("C"), List(),
+     *        Template(
+     *          List(Select(Ident(scala), TypeName("Product")), Select(Ident(scala), TypeName("Serializable"))),
+     *          noSelfType,
+     *          List(
+     *            ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("x"), Ident(TypeName("Int")), EmptyTree),
+     *            DefDef(
+     *              Modifiers(), nme.CONSTRUCTOR, List(),
+     *              List(List(ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("x"), Ident(TypeName("Int")), EmptyTree))), TypeTree(),
+     *              Block(List(pendingSuperCall), Literal(Constant(())))))))))
+     */
+    val CASEACCESSOR: FlagSet
+
+    /** Flag used to distinguish programmatically generated definitions from user-written ones.
+     *  @see ARTIFACT
+     */
+    val SYNTHETIC: FlagSet
+
+    /** Flag used to distinguish platform-specific implementation details.
+     *  Trees and symbols which are currently marked ARTIFACT by scalac:
+     *    * $outer fields and accessors
+     *    * super accessors
+     *    * protected accessors
+     *    * lazy local accessors
+     *    * bridge methods
+     *    * default argument getters
+     *    * evaluation-order preserving locals for right-associative and out-of-order named arguments
+     *    * catch-expression storing vals
+     *    * anything else which feels a setFlag(ARTIFACT)
+     *
+     *  @see SYNTHETIC
+     */
+    val ARTIFACT: FlagSet
+
+    /** Flag that indicates methods that are supposed to be stable
+     *  (e.g. synthetic getters of valdefs).
+     */
+    val STABLE: FlagSet
   }
 
   /** The empty set of flags

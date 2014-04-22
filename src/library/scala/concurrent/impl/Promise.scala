@@ -82,11 +82,11 @@ private[concurrent] object Promise {
    *  2. Complete, with a result.
    *  3. Linked to another DefaultPromise.
    *
-   *  If a DefaultPromise is linked it another DefaultPromise then it will
+   *  If a DefaultPromise is linked to another DefaultPromise, it will
    *  delegate all its operations to that other promise. This means that two
    *  DefaultPromises that are linked will appear, to external callers, to have
-   *  exactly the same state and behaviour. E.g. they will both appear to be
-   *  either complete or incomplete, and with the same values.
+   *  exactly the same state and behaviour. For instance, both will appear as
+   *  incomplete, or as complete with the same result value.
    *
    *  A DefaultPromise stores its state entirely in the AnyRef cell exposed by
    *  AbstractPromise. The type of object stored in the cell fully describes the
@@ -155,7 +155,7 @@ private[concurrent] object Promise {
 
     /** Get the root promise for this promise, compressing the link chain to that
      *  promise if necessary.
-     *    
+     *
      *  For promises that are not linked, the result of calling
      *  `compressedRoot()` will the promise itself. However for linked promises,
      *  this method will traverse each link until it locates the root promise at
@@ -265,7 +265,7 @@ private[concurrent] object Promise {
     }
 
     def onComplete[U](func: Try[T] => U)(implicit executor: ExecutionContext): Unit = {
-      val preparedEC = executor.prepare
+      val preparedEC = executor.prepare()
       val runnable = new CallbackRunnable[T](preparedEC, func)
       dispatchOrAddCallback(runnable)
     }
@@ -329,7 +329,7 @@ private[concurrent] object Promise {
 
     def onComplete[U](func: Try[T] => U)(implicit executor: ExecutionContext): Unit = {
       val completedAs = value.get
-      val preparedEC = executor.prepare
+      val preparedEC = executor.prepare()
       (new CallbackRunnable(preparedEC, func)).executeWithValue(completedAs)
     }
 

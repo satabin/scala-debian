@@ -18,21 +18,16 @@ import scala.collection.parallel.immutable.ParVector
 
 /** Companion object to the Vector class
  */
-object Vector extends SeqFactory[Vector] {
-  // left lying around for binary compatibility check
-  private[collection] class VectorReusableCBF extends GenericCanBuildFrom[Nothing] {    
-    override def apply() = newBuilder[Nothing]
-  }      
-  // left lying around for binary compatibility check
-  private val VectorReusableCBF: GenericCanBuildFrom[Nothing] = new VectorReusableCBF
-  
-  override lazy val ReusableCBF  = 
-      scala.collection.IndexedSeq.ReusableCBF.asInstanceOf[GenericCanBuildFrom[Nothing]]  
+object Vector extends IndexedSeqFactory[Vector] {
   def newBuilder[A]: Builder[A, Vector[A]] = new VectorBuilder[A]
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Vector[A]] =
     ReusableCBF.asInstanceOf[GenericCanBuildFrom[A]]
   private[immutable] val NIL = new Vector[Nothing](0, 0, 0)
   override def empty[A]: Vector[A] = NIL
+  
+  // Constants governing concat strategy for performance
+  private final val Log2ConcatFaster = 5
+  private final val TinyAppendFaster = 2
 }
 
 // in principle, most members should be private. however, access privileges must
@@ -64,7 +59,7 @@ object Vector extends SeqFactory[Vector] {
  *  @define mayNotTerminateInf
  *  @define willNotTerminateInf
  */
-final class Vector[+A](private[collection] val startIndex: Int, private[collection] val endIndex: Int, focus: Int)
+final class Vector[+A] private[immutable] (private[collection] val startIndex: Int, private[collection] val endIndex: Int, focus: Int)
 extends AbstractSeq[A]
    with IndexedSeq[A]
    with GenericTraversableTemplate[A, Vector]
@@ -113,7 +108,7 @@ override def companion: GenericCompanion[Vector] = Vector
       if (0 < i) {
         i -= 1
         self(i)
-      } else Iterator.empty.next
+      } else Iterator.empty.next()
   }
 
   // TODO: reverse
@@ -148,7 +143,7 @@ override def companion: GenericCompanion[Vector] = Vector
     if (bf eq IndexedSeq.ReusableCBF) appendFront(elem).asInstanceOf[That] // just ignore bf
     else super.+:(elem)(bf)
 
-  override def :+[B >: A, That](elem: B)(implicit bf: CanBuildFrom[Vector[A], B, That]): That = 
+  override def :+[B >: A, That](elem: B)(implicit bf: CanBuildFrom[Vector[A], B, That]): That =
     if (bf eq IndexedSeq.ReusableCBF) appendBack(elem).asInstanceOf[That] // just ignore bf
     else super.:+(elem)(bf)
 
@@ -214,10 +209,29 @@ override def companion: GenericCompanion[Vector] = Vector
   override /*IterableLike*/ def splitAt(n: Int): (Vector[A], Vector[A]) = (take(n), drop(n))
 
 
-  // concat (stub)
-
+  // concat (suboptimal but avoids worst performance gotchas)
   override def ++[B >: A, That](that: GenTraversableOnce[B])(implicit bf: CanBuildFrom[Vector[A], B, That]): That = {
-    super.++(that.seq)
+    if (bf eq IndexedSeq.ReusableCBF) {
+      import Vector.{Log2ConcatFaster, TinyAppendFaster}
+      if (that.isEmpty) this.asInstanceOf[That]
+      else {
+        val again = if (!that.isTraversableAgain) that.toVector else that
+        again.size match {
+          // Often it's better to append small numbers of elements (or prepend if RHS is a vector)
+          case n if n <= TinyAppendFaster || n < (this.size >> Log2ConcatFaster) => 
+            var v: Vector[B] = this
+            for (x <- again) v = v :+ x
+            v.asInstanceOf[That]
+          case n if this.size < (n >> Log2ConcatFaster) && again.isInstanceOf[Vector[_]] =>
+            var v = again.asInstanceOf[Vector[B]]
+            val ri = this.reverseIterator
+            while (ri.hasNext) v = ri.next +: v
+            v.asInstanceOf[That]
+          case _ => super.++(again)
+        }
+      }
+    }
+    else super.++(that.seq)
   }
 
 
@@ -251,8 +265,8 @@ override def companion: GenericCompanion[Vector] = Vector
 
   private[immutable] def appendFront[B>:A](value: B): Vector[B] = {
     if (endIndex != startIndex) {
-      var blockIndex = (startIndex - 1) & ~31
-      var lo = (startIndex - 1) & 31
+      val blockIndex = (startIndex - 1) & ~31
+      val lo = (startIndex - 1) & 31
 
       if (startIndex != blockIndex + 32) {
         val s = new Vector(startIndex - 1, endIndex, blockIndex)
@@ -270,7 +284,7 @@ override def companion: GenericCompanion[Vector] = Vector
         //println("----- appendFront " + value + " at " + (startIndex - 1) + " reached block start")
         if (shift != 0) {
           // case A: we can shift right on the top level
-          debug
+          debug()
           //println("shifting right by " + shiftBlocks + " at level " + (depth-1) + " (had "+freeSpace+" free space)")
 
           if (depth > 1) {
@@ -280,7 +294,7 @@ override def companion: GenericCompanion[Vector] = Vector
             s.initFrom(this)
             s.dirty = dirty
             s.shiftTopLevel(0, shiftBlocks) // shift right by n blocks
-            s.debug
+            s.debug()
             s.gotoFreshPosWritable(newFocus, newBlockIndex, newFocus ^ newBlockIndex) // maybe create pos; prepare for writing
             s.display0(lo) = value.asInstanceOf[AnyRef]
             //assert(depth == s.depth)
@@ -298,7 +312,7 @@ override def companion: GenericCompanion[Vector] = Vector
             s.shiftTopLevel(0, shiftBlocks) // shift right by n elements
             s.gotoPosWritable(newFocus, newBlockIndex, newFocus ^ newBlockIndex) // prepare for writing
             s.display0(shift-1) = value.asInstanceOf[AnyRef]
-            s.debug
+            s.debug()
             s
           }
         } else if (blockIndex < 0) {
@@ -313,10 +327,10 @@ override def companion: GenericCompanion[Vector] = Vector
           val s = new Vector(startIndex - 1 + move, endIndex + move, newBlockIndex)
           s.initFrom(this)
           s.dirty = dirty
-          s.debug
+          s.debug()
           s.gotoFreshPosWritable(newFocus, newBlockIndex, newFocus ^ newBlockIndex) // could optimize: we know it will create a whole branch
           s.display0(lo) = value.asInstanceOf[AnyRef]
-          s.debug
+          s.debug()
           //assert(s.depth == depth+1)
           s
         } else {
@@ -348,8 +362,8 @@ override def companion: GenericCompanion[Vector] = Vector
 //    //println("------- append " + value)
 //    debug()
     if (endIndex != startIndex) {
-      var blockIndex = endIndex & ~31
-      var lo = endIndex & 31
+      val blockIndex = endIndex & ~31
+      val lo = endIndex & 31
 
       if (endIndex != blockIndex) {
         //println("will make writable block (from "+focus+") at: " + blockIndex)
@@ -366,7 +380,7 @@ override def companion: GenericCompanion[Vector] = Vector
         //println("----- appendBack " + value + " at " + endIndex + " reached block end")
 
         if (shift != 0) {
-          debug
+          debug()
           //println("shifting left by " + shiftBlocks + " at level " + (depth-1) + " (had "+startIndex+" free space)")
           if (depth > 1) {
             val newBlockIndex = blockIndex - shift
@@ -375,10 +389,10 @@ override def companion: GenericCompanion[Vector] = Vector
             s.initFrom(this)
             s.dirty = dirty
             s.shiftTopLevel(shiftBlocks, 0) // shift left by n blocks
-            s.debug
+            s.debug()
             s.gotoFreshPosWritable(newFocus, newBlockIndex, newFocus ^ newBlockIndex)
             s.display0(lo) = value.asInstanceOf[AnyRef]
-            s.debug
+            s.debug()
             //assert(depth == s.depth)
             s
           } else {
@@ -394,7 +408,7 @@ override def companion: GenericCompanion[Vector] = Vector
             s.shiftTopLevel(shiftBlocks, 0) // shift right by n elements
             s.gotoPosWritable(newFocus, newBlockIndex, newFocus ^ newBlockIndex)
             s.display0(32 - shift) = value.asInstanceOf[AnyRef]
-            s.debug
+            s.debug()
             s
           }
         } else {
@@ -409,7 +423,7 @@ override def companion: GenericCompanion[Vector] = Vector
           //assert(s.depth == depth+1) might or might not create new level!
           if (s.depth == depth+1) {
             //println("creating new level " + s.depth + " (had "+0+" free space)")
-            s.debug
+            s.debug()
           }
           s
         }
@@ -583,9 +597,7 @@ override def companion: GenericCompanion[Vector] = Vector
   }
 
   private def dropFront0(cutIndex: Int): Vector[A] = {
-    var blockIndex = cutIndex & ~31
-    var lo = cutIndex & 31
-
+    val blockIndex = cutIndex & ~31
     val xor = cutIndex ^ (endIndex - 1)
     val d = requiredDepth(xor)
     val shift = (cutIndex & ~((1 << (5*d))-1))
@@ -615,9 +627,7 @@ override def companion: GenericCompanion[Vector] = Vector
   }
 
   private def dropBack0(cutIndex: Int): Vector[A] = {
-    var blockIndex = (cutIndex - 1) & ~31
-    var lo = ((cutIndex - 1) & 31) + 1
-
+    val blockIndex = (cutIndex - 1) & ~31
     val xor = startIndex ^ (cutIndex - 1)
     val d = requiredDepth(xor)
     val shift = (startIndex & ~((1 << (5*d))-1))
@@ -639,14 +649,13 @@ override def companion: GenericCompanion[Vector] = Vector
 }
 
 
-class VectorIterator[+A](_startIndex: Int, _endIndex: Int)
+class VectorIterator[+A](_startIndex: Int, endIndex: Int)
 extends AbstractIterator[A]
    with Iterator[A]
    with VectorPointer[A @uncheckedVariance] {
 
   private var blockIndex: Int = _startIndex & ~31
   private var lo: Int = _startIndex & 31
-  private var endIndex: Int = _endIndex
 
   private var endLo = math.min(endIndex - blockIndex, 32)
 
@@ -676,13 +685,13 @@ extends AbstractIterator[A]
     res
   }
 
-  private[collection] def remainingElementCount: Int = (_endIndex - (blockIndex + lo)) max 0
+  private[collection] def remainingElementCount: Int = (endIndex - (blockIndex + lo)) max 0
 
   /** Creates a new vector which consists of elements remaining in this iterator.
    *  Such a vector can then be split into several vectors using methods like `take` and `drop`.
    */
   private[collection] def remainingVector: Vector[A] = {
-    val v = new Vector(blockIndex + lo, _endIndex, blockIndex + lo)
+    val v = new Vector(blockIndex + lo, endIndex, blockIndex + lo)
     v.initFrom(this)
     v
   }

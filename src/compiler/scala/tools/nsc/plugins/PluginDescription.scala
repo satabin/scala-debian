@@ -6,70 +6,50 @@
 package scala.tools.nsc
 package plugins
 
-import scala.xml.{Node,NodeSeq}
+import scala.reflect.internal.util.StringContextStripMarginOps
 
 /** A description of a compiler plugin, suitable for serialization
  *  to XML for inclusion in the plugin's .jar file.
  *
  * @author Lex Spoon
  * @version 1.0, 2007-5-21
+ * @author Adriaan Moors
+ * @version 2.0, 2013
+ * @param name A short name of the plugin, used to identify it in
+ *   various contexts. The phase defined by the plugin
+ *   should have the same name.
+ * @param classname The name of the main Plugin class.
  */
-abstract class PluginDescription {
-
-  /** A short name of the compiler, used to identify it in
-   *  various contexts. The phase defined by the plugin
-   *  should have the same name.
-   */
-  val name: String
-
-  /** The name of the main class for the plugin */
-  val classname: String
-
-  /** An XML representation of this description.  It can be
-   *  read back using <code>PluginDescription.fromXML</code>.
+case class PluginDescription(name: String, classname: String) {
+  /** An XML representation of this description.
    *  It should be stored inside the jar archive file.
    */
-  def toXML: Node = {
-    <plugin>
-      <name>{name}</name>
-      <classname>{classname}</classname>
-    </plugin>
-  }
+  def toXML: String =
+    sm"""<plugin>
+         | <name>${name}</name>
+         | <classname>${classname}</classname>
+         |</plugin>"""
 }
 
 /** Utilities for the PluginDescription class.
  *
- *  @author Lex Spoon
- *  @version 1.0, 2007-5-21
+ * @author Lex Spoon
+ * @version 1.0, 2007-5-21
+ * @author Adriaan Moors
+ * @version 2.0, 2013
  */
 object PluginDescription {
+  private def text(ns: org.w3c.dom.NodeList): String =
+    if (ns.getLength == 1) ns.item(0).getTextContent.trim
+    else throw new RuntimeException("Bad plugin descriptor.")
 
-  def fromXML(xml: Node): Option[PluginDescription] = {
-    // check the top-level tag
-    xml match {
-      case <plugin>{_*}</plugin>  => ()
-      case _ => return None
-    }
-    // extract one field
-    def getField(field: String): Option[String] = {
-      val text = (xml \\ field).text.trim
-      if (text == "") None else Some(text)
-    }
+  def fromXML(xml: java.io.InputStream): PluginDescription = {
+    import javax.xml.parsers.DocumentBuilderFactory
+    val root = DocumentBuilderFactory.newInstance.newDocumentBuilder.parse(xml).getDocumentElement
+    root.normalize()
+    if (root.getNodeName != "plugin")
+      throw new RuntimeException("Plugin descriptor root element must be <plugin>.")
 
-    // extract the required fields
-    val name1 = getField("name") match {
-      case None => return None
-      case Some(str) => str
-    }
-    val classname1 = getField("classname") match {
-      case None => return None
-      case Some(str) => str
-    }
-
-    Some(new PluginDescription {
-      val name = name1
-      val classname = classname1
-    })
+    PluginDescription(text(root.getElementsByTagName("name")), text(root.getElementsByTagName("classname")))
   }
-
 }

@@ -5,7 +5,6 @@
 
 package scala.tools.nsc
 
-import scala.collection.mutable.ListBuffer
 import io.File
 
 /** A class representing command line info for scalac */
@@ -14,9 +13,6 @@ class CompilerCommand(arguments: List[String], val settings: Settings) {
   def this(arguments: List[String], settings: Settings, error: String => Unit) = this(arguments, settings withErrorFn error)
 
   type Setting = Settings#Setting
-
-  /** file extensions of files that the compiler can process */
-  lazy val fileEndings = Properties.fileEndings
 
   private val processArgumentsResult =
     if (shouldProcessArguments) processArguments
@@ -31,7 +27,7 @@ class CompilerCommand(arguments: List[String], val settings: Settings) {
     |-- Notes on option parsing --
     |Boolean settings are always false unless set.
     |Where multiple values are accepted, they should be comma-separated.
-    |  example: -Xplugin:plugin1,plugin2
+    |  example: -Xplugin:option1,option2
     |<phases> means one or a comma-separated list of:
     |  (partial) phase names, phase ids, phase id ranges, or the string "all".
     |  example: -Xprint:all prints all phases.
@@ -41,8 +37,6 @@ class CompilerCommand(arguments: List[String], val settings: Settings) {
   """.stripMargin.trim + "\n"
 
   def shortUsage = "Usage: %s <options> <source files>" format cmdName
-  def createUsagePreface(shouldExplain: Boolean) =
-    if (shouldExplain) shortUsage + "\n" + explainAdvanced else ""
 
   /** Creates a help message for a subset of options based on cond */
   def createUsageMsg(cond: Setting => Boolean): String = {
@@ -82,27 +76,27 @@ class CompilerCommand(arguments: List[String], val settings: Settings) {
   }
 
   /** Messages explaining usage and options */
-  def usageMsg    = createUsageMsg("where possible standard", false, _.isStandard)
-  def xusageMsg   = createUsageMsg("Possible advanced", true, _.isAdvanced)
-  def yusageMsg   = createUsageMsg("Possible private", true, _.isPrivate)
+  def usageMsg    = createUsageMsg("where possible standard", shouldExplain = false, _.isStandard)
+  def xusageMsg   = createUsageMsg("Possible advanced", shouldExplain = true, _.isAdvanced)
+  def yusageMsg   = createUsageMsg("Possible private", shouldExplain = true, _.isPrivate)
 
-  // If any of these settings is set, the compiler shouldn't start;
-  // an informative message of some sort should be printed instead.
-  def shouldStopWithInfo = {
-    import settings.{ Setting => _, _ }
-    Set[BooleanSetting](help, Xhelp, Yhelp, showPlugins, showPhases) exists (_.value)
-  }
+  /** For info settings, compiler should just print a message and quit. */
+  def shouldStopWithInfo = settings.isInfo
 
   def getInfoMessage(global: Global): String = {
     import settings._
-    if (help.value)               usageMsg + global.pluginOptionsHelp
-    else if (Xhelp.value)         xusageMsg
-    else if (Yhelp.value)         yusageMsg
-    else if (showPlugins.value)   global.pluginDescriptions
-    else if (showPhases.value)    global.phaseDescriptions + (
-      if (debug.value) "\n" + global.phaseFlagDescriptions else ""
+    if (help)               usageMsg + global.pluginOptionsHelp
+    else if (Xhelp)         xusageMsg
+    else if (Yhelp)         yusageMsg
+    else if (showPlugins)   global.pluginDescriptions
+    else if (showPhases)    global.phaseDescriptions + (
+      if (debug) "\n" + global.phaseFlagDescriptions else ""
     )
-    else                          ""
+    else if (genPhaseGraph.isSetByUser) {
+      val components = global.phaseNames  // global.phaseDescriptors // one initializes
+      s"Phase graph of ${components.size} components output to ${genPhaseGraph.value}*.dot."
+    }
+    else                    ""
   }
 
   /**
@@ -128,6 +122,6 @@ class CompilerCommand(arguments: List[String], val settings: Settings) {
       case x                      => List(x)
     }
 
-    settings.processArguments(expandedArguments, true)
+    settings.processArguments(expandedArguments, processAll = true)
   }
 }

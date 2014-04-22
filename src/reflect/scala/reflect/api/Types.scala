@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package api
 
 /**
@@ -50,20 +51,15 @@ package api
  *
  *  @contentDiagram hideNodes "*Api"
  */
-trait Types { self: Universe =>
+trait Types {
+  self: Universe =>
 
   /** The type of Scala types, and also Scala type signatures.
    *  (No difference is internally made between the two).
    *  @template
    *  @group Types
    */
-  type Type >: Null <: TypeApi
-
-  /** A tag that preserves the identity of the `Type` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val TypeTagg: ClassTag[Type]
+  type Type >: Null <: AnyRef with TypeApi
 
   /** This constant is used as a special value that indicates that no meaningful type exists.
    *  @group Types
@@ -80,6 +76,12 @@ trait Types { self: Universe =>
   /** The API of types.
    *  The main source of information about types is the [[scala.reflect.api.Types]] page.
    *  @group API
+   *
+   *  @define dealiasWidenWarning Note that type aliases can hide beneath
+   *  singleton types and singleton types can hide inside type aliases.
+   *  Moreover, aliases might lurk in the upper bounds of abstract types.
+   *  Therefore careful thought has to be applied to identify and carry out
+   *  unwrapping logic specific to your use case.
    */
   abstract class TypeApi {
     /** The term symbol associated with the type, or `NoSymbol` for types
@@ -92,11 +94,19 @@ trait Types { self: Universe =>
      */
     def typeSymbol: Symbol
 
+    /** @see [[decl]] */
+    @deprecated("Use `decl` instead", "2.11.0")
+    def declaration(name: Name): Symbol
+
     /** The defined or declared members with name `name` in this type;
      *  an OverloadedSymbol if several exist, NoSymbol if none exist.
      *  Alternatives of overloaded symbol appear in the order they are declared.
      */
-    def declaration(name: Name): Symbol
+    def decl(name: Name): Symbol
+
+    /** @see [[decls]] */
+    @deprecated("Use `decls` instead", "2.11.0")
+    def declarations: MemberScope
 
     /** A `Scope` containing directly declared members of this type.
      *  Unlike `members` this method doesn't returns inherited members.
@@ -104,7 +114,7 @@ trait Types { self: Universe =>
      *  Members in the returned scope might appear in arbitrary order.
      *  Use `declarations.sorted` to get an ordered list of members.
      */
-    def declarations: MemberScope
+    def decls: MemberScope
 
     /** The member with given name, either directly declared or inherited,
      *  an OverloadedSymbol if several exist, NoSymbol if none exist.
@@ -119,6 +129,11 @@ trait Types { self: Universe =>
      */
     def members: MemberScope
 
+    /** Type signature of the companion of the underlying class symbol.
+     *  NoType if the underlying symbol is not a class symbol, or if it doesn't have a companion.
+     */
+    def companion: Type
+
     /** Is this type a type constructor that is missing its type arguments?
      */
     def takesTypeArgs: Boolean
@@ -127,7 +142,7 @@ trait Types { self: Universe =>
      */
     def typeConstructor: Type
 
-    /**
+    /** Reduce to beta eta-long normal form.
      *  Expands type aliases and converts higher-kinded TypeRefs to PolyTypes.
      *  Functions on types are also implemented as PolyTypes.
      *
@@ -135,7 +150,17 @@ trait Types { self: Universe =>
      *    TypeRef(pre, <List>, List()) is replaced by
      *    PolyType(X, TypeRef(pre, <List>, List(X)))
      */
+    @deprecated("Use `dealias` or `etaExpand` instead", "2.11.0")
     def normalize: Type
+
+    /** Converts higher-kinded TypeRefs to PolyTypes.
+     *  Functions on types are also implemented as PolyTypes.
+     *
+     *  Example: (in the below, <List> is the type constructor of List)
+     *    TypeRef(pre, <List>, List()) is replaced by
+     *    PolyType(X, TypeRef(pre, <List>, List(X)))
+     */
+    def etaExpand: Type
 
     /** Does this type conform to given type argument `that`? */
     def <:< (that: Type): Boolean
@@ -209,10 +234,131 @@ trait Types { self: Universe =>
      *  class Outer { class C ; val x: C }
      *  val o: Outer
      *  <o.x.type>.widen = o.C
+     *
+     *  $dealiasWidenWarning
      */
     def widen: Type
 
+    /** Expands type aliases arising from type members.
+     *  $dealiasWidenWarning
+     */
+    def dealias: Type
+
+    /******* popular methods from subclasses *******/
+
+    /** List of type arguments ingrained in this type reference.
+     *  Depending on your use case you might or might not want to call `dealias` first.
+     *
+     *  {{{
+     *  scala> type T = List[Int]
+     *  defined type alias T
+     *
+     *  scala> typeOf[T].typeArgs
+     *  res0: List[reflect.runtime.universe.Type] = List()
+     *
+     *  scala> typeOf[T].dealias.typeArgs
+     *  res1: List[reflect.runtime.universe.Type] = List(scala.Int)
+     *  }}}
+     */
+    def typeArgs: List[Type]
+
+    /** @see [[paramLists]] */
+    @deprecated("Use `paramLists` instead", "2.11.0")
+    def paramss: List[List[Symbol]]
+
+    /** For a method or poly type, a list of its value parameter sections,
+     *  the empty list of lists for all other types.
+     */
+    def paramLists: List[List[Symbol]]
+
+    /** For a poly type, its type parameters,
+     *  the empty list for all other types.
+     */
+    def typeParams: List[Symbol]
+
+    /** For a (nullary) method or poly type, its direct result type
+     *  (can be a MethodType if the method has multiple argument lists),
+     *  the type itself for all other types.
+     *
+     *  {{{
+     *  scala> class C { def foo[T](x: T)(y: T) = ??? }
+     *  defined class C
+     *
+     *  scala> typeOf[C].member(TermName("foo")).asMethod
+     *  res0: reflect.runtime.universe.MethodSymbol = method foo
+     *
+     *  scala> res0.info // PolyType wrapping a MethodType
+     *  res1: reflect.runtime.universe.Type = [T](x: T)(y: T)scala.Nothing
+     *
+     *  scala> res1.resultType // MethodType wrapping a MethodType
+     *  res2: reflect.runtime.universe.Type = (x: T)(y: T)scala.Nothing
+     *
+     *  scala> res1.resultType.resultType // vanilla MethodType
+     *  res3: reflect.runtime.universe.Type = (y: T)scala.Nothing
+     *
+     *  scala> res1.resultType.resultType.resultType
+     *  res4: reflect.runtime.universe.Type = scala.Nothing
+     *
+     *  scala> res1.finalResultType
+     *  res5: reflect.runtime.universe.Type = scala.Nothing
+     *  }}}
+     *
+     *  @see finalResultType
+     */
+    def resultType: Type
+
+    /** For a curried/nullary method or poly type its non-method result type,
+     *  the type itself for all other types.
+     *
+     *  {{{
+     *  scala> class C {
+     *       | def foo[T](x: T)(y: T) = ???
+     *       | def bar: Int = ???
+     *       | }
+     *  defined class C
+     *
+     *  scala> typeOf[C].member(TermName("foo")).asMethod
+     *  res0: reflect.runtime.universe.MethodSymbol = method foo
+     *
+     *  scala> res0.info // PolyType wrapping a MethodType
+     *  res1: reflect.runtime.universe.Type = [T](x: T)(y: T)scala.Nothing
+     *
+     *  scala> res1.resultType // MethodType wrapping a MethodType
+     *  res2: reflect.runtime.universe.Type = (x: T)(y: T)scala.Nothing
+     *
+     *  scala> res1.resultType.resultType // vanilla MethodType
+     *  res3: reflect.runtime.universe.Type = (y: T)scala.Nothing
+     *
+     *  scala> res1.resultType.resultType.resultType
+     *  res4: reflect.runtime.universe.Type = scala.Nothing
+     *
+     *  scala> res1.finalResultType
+     *  res5: reflect.runtime.universe.Type = scala.Nothing
+     *
+     *  scala> typeOf[C].member(TermName("bar")).asMethod
+     *  res6: reflect.runtime.universe.MethodSymbol = method bar
+     *
+     *  scala> res6.info
+     *  res7: reflect.runtime.universe.Type = => scala.Int
+     *
+     *  scala> res6.info.resultType
+     *  res8: reflect.runtime.universe.Type = scala.Int
+     *
+     *  scala> res6.info.finalResultType
+     *  res9: reflect.runtime.universe.Type = scala.Int
+     *  }}}
+     *
+     *  @see resultType
+     */
+    def finalResultType: Type
+
     /******************* helpers *******************/
+
+    /** Provides an alternate if type is NoType.
+     *
+     *  @group Helpers
+     */
+    def orElse(alt: => Type): Type
 
     /** Substitute symbols in `to` for corresponding occurrences of references to
      *  symbols `from` in this type.
@@ -254,13 +400,12 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type SingletonType >: Null <: Type
+  type SingletonType >: Null <: SingletonTypeApi with Type
 
-  /** A tag that preserves the identity of the `SingletonType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
+  /** Has no special methods. Is here to provides erased identity for `SingletonType`.
+   *  @group API
    */
-  implicit val SingletonTypeTag: ClassTag[SingletonType]
+  trait SingletonTypeApi
 
   /** A singleton type that describes types of the form on the left with the
    *  corresponding `ThisType` representation to the right:
@@ -270,13 +415,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type ThisType >: Null <: AnyRef with SingletonType with ThisTypeApi
-
-  /** A tag that preserves the identity of the `ThisType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val ThisTypeTag: ClassTag[ThisType]
+  type ThisType >: Null <: ThisTypeApi with SingletonType
 
   /** The constructor/extractor for `ThisType` instances.
    *  @group Extractors
@@ -288,11 +427,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class ThisTypeExtractor {
-    /**
-     * Creates a ThisType from the given class symbol.
-     */
-    def apply(sym: Symbol): Type
     def unapply(tpe: ThisType): Option[Symbol]
+
+    /** @see [[InternalApi.thisType]] */
+    @deprecated("Use `internal.thisType` instead", "2.11.0")
+    def apply(sym: Symbol)(implicit token: CompatToken): Type = internal.thisType(sym)
   }
 
   /** The API that all this types support.
@@ -314,13 +453,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type SingleType >: Null <: AnyRef with SingletonType with SingleTypeApi
-
-  /** A tag that preserves the identity of the `SingleType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val SingleTypeTag: ClassTag[SingleType]
+  type SingleType >: Null <: SingleTypeApi with SingletonType
 
   /** The constructor/extractor for `SingleType` instances.
    *  @group Extractors
@@ -333,8 +466,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class SingleTypeExtractor {
-    def apply(pre: Type, sym: Symbol): Type // not SingleTypebecause of implementation details
     def unapply(tpe: SingleType): Option[(Type, Symbol)]
+
+    /** @see [[InternalApi.singleType]] */
+    @deprecated("Use `ClassSymbol.thisPrefix` or `internal.singleType` instead")
+    def apply(pre: Type, sym: Symbol)(implicit token: CompatToken): Type = internal.singleType(pre, sym)
   }
 
   /** The API that all single types support.
@@ -359,13 +495,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type SuperType >: Null <: AnyRef with SingletonType with SuperTypeApi
-
-  /** A tag that preserves the identity of the `SuperType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val SuperTypeTag: ClassTag[SuperType]
+  type SuperType >: Null <: SuperTypeApi with SingletonType
 
   /** The constructor/extractor for `SuperType` instances.
    *  @group Extractors
@@ -376,8 +506,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class SuperTypeExtractor {
-    def apply(thistpe: Type, supertpe: Type): Type // not SuperTypebecause of implementation details
     def unapply(tpe: SuperType): Option[(Type, Type)]
+
+    /** @see [[InternalApi.superType]] */
+    @deprecated("Use `ClassSymbol.superPrefix` or `internal.superType` instead", "2.11.0")
+    def apply(thistpe: Type, supertpe: Type)(implicit token: CompatToken): Type = internal.superType(thistpe, supertpe)
   }
 
   /** The API that all super types support.
@@ -404,13 +537,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type ConstantType >: Null <: AnyRef with SingletonType with ConstantTypeApi
-
-  /** A tag that preserves the identity of the `ConstantType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val ConstantTypeTag: ClassTag[ConstantType]
+  type ConstantType >: Null <: ConstantTypeApi with SingletonType
 
   /** The constructor/extractor for `ConstantType` instances.
    *  @group Extractors
@@ -422,8 +549,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class ConstantTypeExtractor {
-    def apply(value: Constant): ConstantType
     def unapply(tpe: ConstantType): Option[Constant]
+
+    /** @see [[InternalApi.constantType]] */
+    @deprecated("Use `value.tpe` or `internal.constantType` instead", "2.11.0")
+    def apply(value: Constant)(implicit token: CompatToken): ConstantType = internal.constantType(value)
   }
 
   /** The API that all constant types support.
@@ -448,13 +578,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type TypeRef >: Null <: AnyRef with Type with TypeRefApi
-
-  /** A tag that preserves the identity of the `TypeRef` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val TypeRefTag: ClassTag[TypeRef]
+  type TypeRef >: Null <: TypeRefApi with Type
 
   /** The constructor/extractor for `TypeRef` instances.
    *  @group Extractors
@@ -468,8 +592,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class TypeRefExtractor {
-    def apply(pre: Type, sym: Symbol, args: List[Type]): Type // not TypeRefbecause of implementation details
     def unapply(tpe: TypeRef): Option[(Type, Symbol, List[Type])]
+
+    /** @see [[InternalApi.typeRef]] */
+    @deprecated("Use `internal.typeRef` instead", "2.11.0")
+    def apply(pre: Type, sym: Symbol, args: List[Type])(implicit token: CompatToken): Type = internal.typeRef(pre, sym, args)
   }
 
   /** The API that all type refs support.
@@ -495,13 +622,12 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type CompoundType >: Null <: AnyRef with Type
+  type CompoundType >: Null <: CompoundTypeApi with Type
 
-  /** A tag that preserves the identity of the `CompoundType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
+  /** Has no special methods. Is here to provides erased identity for `CompoundType`.
+   *  @group API
    */
-  implicit val CompoundTypeTag: ClassTag[CompoundType]
+  trait CompoundTypeApi
 
   /** The `RefinedType` type defines types of any of the forms on the left,
    *  with their RefinedType representations to the right.
@@ -513,13 +639,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type RefinedType >: Null <: AnyRef with CompoundType with RefinedTypeApi
-
-  /** A tag that preserves the identity of the `RefinedType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val RefinedTypeTag: ClassTag[RefinedType]
+  type RefinedType >: Null <: RefinedTypeApi with CompoundType
 
   /** The constructor/extractor for `RefinedType` instances.
    *  @group Extractors
@@ -532,13 +652,15 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class RefinedTypeExtractor {
-    def apply(parents: List[Type], decls: Scope): RefinedType
-
-    /** An alternative constructor that passes in the synthetic classs symbol
-     *  that backs the refined type. (Normally, a fresh class symbol is created automatically).
-     */
-    def apply(parents: List[Type], decls: Scope, clazz: Symbol): RefinedType
     def unapply(tpe: RefinedType): Option[(List[Type], Scope)]
+
+    /** @see [[InternalApi.refinedType]] */
+    @deprecated("Use `internal.refinedType` instead", "2.11.0")
+    def apply(parents: List[Type], decls: Scope)(implicit token: CompatToken): RefinedType = internal.refinedType(parents, decls)
+
+    /** @see [[InternalApi.refinedType]] */
+    @deprecated("Use `internal.refinedType` instead", "2.11.0")
+    def apply(parents: List[Type], decls: Scope, clazz: Symbol)(implicit token: CompatToken): RefinedType = internal.refinedType(parents, decls, clazz)
   }
 
   /** The API that all refined types support.
@@ -550,7 +672,7 @@ trait Types { self: Universe =>
     def parents: List[Type]
 
     /** The scope that holds the definitions comprising the type. */
-    def decls: Scope
+    def decls: MemberScope
   }
 
   /** The `ClassInfo` type signature is used to define parents and declarations
@@ -565,13 +687,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type ClassInfoType >: Null <: AnyRef with CompoundType with ClassInfoTypeApi
-
-  /** A tag that preserves the identity of the `ClassInfoType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val ClassInfoTypeTag: ClassTag[ClassInfoType]
+  type ClassInfoType >: Null <: ClassInfoTypeApi with CompoundType
 
   /** The constructor/extractor for `ClassInfoType` instances.
    *  @group Extractors
@@ -585,8 +701,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class ClassInfoTypeExtractor {
-    def apply(parents: List[Type], decls: Scope, typeSymbol: Symbol): ClassInfoType
     def unapply(tpe: ClassInfoType): Option[(List[Type], Scope, Symbol)]
+
+    /** @see [[InternalApi.classInfoType]] */
+    @deprecated("Use `internal.classInfoType` instead", "2.11.0")
+    def apply(parents: List[Type], decls: Scope, typeSymbol: Symbol)(implicit token: CompatToken): ClassInfoType = internal.classInfoType(parents, decls, typeSymbol)
   }
 
   /** The API that all class info types support.
@@ -598,7 +717,7 @@ trait Types { self: Universe =>
     def parents: List[Type]
 
     /** The scope that holds the definitions comprising the class type. */
-    def decls: Scope
+    def decls: MemberScope
 
     /** The symbol underlying the class type. */
     def typeSymbol: Symbol
@@ -608,13 +727,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type MethodType >: Null <: AnyRef with Type with MethodTypeApi
-
-  /** A tag that preserves the identity of the `MethodType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val MethodTypeTag: ClassTag[MethodType]
+  type MethodType >: Null <: MethodTypeApi with Type
 
   /** The constructor/extractor for `MethodType` instances.
    *  @group Extractors
@@ -637,8 +750,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class MethodTypeExtractor {
-    def apply(params: List[Symbol], resultType: Type): MethodType
     def unapply(tpe: MethodType): Option[(List[Symbol], Type)]
+
+    /** @see [[InternalApi.methodType]] */
+    @deprecated("Use `internal.methodType` instead", "2.11.0")
+    def apply(params: List[Symbol], resultType: Type)(implicit token: CompatToken): MethodType = internal.methodType(params, resultType)
   }
 
   /** The API that all method types support.
@@ -658,13 +774,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type NullaryMethodType >: Null <: AnyRef with Type with NullaryMethodTypeApi
-
-  /** A tag that preserves the identity of the `NullaryMethodType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val NullaryMethodTypeTag: ClassTag[NullaryMethodType]
+  type NullaryMethodType >: Null <: NullaryMethodTypeApi with Type
 
   /** The constructor/extractor for `NullaryMethodType` instances.
    *  @group Extractors
@@ -676,8 +786,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class NullaryMethodTypeExtractor {
-    def apply(resultType: Type): NullaryMethodType
     def unapply(tpe: NullaryMethodType): Option[(Type)]
+
+    /** @see [[InternalApi.nullaryMethodType]] */
+    @deprecated("Use `internal.nullaryMethodType` instead", "2.11.0")
+    def apply(resultType: Type)(implicit token: CompatToken): NullaryMethodType = internal.nullaryMethodType(resultType)
   }
 
   /** The API that all nullary method types support.
@@ -694,13 +807,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type PolyType >: Null <: AnyRef with Type with PolyTypeApi
-
-  /** A tag that preserves the identity of the `PolyType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val PolyTypeTag: ClassTag[PolyType]
+  type PolyType >: Null <: PolyTypeApi with Type
 
   /** The constructor/extractor for `PolyType` instances.
    *  @group Extractors
@@ -713,8 +820,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class PolyTypeExtractor {
-    def apply(typeParams: List[Symbol], resultType: Type): PolyType
     def unapply(tpe: PolyType): Option[(List[Symbol], Type)]
+
+    /** @see [[InternalApi.polyType]] */
+    @deprecated("Use `internal.polyType` instead", "2.11.0")
+    def apply(typeParams: List[Symbol], resultType: Type)(implicit token: CompatToken): PolyType = internal.polyType(typeParams, resultType)
   }
 
   /** The API that all polymorphic types support.
@@ -734,13 +844,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type ExistentialType >: Null <: AnyRef with Type with ExistentialTypeApi
-
-  /** A tag that preserves the identity of the `ExistentialType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val ExistentialTypeTag: ClassTag[ExistentialType]
+  type ExistentialType >: Null <: ExistentialTypeApi with Type
 
   /** The constructor/extractor for `ExistentialType` instances.
    *  @group Extractors
@@ -754,8 +858,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class ExistentialTypeExtractor {
-    def apply(quantified: List[Symbol], underlying: Type): ExistentialType
     def unapply(tpe: ExistentialType): Option[(List[Symbol], Type)]
+
+    /** @see [[InternalApi.existentialType]] */
+    @deprecated("Use `internal.existentialType` instead", "2.11.0")
+    def apply(quantified: List[Symbol], underlying: Type)(implicit token: CompatToken): ExistentialType = internal.existentialType(quantified, underlying)
   }
 
   /** The API that all existential types support.
@@ -775,13 +882,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type AnnotatedType >: Null <: AnyRef with Type with AnnotatedTypeApi
-
-  /** A tag that preserves the identity of the `AnnotatedType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val AnnotatedTypeTag: ClassTag[AnnotatedType]
+  type AnnotatedType >: Null <: AnnotatedTypeApi with Type
 
   /** The constructor/extractor for `AnnotatedType` instances.
    *  @group Extractors
@@ -789,14 +890,17 @@ trait Types { self: Universe =>
   val AnnotatedType: AnnotatedTypeExtractor
 
   /** An extractor class to create and pattern match with syntax
-   * `AnnotatedType(annotations, underlying, selfsym)`.
+   * `AnnotatedType(annotations, underlying)`.
    *  Here, `annotations` are the annotations decorating the underlying type `underlying`.
    *  `selfSym` is a symbol representing the annotated type itself.
    *  @group Extractors
    */
   abstract class AnnotatedTypeExtractor {
-    def apply(annotations: List[Annotation], underlying: Type, selfsym: Symbol): AnnotatedType
-    def unapply(tpe: AnnotatedType): Option[(List[Annotation], Type, Symbol)]
+    def unapply(tpe: AnnotatedType): Option[(List[Annotation], Type)]
+
+    /** @see [[InternalApi.annotatedType]] */
+    @deprecated("Use `internal.annotatedType` instead", "2.11.0")
+    def apply(annotations: List[Annotation], underlying: Type)(implicit token: CompatToken): AnnotatedType = internal.annotatedType(annotations, underlying)
   }
 
   /** The API that all annotated types support.
@@ -809,9 +913,6 @@ trait Types { self: Universe =>
 
     /** The annotee. */
     def underlying: Type
-
-    /** A symbol that represents the annotated type itself. */
-    def selfsym: Symbol
   }
 
   /** The `TypeBounds` type signature is used to indicate lower and upper type bounds
@@ -826,13 +927,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type TypeBounds >: Null <: AnyRef with Type with TypeBoundsApi
-
-  /** A tag that preserves the identity of the `TypeBounds` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val TypeBoundsTag: ClassTag[TypeBounds]
+  type TypeBounds >: Null <: TypeBoundsApi with Type
 
   /** The constructor/extractor for `TypeBounds` instances.
    *  @group Extractors
@@ -845,8 +940,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class TypeBoundsExtractor {
-    def apply(lo: Type, hi: Type): TypeBounds
     def unapply(tpe: TypeBounds): Option[(Type, Type)]
+
+    /** @see [[InternalApi.typeBounds]] */
+    @deprecated("Use `internal.typeBounds` instead", "2.11.0")
+    def apply(lo: Type, hi: Type)(implicit token: CompatToken): TypeBounds = internal.typeBounds(lo, hi)
   }
 
   /** The API that all type bounds support.
@@ -883,13 +981,7 @@ trait Types { self: Universe =>
    *  @template
    *  @group Types
    */
-  type BoundedWildcardType >: Null <: AnyRef with Type with BoundedWildcardTypeApi
-
-  /** A tag that preserves the identity of the `BoundedWildcardType` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val BoundedWildcardTypeTag: ClassTag[BoundedWildcardType]
+  type BoundedWildcardType >: Null <: BoundedWildcardTypeApi with Type
 
   /** The constructor/extractor for `BoundedWildcardType` instances.
    *  @group Extractors
@@ -901,8 +993,11 @@ trait Types { self: Universe =>
    *  @group Extractors
    */
   abstract class BoundedWildcardTypeExtractor {
-    def apply(bounds: TypeBounds): BoundedWildcardType
     def unapply(tpe: BoundedWildcardType): Option[TypeBounds]
+
+    /** @see [[InternalApi.boundedWildcardType]] */
+    @deprecated("Use `internal.boundedWildcardType` instead", "2.11.0")
+    def apply(bounds: TypeBounds)(implicit token: CompatToken): BoundedWildcardType = internal.boundedWildcardType(bounds)
   }
 
   /** The API that all this types support.
@@ -924,74 +1019,17 @@ trait Types { self: Universe =>
    */
   def glb(ts: List[Type]): Type
 
-  // Creators ---------------------------------------------------------------
-  // too useful and too non-trivial to be left out of public API
-
-  /** The canonical creator for single-types
-   *  @group TypeCreators
-   */
-  def singleType(pre: Type, sym: Symbol): Type
-
-  /** the canonical creator for a refined type with a given scope
-   *  @group TypeCreators
-   */
-  def refinedType(parents: List[Type], owner: Symbol, decls: Scope, pos: Position): Type
-
-  /** The canonical creator for a refined type with an initially empty scope.
-   *  @group TypeCreators
-   */
-  def refinedType(parents: List[Type], owner: Symbol): Type
-
-  /** The canonical creator for typerefs
-   *  @group TypeCreators
-   */
-  def typeRef(pre: Type, sym: Symbol, args: List[Type]): Type
-
-  /** A creator for intersection type where intersections of a single type are
-   *  replaced by the type itself.
-   *  @group TypeCreators
-   */
-  def intersectionType(tps: List[Type]): Type
-
-  /** A creator for intersection type where intersections of a single type are
-   *  replaced by the type itself, and repeated parent classes are merged.
-   *
-   *  !!! Repeated parent classes are not merged - is this a bug in the
-   *  comment or in the code?
-   *  @group TypeCreators
-   */
-  def intersectionType(tps: List[Type], owner: Symbol): Type
-
   /** A creator for type applications
-   *  @group Types
+   *  @group TypeOps
    */
   def appliedType(tycon: Type, args: List[Type]): Type
 
-  /** A creator for type parameterizations that strips empty type parameter lists.
-   *  Use this factory method to indicate the type has kind * (it's a polymorphic value)
-   *  until we start tracking explicit kinds equivalent to typeFun (except that the latter requires tparams nonEmpty).
-   *  @group Types
-   */
-  def polyType(tparams: List[Symbol], tpe: Type): Type
+  /** @see [[appliedType]] */
+  def appliedType(tycon: Type, args: Type*): Type
 
-  /** A creator for existential types. This generates:
-   *
-   *  {{{
-   *    tpe1 where { tparams }
-   *  }}}
-   *
-   *  where `tpe1` is the result of extrapolating `tpe` with regard to `tparams`.
-   *  Extrapolating means that type variables in `tparams` occurring
-   *  in covariant positions are replaced by upper bounds, (minus any
-   *  SingletonClass markers), type variables in `tparams` occurring in
-   *  contravariant positions are replaced by upper bounds, provided the
-   *  resulting type is legal with regard to stability, and does not contain
-   *  any type variable in `tparams`.
-   *
-   *  The abstraction drops all type parameters that are not directly or
-   *  indirectly referenced by type `tpe1`. If there are no remaining type
-   *  parameters, simply returns result type `tpe`.
-   *  @group TypeCreators
-   */
-  def existentialAbstraction(tparams: List[Symbol], tpe0: Type): Type
+  /** @see [[appliedType]] */
+  def appliedType(sym: Symbol, args: List[Type]): Type
+
+  /** @see [[appliedType]] */
+  def appliedType(sym: Symbol, args: Type*): Type
 }

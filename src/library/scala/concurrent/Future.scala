@@ -29,11 +29,11 @@ import scala.reflect.ClassTag
 
 /** The trait that represents futures.
  *
- *  Asynchronous computations that yield futures are created with the `future` call:
+ *  Asynchronous computations that yield futures are created with the `Future` call:
  *
  *  {{{
  *  val s = "Hello"
- *  val f: Future[String] = future {
+ *  val f: Future[String] = Future {
  *    s + " future!"
  *  }
  *  f onSuccess {
@@ -67,11 +67,11 @@ import scala.reflect.ClassTag
  *  Example:
  *
  *  {{{
- *  val f = future { 5 }
- *  val g = future { 3 }
+ *  val f = Future { 5 }
+ *  val g = Future { 3 }
  *  val h = for {
  *    x: Int <- f // returns Future(5)
- *    y: Int <- g // returns Future(5)
+ *    y: Int <- g // returns Future(3)
  *  } yield x + y
  *  }}}
  *
@@ -131,9 +131,9 @@ trait Future[+T] extends Awaitable[T] {
    *  $multipleCallbacks
    *  $callbackInContext
    */
-  def onFailure[U](callback: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Unit = onComplete {
+  def onFailure[U](@deprecatedName('callback) pf: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Unit = onComplete {
     case Failure(t) =>
-      callback.applyOrElse[Throwable, Any](t, Predef.conforms[Throwable]) // Exploiting the cached function to avoid MatchError
+      pf.applyOrElse[Throwable, Any](t, Predef.conforms[Throwable]) // Exploiting the cached function to avoid MatchError
     case _ =>
   }
 
@@ -146,7 +146,7 @@ trait Future[+T] extends Awaitable[T] {
    *  $multipleCallbacks
    *  $callbackInContext
    */
-  def onComplete[U](func: Try[T] => U)(implicit executor: ExecutionContext): Unit
+  def onComplete[U](@deprecatedName('func) f: Try[T] => U)(implicit executor: ExecutionContext): Unit
 
 
   /* Miscellaneous */
@@ -266,16 +266,16 @@ trait Future[+T] extends Awaitable[T] {
    *
    *  Example:
    *  {{{
-   *  val f = future { 5 }
+   *  val f = Future { 5 }
    *  val g = f filter { _ % 2 == 1 }
    *  val h = f filter { _ % 2 == 0 }
    *  Await.result(g, Duration.Zero) // evaluates to 5
    *  Await.result(h, Duration.Zero) // throw a NoSuchElementException
    *  }}}
    */
-  def filter(pred: T => Boolean)(implicit executor: ExecutionContext): Future[T] =
+  def filter(@deprecatedName('pred) p: T => Boolean)(implicit executor: ExecutionContext): Future[T] =
     map {
-      r => if (pred(r)) r else throw new NoSuchElementException("Future.filter predicate is not satisfied")
+      r => if (p(r)) r else throw new NoSuchElementException("Future.filter predicate is not satisfied")
     }
 
   /** Used by for-comprehensions.
@@ -291,7 +291,7 @@ trait Future[+T] extends Awaitable[T] {
    *
    *  Example:
    *  {{{
-   *  val f = future { -5 }
+   *  val f = Future { -5 }
    *  val g = f collect {
    *    case x if x < 0 => -x
    *  }
@@ -314,9 +314,9 @@ trait Future[+T] extends Awaitable[T] {
    *  Example:
    *
    *  {{{
-   *  future (6 / 0) recover { case e: ArithmeticException => 0 } // result: 0
-   *  future (6 / 0) recover { case e: NotFoundException   => 0 } // result: exception
-   *  future (6 / 2) recover { case e: ArithmeticException => 0 } // result: 3
+   *  Future (6 / 0) recover { case e: ArithmeticException => 0 } // result: 0
+   *  Future (6 / 0) recover { case e: NotFoundException   => 0 } // result: exception
+   *  Future (6 / 2) recover { case e: ArithmeticException => 0 } // result: 3
    *  }}}
    */
   def recover[U >: T](pf: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Future[U] = {
@@ -334,8 +334,8 @@ trait Future[+T] extends Awaitable[T] {
    *  Example:
    *
    *  {{{
-   *  val f = future { Int.MaxValue }
-   *  future (6 / 0) recoverWith { case e: ArithmeticException => f } // result: Int.MaxValue
+   *  val f = Future { Int.MaxValue }
+   *  Future (6 / 0) recoverWith { case e: ArithmeticException => f } // result: Int.MaxValue
    *  }}}
    */
   def recoverWith[U >: T](pf: PartialFunction[Throwable, Future[U]])(implicit executor: ExecutionContext): Future[U] = {
@@ -373,8 +373,8 @@ trait Future[+T] extends Awaitable[T] {
    *
    *  Example:
    *  {{{
-   *  val f = future { sys.error("failed") }
-   *  val g = future { 5 }
+   *  val f = Future { sys.error("failed") }
+   *  val g = Future { 5 }
    *  val h = f fallbackTo g
    *  Await.result(h, Duration.Zero) // evaluates to 5
    *  }}}
@@ -419,7 +419,7 @@ trait Future[+T] extends Awaitable[T] {
    *  The following example prints out `5`:
    *
    *  {{{
-   *  val f = future { 5 }
+   *  val f = Future { 5 }
    *  f andThen {
    *    case r => sys.error("runtime exception")
    *  } andThen {
@@ -473,24 +473,31 @@ object Future {
    */
   def successful[T](result: T): Future[T] = Promise.successful(result).future
 
+  /** Creates an already completed Future with the specified result or exception.
+   *
+   *  @tparam T       the type of the value in the promise
+   *  @return         the newly created `Future` object
+   */
+  def fromTry[T](result: Try[T]): Future[T] = Promise.fromTry(result).future
+
   /** Starts an asynchronous computation and returns a `Future` object with the result of that computation.
   *
   *  The result becomes available once the asynchronous computation is completed.
   *
   *  @tparam T       the type of the result
   *  @param body     the asychronous computation
-  *  @param execctx  the execution context on which the future is run
+  *  @param executor  the execution context on which the future is run
   *  @return         the `Future` holding the result of the computation
   */
-  def apply[T](body: =>T)(implicit execctx: ExecutionContext): Future[T] = impl.Future(body)
+  def apply[T](body: =>T)(implicit @deprecatedName('execctx) executor: ExecutionContext): Future[T] = impl.Future(body)
 
-  /** Simple version of `Futures.traverse`. Transforms a `TraversableOnce[Future[A]]` into a `Future[TraversableOnce[A]]`.
+  /** Simple version of `Future.traverse`. Transforms a `TraversableOnce[Future[A]]` into a `Future[TraversableOnce[A]]`.
    *  Useful for reducing many `Future`s into a single `Future`.
    */
-  def sequence[A, M[_] <: TraversableOnce[_]](in: M[Future[A]])(implicit cbf: CanBuildFrom[M[Future[A]], A, M[A]], executor: ExecutionContext): Future[M[A]] = {
-    in.foldLeft(Promise.successful(cbf(in)).future) {
-      (fr, fa) => for (r <- fr; a <- fa.asInstanceOf[Future[A]]) yield (r += a)
-    } map (_.result)
+  def sequence[A, M[X] <: TraversableOnce[X]](in: M[Future[A]])(implicit cbf: CanBuildFrom[M[Future[A]], A, M[A]], executor: ExecutionContext): Future[M[A]] = {
+    in.foldLeft(successful(cbf(in))) {
+      (fr, fa) => for (r <- fr; a <- fa) yield (r += a)
+    } map (_.result())
   }
 
   /** Returns a new `Future` to the result of the first future in the list that is completed.
@@ -504,15 +511,15 @@ object Future {
 
   /** Returns a `Future` that will hold the optional result of the first `Future` with a result that matches the predicate.
    */
-  def find[T](futurestravonce: TraversableOnce[Future[T]])(predicate: T => Boolean)(implicit executor: ExecutionContext): Future[Option[T]] = {
-    val futures = futurestravonce.toBuffer
-    if (futures.isEmpty) Promise.successful[Option[T]](None).future
+  def find[T](@deprecatedName('futurestravonce) futures: TraversableOnce[Future[T]])(@deprecatedName('predicate) p: T => Boolean)(implicit executor: ExecutionContext): Future[Option[T]] = {
+    val futuresBuffer = futures.toBuffer
+    if (futuresBuffer.isEmpty) successful[Option[T]](None)
     else {
       val result = Promise[Option[T]]()
-      val ref = new AtomicInteger(futures.size)
+      val ref = new AtomicInteger(futuresBuffer.size)
       val search: Try[T] => Unit = v => try {
         v match {
-          case Success(r) => if (predicate(r)) result tryComplete Success(Some(r))
+          case Success(r) if p(r) => result tryComplete Success(Some(r))
           case _ =>
         }
       } finally {
@@ -521,7 +528,7 @@ object Future {
         }
       }
 
-      futures.foreach(_ onComplete search)
+      futuresBuffer.foreach(_ onComplete search)
 
       result.future
     }
@@ -537,9 +544,9 @@ object Future {
    *    val result = Await.result(Future.fold(futures)(0)(_ + _), 5 seconds)
    *  }}}
    */
-  def fold[T, R](futures: TraversableOnce[Future[T]])(zero: R)(foldFun: (R, T) => R)(implicit executor: ExecutionContext): Future[R] = {
-    if (futures.isEmpty) Future.successful(zero)
-    else sequence(futures).map(_.foldLeft(zero)(foldFun))
+  def fold[T, R](futures: TraversableOnce[Future[T]])(zero: R)(@deprecatedName('foldFun) op: (R, T) => R)(implicit executor: ExecutionContext): Future[R] = {
+    if (futures.isEmpty) successful(zero)
+    else sequence(futures).map(_.foldLeft(zero)(op))
   }
 
   /** Initiates a fold over the supplied futures where the fold-zero is the result value of the `Future` that's completed first.
@@ -550,7 +557,7 @@ object Future {
    *  }}}
    */
   def reduce[T, R >: T](futures: TraversableOnce[Future[T]])(op: (R, T) => R)(implicit executor: ExecutionContext): Future[R] = {
-    if (futures.isEmpty) Future.failed(new NoSuchElementException("reduce attempted on empty collection"))
+    if (futures.isEmpty) failed(new NoSuchElementException("reduce attempted on empty collection"))
     else sequence(futures).map(_ reduceLeft op)
   }
 
@@ -562,11 +569,11 @@ object Future {
    *    val myFutureList = Future.traverse(myList)(x => Future(myFunc(x)))
    *  }}}
    */
-  def traverse[A, B, M[_] <: TraversableOnce[_]](in: M[A])(fn: A => Future[B])(implicit cbf: CanBuildFrom[M[A], B, M[B]], executor: ExecutionContext): Future[M[B]] =
-    in.foldLeft(Promise.successful(cbf(in)).future) { (fr, a) =>
-      val fb = fn(a.asInstanceOf[A])
+  def traverse[A, B, M[X] <: TraversableOnce[X]](in: M[A])(fn: A => Future[B])(implicit cbf: CanBuildFrom[M[A], B, M[B]], executor: ExecutionContext): Future[M[B]] =
+    in.foldLeft(successful(cbf(in))) { (fr, a) =>
+      val fb = fn(a)
       for (r <- fr; b <- fb) yield (r += b)
-    }.map(_.result)
+    }.map(_.result())
 
   // This is used to run callbacks which are internal
   // to scala.concurrent; our own callbacks are only
@@ -587,111 +594,11 @@ object Future {
   // by just not ever using it itself. scala.concurrent
   // doesn't need to create defaultExecutionContext as
   // a side effect.
-  private[concurrent] object InternalCallbackExecutor extends ExecutionContext with java.util.concurrent.Executor {
+  private[concurrent] object InternalCallbackExecutor extends ExecutionContext with BatchingExecutor {
+    override protected def unbatchedExecute(r: Runnable): Unit =
+      r.run()
     override def reportFailure(t: Throwable): Unit =
       throw new IllegalStateException("problem in scala.concurrent internal callback", t)
-
-    /**
-     * The BatchingExecutor trait had to be inlined into InternalCallbackExecutor for binary compatibility.
-     *
-     * BatchingExecutor is a trait for an Executor
-     * which groups multiple nested `Runnable.run()` calls
-     * into a single Runnable passed to the original
-     * Executor. This can be a useful optimization
-     * because it bypasses the original context's task
-     * queue and keeps related (nested) code on a single
-     * thread which may improve CPU affinity. However,
-     * if tasks passed to the Executor are blocking
-     * or expensive, this optimization can prevent work-stealing
-     * and make performance worse. Also, some ExecutionContext
-     * may be fast enough natively that this optimization just
-     * adds overhead.
-     * The default ExecutionContext.global is already batching
-     * or fast enough not to benefit from it; while
-     * `fromExecutor` and `fromExecutorService` do NOT add
-     * this optimization since they don't know whether the underlying
-     * executor will benefit from it.
-     * A batching executor can create deadlocks if code does
-     * not use `scala.concurrent.blocking` when it should,
-     * because tasks created within other tasks will block
-     * on the outer task completing.
-     * This executor may run tasks in any order, including LIFO order.
-     * There are no ordering guarantees.
-     *
-     * WARNING: The underlying Executor's execute-method must not execute the submitted Runnable
-     * in the calling thread synchronously. It must enqueue/handoff the Runnable.
-     */
-    // invariant: if "_tasksLocal.get ne null" then we are inside BatchingRunnable.run; if it is null, we are outside
-    private val _tasksLocal = new ThreadLocal[List[Runnable]]()
-
-    private class Batch(val initial: List[Runnable]) extends Runnable with BlockContext {
-      private[this] var parentBlockContext: BlockContext = _
-      // this method runs in the delegate ExecutionContext's thread
-      override def run(): Unit = {
-        require(_tasksLocal.get eq null)
-
-        val prevBlockContext = BlockContext.current
-        BlockContext.withBlockContext(this) {
-          try {
-            parentBlockContext = prevBlockContext
-
-            @tailrec def processBatch(batch: List[Runnable]): Unit = batch match {
-              case Nil => ()
-              case head :: tail =>
-                _tasksLocal set tail
-                try {
-                  head.run()
-                } catch {
-                  case t: Throwable =>
-                    // if one task throws, move the
-                    // remaining tasks to another thread
-                    // so we can throw the exception
-                    // up to the invoking executor
-                    val remaining = _tasksLocal.get
-                    _tasksLocal set Nil
-                    unbatchedExecute(new Batch(remaining)) //TODO what if this submission fails?
-                    throw t // rethrow
-                }
-                processBatch(_tasksLocal.get) // since head.run() can add entries, always do _tasksLocal.get here
-            }
-
-            processBatch(initial)
-          } finally {
-            _tasksLocal.remove()
-            parentBlockContext = null
-          }
-        }
-      }
-
-      override def blockOn[T](thunk: => T)(implicit permission: CanAwait): T = {
-        // if we know there will be blocking, we don't want to keep tasks queued up because it could deadlock.
-        {
-          val tasks = _tasksLocal.get
-          _tasksLocal set Nil
-          if ((tasks ne null) && tasks.nonEmpty)
-            unbatchedExecute(new Batch(tasks))
-        }
-
-        // now delegate the blocking to the previous BC
-        require(parentBlockContext ne null)
-        parentBlockContext.blockOn(thunk)
-      }
-    }
-
-    override def execute(runnable: Runnable): Unit = runnable match {
-      // If we can batch the runnable
-      case _: OnCompleteRunnable =>
-        _tasksLocal.get match {
-          case null => unbatchedExecute(new Batch(List(runnable))) // If we aren't in batching mode yet, enqueue batch
-          case some => _tasksLocal.set(runnable :: some) // If we are already in batching mode, add to batch
-        }
-
-      // If not batchable, just delegate to underlying
-      case _ =>
-        unbatchedExecute(runnable)
-    }
-
-    private def unbatchedExecute(r: Runnable): Unit = r.run()
   }
 }
 

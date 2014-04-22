@@ -17,7 +17,7 @@ package scala.annotation
  * order between Scala 2.7 and 2.8.
  *
  * @param message A message describing the change, which is emitted
- * by the compiler if the flag `-Xmigration` indicates a version 
+ * by the compiler if the flag `-Xmigration` indicates a version
  * prior to the changedIn version.
  *
  * @param changedIn The version, in which the behaviour change was
@@ -25,7 +25,4 @@ package scala.annotation
  *
  * @since 2.8
  */
- private[scala] final class migration(message: String, changedIn: String) extends scala.annotation.StaticAnnotation {
-   @deprecated("Use the constructor taking two Strings instead.", "2.10.0")
-   def this(majorVersion: Int, minorVersion: Int, message: String) = this(message, majorVersion + "." + minorVersion)
- }
+ private[scala] final class migration(message: String, changedIn: String) extends scala.annotation.StaticAnnotation

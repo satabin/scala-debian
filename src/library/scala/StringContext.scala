@@ -59,7 +59,8 @@ case class StringContext(parts: String*) {
    */
   def checkLengths(args: Seq[Any]): Unit =
     if (parts.length != args.length + 1)
-      throw new IllegalArgumentException("wrong number of arguments for interpolated string")
+      throw new IllegalArgumentException("wrong number of arguments ("+ args.length
+        +") for interpolated string with "+ parts.length +" parts")
 
 
   /** The simple string interpolator.
@@ -156,13 +157,12 @@ case class StringContext(parts: String*) {
    *      If a formatting position does not refer to a `%` character (which is assumed to
    *      start a format specifier), then the string format specifier `%s` is inserted.
    *
-   *   2. Any `%` characters not in formatting positions are left in the resulting
-   *      string literally. This is achieved by replacing each such occurrence by the
-   *      format specifier `%%`.
+   *   2. Any `%` characters not in formatting positions must begin one of the conversions
+   *      `%%` (the literal percent) or `%n` (the platform-specific line separator).
    */
   // The implementation is hardwired to `scala.tools.reflect.MacroImplementations.macro_StringInterpolation_f`
   // Using the mechanism implemented in `scala.tools.reflect.FastTrack`
-  def f(args: Any*): String = ??? // macro
+  def f(args: Any*): String = macro ???
 }
 
 object StringContext {
@@ -172,8 +172,8 @@ object StringContext {
    *  @param  str   The offending string
    *  @param  idx   The index of the offending backslash character in `str`.
    */
-  class InvalidEscapeException(str: String, idx: Int)
-    extends IllegalArgumentException("invalid escape character at index "+idx+" in \""+str+"\"")
+  class InvalidEscapeException(str: String, @deprecatedName('idx) val index: Int)
+    extends IllegalArgumentException("invalid escape character at index "+index+" in \""+str+"\"")
 
   /** Expands standard Scala escape sequences in a string.
    *  Escape sequences are:
@@ -184,7 +184,11 @@ object StringContext {
    *  @param  str  A string that may contain escape sequences
    *  @return The string with all escape sequences expanded.
    */
-  def treatEscapes(str: String): String = {
+  def treatEscapes(str: String): String = treatEscapes0(str, strict = false)
+
+  def processEscapes(str: String): String = treatEscapes0(str, strict = true)
+
+  private def treatEscapes0(str: String, strict: Boolean): String = {
     lazy val bldr = new java.lang.StringBuilder
     val len = str.length
     var start = 0
@@ -201,6 +205,7 @@ object StringContext {
         idx += 1
         if (idx >= len) throw new InvalidEscapeException(str, cur)
         if ('0' <= str(idx) && str(idx) <= '7') {
+          if (strict) throw new InvalidEscapeException(str, cur)
           val leadch = str(idx)
           var oct = leadch - '0'
           idx += 1

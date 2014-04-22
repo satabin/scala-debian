@@ -11,7 +11,6 @@ import scala.language.postfixOps
 import scala.collection.mutable
 import scala.reflect.internal.util.Statistics
 import scala.reflect.internal.util.Position
-import scala.reflect.internal.util.NoPosition
 
 /** Optimize and analyze matches based on their TreeMaker-representation.
  *
@@ -20,14 +19,8 @@ import scala.reflect.internal.util.NoPosition
  */
 // TODO: split out match analysis
 trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
-  import PatternMatchingStats._
-  import global.{Tree, Type, Symbol, NoSymbol, CaseDef, atPos,
-    ConstantType, Literal, Constant, gen, EmptyTree, distinctBy,
-    Typed, treeInfo, nme, Ident,
-    Apply, If, Bind, lub, Alternative, deriveCaseDef, Match, MethodType, LabelDef, TypeTree, Throw}
-
+  import global._
   import global.definitions._
-
 
   ////
   trait CommonSubconditionElimination extends OptimizedCodegen with MatchApproximator {
@@ -148,19 +141,19 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
     object ReusedCondTreeMaker {
       def apply(orig: CondTreeMaker) = new ReusedCondTreeMaker(orig.prevBinder, orig.nextBinder, orig.cond, orig.res, orig.pos)
     }
-    class ReusedCondTreeMaker(prevBinder: Symbol, val nextBinder: Symbol, cond: Tree, res: Tree, val pos: Position) extends TreeMaker { import CODE._
+    class ReusedCondTreeMaker(prevBinder: Symbol, val nextBinder: Symbol, cond: Tree, res: Tree, val pos: Position) extends TreeMaker {
       lazy val localSubstitution        = Substitution(List(prevBinder), List(CODE.REF(nextBinder)))
-      lazy val storedCond               = freshSym(pos, BooleanClass.tpe, "rc") setFlag MUTABLE
+      lazy val storedCond               = freshSym(pos, BooleanTpe, "rc") setFlag MUTABLE
       lazy val treesToHoist: List[Tree] = {
         nextBinder setFlag MUTABLE
-        List(storedCond, nextBinder) map { b => VAL(b) === codegen.mkZero(b.info) }
+        List(storedCond, nextBinder) map (b => ValDef(b, codegen.mkZero(b.info)))
       }
 
       // TODO: finer-grained duplication
       def chainBefore(next: Tree)(casegen: Casegen): Tree = // assert(codegen eq optimizedCodegen)
         atPos(pos)(casegen.asInstanceOf[optimizedCodegen.OptimizedCasegen].flatMapCondStored(cond, storedCond, res, nextBinder, substitution(next).duplicate))
 
-      override def toString = "Memo"+(nextBinder.name, storedCond.name, cond, res, substitution)
+      override def toString = "Memo"+((nextBinder.name, storedCond.name, cond, res, substitution))
     }
 
     case class ReusingCondTreeMaker(sharedPrefix: List[Test], toReused: TreeMaker => TreeMaker) extends TreeMaker { import CODE._
@@ -199,7 +192,7 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
         // and in its confusion it emits illegal casts (diagnosed by Grzegorz: checkcast T ; invokevirtual S.m, where T not a subtype of S)
         casegen.ifThenElseZero(REF(lastReusedTreeMaker.storedCond), substitution(next).duplicate)
       }
-      override def toString = "R"+(lastReusedTreeMaker.storedCond.name, substitution)
+      override def toString = "R"+((lastReusedTreeMaker.storedCond.name, substitution))
     }
   }
 
@@ -217,7 +210,7 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
 //  }
 
   //// SWITCHES -- TODO: operate on Tests rather than TreeMakers
-  trait SwitchEmission extends TreeMakers with OptimizedMatchMonadInterface {
+  trait SwitchEmission extends TreeMakers with MatchMonadInterface {
     import treeInfo.isGuardedCase
 
     abstract class SwitchMaker {
@@ -239,9 +232,6 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
       def defaultSym: Symbol
       def defaultBody: Tree
       def defaultCase(scrutSym: Symbol = defaultSym, guard: Tree = EmptyTree, body: Tree = defaultBody): CaseDef
-
-      private def sequence[T](xs: List[Option[T]]): Option[List[T]] =
-        if (xs exists (_.isEmpty)) None else Some(xs.flatten)
 
       object GuardAndBodyTreeMakers {
           def unapply(tms: List[TreeMaker]): Option[(Tree, Tree)] = {
@@ -409,23 +399,15 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
       private def noGuards(cs: List[CaseDef]): Boolean = !cs.exists(isGuardedCase)
 
       // must do this before removing guards from cases and collapsing (SI-6011, SI-6048)
-      private def unreachableCase(cs: List[CaseDef]): Option[CaseDef] = {
-        var cases = cs
-        var unreachable: Option[CaseDef] = None
-
-        while (cases.nonEmpty && unreachable.isEmpty) {
-          val currCase = cases.head
-          if (isDefault(currCase) && cases.tail.nonEmpty) // subsumed by the `else if` that follows, but faster
-            unreachable = Some(cases.tail.head)
-          else if (!isGuardedCase(currCase) || currCase.guard.tpe =:= ConstantType(Constant(true)))
-            unreachable = cases.tail.find(caseImplies(currCase))
-          else if (currCase.guard.tpe =:= ConstantType(Constant(false)))
-            unreachable = Some(currCase)
-
-          cases = cases.tail
+      private def unreachableCase(cases: List[CaseDef]): Option[CaseDef] = {
+        def loop(cases: List[CaseDef]): Option[CaseDef] = cases match {
+          case head :: next :: _ if isDefault(head)                                    => Some(next) // subsumed by the next case, but faster
+          case head :: rest if !isGuardedCase(head) || head.guard.tpe =:= ConstantTrue => rest find caseImplies(head) orElse loop(rest)
+          case head :: _ if head.guard.tpe =:= ConstantFalse                           => Some(head)
+          case _ :: rest                                                               => loop(rest)
+          case _                                                                       => None
         }
-
-        unreachable
+        loop(cases)
       }
 
       // empty list ==> failure
@@ -510,7 +492,7 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
     }
 
     class RegularSwitchMaker(scrutSym: Symbol, matchFailGenOverride: Option[Tree => Tree], val unchecked: Boolean) extends SwitchMaker {
-      val switchableTpe = Set(ByteClass.tpe, ShortClass.tpe, IntClass.tpe, CharClass.tpe)
+      val switchableTpe = Set(ByteTpe, ShortTpe, IntTpe, CharTpe)
       val alternativesSupported = true
       val canJump = true
 
@@ -535,7 +517,7 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
       }
 
       def defaultSym: Symbol = scrutSym
-      def defaultBody: Tree  = { import CODE._; matchFailGenOverride map (gen => gen(REF(scrutSym))) getOrElse MATCHERROR(REF(scrutSym)) }
+      def defaultBody: Tree  = { import CODE._; matchFailGenOverride map (gen => gen(REF(scrutSym))) getOrElse Throw(MatchErrorClass.tpe, REF(scrutSym)) }
       def defaultCase(scrutSym: Symbol = defaultSym, guard: Tree = EmptyTree, body: Tree = defaultBody): CaseDef = { import CODE._; atPos(body.pos) {
         (DEFAULT IF guard) ==> body
       }}
@@ -550,10 +532,10 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
         else {
           // match on scrutSym -- converted to an int if necessary -- not on scrut directly (to avoid duplicating scrut)
           val scrutToInt: Tree =
-            if (scrutSym.tpe =:= IntClass.tpe) REF(scrutSym)
+            if (scrutSym.tpe =:= IntTpe) REF(scrutSym)
             else (REF(scrutSym) DOT (nme.toInt))
           Some(BLOCK(
-            VAL(scrutSym) === scrut,
+            ValDef(scrutSym, scrut),
             Match(scrutToInt, caseDefsWithDefault) // a switch
           ))
         }
@@ -578,16 +560,16 @@ trait MatchOptimization extends MatchTreeMaking with MatchAnalysis {
       }
 
       def isDefault(x: CaseDef): Boolean = x match {
-        case CaseDef(Typed(Ident(nme.WILDCARD), tpt), EmptyTree, _) if (tpt.tpe =:= ThrowableClass.tpe)          => true
-        case CaseDef(Bind(_, Typed(Ident(nme.WILDCARD), tpt)), EmptyTree, _) if (tpt.tpe =:= ThrowableClass.tpe) => true
+        case CaseDef(Typed(Ident(nme.WILDCARD), tpt), EmptyTree, _) if (tpt.tpe =:= ThrowableTpe)          => true
+        case CaseDef(Bind(_, Typed(Ident(nme.WILDCARD), tpt)), EmptyTree, _) if (tpt.tpe =:= ThrowableTpe) => true
         case CaseDef(Ident(nme.WILDCARD), EmptyTree, _)                                                          => true
         case _ => false
       }
 
-      lazy val defaultSym: Symbol = freshSym(NoPosition, ThrowableClass.tpe)
+      lazy val defaultSym: Symbol = freshSym(NoPosition, ThrowableTpe)
       def defaultBody: Tree       = Throw(CODE.REF(defaultSym))
       def defaultCase(scrutSym: Symbol = defaultSym, guard: Tree = EmptyTree, body: Tree = defaultBody): CaseDef = { import CODE._; atPos(body.pos) {
-        (CASE (Bind(scrutSym, Typed(Ident(nme.WILDCARD), TypeTree(ThrowableClass.tpe)))) IF guard) ==> body
+        (CASE (Bind(scrutSym, Typed(Ident(nme.WILDCARD), TypeTree(ThrowableTpe)))) IF guard) ==> body
       }}
     }
 

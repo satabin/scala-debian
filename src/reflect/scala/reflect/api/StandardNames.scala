@@ -2,7 +2,8 @@
 * Copyright 2005-2013 LAMP/EPFL
 * @author  Martin Odersky
 */
-package scala.reflect
+package scala
+package reflect
 package api
 
 // Q: I have a pretty name. Can I put it here?
@@ -27,15 +28,23 @@ package api
 trait StandardNames {
   self: Universe =>
 
+  /** @see [[termNames]] */
+  @deprecated("Use `termNames` instead", "2.11.0")
+  val nme: TermNamesApi
+
   /** A value containing all [[TermNamesApi standard term names]].
    *  @group StandardNames
    */
-  val nme: TermNamesApi
+  val termNames: TermNamesApi
+
+  /** @see [[typeNames]] */
+  @deprecated("Use `typeNames` instead", "2.11.0")
+  val tpnme: TypeNamesApi
 
   /** A value containing all [[TypeNamesApi standard type names]].
    *  @group StandardNames
    */
-  val tpnme: TypeNamesApi
+  val typeNames: TypeNamesApi
 
   /** Defines standard names, common for term and type names: These can be accessed via the [[nme]] and [[tpnme]] members.
    *  @group API
@@ -83,6 +92,11 @@ trait StandardNames {
      *  Represents the root package.
      */
     val ROOTPKG: NameType
+
+    /** The term name `<empty>`.
+     *  Represents the empty package.
+     */
+    val EMPTY_PACKAGE_NAME: NameType
 
     /** The string " " (a single whitespace).
      *  `LOCAL_SUFFIX_STRING` is appended to the names of local identifiers,

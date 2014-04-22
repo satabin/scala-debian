@@ -8,17 +8,14 @@ import org.junit.runners.JUnit4
 @RunWith(classOf[JUnit4])
 class SourceFileTest {
   def lineContentOf(code: String, offset: Int) =
-    new OffsetPosition(new BatchSourceFile("", code), offset).lineContent
-    //Position.offset(new BatchSourceFile("", code), offset).lineContent
+    Position.offset(new BatchSourceFile("", code), offset).lineContent
 
-  /*
   @Test
   def si8205_overflow(): Unit = {
     val file = new BatchSourceFile("", "code no newline")
     // the bug in lineToString counted until MaxValue, and the AIOOBE came from here
     assertFalse(file.isEndOfLine(Int.MaxValue))
   }
-  */
 
   @Test
   def si8205_lineToString(): Unit = {

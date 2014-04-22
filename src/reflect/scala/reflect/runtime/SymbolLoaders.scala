@@ -1,10 +1,12 @@
-package scala.reflect
+package scala
+package reflect
 package runtime
 
 import internal.Flags
 import java.lang.{Class => jClass, Package => jPackage}
 import scala.collection.mutable
 import scala.reflect.runtime.ReflectionUtils.scalacShouldntLoadClass
+import scala.reflect.internal.Flags._
 
 private[reflect] trait SymbolLoaders { self: SymbolTable =>
 
@@ -16,37 +18,16 @@ private[reflect] trait SymbolLoaders { self: SymbolTable =>
    *  is found, a package is created instead.
    */
   class TopClassCompleter(clazz: Symbol, module: Symbol) extends SymLoader with FlagAssigningCompleter {
-//    def makePackage() {
-//      println("wrong guess; making package "+clazz)
-//      val ptpe = newPackageType(module.moduleClass)
-//      for (sym <- List(clazz, module, module.moduleClass)) {
-//        sym setFlag Flags.PACKAGE
-//        sym setInfo ptpe
-//      }
-//    }
-
+    markFlagsCompleted(clazz, module)(mask = ~TopLevelPickledFlags)
     override def complete(sym: Symbol) = {
       debugInfo("completing "+sym+"/"+clazz.fullName)
       assert(sym == clazz || sym == module || sym == module.moduleClass)
-//      try {
-      atPhaseNotLaterThan(picklerPhase) {
+      slowButSafeEnteringPhaseNotLaterThan(picklerPhase) {
         val loadingMirror = mirrorThatLoaded(sym)
         val javaClass = loadingMirror.javaClass(clazz.javaClassName)
         loadingMirror.unpickleClass(clazz, module, javaClass)
-//      } catch {
-//        case ex: ClassNotFoundException => makePackage()
-//        case ex: NoClassDefFoundError => makePackage()
-          // Note: We catch NoClassDefFoundError because there are situations
-          // where a package and a class have the same name except for capitalization.
-          // It seems in this case the class is loaded even if capitalization differs
-          // but then a NoClassDefFound error is issued with a ("wrong name: ...")
-          // reason. (I guess this is a concession to Windows).
-          // The present behavior is a bit too forgiving, in that it masks
-          // all class load errors, not just wrong name errors. We should try
-          // to be more discriminating. To get on the right track simply delete
-          // the clause above and load a collection class such as collection.Iterable.
-          // You'll see an error that class `parallel` has the wrong name.
-//      }
+        // NOTE: can't mark as thread-safe here, because unpickleClass might decide to delegate to FromJavaClassCompleter
+        // if (!isCompilerUniverse) markAllCompleted(clazz, module)
       }
     }
     override def load(sym: Symbol) = complete(sym)
@@ -58,7 +39,7 @@ private[reflect] trait SymbolLoaders { self: SymbolTable =>
    *  @param name    The simple name of the newly created class
    *  @param completer  The completer to be used to set the info of the class and the module
    */
-  protected def createClassModule(owner: Symbol, name: TypeName, completer: (Symbol, Symbol) => LazyType) = {
+  protected def initAndEnterClassAndModule(owner: Symbol, name: TypeName, completer: (Symbol, Symbol) => LazyType) = {
     assert(!(name.toString endsWith "[]"), name)
     val clazz = owner.newClass(name)
     val module = owner.newModule(name.toTermName)
@@ -68,7 +49,7 @@ private[reflect] trait SymbolLoaders { self: SymbolTable =>
       owner.info.decls enter clazz
       owner.info.decls enter module
     }
-    initClassModule(clazz, module, completer(clazz, module))
+    initClassAndModule(clazz, module, completer(clazz, module))
     (clazz, module)
   }
 
@@ -76,7 +57,7 @@ private[reflect] trait SymbolLoaders { self: SymbolTable =>
     List(clazz, module, module.moduleClass) foreach (_ setInfo info)
   }
 
-  protected def initClassModule(clazz: Symbol, module: Symbol, completer: LazyType) =
+  protected def initClassAndModule(clazz: Symbol, module: Symbol, completer: LazyType) =
     setAllInfos(clazz, module, completer)
 
   /** The type completer for packages.
@@ -87,15 +68,56 @@ private[reflect] trait SymbolLoaders { self: SymbolTable =>
       sym setInfo new ClassInfoType(List(), new PackageScope(sym), sym)
         // override def safeToString = pkgClass.toString
       openPackageModule(sym)
+      markAllCompleted(sym)
     }
   }
 
+
+  // Since runtime reflection doesn't have a luxury of enumerating all classes
+  // on the classpath, it has to materialize symbols for top-level definitions
+  // (packages, classes, objects) on demand.
+  //
+  // Someone asks us for a class named `foo.Bar`? Easy. Let's speculatively create
+  // a package named `foo` and then look up `newTypeName("bar")` in its decls.
+  // This lookup, implemented in `SymbolLoaders.PackageScope` tests the waters by
+  // trying to to `Class.forName("foo.Bar")` and then creates a ClassSymbol upon
+  // success (the whole story is a bit longer, but the rest is irrelevant here).
+  //
+  // That's all neat, but these non-deterministic mutations of the global symbol
+  // table give a lot of trouble in multi-threaded setting. One of the popular
+  // reflection crashes happens when multiple threads happen to trigger symbol
+  // materialization multiple times for the same symbol, making subsequent
+  // reflective operations stumble upon outrageous stuff like overloaded packages.
+  //
+  // Short of significantly changing SymbolLoaders I see no other way than just
+  // to slap a global lock on materialization in runtime reflection.
   class PackageScope(pkgClass: Symbol) extends Scope(initFingerPrints = -1L) // disable fingerprinting as we do not know entries beforehand
       with SynchronizedScope {
     assert(pkgClass.isType)
-    // disable fingerprinting as we do not know entries beforehand
-    private val negatives = mutable.Set[Name]() // Syncnote: Performance only, so need not be protected.
-    override def lookupEntry(name: Name): ScopeEntry = {
+
+    // materializing multiple copies of the same symbol in PackageScope is a very popular bug
+    // this override does its best to guard against it
+    override def enter[T <: Symbol](sym: T): T = {
+      // workaround for SI-7728
+      if (isCompilerUniverse) super.enter(sym)
+      else {
+        val existing = super.lookupEntry(sym.name)
+        assert(existing == null || existing.sym.isMethod, s"pkgClass = $pkgClass, sym = $sym, existing = $existing")
+        super.enter(sym)
+      }
+    }
+
+    override def enterIfNew[T <: Symbol](sym: T): T = {
+      val existing = super.lookupEntry(sym.name)
+      if (existing == null) enter(sym)
+      else existing.sym.asInstanceOf[T]
+    }
+
+    // package scopes need to synchronize on the GIL
+    // because lookupEntry might cause changes to the global symbol table
+    override def syncLockSynchronized[T](body: => T): T = gilSynchronized(body)
+    private val negatives = new mutable.HashSet[Name]
+    override def lookupEntry(name: Name): ScopeEntry = syncLockSynchronized {
       val e = super.lookupEntry(name)
       if (e != null)
         e
@@ -109,17 +131,30 @@ private[reflect] trait SymbolLoaders { self: SymbolTable =>
         currentMirror.tryJavaClass(path) match {
           case Some(cls) =>
             val loadingMirror = currentMirror.mirrorDefining(cls)
-            val (clazz, module) =
+            val (_, module) =
               if (loadingMirror eq currentMirror) {
-                createClassModule(pkgClass, name.toTypeName, new TopClassCompleter(_, _))
+                initAndEnterClassAndModule(pkgClass, name.toTypeName, new TopClassCompleter(_, _))
               } else {
                 val origOwner = loadingMirror.packageNameToScala(pkgClass.fullName)
                 val clazz = origOwner.info decl name.toTypeName
                 val module = origOwner.info decl name.toTermName
                 assert(clazz != NoSymbol)
                 assert(module != NoSymbol)
-                pkgClass.info.decls enter clazz
-                pkgClass.info.decls enter module
+                // currentMirror.mirrorDefining(cls) might side effect by entering symbols into pkgClass.info.decls
+                // therefore, even though in the beginning of this method, super.lookupEntry(name) returned null
+                // entering clazz/module now will result in a double-enter assertion in PackageScope.enter
+                // here's how it might happen
+                // 1) we are the rootMirror
+                // 2) cls.getClassLoader is different from our classloader
+                // 3) mirrorDefining(cls) looks up a mirror corresponding to that classloader and cannot find it
+                // 4) mirrorDefining creates a new mirror
+                // 5) that triggers Mirror.init() of the new mirror
+                // 6) that triggers definitions.syntheticCoreClasses
+                // 7) that might materialize symbols and enter them into our scope (because syntheticCoreClasses live in rootMirror)
+                // 8) now we come back here and try to enter one of the now entered symbols => BAM!
+                // therefore we use enterIfNew rather than just enter
+                enterIfNew(clazz)
+                enterIfNew(module)
                 (clazz, module)
               }
             debugInfo(s"created $module/${module.moduleClass} in $pkgClass")

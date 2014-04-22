@@ -3,7 +3,8 @@
  * @author  Martin Odersky
  */
 
-package scala.reflect
+package scala
+package reflect
 package internal
 
 import scala.collection.{ mutable, immutable }
@@ -62,7 +63,7 @@ import scala.collection.{ mutable, immutable }
 // 45:  SYNCHRONIZED/M
 // 46:        ARTIFACT
 // 47: DEFAULTMETHOD/M
-// 48:
+// 48:            ENUM
 // 49:
 // 50:
 // 51:    lateDEFERRED
@@ -116,8 +117,10 @@ class ModifierFlags {
   final val LAZY          = 1L << 31      // symbol is a lazy val. can't have MUTABLE unless transformed by typer
   final val PRESUPER      = 1L << 37      // value is evaluated before super call
   final val DEFAULTINIT   = 1L << 41      // symbol is initialized to the default value: used by -Xcheckinit
-  // ARTIFACT at #46 in 2.11+
+  final val ARTIFACT      = 1L << 46      // symbol should be ignored when typechecking; will be marked ACC_SYNTHETIC in bytecode
+                                          // to see which symbols are marked as ARTIFACT, see scaladocs for FlagValues.ARTIFACT
   final val DEFAULTMETHOD = 1L << 47      // symbol is a java default method
+  final val ENUM          = 1L << 48      // symbol is an enum
 
   // Overridden.
   def flagToString(flag: Long): String = ""
@@ -128,7 +131,7 @@ class ModifierFlags {
 }
 object ModifierFlags extends ModifierFlags
 
-/** All flags and associated operatins */
+/** All flags and associated operations */
 class Flags extends ModifierFlags {
   final val METHOD        = 1 << 6        // a method
   final val MODULE        = 1 << 8        // symbol is module or class implementing a module
@@ -163,11 +166,10 @@ class Flags extends ModifierFlags {
   final val VBRIDGE       = 1L << 42      // symbol is a varargs bridge
 
   final val VARARGS       = 1L << 43      // symbol is a Java-style varargs method
-  final val TRIEDCOOKING  = 1L << 44      // ``Cooking'' has been tried on this symbol
-                                          // A Java method's type is ``cooked'' by transforming raw types to existentials
+  final val TRIEDCOOKING  = 1L << 44      // `Cooking` has been tried on this symbol
+                                          // A Java method's type is `cooked` by transforming raw types to existentials
 
   final val SYNCHRONIZED  = 1L << 45      // symbol is a method which should be marked ACC_SYNCHRONIZED
-  final val ARTIFACT      = 1L << 46      // symbol should be ignored when typechecking; will be marked ACC_SYNTHETIC in bytecode
 
   // ------- shift definitions -------------------------------------------------------
 
@@ -250,7 +252,7 @@ class Flags extends ModifierFlags {
   /** These modifiers appear in TreePrinter output. */
   final val PrintableFlags =
     ExplicitFlags | BridgeFlags | LOCAL | SYNTHETIC | STABLE | CASEACCESSOR | MACRO |
-    ACCESSOR | SUPERACCESSOR | PARAMACCESSOR | STATIC | SPECIALIZED | SYNCHRONIZED
+    ACCESSOR | SUPERACCESSOR | PARAMACCESSOR | STATIC | SPECIALIZED | SYNCHRONIZED | ARTIFACT
 
   /** When a symbol for a field is created, only these flags survive
    *  from Modifiers.  Others which may be applied at creation time are:
@@ -266,11 +268,13 @@ class Flags extends ModifierFlags {
   final val GetterFlags = ~(PRESUPER | MUTABLE)
   final val SetterFlags = ~(PRESUPER | MUTABLE | STABLE | CASEACCESSOR | IMPLICIT)
 
-  /** When a symbol for a default getter is created, it inherits these
-   *  flags from the method with the default.  Other flags applied at creation
-   *  time are SYNTHETIC, DEFAULTPARAM, and possibly OVERRIDE, and maybe PRESUPER.
+  /** Since DEFAULTPARAM is overloaded with TRAIT, we need some additional
+   *  means of determining what that bit means. Usually DEFAULTPARAM is coupled
+   *  with PARAM, which suffices. Default getters get METHOD instead.
+   *  This constant is the mask of flags which can survive from the parameter modifiers.
+   *  See paramFlagsToDefaultGetter for the full logic.
    */
-  final val DefaultGetterFlags = PRIVATE | PROTECTED | FINAL
+  final val DefaultGetterFlags = PRIVATE | PROTECTED | FINAL | PARAMACCESSOR
 
   /** When a symbol for a method parameter is created, only these flags survive
    *  from Modifiers.  Others which may be applied at creation time are:
@@ -296,13 +300,20 @@ class Flags extends ModifierFlags {
   assert((OverloadedFlagsMask & FlagsNotPickled) == 0, flagsToString(OverloadedFlagsMask & FlagsNotPickled))
 
   /** These flags are pickled */
-  final val PickledFlags  = InitialFlags & ~FlagsNotPickled
+  final val PickledFlags  = (
+      (InitialFlags & ~FlagsNotPickled)
+    | notPRIVATE // for value class constructors (SI-6601), and private members referenced
+                 // in @inline-marked methods publicized in SuperAccessors (see SI-6608, e6b4204604)
+  )
 
   /** If we have a top-level class or module
    *  and someone asks us for a flag not in TopLevelPickledFlags,
    *  then we don't need unpickling to give a definite answer.
    */
   final val TopLevelPickledFlags = PickledFlags & ~(MODULE | METHOD | PACKAGE | PARAM | EXISTENTIAL)
+
+  def paramFlagsToDefaultGetter(paramFlags: Long): Long =
+    (paramFlags & DefaultGetterFlags) | SYNTHETIC | METHOD | DEFAULTPARAM
 
   def getterFlags(fieldFlags: Long): Long = ACCESSOR + (
     if ((fieldFlags & MUTABLE) != 0) fieldFlags & ~MUTABLE & ~PRESUPER
@@ -422,9 +433,9 @@ class Flags extends ModifierFlags {
     case             VARARGS => "<varargs>"                           // (1L << 43)
     case        TRIEDCOOKING => "<triedcooking>"                      // (1L << 44)
     case        SYNCHRONIZED => "<synchronized>"                      // (1L << 45)
-    case     0x400000000000L => ""                                    // (1L << 46)
+    case            ARTIFACT => "<artifact>"                          // (1L << 46)
     case       DEFAULTMETHOD => "<defaultmethod>"                     // (1L << 47)
-    case    0x1000000000000L => ""                                    // (1L << 48)
+    case                ENUM => "<enum>"                              // (1L << 48)
     case    0x2000000000000L => ""                                    // (1L << 49)
     case    0x4000000000000L => ""                                    // (1L << 50)
     case      `lateDEFERRED` => "<latedeferred>"                      // (1L << 51)
@@ -456,7 +467,7 @@ class Flags extends ModifierFlags {
   )
 
   @deprecated("Use flagString on the flag-carrying member", "2.10.0")
-  def flagsToString(flags: Long, privateWithin: String): String = {
+  private[scala] def flagsToString(flags: Long, privateWithin: String): String = {
     val access    = accessString(flags, privateWithin)
     val nonAccess = flagsToString(flags & ~AccessFlags)
 
@@ -464,7 +475,7 @@ class Flags extends ModifierFlags {
   }
 
   @deprecated("Use flagString on the flag-carrying member", "2.10.0")
-  def flagsToString(flags: Long): String = {
+  private[scala] def flagsToString(flags: Long): String = {
     // Fast path for common case
     if (flags == 0L) "" else {
       var sb: StringBuilder = null
@@ -497,4 +508,4 @@ class Flags extends ModifierFlags {
   final val rawFlagPickledOrder: Array[Long] = pickledListOrder.toArray
 }
 
-object Flags extends Flags { }
+object Flags extends Flags

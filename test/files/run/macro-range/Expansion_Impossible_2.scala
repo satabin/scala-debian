@@ -1,4 +1,4 @@
-import reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 
 object Impls {
   def foreach(c: Context)(f: c.Expr[Int => Unit]): c.Expr[Unit] = {
@@ -9,18 +9,18 @@ object Impls {
     import c.universe._
     import Flag._
 
-    val initName = nme.CONSTRUCTOR
+    val initName = termNames.CONSTRUCTOR
     // Either:
     //   scala"{ var i = $low; val h = $hi; while (i < h) { $f(i); i = i + 1 } }
     // or:
     //   scala"($_this: RangeDefault).foreach($f)"
     c.Expr(c.prefix.tree match {
       case Apply(Select(New(tpt), initName), List(lo, hi)) if tpt.symbol.fullName == "Range" =>
-        val iname = newTermName("$i")
-        val hname = newTermName("$h")
+        val iname = TermName("$i")
+        val hname = TermName("$h")
         def iref = Ident(iname)
         def href = Ident(hname)
-        val labelname = newTermName("$while")
+        val labelname = TermName("$while")
         val cond = makeBinop(iref, "$less", href)
         val body = Block(
             List(makeApply(f.tree, List(iref))),
@@ -37,8 +37,8 @@ object Impls {
       case _ =>
         Apply(
           Select(
-            Typed(c.prefix.tree, Ident(newTypeName("RangeDefault"))),
-            newTermName("foreach")),
+            Typed(c.prefix.tree, Ident(TypeName("RangeDefault"))),
+            TermName("foreach")),
           List(f.tree))
     })
   }

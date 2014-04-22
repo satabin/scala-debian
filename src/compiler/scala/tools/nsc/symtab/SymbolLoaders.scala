@@ -10,10 +10,9 @@ import java.io.IOException
 import scala.compat.Platform.currentTime
 import scala.tools.nsc.util.{ ClassPath }
 import classfile.ClassfileParser
-import scala.reflect.internal.Flags._
 import scala.reflect.internal.MissingRequirementError
 import scala.reflect.internal.util.Statistics
-import scala.tools.nsc.io.{ AbstractFile, MsilFile }
+import scala.reflect.io.{ AbstractFile, NoAbstractFile }
 
 /** This class ...
  *
@@ -21,14 +20,37 @@ import scala.tools.nsc.io.{ AbstractFile, MsilFile }
  *  @version 1.0
  */
 abstract class SymbolLoaders {
-  val global: Global
-  import global._
+  val symbolTable: symtab.SymbolTable {
+    def settings: Settings
+  }
+  val platform: backend.Platform {
+    val symbolTable: SymbolLoaders.this.symbolTable.type
+  }
+  import symbolTable._
+  /**
+   * Required by ClassfileParser. Check documentation in that class for details.
+   */
+  def lookupMemberAtTyperPhaseIfPossible(sym: Symbol, name: Name): Symbol
+  /**
+   * Should forward to `Run.compileLate`. The more principled fix would be to
+   * determine why this functionality is needed and extract it into a separate
+   * interface.
+   */
+  protected def compileLate(srcfile: AbstractFile): Unit
   import SymbolLoadersStats._
 
   protected def enterIfNew(owner: Symbol, member: Symbol, completer: SymbolLoader): Symbol = {
     assert(owner.info.decls.lookup(member.name) == NoSymbol, owner.fullName + "." + member.name)
     owner.info.decls enter member
     member
+  }
+
+  protected def signalError(root: Symbol, ex: Throwable) {
+    if (settings.debug) ex.printStackTrace()
+    globalError(ex.getMessage() match {
+      case null => "i/o error while loading " + root.name
+      case msg  => "error while loading " + root.name + ", " + msg
+    })
   }
 
   /** Enter class with given `name` into scope of `root`
@@ -68,14 +90,14 @@ abstract class SymbolLoaders {
           name+"\none of them needs to be removed from classpath"
         )
       else if (settings.termConflict.value == "package") {
-        global.warning(
+        warning(
           "Resolving package/object name conflict in favor of package " +
           preExisting.fullName + ".  The object will be inaccessible."
         )
         root.info.decls.unlink(preExisting)
       }
       else {
-        global.warning(
+        warning(
           "Resolving package/object name conflict in favor of object " +
           preExisting.fullName + ".  The package will be inaccessible."
         )
@@ -132,19 +154,26 @@ abstract class SymbolLoaders {
 
   /** Initialize toplevel class and module symbols in `owner` from class path representation `classRep`
    */
-  def initializeFromClassPath(owner: Symbol, classRep: ClassPath[platform.BinaryRepr]#ClassRep) {
+  def initializeFromClassPath(owner: Symbol, classRep: ClassPath[AbstractFile]#ClassRep) {
     ((classRep.binary, classRep.source) : @unchecked) match {
       case (Some(bin), Some(src))
       if platform.needCompile(bin, src) && !binaryOnly(owner, classRep.name) =>
-        if (settings.verbose.value) inform("[symloader] picked up newer source file for " + src.path)
-        global.loaders.enterToplevelsFromSource(owner, classRep.name, src)
+        if (settings.verbose) inform("[symloader] picked up newer source file for " + src.path)
+        enterToplevelsFromSource(owner, classRep.name, src)
       case (None, Some(src)) =>
-        if (settings.verbose.value) inform("[symloader] no class, picked up source file for " + src.path)
-        global.loaders.enterToplevelsFromSource(owner, classRep.name, src)
+        if (settings.verbose) inform("[symloader] no class, picked up source file for " + src.path)
+        enterToplevelsFromSource(owner, classRep.name, src)
       case (Some(bin), _) =>
-        global.loaders.enterClassAndModule(owner, classRep.name, platform.newClassLoader(bin))
+        enterClassAndModule(owner, classRep.name, newClassLoader(bin))
     }
   }
+
+  /** Create a new loader from a binary classfile.
+   *  This is intented as a hook allowing to support loading symbols from
+   *  files other than .class files.
+   */
+  protected def newClassLoader(bin: AbstractFile): SymbolLoader =
+    new ClassfileLoader(bin)
 
   /**
    * A lazy type that completes itself by calling parameter doComplete.
@@ -160,7 +189,7 @@ abstract class SymbolLoaders {
     def sourcefile: Option[AbstractFile] = None
 
     /**
-     * Description of the resource (ClassPath, AbstractFile, MsilFile)
+     * Description of the resource (ClassPath, AbstractFile)
      * being processed by this loader
      */
     protected def description: String
@@ -169,25 +198,13 @@ abstract class SymbolLoaders {
 
     private def setSource(sym: Symbol) {
       sourcefile foreach (sf => sym match {
-        case cls: ClassSymbol => cls.sourceFile = sf
-        case mod: ModuleSymbol => mod.moduleClass.sourceFile = sf
+        case cls: ClassSymbol => cls.associatedFile = sf
+        case mod: ModuleSymbol => mod.moduleClass.associatedFile = sf
         case _ => ()
       })
     }
 
     override def complete(root: Symbol) {
-      def signalError(ex: Exception) {
-        ok = false
-        if (settings.debug.value) ex.printStackTrace()
-        val msg = ex.getMessage()
-        // SI-5593 Scaladoc's current strategy is to visit all packages in search of user code that can be documented
-        // therefore, it will rummage through the classpath triggering errors whenever it encounters package objects
-        // that are not in their correct place (see bug for details)
-        if (!settings.isScaladoc)
-          globalError(
-            if (msg eq null) "i/o error while loading " + root.name
-            else "error while loading " + root.name + ", " + msg);
-      }
       try {
         val start = currentTime
         val currentphase = phase
@@ -197,11 +214,11 @@ abstract class SymbolLoaders {
         ok = true
         setSource(root)
         setSource(root.companionSymbol) // module -> class, class -> module
-      } catch {
-        case ex: IOException =>
-          signalError(ex)
-        case ex: MissingRequirementError =>
-          signalError(ex)
+      }
+      catch {
+        case ex @ (_: IOException | _: MissingRequirementError) =>
+          ok = false
+          signalError(root, ex)
       }
       initRoot(root)
       if (!root.isPackageClass) initRoot(root.companionSymbol)
@@ -226,14 +243,13 @@ abstract class SymbolLoaders {
   /**
    * Load contents of a package
    */
-  class PackageLoader(classpath: ClassPath[platform.BinaryRepr]) extends SymbolLoader with FlagAgnosticCompleter {
+  class PackageLoader(classpath: ClassPath[AbstractFile]) extends SymbolLoader with FlagAgnosticCompleter {
     protected def description = "package loader "+ classpath.name
 
     protected def doComplete(root: Symbol) {
       assert(root.isPackageClass, root)
       root.setInfo(new PackageClassInfoType(newScope, root))
 
-      val sourcepaths = classpath.sourcepaths
       if (!root.isRoot) {
         for (classRep <- classpath.classes if platform.doLoad(classRep)) {
           initializeFromClassPath(root, classRep)
@@ -250,8 +266,24 @@ abstract class SymbolLoaders {
   }
 
   class ClassfileLoader(val classfile: AbstractFile) extends SymbolLoader with FlagAssigningCompleter {
-    private object classfileParser extends ClassfileParser {
-      val global: SymbolLoaders.this.global.type = SymbolLoaders.this.global
+    private object classfileParser extends {
+      val symbolTable: SymbolLoaders.this.symbolTable.type = SymbolLoaders.this.symbolTable
+    } with ClassfileParser {
+      override protected type ThisConstantPool = ConstantPool
+      override protected def newConstantPool: ThisConstantPool = new ConstantPool
+      override protected def lookupMemberAtTyperPhaseIfPossible(sym: Symbol, name: Name): Symbol =
+        SymbolLoaders.this.lookupMemberAtTyperPhaseIfPossible(sym, name)
+      /*
+       * The type alias and the cast (where the alias is used) is needed due to problem described
+       * in SI-7585. In this particular case, the problem is that we need to make sure that symbol
+       * table used by symbol loaders is exactly the same as they one used by classfileParser.
+       * If you look at the path-dependent types we have here everything should work out ok but
+       * due to issue described in SI-7585 type-checker cannot tie the knot here.
+       *
+       */
+      private type SymbolLoadersRefined = SymbolLoaders { val symbolTable: classfileParser.symbolTable.type }
+      val loaders = SymbolLoaders.this.asInstanceOf[SymbolLoadersRefined]
+      val classPath = platform.classPath
     }
 
     protected def description = "class file "+ classfile.toString
@@ -259,7 +291,7 @@ abstract class SymbolLoaders {
     protected def doComplete(root: Symbol) {
       val start = if (Statistics.canEnable) Statistics.startTimer(classReadNanos) else null
       classfileParser.parse(classfile, root)
-      if (root.associatedFile eq null) {
+      if (root.associatedFile eq NoAbstractFile) {
         root match {
           // In fact, the ModuleSymbol forwards its setter to the module class
           case _: ClassSymbol | _: ModuleSymbol =>
@@ -274,31 +306,16 @@ abstract class SymbolLoaders {
     override def sourcefile: Option[AbstractFile] = classfileParser.srcfile
   }
 
-  class MsilFileLoader(msilFile: MsilFile) extends SymbolLoader with FlagAssigningCompleter {
-    private def typ = msilFile.msilType
-    private object typeParser extends clr.TypeParser {
-      val global: SymbolLoaders.this.global.type = SymbolLoaders.this.global
-    }
-
-    protected def description = "MsilFile "+ typ.FullName + ", assembly "+ typ.Assembly.FullName
-    protected def doComplete(root: Symbol) { typeParser.parse(typ, root) }
-  }
-
   class SourcefileLoader(val srcfile: AbstractFile) extends SymbolLoader with FlagAssigningCompleter {
     protected def description = "source file "+ srcfile.toString
     override def fromSource = true
     override def sourcefile = Some(srcfile)
-    protected def doComplete(root: Symbol): Unit = global.currentRun.compileLate(srcfile)
+    protected def doComplete(root: Symbol): Unit = compileLate(srcfile)
   }
 
   object moduleClassLoader extends SymbolLoader with FlagAssigningCompleter {
     protected def description = "module class loader"
     protected def doComplete(root: Symbol) { root.sourceModule.initialize }
-  }
-
-  object clrTypes extends clr.CLRTypes {
-    val global: SymbolLoaders.this.global.type = SymbolLoaders.this.global
-    if (global.forMSIL) init()
   }
 
   /** used from classfile parser to avoid cyclies */

@@ -6,14 +6,14 @@
 **                          |/                                          **
 \*                                                                      */
 
-
-
-package scala.collection
+package scala
+package collection
 package mutable
 
 import generic._
 import immutable.{List, Nil, ::}
 import java.io._
+import scala.annotation.migration
 
 /** A `Buffer` implementation back up by a list. It provides constant time
  *  prepend and append. Most other operations are linear.
@@ -56,12 +56,18 @@ final class ListBuffer[A]
   import scala.collection.Traversable
   import scala.collection.immutable.ListSerializeEnd
 
+  /** Expected invariants:
+   *  If start.isEmpty, last0 == null
+   *  If start.nonEmpty, last0 != null
+   *  If len == 0, start.isEmpty
+   *  If len > 0, start.nonEmpty
+   */
   private var start: List[A] = Nil
   private var last0: ::[A] = _
   private var exported: Boolean = false
   private var len = 0
 
-  protected def underlying: immutable.Seq[A] = start
+  protected def underlying: List[A] = start
 
   private def writeObject(out: ObjectOutputStream) {
     // write start
@@ -133,7 +139,7 @@ final class ListBuffer[A]
     if (n < 0 || n >= len) throw new IndexOutOfBoundsException(n.toString)
     if (exported) copy()
     if (n == 0) {
-      val newElem = new :: (x, start.tail);
+      val newElem = new :: (x, start.tail)
       if (last0 eq start) {
         last0 = newElem
       }
@@ -160,7 +166,7 @@ final class ListBuffer[A]
    */
   def += (x: A): this.type = {
     if (exported) copy()
-    if (start.isEmpty) {
+    if (isEmpty) {
       last0 = new :: (x, Nil)
       start = last0
     } else {
@@ -172,8 +178,11 @@ final class ListBuffer[A]
     this
   }
 
-  override def ++=(xs: TraversableOnce[A]): this.type =
-    if (xs.asInstanceOf[AnyRef] eq this) ++= (this take size) else super.++=(xs)
+  override def ++=(xs: TraversableOnce[A]): this.type = xs match {
+    case x: AnyRef if x eq this      => this ++= (this take size)
+    case _                           => super.++=(xs)
+
+  }
 
   override def ++=:(xs: TraversableOnce[A]): this.type =
     if (xs.asInstanceOf[AnyRef] eq this) ++=: (this take size) else super.++=:(xs)
@@ -182,6 +191,7 @@ final class ListBuffer[A]
    */
   def clear() {
     start = Nil
+    last0 = null
     exported = false
     len = 0
   }
@@ -195,7 +205,7 @@ final class ListBuffer[A]
   def +=: (x: A): this.type = {
     if (exported) copy()
     val newElem = new :: (x, start)
-    if (start.isEmpty) last0 = newElem
+    if (isEmpty) last0 = newElem
     start = newElem
     len += 1
     this
@@ -238,13 +248,22 @@ final class ListBuffer[A]
     }
   }
 
+  /** Reduce the length of the buffer, and null out last0
+   *  if this reduces the length to 0.
+   */
+  private def reduceLengthBy(num: Int) {
+    len -= num
+    if (len <= 0)   // obviously shouldn't be < 0, but still better not to leak
+      last0 = null
+  }
+
   /** Removes a given number of elements on a given index position. May take
    *  time linear in the buffer size.
    *
    *  @param n         the index which refers to the first element to remove.
    *  @param count     the number of elements to remove.
    */
-  @annotation.migration("Invalid input values will be rejected in future releases.", "2.11")
+  @migration("Invalid input values will be rejected in future releases.", "2.11")
   override def remove(n: Int, count: Int) {
     if (n >= len)
       return
@@ -253,7 +272,6 @@ final class ListBuffer[A]
     if (exported) copy()
     val n1 = n max 0
     val count1 = count min (len - n1)
-    var old = start.head
     if (n1 == 0) {
       var c = count1
       while (c > 0) {
@@ -274,7 +292,7 @@ final class ListBuffer[A]
         c -= 1
       }
     }
-    len -= count1
+    reduceLengthBy(count1)
   }
 
 // Implementation of abstract method in Builder
@@ -285,7 +303,7 @@ final class ListBuffer[A]
    *  copied lazily, the first time it is mutated.
    */
   override def toList: List[A] = {
-    exported = !start.isEmpty
+    exported = !isEmpty
     start
   }
 
@@ -296,7 +314,7 @@ final class ListBuffer[A]
    *  @param xs   the list to which elements are prepended
    */
   def prependToList(xs: List[A]): List[A] = {
-    if (start.isEmpty) xs
+    if (isEmpty) xs
     else {
       if (exported) copy()
       last0.tl = xs
@@ -331,7 +349,7 @@ final class ListBuffer[A]
       if (last0 eq cursor.tail) last0 = cursor.asInstanceOf[::[A]]
       cursor.asInstanceOf[::[A]].tl = cursor.tail.tail
     }
-    len -= 1
+    reduceLengthBy(1)
     old
   }
 
@@ -343,11 +361,12 @@ final class ListBuffer[A]
    */
   override def -= (elem: A): this.type = {
     if (exported) copy()
-    if (start.isEmpty) {}
+    if (isEmpty) {}
     else if (start.head == elem) {
       start = start.tail
-      len -= 1
-    } else {
+      reduceLengthBy(1)
+    }
+    else {
       var cursor = start
       while (!cursor.tail.isEmpty && cursor.tail.head != elem) {
         cursor = cursor.tail
@@ -357,12 +376,18 @@ final class ListBuffer[A]
         if (z.tl == last0)
           last0 = z
         z.tl = cursor.tail.tail
-        len -= 1
+        reduceLengthBy(1)
       }
     }
     this
   }
 
+  /** Returns an iterator over this `ListBuffer`.  The iterator will reflect
+   *  changes made to the underlying `ListBuffer` beyond the next element;
+   *  the next element's value is cached so that `hasNext` and `next` are
+   *  guaranteed to be consistent.  In particular, an empty `ListBuffer`
+   *  will give an empty iterator even if the `ListBuffer` is later filled.
+   */
   override def iterator: Iterator[A] = new AbstractIterator[A] {
     // Have to be careful iterating over mutable structures.
     // This used to have "(cursor ne last0)" as part of its hasNext
@@ -371,32 +396,26 @@ final class ListBuffer[A]
     // a structure while iterating, but we should never return hasNext == true
     // on exhausted iterators (thus creating exceptions) merely because
     // values were changed in-place.
-    var cursor: List[A] = null
-    var delivered = 0
+    var cursor: List[A] = if (ListBuffer.this.isEmpty) Nil else start
 
-    // Note: arguably this should not be a "dynamic test" against
-    // the present length of the buffer, but fixed at the size of the
-    // buffer when the iterator is created.  At the moment such a
-    // change breaks tests: see comment on def units in Global.scala.
-    def hasNext: Boolean = delivered < ListBuffer.this.length
+    def hasNext: Boolean = cursor ne Nil
     def next(): A =
-      if (!hasNext)
-        throw new NoSuchElementException("next on empty Iterator")
+      if (!hasNext) throw new NoSuchElementException("next on empty Iterator")
       else {
-        if (cursor eq null) cursor = start
-        else cursor = cursor.tail
-        delivered += 1
-        cursor.head
+        val ans = cursor.head
+        cursor = cursor.tail
+        ans
       }
   }
 
-  /** expose the underlying list but do not mark it as exported */
+  @deprecated("The result of this method will change along with this buffer, which is often not what's expected.", "2.11.0")
   override def readOnly: List[A] = start
 
   // Private methods
 
   /** Copy contents of this buffer */
   private def copy() {
+    if (isEmpty) return
     var cursor = start
     val limit = last0.tail
     clear()

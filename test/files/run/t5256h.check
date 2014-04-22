@@ -1,7 +1,7 @@
-anonymous class $anon$1
+$anon
 Test.$anon$1
 java.lang.Object {
   final private val x: Int
   def x(): Int
-  def <init>(): java.lang.Object{def x(): Int}
+  def <init>(): $anon$1
 }

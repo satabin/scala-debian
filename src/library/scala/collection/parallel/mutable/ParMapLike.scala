@@ -6,18 +6,14 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection.parallel
+package scala
+package collection.parallel
 package mutable
 
-
-
 import scala.collection.generic._
-import scala.collection.mutable.Builder
 import scala.collection.mutable.Cloneable
 import scala.collection.generic.Growable
 import scala.collection.generic.Shrinkable
-
-
 
 /** A template trait for mutable parallel maps. This trait is to be mixed in
  *  with concrete parallel maps to override the representation type.
@@ -53,6 +49,4 @@ extends scala.collection.GenMapLike[K, V, Repr]
   def -(key: K) = this.clone() -= key
 
   def clear(): Unit
-
 }
-

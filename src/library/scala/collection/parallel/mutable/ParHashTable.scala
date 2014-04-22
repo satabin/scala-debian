@@ -6,17 +6,12 @@
 **                          |/                                          **
 \*                                                                      */
 
-
-package scala.collection
+package scala
+package collection
 package parallel.mutable
-
-
-
 
 import scala.collection.mutable.HashEntry
 import scala.collection.parallel.IterableSplitter
-
-
 
 /** Provides functionality for hash tables with linked list buckets,
  *  enriching the data structure by fulfilling certain requirements
@@ -110,7 +105,7 @@ trait ParHashTable[K, Entry >: Null <: HashEntry[K, Entry]] extends scala.collec
     } else Seq(this.asInstanceOf[IterRepr])
 
     private def convertToArrayBuffer(chainhead: Entry): mutable.ArrayBuffer[T] = {
-      var buff = mutable.ArrayBuffer[Entry]()
+      val buff = mutable.ArrayBuffer[Entry]()
       var curr = chainhead
       while (curr ne null) {
         buff += curr
@@ -145,11 +140,4 @@ trait ParHashTable[K, Entry >: Null <: HashEntry[K, Entry]] extends scala.collec
       c
     }
   }
-
 }
-
-
-
-
-
-

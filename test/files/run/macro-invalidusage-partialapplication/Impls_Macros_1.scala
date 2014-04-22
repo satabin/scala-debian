@@ -1,10 +1,10 @@
-import scala.reflect.macros.{Context => Ctx}
+import scala.reflect.macros.blackbox.Context
 
 object Impls {
-  def foo(c: Ctx)(x: c.Expr[Int])(y: c.Expr[Int]) = {
+  def foo(c: Context)(x: c.Expr[Int])(y: c.Expr[Int]) = {
     import c.universe._
-    val sum = Apply(Select(x.tree, newTermName("$plus")), List(y.tree))
-    val body = Apply(Select(Ident(definitions.PredefModule), newTermName("println")), List(sum))
+    val sum = Apply(Select(x.tree, TermName("$plus")), List(y.tree))
+    val body = Apply(Select(Ident(definitions.PredefModule), TermName("println")), List(sum))
     c.Expr[Unit](body)
   }
 }

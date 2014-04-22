@@ -16,7 +16,6 @@ trait Analyzer extends AnyRef
             with Typers
             with Infer
             with Implicits
-            with Variances
             with EtaExpansion
             with SyntheticMethods
             with Unapplies
@@ -30,8 +29,9 @@ trait Analyzer extends AnyRef
   val global : Global
   import global._
 
-  object namerFactory extends SubComponent {
+  object namerFactory extends {
     val global: Analyzer.this.global.type = Analyzer.this.global
+  } with SubComponent {
     val phaseName = "namer"
     val runsAfter = List[String]("parser")
     val runsRightAfter = None
@@ -45,8 +45,9 @@ trait Analyzer extends AnyRef
     }
   }
 
-  object packageObjects extends SubComponent {
+  object packageObjects extends {
     val global: Analyzer.this.global.type = Analyzer.this.global
+  } with SubComponent {
     val phaseName = "packageobjects"
     val runsAfter = List[String]()
     val runsRightAfter= Some("namer")
@@ -72,9 +73,10 @@ trait Analyzer extends AnyRef
     }
   }
 
-  object typerFactory extends SubComponent {
-    import scala.reflect.internal.TypesStats.typerNanos
+  object typerFactory extends {
     val global: Analyzer.this.global.type = Analyzer.this.global
+  } with SubComponent {
+    import scala.reflect.internal.TypesStats.typerNanos
     val phaseName = "typer"
     val runsAfter = List[String]()
     val runsRightAfter = Some("packageobjects")
@@ -88,22 +90,27 @@ trait Analyzer extends AnyRef
       override def run() {
         val start = if (Statistics.canEnable) Statistics.startTimer(typerNanos) else null
         global.echoPhaseSummary(this)
-        currentRun.units foreach applyPhase
-        undoLog.clear()
-        // need to clear it after as well or 10K+ accumulated entries are
-        // uncollectable the rest of the way.
+        for (unit <- currentRun.units) {
+          applyPhase(unit)
+          undoLog.clear()
+        }
         if (Statistics.canEnable) Statistics.stopTimer(typerNanos, start)
       }
       def apply(unit: CompilationUnit) {
         try {
-          unit.body = newTyper(rootContext(unit)).typed(unit.body)
-          if (global.settings.Yrangepos.value && !global.reporter.hasErrors) global.validatePositions(unit.body)
+          val typer = newTyper(rootContext(unit))
+          unit.body = typer.typed(unit.body)
+          if (global.settings.Yrangepos && !global.reporter.hasErrors) global.validatePositions(unit.body)
           for (workItem <- unit.toCheck) workItem()
-        } finally {
+          if (settings.warnUnusedImport)
+            warnUnusedImports(unit)
+          if (settings.warnUnused)
+            typer checkUnused unit
+        }
+        finally {
           unit.toCheck.clear()
         }
       }
     }
   }
 }
-

@@ -10,7 +10,7 @@ package scala.tools.ant.sabbus
 
 import java.io.File
 
-import org.apache.tools.ant.types.{Path, Reference}
+import org.apache.tools.ant.types.Path
 
 class Settings {
 
@@ -93,4 +93,18 @@ class Settings {
     case _ => false
   }
 
+  override lazy val hashCode: Int = Seq[Any](
+    gBf,
+    uncheckedBf,
+    classpathBf,
+    sourcepathBf,
+    sourcedirBf,
+    bootclasspathBf,
+    extdirsBf,
+    dBf,
+    encodingBf,
+    targetBf,
+    optimiseBf,
+    extraParamsBf
+  ).##
 }

@@ -7,12 +7,11 @@ package scala.tools.nsc
 package typechecker
 
 import scala.collection.{ mutable, immutable }
-import scala.collection.mutable.ListBuffer
 import scala.util.control.ControlThrowable
 import symtab.Flags._
-import scala.annotation.tailrec
+import scala.reflect.internal.Depth
 
-/** This trait ...
+/** This trait contains methods related to type parameter inference.
  *
  *  @author Martin Odersky
  *  @version 1.0
@@ -22,138 +21,64 @@ trait Infer extends Checkable {
 
   import global._
   import definitions._
-  import typer.printInference
   import typeDebug.ptBlock
+  import typeDebug.str.parentheses
+  import typingStack.{ printTyping }
 
-/* -- Type parameter inference utility functions --------------------------- */
-
-  private def assertNonCyclic(tvar: TypeVar) =
-    assert(tvar.constr.inst != tvar, tvar.origin)
-
-  /** The formal parameter types corresponding to <code>formals</code>.
-   *  If <code>formals</code> has a repeated last parameter, a list of
-   *  (nargs - params.length + 1) copies of its type is returned.
-   *  By-name types are replaced with their underlying type.
+  /** The formal parameter types corresponding to `formals`.
+   *  If `formals` has a repeated last parameter, a list of
+   *  (numArgs - numFormals + 1) copies of its type is appended
+   *  to the other formals. By-name types are replaced with their
+   *  underlying type.
    *
    *  @param removeByName allows keeping ByName parameters. Used in NamesDefaults.
    *  @param removeRepeated allows keeping repeated parameter (if there's one argument). Used in NamesDefaults.
    */
-  def formalTypes(formals: List[Type], nargs: Int, removeByName: Boolean = true, removeRepeated: Boolean = true): List[Type] = {
-    val formals1 = if (removeByName) formals mapConserve {
-      case TypeRef(_, ByNameParamClass, List(arg)) => arg
-      case formal => formal
-    } else formals
-    if (isVarArgTypes(formals1) && (removeRepeated || formals.length != nargs)) {
-      val ft = formals1.last.dealiasWiden.typeArgs.head
-      formals1.init ::: (for (i <- List.range(formals1.length - 1, nargs)) yield ft)
-    } else formals1
+  def formalTypes(formals: List[Type], numArgs: Int, removeByName: Boolean = true, removeRepeated: Boolean = true): List[Type] = {
+    val numFormals = formals.length
+    val formals1   = if (removeByName) formals mapConserve dropByName else formals
+    val expandLast = (
+         (removeRepeated || numFormals != numArgs)
+      && isVarArgTypes(formals1)
+    )
+    def lastType = formals1.last.dealiasWiden.typeArgs.head
+    def expanded(n: Int) = (1 to n).toList map (_ => lastType)
+
+    if (expandLast)
+      formals1.init ::: expanded(numArgs - numFormals + 1)
+    else
+      formals1
   }
 
-  /** Returns `(formals, formalsExpanded)` where `formalsExpanded` are the expected types
-   * for the `nbSubPats` sub-patterns of an extractor pattern, of which the corresponding
-   * unapply[Seq] call is assumed to have result type `resTp`.
-   *
-   * `formals` are the formal types before expanding a potential repeated parameter (must come last in `formals`, if at all)
-   *
-   * @param nbSubPats          The number of arguments to the extractor pattern
-   * @param effectiveNbSubPats `nbSubPats`, unless there is one sub-pattern which, after unwrapping
-   *                           bind patterns, is a Tuple pattern, in which case it is the number of
-   *                           elements. Used to issue warnings about binding a `TupleN` to a single value.
-   * @throws TypeError when the unapply[Seq] definition is ill-typed
-   * @returns (null, null) when the expected number of sub-patterns cannot be satisfied by the given extractor
-   *
-   * This is the spec currently implemented -- TODO: update it.
-   *
-   *   8.1.8 ExtractorPatterns
-   *
-   *   An extractor pattern x(p1, ..., pn) where n ≥ 0 is of the same syntactic form as a constructor pattern.
-   *   However, instead of a case class, the stable identifier x denotes an object which has a member method named unapply or unapplySeq that matches the pattern.
-   *
-   *   An `unapply` method with result type `R` in an object `x` matches the
-   *   pattern `x(p_1, ..., p_n)` if it takes exactly one argument and, either:
-   *     - `n = 0` and `R =:= Boolean`, or
-   *     - `n = 1` and `R <:< Option[T]`, for some type `T`.
-   *        The argument pattern `p1` is typed in turn with expected type `T`.
-   *     - Or, `n > 1` and `R <:< Option[Product_n[T_1, ..., T_n]]`, for some
-   *       types `T_1, ..., T_n`. The argument patterns `p_1, ..., p_n` are
-   *       typed with expected types `T_1, ..., T_n`.
-   *
-   *   An `unapplySeq` method in an object `x` matches the pattern `x(p_1, ..., p_n)`
-   *   if it takes exactly one argument and its result type is of the form `Option[S]`,
-   *   where either:
-   *     - `S` is a subtype of `Seq[U]` for some element type `U`, (set `m = 0`)
-   *     - or `S` is a `ProductX[T_1, ..., T_m]` and `T_m <: Seq[U]` (`m <= n`).
-   *
-   *   The argument patterns `p_1, ..., p_n` are typed with expected types
-   *   `T_1, ..., T_m, U, ..., U`. Here, `U` is repeated `n-m` times.
-   *
+  /** Sorts the alternatives according to the given comparison function.
+   *  Returns a list containing the best alternative as well as any which
+   *  the best fails to improve upon.
    */
-  def extractorFormalTypes(pos: Position, resTp: Type, nbSubPats: Int,
-                           unappSym: Symbol, effectiveNbSubPats: Int): (List[Type], List[Type]) = {
-    val isUnapplySeq     = unappSym.name == nme.unapplySeq
-    val booleanExtractor = resTp.typeSymbolDirect == BooleanClass
+  private def bestAlternatives(alternatives: List[Symbol])(isBetter: (Symbol, Symbol) => Boolean): List[Symbol] = {
+    def improves(sym1: Symbol, sym2: Symbol) = (
+         (sym2 eq NoSymbol)
+      || sym2.isError
+      || (sym2 hasAnnotation BridgeClass)
+      || isBetter(sym1, sym2)
+    )
 
-    def seqToRepeatedChecked(tp: Type) = {
-      val toRepeated = seqToRepeated(tp)
-      if (tp eq toRepeated) throw new TypeError("(the last tuple-component of) the result type of an unapplySeq must be a Seq[_]")
-      else toRepeated
+    alternatives sortWith improves match {
+      case best :: rest if rest.nonEmpty => best :: rest.filterNot(alt => improves(best, alt))
+      case bests                         => bests
     }
-
-    // empty list --> error, otherwise length == 1
-    lazy val optionArgs = resTp.baseType(OptionClass).typeArgs
-    // empty list --> not a ProductN, otherwise product element types
-    def productArgs = getProductArgs(optionArgs.head)
-
-    val formals =
-      // convert Seq[T] to the special repeated argument type
-      // so below we can use formalTypes to expand formals to correspond to the number of actuals
-      if (isUnapplySeq) {
-        if (optionArgs.nonEmpty)
-          productArgs match {
-            case Nil => List(seqToRepeatedChecked(optionArgs.head))
-            case normalTps :+ seqTp => normalTps :+ seqToRepeatedChecked(seqTp)
-          }
-        else throw new TypeError(s"result type $resTp of unapplySeq defined in ${unappSym.fullLocationString} does not conform to Option[_]")
-      } else {
-        if (booleanExtractor && nbSubPats == 0) Nil
-        else if (optionArgs.nonEmpty)
-          if (nbSubPats == 1) {
-            val productArity = productArgs.size
-            if (settings.lint.value && productArity > 1 && productArity != effectiveNbSubPats)
-              global.currentUnit.warning(pos,
-                s"extractor pattern binds a single value to a Product${productArity} of type ${optionArgs.head}")
-            optionArgs
-          }
-          // TODO: update spec to reflect we allow any ProductN, not just TupleN
-          else productArgs
-        else
-          throw new TypeError(s"result type $resTp of unapply defined in ${unappSym.fullLocationString} does not conform to Option[_] or Boolean")
-      }
-
-    // for unapplySeq, replace last vararg by as many instances as required by nbSubPats
-    val formalsExpanded =
-      if (isUnapplySeq && formals.nonEmpty) formalTypes(formals, nbSubPats)
-      else formals
-
-    if (formalsExpanded.lengthCompare(nbSubPats) != 0) (null, null)
-    else (formals, formalsExpanded)
   }
 
-  def actualTypes(actuals: List[Type], nformals: Int): List[Type] =
-    if (nformals == 1 && !hasLength(actuals, 1))
-      List(if (actuals.isEmpty) UnitClass.tpe else tupleType(actuals))
-    else actuals
-
-  def actualArgs(pos: Position, actuals: List[Tree], nformals: Int): List[Tree] = {
-    val inRange = nformals == 1 && !hasLength(actuals, 1) && actuals.lengthCompare(MaxTupleArity) <= 0
-    if (inRange && !phase.erasedTypes) List(atPos(pos)(gen.mkTuple(actuals)))
-    else actuals
+  // we must not allow CyclicReference to be thrown when sym.info is called
+  // in checkAccessible, because that would mark the symbol erroneous, which it
+  // is not. But if it's a true CyclicReference then macro def will report it.
+  // See comments to TypeSigError for an explanation of this special case.
+  // [Eugene] is there a better way?
+  private object CheckAccessibleMacroCycle extends TypeCompleter {
+    val tree = EmptyTree
+    override def complete(sym: Symbol) = ()
   }
 
   /** A fresh type variable with given type parameter as origin.
-   *
-   *  @param tparam ...
-   *  @return       ...
    */
   def freshVar(tparam: Symbol): TypeVar = TypeVar(tparam)
 
@@ -170,50 +95,34 @@ trait Infer extends Checkable {
    */
   object instantiate extends TypeMap {
     private var excludedVars = immutable.Set[TypeVar]()
+    private def applyTypeVar(tv: TypeVar): Type = tv match {
+      case TypeVar(origin, constr) if !constr.instValid => throw new DeferredNoInstance(() => s"no unique instantiation of type variable $origin could be found")
+      case _ if excludedVars(tv)                        => throw new NoInstance("cyclic instantiation")
+      case TypeVar(_, constr)                           =>
+        excludedVars += tv
+        try apply(constr.inst)
+        finally excludedVars -= tv
+    }
     def apply(tp: Type): Type = tp match {
-      case WildcardType | BoundedWildcardType(_) | NoType =>
-        throw new NoInstance("undetermined type")
-      case tv @ TypeVar(origin, constr) if !tv.untouchable =>
-        if (constr.inst == NoType) {
-          throw new DeferredNoInstance(() =>
-            "no unique instantiation of type variable " + origin + " could be found")
-        } else if (excludedVars(tv)) {
-          throw new NoInstance("cyclic instantiation")
-        } else {
-          excludedVars += tv
-          val res = apply(constr.inst)
-          excludedVars -= tv
-          res
-        }
-      case _ =>
-        mapOver(tp)
+      case WildcardType | BoundedWildcardType(_) | NoType => throw new NoInstance("undetermined type")
+      case tv: TypeVar if !tv.untouchable                 => applyTypeVar(tv)
+      case _                                              => mapOver(tp)
     }
   }
 
+  @inline final def falseIfNoInstance(body: => Boolean): Boolean =
+    try body catch { case _: NoInstance => false }
+
   /** Is type fully defined, i.e. no embedded anytypes or wildcards in it?
-   *
-   *  @param tp ...
-   *  @return   ...
    */
   private[typechecker] def isFullyDefined(tp: Type): Boolean = tp match {
-    case WildcardType | BoundedWildcardType(_) | NoType =>
-      false
-    case NoPrefix | ThisType(_) | ConstantType(_) =>
-      true
-    case TypeRef(pre, sym, args) =>
-      isFullyDefined(pre) && (args forall isFullyDefined)
-    case SingleType(pre, sym) =>
-      isFullyDefined(pre)
-    case RefinedType(ts, decls) =>
-      ts forall isFullyDefined
-    case TypeVar(origin, constr) if (constr.inst == NoType) =>
-      false
-    case _ =>
-      try {
-        instantiate(tp); true
-      } catch {
-        case ex: NoInstance => false
-      }
+    case WildcardType | BoundedWildcardType(_) | NoType => false
+    case NoPrefix | ThisType(_) | ConstantType(_)       => true
+    case TypeRef(pre, _, args)                          => isFullyDefined(pre) && (args forall isFullyDefined)
+    case SingleType(pre, _)                             => isFullyDefined(pre)
+    case RefinedType(ts, _)                             => ts forall isFullyDefined
+    case TypeVar(_, constr) if constr.inst == NoType    => false
+    case _                                              => falseIfNoInstance({ instantiate(tp) ; true })
   }
 
   /** Solve constraint collected in types `tvars`.
@@ -225,32 +134,17 @@ trait Infer extends Checkable {
    *  @param upper      When `true` search for max solution else min.
    *  @throws NoInstance
    */
-  def solvedTypes(tvars: List[TypeVar], tparams: List[Symbol],
-                  variances: List[Int], upper: Boolean, depth: Int): List[Type] = {
-
-    if (tvars.nonEmpty)
-      printInference("[solve types] solving for " + tparams.map(_.name).mkString(", ") + " in " + tvars.mkString(", "))
-
-    if (!solve(tvars, tparams, variances, upper, depth)) {
-      // no panic, it's good enough to just guess a solution, we'll find out
-      // later whether it works.  *ZAP* @M danger, Will Robinson! this means
-      // that you should never trust inferred type arguments!
-      //
-      // Need to call checkBounds on the args/typars or type1 on the tree
-      // for the expression that results from type inference see e.g., #2421:
-      // implicit search had been ignoring this caveat
-      // throw new DeferredNoInstance(() =>
-      //   "no solution exists for constraints"+(tvars map boundsString))
+  def solvedTypes(tvars: List[TypeVar], tparams: List[Symbol], variances: List[Variance], upper: Boolean, depth: Depth): List[Type] = {
+    if (tvars.isEmpty) Nil else {
+      printTyping("solving for " + parentheses((tparams, tvars).zipped map ((p, tv) => s"${p.name}: $tv")))
+      // !!! What should be done with the return value of "solve", which is at present ignored?
+      // The historical commentary says "no panic, it's good enough to just guess a solution,
+      // we'll find out later whether it works", meaning don't issue an error here when types
+      // don't conform to bounds. That means you can never trust the results of implicit search.
+      // For an example where this was not being heeded, SI-2421.
+      solve(tvars, tparams, variances, upper, depth)
+      tvars map instantiate
     }
-    for (tvar <- tvars ; if tvar.constr.inst == tvar) {
-      if (tvar.origin.typeSymbol.info eq ErrorType)
-        // this can happen if during solving a cyclic type parameter
-        // such as T <: T gets completed. See #360
-        tvar.constr.inst = ErrorType
-      else
-        abort(tvar.origin+" at "+tvar.origin.typeSymbol.owner)
-    }
-    tvars map instantiate
   }
 
   def skipImplicit(tp: Type) = tp match {
@@ -265,33 +159,29 @@ trait Infer extends Checkable {
    *  This method seems to be performance critical.
    */
   def normalize(tp: Type): Type = tp match {
-    case mt @ MethodType(params, restpe) if mt.isImplicit =>
-      normalize(restpe)
-    case mt @ MethodType(_, restpe) if !mt.isDependentMethodType =>
-      functionType(mt.paramTypes, normalize(restpe))
-    case NullaryMethodType(restpe) =>
-      normalize(restpe)
-    case ExistentialType(tparams, qtpe) =>
-      newExistentialType(tparams, normalize(qtpe))
-    case tp1 =>
-      tp1 // @MAT aliases already handled by subtyping
+    case PolyType(_, restpe) =>
+      logResult(sm"""|Normalizing PolyType in infer:
+                     |  was: $restpe
+                     |  now""")(normalize(restpe))
+    case mt @ MethodType(_, restpe) if mt.isImplicit             => normalize(restpe)
+    case mt @ MethodType(_, restpe) if !mt.isDependentMethodType => functionType(mt.paramTypes, normalize(restpe))
+    case NullaryMethodType(restpe)                               => normalize(restpe)
+    case ExistentialType(tparams, qtpe)                          => newExistentialType(tparams, normalize(qtpe))
+    case _                                                       => tp // @MAT aliases already handled by subtyping
   }
 
   private lazy val stdErrorClass = rootMirror.RootClass.newErrorClass(tpnme.ERROR)
   private lazy val stdErrorValue = stdErrorClass.newErrorValue(nme.ERROR)
 
   /** The context-dependent inferencer part */
-  class Inferencer(context: Context) extends InferencerContextErrors with InferCheckable {
+  abstract class Inferencer extends InferencerContextErrors with InferCheckable {
+    def context: Context
     import InferErrorGen._
 
     /* -- Error Messages --------------------------------------------------- */
     def setError[T <: Tree](tree: T): T = {
-      debuglog("set error: "+ tree)
-      // this breaks -Ydebug pretty radically
-      // if (settings.debug.value) { // DEBUG
-      //   println("set error: "+tree);
-      //   throw new Error()
-      // }
+      // SI-7388, one can incur a cycle calling sym.toString
+      // (but it'd be nicer if that weren't so)
       def name = {
         val sym = tree.symbol
         val nameStr = try sym.toString catch { case _: CyclicReference => sym.nameString }
@@ -301,7 +191,7 @@ trait Infer extends Checkable {
       def errorValue  = if (context.reportErrors) context.owner.newErrorValue(name) else stdErrorValue
       def errorSym    = if (tree.isType) errorClass else errorValue
 
-      if (tree.hasSymbol)
+      if (tree.hasSymbolField)
         tree setSymbol errorSym
 
       tree setType ErrorType
@@ -311,102 +201,87 @@ trait Infer extends Checkable {
 
     def issue(err: AbsTypeError): Unit = context.issue(err)
 
-    def isPossiblyMissingArgs(found: Type, req: Type) = (
-      false
-      /** However it is that this condition is expected to imply
-       *  "is possibly missing args", it is too weak.  It is
-       *  better to say nothing than to offer misleading guesses.
+    def explainTypes(tp1: Type, tp2: Type) = {
+      if (context.reportErrors)
+        withDisambiguation(List(), tp1, tp2)(global.explainTypes(tp1, tp2))
+    }
 
-         (found.resultApprox ne found)
-      && isWeaklyCompatible(found.resultApprox, req)
-      */
-    )
+    // When filtering sym down to the accessible alternatives leaves us empty handed.
+    private def checkAccessibleError(tree: Tree, sym: Symbol, pre: Type, site: Tree): Tree = {
+      if (settings.debug) {
+        Console.println(context)
+        Console.println(tree)
+        Console.println("" + pre + " " + sym.owner + " " + context.owner + " " + context.outer.enclClass.owner + " " + sym.owner.thisType + (pre =:= sym.owner.thisType))
+      }
+      ErrorUtils.issueTypeError(AccessError(tree, sym, pre, context.enclClass.owner,
+        if (settings.check.isDefault)
+          analyzer.lastAccessCheckDetails
+        else
+          ptBlock("because of an internal error (no accessible symbol)",
+            "sym.ownerChain"                -> sym.ownerChain,
+            "underlyingSymbol(sym)"         -> underlyingSymbol(sym),
+            "pre"                           -> pre,
+            "site"                          -> site,
+            "tree"                          -> tree,
+            "sym.accessBoundary(sym.owner)" -> sym.accessBoundary(sym.owner),
+            "context.owner"                 -> context.owner,
+            "context.outer.enclClass.owner" -> context.outer.enclClass.owner
+          )
+      ))(context)
 
-    def explainTypes(tp1: Type, tp2: Type) =
-      withDisambiguation(List(), tp1, tp2)(global.explainTypes(tp1, tp2))
+      setError(tree)
+    }
 
     /* -- Tests & Checks---------------------------------------------------- */
 
-    /** Check that <code>sym</code> is defined and accessible as a member of
-     *  tree <code>site</code> with type <code>pre</code> in current context.
+    /** Check that `sym` is defined and accessible as a member of
+     *  tree `site` with type `pre` in current context.
+     *  @PP: In case it's not abundantly obvious to anyone who might read
+     *  this, the method does a lot more than "check" these things, as does
+     *  nearly every method in the compiler, so don't act all shocked.
+     *  This particular example "checks" its way to assigning both the
+     *  symbol and type of the incoming tree, in addition to forcing lots
+     *  of symbol infos on its way to transforming java raw types (but
+     *  only of terms - why?)
      *
      * Note: pre is not refchecked -- moreover, refchecking the resulting tree may not refcheck pre,
      *       since pre may not occur in its type (callers should wrap the result in a TypeTreeWithDeferredRefCheck)
      */
-    def checkAccessible(tree: Tree, sym: Symbol, pre: Type, site: Tree): Tree =
-      if (sym.isError) {
+    def checkAccessible(tree: Tree, sym: Symbol, pre: Type, site: Tree): Tree = {
+      def malformed(ex: MalformedType, instance: Type): Type = {
+        val what    = if (ex.msg contains "malformed type") "is malformed" else s"contains a ${ex.msg}"
+        val message = s"\n because its instance type $instance $what"
+        val error   = AccessError(tree, sym, pre, context.enclClass.owner, message)
+        ErrorUtils.issueTypeError(error)(context)
+        ErrorType
+      }
+      def accessible = sym filter (alt => context.isAccessible(alt, pre, site.isInstanceOf[Super])) match {
+        case NoSymbol if sym.isJavaDefined && context.unit.isJava => sym  // don't try to second guess Java; see #4402
+        case sym1                                                 => sym1
+      }
+      // XXX So... what's this for exactly?
+      if (context.unit.exists)
+        context.unit.depends += sym.enclosingTopLevelClass
+
+      if (sym.isError)
         tree setSymbol sym setType ErrorType
-      } else {
-        val topClass = context.owner.enclosingTopLevelClass
-        if (context.unit.exists)
-          context.unit.depends += sym.enclosingTopLevelClass
-
-        var sym1 = sym filter (alt => context.isAccessible(alt, pre, site.isInstanceOf[Super]))
-        // Console.println("check acc " + (sym, sym1) + ":" + (sym.tpe, sym1.tpe) + " from " + pre);//DEBUG
-        if (sym1 == NoSymbol && sym.isJavaDefined && context.unit.isJava) // don't try to second guess Java; see #4402
-          sym1 = sym
-
-        if (sym1 == NoSymbol) {
-          if (settings.debug.value) {
-            Console.println(context)
-            Console.println(tree)
-            Console.println("" + pre + " " + sym.owner + " " + context.owner + " " + context.outer.enclClass.owner + " " + sym.owner.thisType + (pre =:= sym.owner.thisType))
-          }
-          ErrorUtils.issueTypeError(AccessError(tree, sym, pre, context.enclClass.owner,
-            if (settings.check.isDefault)
-              analyzer.lastAccessCheckDetails
-            else
-              ptBlock("because of an internal error (no accessible symbol)",
-                "sym.ownerChain"                -> sym.ownerChain,
-                "underlyingSymbol(sym)"         -> underlyingSymbol(sym),
-                "pre"                           -> pre,
-                "site"                          -> site,
-                "tree"                          -> tree,
-                "sym.accessBoundary(sym.owner)" -> sym.accessBoundary(sym.owner),
-                "context.owner"                 -> context.owner,
-                "context.outer.enclClass.owner" -> context.outer.enclClass.owner
-              )
-          ))(context)
-          setError(tree)
-        }
-        else {
-          if (context.owner.isTermMacro && (sym1 hasFlag LOCKED)) {
-            // we must not let CyclicReference to be thrown from sym1.info
-            // because that would mark sym1 erroneous, which it is not
-            // but if it's a true CyclicReference then macro def will report it
-            // see comments to TypeSigError for an explanation of this special case
-            // [Eugene] is there a better way?
-            val dummy = new TypeCompleter { val tree = EmptyTree; override def complete(sym: Symbol) {} }
-            throw CyclicReference(sym1, dummy)
-          }
-
-          if (sym1.isTerm)
-            sym1.cookJavaRawInfo() // xform java rawtypes into existentials
-
-          val owntype = {
-            try pre.memberType(sym1)
-            catch {
-              case ex: MalformedType =>
-                if (settings.debug.value) ex.printStackTrace
-                val sym2 = underlyingSymbol(sym1)
-                val itype = pre.memberType(sym2)
-                ErrorUtils.issueTypeError(
-                  AccessError(tree, sym, pre, context.enclClass.owner,
-                          "\n because its instance type "+itype+
-                          (if ("malformed type: "+itype.toString==ex.msg) " is malformed"
-                           else " contains a "+ex.msg)))(context)
-                ErrorType
-            }
-          }
-          tree setSymbol sym1 setType {
+      else accessible match {
+        case NoSymbol                                                 => checkAccessibleError(tree, sym, pre, site)
+        case sym if context.owner.isTermMacro && (sym hasFlag LOCKED) => throw CyclicReference(sym, CheckAccessibleMacroCycle)
+        case sym                                                      =>
+          val sym1 = if (sym.isTerm) sym.cookJavaRawInfo() else sym // xform java rawtypes into existentials
+          val owntype = (
+            try pre memberType sym1
+            catch { case ex: MalformedType => malformed(ex, pre memberType underlyingSymbol(sym)) }
+          )
+          tree setSymbol sym1 setType (
             pre match {
               case _: SuperType => owntype map (tp => if (tp eq pre) site.symbol.thisType else tp)
               case _            => owntype
             }
-          }
-        }
+          )
       }
-
+    }
 
     /** "Compatible" means conforming after conversions.
      *  "Raising to a thunk" is not implicit; therefore, for purposes of applicability and
@@ -417,45 +292,38 @@ trait Infer extends Checkable {
      *  since that induces a tie between m(=>A) and m(=>A,B*) [SI-3761]
      */
     private def isCompatible(tp: Type, pt: Type): Boolean = {
-      def isCompatibleByName(tp: Type, pt: Type): Boolean = pt match {
-        case TypeRef(_, ByNameParamClass, List(res)) if !isByNameParamType(tp) => isCompatible(tp, res)
-        case _ => false
-      }
+      def isCompatibleByName(tp: Type, pt: Type): Boolean = (
+           isByNameParamType(pt)
+        && !isByNameParamType(tp)
+        && isCompatible(tp, dropByName(pt))
+      )
       val tp1 = normalize(tp)
-      (tp1 weak_<:< pt) || isCoercible(tp1, pt) || isCompatibleByName(tp, pt)
+
+      (    (tp1 weak_<:< pt)
+        || isCoercible(tp1, pt)
+        || isCompatibleByName(tp, pt)
+      )
     }
-    def isCompatibleArgs(tps: List[Type], pts: List[Type]) =
-      (tps corresponds pts)(isCompatible)
+    def isCompatibleArgs(tps: List[Type], pts: List[Type]) = (tps corresponds pts)(isCompatible)
 
-    def isWeaklyCompatible(tp: Type, pt: Type): Boolean =
-      pt.typeSymbol == UnitClass || // can perform unit coercion
-      isCompatible(tp, pt) ||
-      tp.isInstanceOf[MethodType] && // can perform implicit () instantiation
-      tp.params.isEmpty && isCompatible(tp.resultType, pt)
+    def isWeaklyCompatible(tp: Type, pt: Type): Boolean = {
+      def isCompatibleNoParamsMethod = tp match {
+        case MethodType(Nil, restpe) => isCompatible(restpe, pt)
+        case _                       => false
+      }
+      (    pt.typeSymbol == UnitClass // can perform unit coercion
+        || isCompatible(tp, pt)
+        || isCompatibleNoParamsMethod // can perform implicit () instantiation
+      )
+    }
 
-    /** Like weakly compatible but don't apply any implicit conversions yet.
+    /*  Like weakly compatible but don't apply any implicit conversions yet.
      *  Used when comparing the result type of a method with its prototype.
-     *
-     *  [Martin] I think Infer is also created by Erasure, with the default
-     *  implementation of isCoercible
-     *  [Paulp] (Assuming the above must refer to my comment on isCoercible)
-     *  Nope, I examined every occurrence of Inferencer in trunk.  It
-     *  appears twice as a self-type, once at its definition, and once
-     *  where it is instantiated in Typers.  There are no others.
-     *
-         % ack -A0 -B0 --no-filename '\bInferencer\b' src
-             self: Inferencer =>
-             self: Inferencer =>
-           class Inferencer(context: Context) extends InferencerContextErrors with InferCheckable {
-             val infer = new Inferencer(context0) {
      */
     def isConservativelyCompatible(tp: Type, pt: Type): Boolean =
       context.withImplicitsDisabled(isWeaklyCompatible(tp, pt))
 
-    /** This is overridden in the Typer.infer with some logic, but since
-     *  that's the only place in the compiler an Inferencer is ever created,
-     *  I suggest this should either be abstract or have the implementation.
-     */
+    // Overridden at the point of instantiation, where inferView is visible.
     def isCoercible(tp: Type, pt: Type): Boolean = false
 
     /* -- Type instantiation------------------------------------------------ */
@@ -464,112 +332,99 @@ trait Infer extends Checkable {
      *  by existentially bound variables.
      */
     def makeFullyDefined(tp: Type): Type = {
-      val tparams = new ListBuffer[Symbol]
+      var tparams: List[Symbol] = Nil
       def addTypeParam(bounds: TypeBounds): Type = {
         val tparam = context.owner.newExistential(newTypeName("_"+tparams.size), context.tree.pos.focus) setInfo bounds
-        tparams += tparam
+        tparams ::= tparam
         tparam.tpe
       }
       val tp1 = tp map {
-        case WildcardType =>
-          addTypeParam(TypeBounds.empty)
-        case BoundedWildcardType(bounds) =>
-          addTypeParam(bounds)
-        case t => t
+        case WildcardType                => addTypeParam(TypeBounds.empty)
+        case BoundedWildcardType(bounds) => addTypeParam(bounds)
+        case t                           => t
       }
-      existentialAbstraction(tparams.toList, tp1)
+      if (tp eq tp1) tp
+      else existentialAbstraction(tparams.reverse, tp1)
     }
+    def ensureFullyDefined(tp: Type): Type = if (isFullyDefined(tp)) tp else makeFullyDefined(tp)
 
     /** Return inferred type arguments of polymorphic expression, given
-     *  its type parameters and result type and a prototype <code>pt</code>.
-     *  If no minimal type variables exist that make the
-     *  instantiated type a subtype of <code>pt</code>, return null.
-     *
-     *  @param tparams ...
-     *  @param restpe  ...
-     *  @param pt      ...
-     *  @return        ...
+     *  type vars, its type parameters and result type and a prototype `pt`.
+     *  If the type variables cannot be instantiated such that the type
+     *  conforms to `pt`, return null.
      */
-    private def exprTypeArgs(tparams: List[Symbol], restpe: Type, pt: Type, useWeaklyCompatible: Boolean = false): (List[Type], List[TypeVar]) = {
-      val tvars = tparams map freshVar
-      val instResTp = restpe.instantiateTypeParams(tparams, tvars)
-      if ( if (useWeaklyCompatible) isWeaklyCompatible(instResTp, pt) else isCompatible(instResTp, pt) ) {
-        try {
-          // If the restpe is an implicit method, and the expected type is fully defined
-          // optimize type variables wrt to the implicit formals only; ignore the result type.
-          // See test pos/jesper.scala
-          val varianceType = restpe match {
-            case mt: MethodType if mt.isImplicit && isFullyDefined(pt) =>
-              MethodType(mt.params, AnyClass.tpe)
-            case _ =>
-              restpe
-          }
-          //println("try to solve "+tvars+" "+tparams)
-          (solvedTypes(tvars, tparams, tparams map varianceInType(varianceType),
-                      false, lubDepth(List(restpe, pt))), tvars)
-        } catch {
-          case ex: NoInstance => (null, null)
-        }
-      } else (null, null)
+    private def exprTypeArgs(tvars: List[TypeVar], tparams: List[Symbol], restpe: Type, pt: Type, useWeaklyCompatible: Boolean): List[Type] = {
+      def restpeInst = restpe.instantiateTypeParams(tparams, tvars)
+      def conforms   = if (useWeaklyCompatible) isWeaklyCompatible(restpeInst, pt) else isCompatible(restpeInst, pt)
+      // If the restpe is an implicit method, and the expected type is fully defined
+      // optimize type variables wrt to the implicit formals only; ignore the result type.
+      // See test pos/jesper.scala
+      def variance = restpe match {
+        case mt: MethodType if mt.isImplicit && isFullyDefined(pt) => MethodType(mt.params, AnyTpe)
+        case _                                                     => restpe
+      }
+      def solve() = solvedTypes(tvars, tparams, tparams map varianceInType(variance), upper = false, lubDepth(restpe :: pt :: Nil))
+
+      if (conforms)
+        try solve() catch { case _: NoInstance => null }
+      else
+        null
     }
+    /** Overload which allocates fresh type vars.
+     *  The other one exists because apparently inferExprInstance needs access to the typevars
+     *  after the call, and its wasteful to return a tuple and throw it away almost every time.
+     */
+    private def exprTypeArgs(tparams: List[Symbol], restpe: Type, pt: Type, useWeaklyCompatible: Boolean): List[Type] =
+      exprTypeArgs(tparams map freshVar, tparams, restpe, pt, useWeaklyCompatible)
 
     /** Return inferred proto-type arguments of function, given
     *  its type and value parameters and result type, and a
-    *  prototype <code>pt</code> for the function result.
+    *  prototype `pt` for the function result.
     *  Type arguments need to be either determined precisely by
     *  the prototype, or they are maximized, if they occur only covariantly
     *  in the value parameter list.
     *  If instantiation of a type parameter fails,
     *  take WildcardType for the proto-type argument.
-    *
-    *  @param tparams ...
-    *  @param formals ...
-    *  @param restype ...
-    *  @param pt      ...
-    *  @return        ...
     */
-    def protoTypeArgs(tparams: List[Symbol], formals: List[Type], restpe: Type,
-                      pt: Type): List[Type] = {
-      /** Map type variable to its instance, or, if `variance` is covariant/contravariant,
-       *  to its upper/lower bound */
-      def instantiateToBound(tvar: TypeVar, variance: Int): Type = try {
+    def protoTypeArgs(tparams: List[Symbol], formals: List[Type], restpe: Type, pt: Type): List[Type] = {
+      // Map type variable to its instance, or, if `variance` is variant,
+      // to its upper or lower bound
+      def instantiateToBound(tvar: TypeVar, variance: Variance): Type = {
         lazy val hiBounds = tvar.constr.hiBounds
         lazy val loBounds = tvar.constr.loBounds
-        lazy val upper = glb(hiBounds)
-        lazy val lower = lub(loBounds)
+        lazy val upper    = glb(hiBounds)
+        lazy val lower    = lub(loBounds)
         def setInst(tp: Type): Type = {
           tvar setInst tp
-          assertNonCyclic(tvar)//debug
+          assert(tvar.constr.inst != tvar, tvar.origin)
           instantiate(tvar.constr.inst)
         }
-        //Console.println("instantiate "+tvar+tvar.constr+" variance = "+variance);//DEBUG
-        if (tvar.constr.inst != NoType)
+        if (tvar.constr.instValid)
           instantiate(tvar.constr.inst)
-        else if ((variance & COVARIANT) != 0 && hiBounds.nonEmpty)
-          setInst(upper)
-        else if ((variance & CONTRAVARIANT) != 0 && loBounds.nonEmpty)
+        else if (loBounds.nonEmpty && variance.isContravariant)
           setInst(lower)
-        else if (hiBounds.nonEmpty && loBounds.nonEmpty && upper <:< lower)
+        else if (hiBounds.nonEmpty && (variance.isPositive || loBounds.nonEmpty && upper <:< lower))
           setInst(upper)
         else
           WildcardType
-      } catch {
-        case ex: NoInstance => WildcardType
       }
+
       val tvars = tparams map freshVar
       if (isConservativelyCompatible(restpe.instantiateTypeParams(tparams, tvars), pt))
         map2(tparams, tvars)((tparam, tvar) =>
-          instantiateToBound(tvar, varianceInTypes(formals)(tparam)))
+          try instantiateToBound(tvar, varianceInTypes(formals)(tparam))
+          catch { case ex: NoInstance => WildcardType }
+        )
       else
-        tvars map (tvar => WildcardType)
+        tvars map (_ => WildcardType)
     }
 
     /** [Martin] Can someone comment this please? I have no idea what it's for
      *  and the code is not exactly readable.
      */
     object AdjustedTypeArgs {
-      val Result = scala.collection.mutable.LinkedHashMap
-      type Result = scala.collection.mutable.LinkedHashMap[Symbol, Option[Type]]
+      val Result  = mutable.LinkedHashMap
+      type Result = mutable.LinkedHashMap[Symbol, Option[Type]]
 
       def unapply(m: Result): Some[(List[Symbol], List[Type])] = Some(toLists(
         (m collect {case (p, Some(a)) => (p, a)}).unzip  ))
@@ -586,7 +441,7 @@ trait Infer extends Checkable {
         def unapply(m: Result): Some[(List[Symbol], List[Type], List[Type], List[Symbol])] = Some(toLists{
           val (ok, nok) = m.map{case (p, a) => (p, a.getOrElse(null))}.partition(_._2 ne null)
           val (okArgs, okTparams) = ok.unzip
-          (okArgs, okTparams, m.values.map(_.getOrElse(NothingClass.tpe)), nok.keys)
+          (okArgs, okTparams, m.values.map(_.getOrElse(NothingTpe)), nok.keys)
         })
       }
 
@@ -608,7 +463,7 @@ trait Infer extends Checkable {
      *
      * Rewrite for repeated param types:  Map T* entries to Seq[T].
      *  @return map from tparams to inferred arg, if inference was successful, tparams that map to None are considered left undetermined
-     *    type parameters that are inferred as `scala.Nothing` and that are not covariant in <code>restpe</code> are taken to be undetermined
+     *    type parameters that are inferred as `scala.Nothing` and that are not covariant in `restpe` are taken to be undetermined
      */
     def adjustTypeArgs(tparams: List[Symbol], tvars: List[TypeVar], targs: List[Type], restpe: Type = WildcardType): AdjustedTypeArgs.Result  = {
       val buf = AdjustedTypeArgs.Result.newBuilder[Symbol, Option[Type]]
@@ -616,33 +471,32 @@ trait Infer extends Checkable {
       foreach3(tparams, tvars, targs) { (tparam, tvar, targ) =>
         val retract = (
               targ.typeSymbol == NothingClass                                         // only retract Nothings
-          && (restpe.isWildcard || (varianceInType(restpe)(tparam) & COVARIANT) == 0) // don't retract covariant occurrences
+          && (restpe.isWildcard || !varianceInType(restpe)(tparam).isPositive)  // don't retract covariant occurrences
         )
 
-        // checks opt.virtPatmat directly so one need not run under -Xexperimental to use virtpatmat
         buf += ((tparam,
           if (retract) None
           else Some(
             if (targ.typeSymbol == RepeatedParamClass)     targ.baseType(SeqClass)
             else if (targ.typeSymbol == JavaRepeatedParamClass) targ.baseType(ArrayClass)
             // this infers Foo.type instead of "object Foo" (see also widenIfNecessary)
-            else if (targ.typeSymbol.isModuleClass || ((opt.experimental || opt.virtPatmat) && tvar.constr.avoidWiden)) targ
+            else if (targ.typeSymbol.isModuleClass || tvar.constr.avoidWiden) targ
             else targ.widen
           )
         ))
       }
-      buf.result
+      buf.result()
     }
 
     /** Return inferred type arguments, given type parameters, formal parameters,
     *  argument types, result type and expected result type.
-    *  If this is not possible, throw a <code>NoInstance</code> exception.
-    *  Undetermined type arguments are represented by `definitions.NothingClass.tpe`.
+    *  If this is not possible, throw a `NoInstance` exception.
+    *  Undetermined type arguments are represented by `definitions.NothingTpe`.
     *  No check that inferred parameters conform to their bounds is made here.
     *
     *  @param   tparams         the type parameters of the method
     *  @param   formals         the value parameter types of the method
-    *  @param   restp           the result type of the method
+    *  @param   restpe          the result type of the method
     *  @param   argtpes         the argument types of the application
     *  @param   pt              the expected return type of the application
     *  @return  @see adjustTypeArgs
@@ -689,35 +543,79 @@ trait Infer extends Checkable {
             "argument expression's type is not compatible with formal parameter type" + foundReqMsg(tp1, pt1))
         }
       }
-      val targs = solvedTypes(
-        tvars, tparams, tparams map varianceInTypes(formals),
-        false, lubDepth(formals) max lubDepth(argtpes)
-      )
+      val targs = solvedTypes(tvars, tparams, tparams map varianceInTypes(formals), upper = false, lubDepth(formals) max lubDepth(argtpes))
+      // Can warn about inferring Any/AnyVal as long as they don't appear
+      // explicitly anywhere amongst the formal, argument, result, or expected type.
+      def canWarnAboutAny = !(pt :: restpe :: formals ::: argtpes exists (t => (t contains AnyClass) || (t contains AnyValClass)))
+      def argumentPosition(idx: Int): Position = context.tree match {
+        case x: ValOrDefDef => x.rhs match {
+          case Apply(fn, args) if idx < args.size => args(idx).pos
+          case _                                  => context.tree.pos
+        }
+        case _ => context.tree.pos
+      }
+      if (settings.warnInferAny.value && context.reportErrors && canWarnAboutAny) {
+        foreachWithIndex(targs) ((targ, idx) =>
+          targ.typeSymbol match {
+            case sym @ (AnyClass | AnyValClass) =>
+              context.unit.warning(argumentPosition(idx), s"a type was inferred to be `${sym.name}`; this may indicate a programming error.")
+            case _ =>
+          }
+        )
+      }
       adjustTypeArgs(tparams, tvars, targs, restpe)
     }
 
+    /** One must step carefully when assessing applicability due to
+     *  complications from varargs, tuple-conversion, named arguments.
+     *  This method is used to filter out inapplicable methods,
+     *  its behavior slightly configurable based on what stage of
+     *  overloading resolution we're at.
+     *
+     *  This method has boolean parameters, which is usually suboptimal
+     *  but I didn't work out a better way.  They don't have defaults,
+     *  and the method's scope is limited.
+     */
+    private[typechecker] def isApplicableBasedOnArity(tpe: Type, argsCount: Int, varargsStar: Boolean, tuplingAllowed: Boolean): Boolean = followApply(tpe) match {
+      case OverloadedType(pre, alts) =>
+        // followApply may return an OverloadedType (tpe is a value type with multiple `apply` methods)
+        alts exists (alt => isApplicableBasedOnArity(pre memberType alt, argsCount, varargsStar, tuplingAllowed))
+      case _ =>
+        val paramsCount   = tpe.params.length
+        // simpleMatch implies we're not using defaults
+        val simpleMatch   = paramsCount == argsCount
+        val varargsTarget = isVarArgsList(tpe.params)
+
+        // varargsMatch implies we're not using defaults, as varargs and defaults are mutually exclusive
+        def varargsMatch  = varargsTarget && (paramsCount - 1) <= argsCount
+        // another reason why auto-tupling is a bad idea: it can hide the use of defaults, so must rule those out explicitly
+        def tuplingMatch  = tuplingAllowed && eligibleForTupleConversion(paramsCount, argsCount, varargsTarget)
+        // varargs and defaults are mutually exclusive, so not using defaults if `varargsTarget`
+        // we're not using defaults if there are (at least as many) arguments as parameters (not using exact match to allow for tupling)
+        def notUsingDefaults = varargsTarget || paramsCount <= argsCount
+
+        // A varargs star call, e.g. (x, y:_*) can only match a varargs method
+        // with the same number of parameters.  See SI-5859 for an example of what
+        // would fail were this not enforced before we arrived at isApplicable.
+        if (varargsStar)
+          varargsTarget && simpleMatch
+        else
+          simpleMatch || varargsMatch || (tuplingMatch && notUsingDefaults)
+    }
+
     private[typechecker] def followApply(tp: Type): Type = tp match {
+      case _ if tp.isError => tp // SI-8228, `ErrorType nonPrivateMember nme.apply` returns an member with an erroneous type!
       case NullaryMethodType(restp) =>
         val restp1 = followApply(restp)
         if (restp1 eq restp) tp else restp1
       case _ =>
-        val appmeth = {
-          //OPT cut down on #closures by special casing non-overloaded case
-          // was: tp.nonPrivateMember(nme.apply) filter (_.isPublic)
-          val result = tp.nonPrivateMember(nme.apply)
-          if ((result eq NoSymbol) || !result.isOverloaded && result.isPublic) result
-          else result filter (_.isPublic)
+        //OPT cut down on #closures by special casing non-overloaded case
+        // was: tp.nonPrivateMember(nme.apply) filter (_.isPublic)
+        tp nonPrivateMember nme.apply match {
+          case NoSymbol                                 => tp
+          case sym if !sym.isOverloaded && sym.isPublic => OverloadedType(tp, sym.alternatives)
+          case sym                                      => OverloadedType(tp, sym.filter(_.isPublic).alternatives)
         }
-        if (appmeth == NoSymbol) tp
-        else OverloadedType(tp, appmeth.alternatives)
-    }
-
-    def hasExactlyNumParams(tp: Type, n: Int): Boolean = tp match {
-      case OverloadedType(pre, alts) =>
-        alts exists (alt => hasExactlyNumParams(pre.memberType(alt), n))
-      case _ =>
-        val len = tp.params.length
-        len == n || isVarArgsList(tp.params) && len <= n + 1
     }
 
     /**
@@ -731,7 +629,7 @@ trait Infer extends Checkable {
      *    to the corresponding position in params
      *  - namesOK is false when there's an invalid use of named arguments
      */
-    private def checkNames(argtpes: List[Type], params: List[Symbol]) = {
+    private def checkNames(argtpes: List[Type], params: List[Symbol]): (List[Type], Array[Int], Boolean) = {
       val argPos = Array.fill(argtpes.length)(-1)
       var positionalAllowed, namesOK = true
       var index = 0
@@ -743,7 +641,7 @@ trait Infer extends Checkable {
           if (pos == -1) {
             if (positionalAllowed) { // treat assignment as positional argument
               argPos(index) = index
-              res = UnitClass.tpe
+              res = UnitTpe // TODO: this is a bit optimistic, the name may not refer to a mutable variable...
             } else                   // unknown parameter name
               namesOK = false
           } else if (argPos.contains(pos)) { // parameter specified twice
@@ -765,207 +663,190 @@ trait Infer extends Checkable {
       (argtpes1, argPos, namesOK)
     }
 
-    /** don't do a () to (()) conversion for methods whose second parameter
-     * is a varargs. This is a fairly kludgey way to address #3224.
-     * We'll probably find a better way to do this by identifying
-     * tupled and n-ary methods, but thiws is something for a future major revision.
+    /** True if the given parameter list can accept a tupled argument list,
+     *  and the argument list can be tupled (based on its length.)
      */
-    def isUnitForVarArgs(args: List[AnyRef], params: List[Symbol]): Boolean =
-      args.isEmpty && hasLength(params, 2) && isVarArgsList(params)
+    def eligibleForTupleConversion(paramsCount: Int, argsCount: Int, varargsTarget: Boolean): Boolean = {
+      def canSendTuple = argsCount match {
+        case 0 => !varargsTarget        // avoid () to (()) conversion - SI-3224
+        case 1 => false                 // can't tuple a single argument
+        case n => n <= MaxTupleArity    // <= 22 arguments
+      }
+      def canReceiveTuple = paramsCount match {
+        case 1 => true
+        case 2 => varargsTarget
+        case _ => false
+      }
+      canSendTuple && canReceiveTuple
+    }
+    def eligibleForTupleConversion(formals: List[Type], argsCount: Int): Boolean = formals match {
+      case p :: Nil                                     => eligibleForTupleConversion(1, argsCount, varargsTarget = isScalaRepeatedParamType(p))
+      case _ :: p :: Nil if isScalaRepeatedParamType(p) => eligibleForTupleConversion(2, argsCount, varargsTarget = true)
+      case _                                            => false
+    }
 
-    /** Is there an instantiation of free type variables <code>undetparams</code>
-     *  such that function type <code>ftpe</code> is applicable to
-     *  <code>argtpes</code> and its result conform to <code>pt</code>?
+    /** The type of an argument list after being coerced to a tuple.
+     *  @pre: the argument list is eligible for tuple conversion.
+     */
+    private def typeAfterTupleConversion(argtpes: List[Type]): Type = (
+      if (argtpes.isEmpty) UnitTpe                 // aka "Tuple0"
+      else tupleType(argtpes map {
+        case NamedType(name, tp) => UnitTpe  // not a named arg - only assignments here
+        case RepeatedType(tp)    => tp       // but probably shouldn't be tupling a call containing :_*
+        case tp                  => tp
+      })
+    )
+
+    /** If the argument list needs to be tupled for the parameter list,
+     *  a list containing the type of the tuple.  Otherwise, the original
+     *  argument list.
+     */
+    def tupleIfNecessary(formals: List[Type], argtpes: List[Type]): List[Type] = {
+      if (eligibleForTupleConversion(formals, argtpes.size))
+        typeAfterTupleConversion(argtpes) :: Nil
+      else
+        argtpes
+    }
+
+    private def isApplicableToMethod(undetparams: List[Symbol], mt: MethodType, argtpes0: List[Type], pt: Type): Boolean = {
+      val formals          = formalTypes(mt.paramTypes, argtpes0.length, removeByName = false)
+      def missingArgs      = missingParams[Type](argtpes0, mt.params, x => Some(x) collect { case NamedType(n, _) => n })
+      def argsTupled       = tupleIfNecessary(mt.paramTypes, argtpes0)
+      def argsPlusDefaults = missingArgs match {
+        case (args, _) if args forall (_.hasDefault) => argtpes0 ::: makeNamedTypes(args)
+        case _                                       => argsTupled
+      }
+      // If args eq the incoming arg types, fail; otherwise recurse with these args.
+      def tryWithArgs(args: List[Type]) = (
+           (args ne argtpes0)
+        && isApplicable(undetparams, mt, args, pt)
+      )
+      def tryInstantiating(args: List[Type]) = falseIfNoInstance {
+        val restpe = mt resultType args
+        val AdjustedTypeArgs.Undets(okparams, okargs, leftUndet) = methTypeArgs(undetparams, formals, restpe, args, pt)
+        val restpeInst = restpe.instantiateTypeParams(okparams, okargs)
+        // #2665: must use weak conformance, not regular one (follow the monomorphic case above)
+        exprTypeArgs(leftUndet, restpeInst, pt, useWeaklyCompatible = true) match {
+          case null => false
+          case _    => isWithinBounds(NoPrefix, NoSymbol, okparams, okargs)
+        }
+      }
+      def typesCompatible(args: List[Type]) = undetparams match {
+        case Nil => isCompatibleArgs(args, formals) && isWeaklyCompatible(mt resultType args, pt)
+        case _   => tryInstantiating(args)
+      }
+
+      // when using named application, the vararg param has to be specified exactly once
+      def reorderedTypesCompatible = checkNames(argtpes0, mt.params) match {
+        case (_, _, false)                                                                => false // names are not ok
+        case (_, pos, _) if !allArgsArePositional(pos) && !sameLength(formals, mt.params) => false // different length lists and all args not positional
+        case (args, pos, _)                                                               => typesCompatible(reorderArgs(args, pos))
+      }
+      compareLengths(argtpes0, formals) match {
+        case 0 if containsNamedType(argtpes0) => reorderedTypesCompatible      // right number of args, wrong order
+        case 0                                => typesCompatible(argtpes0)     // fast track if no named arguments are used
+        case x if x > 0                       => tryWithArgs(argsTupled)       // too many args, try tupling
+        case _                                => tryWithArgs(argsPlusDefaults) // too few args, try adding defaults or tupling
+      }
+    }
+
+    /** Is there an instantiation of free type variables `undetparams` such that
+     *  function type `ftpe` is applicable to `argtpes0` and its result conform to `pt`?
      *
-     *  @param undetparams ...
      *  @param ftpe        the type of the function (often a MethodType)
-     *  @param argtpes     the argument types; a NamedType(name, tp) for named
+     *  @param argtpes0    the argument types; a NamedType(name, tp) for named
      *    arguments. For each NamedType, if `name` does not exist in `ftpe`, that
      *    type is set to `Unit`, i.e. the corresponding argument is treated as
      *    an assignment expression (@see checkNames).
-     *  @param pt          ...
-     *  @return            ...
      */
-    private def isApplicable(undetparams: List[Symbol], ftpe: Type,
-                             argtpes0: List[Type], pt: Type): Boolean =
+    private def isApplicable(undetparams: List[Symbol], ftpe: Type, argtpes0: List[Type], pt: Type): Boolean = (
       ftpe match {
-        case OverloadedType(pre, alts) =>
-          alts exists (alt => isApplicable(undetparams, pre.memberType(alt), argtpes0, pt))
-        case ExistentialType(tparams, qtpe) =>
-          isApplicable(undetparams, qtpe, argtpes0, pt)
-        case mt @ MethodType(params, _) =>
-          val formals = formalTypes(mt.paramTypes, argtpes0.length, removeByName = false)
-
-          def tryTupleApply: Boolean = {
-            // if 1 formal, 1 argtpe (a tuple), otherwise unmodified argtpes0
-            val tupleArgTpes = actualTypes(argtpes0 map {
-                // no assignment is treated as named argument here
-              case NamedType(name, tp) => UnitClass.tpe
-              case tp => tp
-              }, formals.length)
-
-            !sameLength(argtpes0, tupleArgTpes) &&
-            !isUnitForVarArgs(argtpes0, params) &&
-            isApplicable(undetparams, ftpe, tupleArgTpes, pt)
-          }
-          def typesCompatible(argtpes: List[Type]) = {
-            val restpe = ftpe.resultType(argtpes)
-            if (undetparams.isEmpty) {
-              isCompatibleArgs(argtpes, formals) && isWeaklyCompatible(restpe, pt)
-            } else {
-              try {
-                val AdjustedTypeArgs.Undets(okparams, okargs, leftUndet) = methTypeArgs(undetparams, formals, restpe, argtpes, pt)
-                // #2665: must use weak conformance, not regular one (follow the monomorphic case above)
-                (exprTypeArgs(leftUndet, restpe.instantiateTypeParams(okparams, okargs), pt, useWeaklyCompatible = true)._1 ne null) &&
-                isWithinBounds(NoPrefix, NoSymbol, okparams, okargs)
-              } catch {
-                case ex: NoInstance => false
-              }
-            }
-          }
-
-          // very similar logic to doTypedApply in typechecker
-          val lencmp = compareLengths(argtpes0, formals)
-          if (lencmp > 0) tryTupleApply
-          else if (lencmp == 0) {
-            if (!argtpes0.exists(_.isInstanceOf[NamedType])) {
-              // fast track if no named arguments are used
-              typesCompatible(argtpes0)
-            }
-            else {
-              // named arguments are used
-              val (argtpes1, argPos, namesOK) = checkNames(argtpes0, params)
-              // when using named application, the vararg param has to be specified exactly once
-              ( namesOK && (isIdentity(argPos) || sameLength(formals, params)) &&
-              // nb. arguments and names are OK, check if types are compatible
-                typesCompatible(reorderArgs(argtpes1, argPos))
-              )
-            }
-          }
-          else {
-            // not enough arguments, check if applicable using defaults
-            val missing = missingParams[Type](argtpes0, params, {
-              case NamedType(name, _) => Some(name)
-              case _ => None
-            })._1
-            if (missing forall (_.hasDefault)) {
-              // add defaults as named arguments
-              val argtpes1 = argtpes0 ::: (missing map (p => NamedType(p.name, p.tpe)))
-              isApplicable(undetparams, ftpe, argtpes1, pt)
-            }
-            else tryTupleApply
-          }
-
-        case NullaryMethodType(restpe) => // strip nullary method type, which used to be done by the polytype case below
-          isApplicable(undetparams, restpe, argtpes0, pt)
-        case PolyType(tparams, restpe) =>
-          createFromClonedSymbols(tparams, restpe)((tps1, restpe1) => isApplicable(tps1 ::: undetparams, restpe1, argtpes0, pt))
-        case ErrorType =>
-          true
-        case _ =>
-          false
+        case OverloadedType(pre, alts) => alts exists (alt => isApplicable(undetparams, pre memberType alt, argtpes0, pt))
+        case ExistentialType(_, qtpe)  => isApplicable(undetparams, qtpe, argtpes0, pt)
+        case mt @ MethodType(_, _)     => isApplicableToMethod(undetparams, mt, argtpes0, pt)
+        case NullaryMethodType(restpe) => isApplicable(undetparams, restpe, argtpes0, pt)
+        case PolyType(tparams, restpe) => createFromClonedSymbols(tparams, restpe)((tps1, res1) => isApplicable(tps1 ::: undetparams, res1, argtpes0, pt))
+        case ErrorType                 => true
+        case _                         => false
       }
+    )
 
     /**
-     * Todo: Try to make isApplicable always safe (i.e. not cause TypeErrors).
-     * The chance of TypeErrors should be reduced through context errors
+     * Are arguments of the given types applicable to `ftpe`? Type argument inference
+     * is tried twice: firstly with the given expected type, and secondly with `WildcardType`.
      */
-    private[typechecker] def isApplicableSafe(undetparams: List[Symbol], ftpe: Type,
-                                              argtpes0: List[Type], pt: Type): Boolean = {
-      val silentContext = context.makeSilent(false)
-      val typer0 = newTyper(silentContext)
-      val res1 = typer0.infer.isApplicable(undetparams, ftpe, argtpes0, pt)
-      if (pt != WildcardType && silentContext.hasErrors) {
-        silentContext.flushBuffer()
-        val res2 = typer0.infer.isApplicable(undetparams, ftpe, argtpes0, WildcardType)
-        if (silentContext.hasErrors) false else res2
-      } else res1
+    // Todo: Try to make isApplicable always safe (i.e. not cause TypeErrors).
+    // The chance of TypeErrors should be reduced through context errors
+    private[typechecker] def isApplicableSafe(undetparams: List[Symbol], ftpe: Type, argtpes0: List[Type], pt: Type): Boolean = {
+      def applicableExpectingPt(pt: Type): Boolean = {
+        val silent = context.makeSilent(reportAmbiguousErrors = false)
+        val result = newTyper(silent).infer.isApplicable(undetparams, ftpe, argtpes0, pt)
+        if (silent.hasErrors && !pt.isWildcard)
+          applicableExpectingPt(WildcardType) // second try
+        else
+          result
+      }
+      applicableExpectingPt(pt)
     }
 
-    /** Is type <code>ftpe1</code> strictly more specific than type <code>ftpe2</code>
+    /** Is type `ftpe1` strictly more specific than type `ftpe2`
      *  when both are alternatives in an overloaded function?
      *  @see SLS (sec:overloading-resolution)
-     *
-     *  @param ftpe1 ...
-     *  @param ftpe2 ...
-     *  @return      ...
      */
-    def isAsSpecific(ftpe1: Type, ftpe2: Type): Boolean = ftpe1 match {
-      case OverloadedType(pre, alts) =>
-        alts exists (alt => isAsSpecific(pre.memberType(alt), ftpe2))
-      case et: ExistentialType =>
-        isAsSpecific(ftpe1.skolemizeExistential, ftpe2)
-        //et.withTypeVars(isAsSpecific(_, ftpe2))
-      case NullaryMethodType(res) =>
-        isAsSpecific(res, ftpe2)
-      case mt: MethodType if mt.isImplicit =>
-        isAsSpecific(ftpe1.resultType, ftpe2)
-      case mt @ MethodType(params, _) if params.nonEmpty =>
-        var argtpes = mt.paramTypes
-        if (isVarArgsList(params) && isVarArgsList(ftpe2.params))
-          argtpes = argtpes map (argtpe =>
-            if (isRepeatedParamType(argtpe)) argtpe.typeArgs.head else argtpe)
-        isApplicable(List(), ftpe2, argtpes, WildcardType)
-      case PolyType(tparams, NullaryMethodType(res)) =>
-        isAsSpecific(PolyType(tparams, res), ftpe2)
-      case PolyType(tparams, mt: MethodType) if mt.isImplicit =>
-        isAsSpecific(PolyType(tparams, mt.resultType), ftpe2)
-      case PolyType(_, (mt @ MethodType(params, _))) if params.nonEmpty =>
-        isApplicable(List(), ftpe2, mt.paramTypes, WildcardType)
-      // case NullaryMethodType(res) =>
-      //   isAsSpecific(res, ftpe2)
-      case ErrorType =>
-        true
-      case _ =>
-        ftpe2 match {
-          case OverloadedType(pre, alts) =>
-            alts forall (alt => isAsSpecific(ftpe1, pre.memberType(alt)))
-          case et: ExistentialType =>
-            et.withTypeVars(isAsSpecific(ftpe1, _))
-          case mt: MethodType =>
-            !mt.isImplicit || isAsSpecific(ftpe1, mt.resultType)
-          case NullaryMethodType(res) =>
-            isAsSpecific(ftpe1, res)
-          case PolyType(tparams, NullaryMethodType(res)) =>
-            isAsSpecific(ftpe1, PolyType(tparams, res))
-          case PolyType(tparams, mt: MethodType) =>
-            !mt.isImplicit || isAsSpecific(ftpe1, PolyType(tparams, mt.resultType))
-          case _ =>
-            isAsSpecificValueType(ftpe1, ftpe2, List(), List())
+    def isAsSpecific(ftpe1: Type, ftpe2: Type): Boolean = {
+      def checkIsApplicable(argtpes: List[Type]) = isApplicable(Nil, ftpe2, argtpes, WildcardType)
+      def bothAreVarargs                         = isVarArgsList(ftpe1.params) && isVarArgsList(ftpe2.params)
+      def onRight = ftpe2 match {
+        case OverloadedType(pre, alts)                     => alts forall (alt => isAsSpecific(ftpe1, pre memberType alt))
+        case et: ExistentialType                           => et.withTypeVars(isAsSpecific(ftpe1, _))
+        case mt @ MethodType(_, restpe)                    => !mt.isImplicit || isAsSpecific(ftpe1, restpe)
+        case NullaryMethodType(res)                        => isAsSpecific(ftpe1, res)
+        case PolyType(tparams, NullaryMethodType(restpe))  => isAsSpecific(ftpe1, PolyType(tparams, restpe))
+        case PolyType(tparams, mt @ MethodType(_, restpe)) => !mt.isImplicit || isAsSpecific(ftpe1, PolyType(tparams, restpe))
+        case _                                             => isAsSpecificValueType(ftpe1, ftpe2, Nil, Nil)
+      }
+      ftpe1 match {
+        case OverloadedType(pre, alts)                                      => alts exists (alt => isAsSpecific(pre memberType alt, ftpe2))
+        case et: ExistentialType                                            => isAsSpecific(et.skolemizeExistential, ftpe2)
+        case NullaryMethodType(restpe)                                      => isAsSpecific(restpe, ftpe2)
+        case mt @ MethodType(_, restpe) if mt.isImplicit                    => isAsSpecific(restpe, ftpe2)
+        case mt @ MethodType(_, _) if bothAreVarargs                        => checkIsApplicable(mt.paramTypes mapConserve repeatedToSingle)
+        case mt @ MethodType(params, _) if params.nonEmpty                  => checkIsApplicable(mt.paramTypes)
+        case PolyType(tparams, NullaryMethodType(restpe))                   => isAsSpecific(PolyType(tparams, restpe), ftpe2)
+        case PolyType(tparams, mt @ MethodType(_, restpe)) if mt.isImplicit => isAsSpecific(PolyType(tparams, restpe), ftpe2)
+        case PolyType(_, mt @ MethodType(params, _)) if params.nonEmpty     => checkIsApplicable(mt.paramTypes)
+        case ErrorType                                                      => true
+        case _                                                              => onRight
+      }
+    }
+    private def isAsSpecificValueType(tpe1: Type, tpe2: Type, undef1: List[Symbol], undef2: List[Symbol]): Boolean = tpe1 match {
+      case PolyType(tparams1, rtpe1) =>
+        isAsSpecificValueType(rtpe1, tpe2, undef1 ::: tparams1, undef2)
+      case _                         =>
+        tpe2 match {
+          case PolyType(tparams2, rtpe2) => isAsSpecificValueType(tpe1, rtpe2, undef1, undef2 ::: tparams2)
+          case _                         => existentialAbstraction(undef1, tpe1) <:< existentialAbstraction(undef2, tpe2)
         }
     }
-    private def isAsSpecificValueType(tpe1: Type, tpe2: Type, undef1: List[Symbol], undef2: List[Symbol]): Boolean = (tpe1, tpe2) match {
-      case (PolyType(tparams1, rtpe1), _) =>
-        isAsSpecificValueType(rtpe1, tpe2, undef1 ::: tparams1, undef2)
-      case (_, PolyType(tparams2, rtpe2)) =>
-        isAsSpecificValueType(tpe1, rtpe2, undef1, undef2 ::: tparams2)
-      case _ =>
-        existentialAbstraction(undef1, tpe1) <:< existentialAbstraction(undef2, tpe2)
-    }
 
-
-/*
-    def isStrictlyMoreSpecific(ftpe1: Type, ftpe2: Type): Boolean =
-      ftpe1.isError || isAsSpecific(ftpe1, ftpe2) &&
-      (!isAsSpecific(ftpe2, ftpe1) ||
-       !ftpe1.isInstanceOf[OverloadedType] && ftpe2.isInstanceOf[OverloadedType] ||
-       phase.erasedTypes && covariantReturnOverride(ftpe1, ftpe2))
-*/
     /** Is sym1 (or its companion class in case it is a module) a subclass of
      *  sym2 (or its companion class in case it is a module)?
      */
     def isProperSubClassOrObject(sym1: Symbol, sym2: Symbol): Boolean = (
-      (sym1 != sym2) && (sym1 != NoSymbol) && (
-           (sym1 isSubClass sym2)
-        || (sym1.isModuleClass && isProperSubClassOrObject(sym1.linkedClassOfClass, sym2))
-        || (sym2.isModuleClass && isProperSubClassOrObject(sym1, sym2.linkedClassOfClass))
-      )
+         (sym1 ne sym2)
+      && (sym1 ne NoSymbol)
+      && (    (sym1 isSubClass sym2)
+           || (sym1.isModuleClass && isProperSubClassOrObject(sym1.linkedClassOfClass, sym2))
+           || (sym2.isModuleClass && isProperSubClassOrObject(sym1, sym2.linkedClassOfClass))
+         )
     )
 
     /** is symbol `sym1` defined in a proper subclass of symbol `sym2`?
      */
-    def isInProperSubClassOrObject(sym1: Symbol, sym2: Symbol) =
-      sym2 == NoSymbol || isProperSubClassOrObject(sym1.owner, sym2.owner)
+    def isInProperSubClassOrObject(sym1: Symbol, sym2: Symbol) = (
+         (sym2 eq NoSymbol)
+      || isProperSubClassOrObject(sym1.safeOwner, sym2.owner)
+    )
 
     def isStrictlyMoreSpecific(ftpe1: Type, ftpe2: Type, sym1: Symbol, sym2: Symbol): Boolean = {
       // ftpe1 / ftpe2 are OverloadedTypes (possibly with one single alternative) if they
@@ -978,92 +859,36 @@ trait Infer extends Checkable {
                                  (!phase.erasedTypes || covariantReturnOverride(ftpe1, ftpe2))) 1 else 0)
         val subClassCount = (if (isInProperSubClassOrObject(sym1, sym2)) 1 else 0) -
                             (if (isInProperSubClassOrObject(sym2, sym1)) 1 else 0)
-//        println("is more specific? "+sym1+":"+ftpe1+sym1.locationString+"/"+sym2+":"+ftpe2+sym2.locationString+":"+
-//                specificCount+"/"+subClassCount)
         specificCount + subClassCount > 0
       }
     }
-/*
-      ftpe1.isError || {
-        if (isAsSpecific(ftpe1, ftpe2))
-          (!isAsSpecific(ftpe2, ftpe1) ||
-           isProperSubClassOrObject(sym1.owner, sym2.owner) ||
-           !ftpe1.isInstanceOf[OverloadedType] && ftpe2.isInstanceOf[OverloadedType] ||
-           phase.erasedTypes && covariantReturnOverride(ftpe1, ftpe2))
-        else
-          !isAsSpecific(ftpe2, ftpe1) &&
-          isProperSubClassOrObject(sym1.owner, sym2.owner)
-      }
-*/
-    private def covariantReturnOverride(ftpe1: Type, ftpe2: Type): Boolean = (ftpe1, ftpe2) match {
-      case (MethodType(_, rtpe1), MethodType(_, rtpe2)) =>
-        rtpe1 <:< rtpe2 || rtpe2.typeSymbol == ObjectClass
-      case _ =>
-        false
-    }
-/*
-    /** Is type `tpe1` a strictly better expression alternative than type `tpe2`?
-     */
-    def isStrictlyBetterExpr(tpe1: Type, tpe2: Type) = {
-      isMethod(tpe2) && !isMethod(tpe1) ||
-      isNullary(tpe1) && !isNullary(tpe2) ||
-      isStrictlyBetter(tpe1, tpe2)
-    }
 
-    /** Is type `tpe1` a strictly better alternative than type `tpe2`?
-     *  non-methods are always strictly better than methods
-     *  nullary methods are always strictly better than non-nullary
-     *  if both are non-nullary methods, then tpe1 is strictly better than tpe2 if
-     *   - tpe1 specializes tpe2 and tpe2 does not specialize tpe1
-     *   - tpe1 and tpe2 specialize each other and tpe1 has a strictly better resulttype than
-     *     tpe2
-     */
-    def isStrictlyBetter(tpe1: Type, tpe2: Type) = {
-      def isNullary(tpe: Type): Boolean = tpe match {
-        case tp: RewrappingTypeProxy => isNullary(tp.underlying)
-        case _ => tpe.paramSectionCount == 0 || tpe.params.isEmpty
-      }
-      def isMethod(tpe: Type): Boolean = tpe match {
-        case tp: RewrappingTypeProxy => isMethod(tp.underlying)
-        case MethodType(_, _) | PolyType(_, _) => true
-        case _ => false
-      }
-      def hasStrictlyBetterResult =
-        resultIsBetter(tpe1, tpe2, List(), List()) && !resultIsBetter(tpe2, tpe1, List(), List())
-      if (!isMethod(tpe1))
-        isMethod(tpe2) || hasStrictlyBetterResult
-
-      isNullary(tpe1) && !isNullary(tpe2) ||
-      is
-
-      else if (isNullary(tpe1))
-        isMethod(tpe2) && (!isNullary(tpe2) || hasStrictlyBetterResult)
-      else
-        specializes(tpe1, tpe2) && (!specializes(tpe2, tpe1) || hasStrictlyBetterResult)
-    }
-
-*/
-    /** error if arguments not within bounds. */
-    def checkBounds(tree: Tree, pre: Type, owner: Symbol,
-                    tparams: List[Symbol], targs: List[Type], prefix: String): Boolean =
-      if ((targs exists (_.isErroneous)) || (tparams exists (_.isErroneous))) true
-      else {
-        //@M validate variances & bounds of targs wrt variances & bounds of tparams
-        //@M TODO: better place to check this?
-        //@M TODO: errors for getters & setters are reported separately
-        val kindErrors = checkKindBounds(tparams, targs, pre, owner)
-        kindErrors match {
-          case Nil =>
-            def notWithinBounds() = NotWithinBounds(tree, prefix, targs, tparams, Nil)
-            isWithinBounds(pre, owner, tparams, targs) || {notWithinBounds(); false}
-          case errors =>
-            def kindBoundErrors() = KindBoundErrors(tree, prefix, targs, tparams, errors)
-            (targs contains WildcardType) || {kindBoundErrors(); false}
+    private def covariantReturnOverride(ftpe1: Type, ftpe2: Type): Boolean = ftpe1 match {
+      case MethodType(_, rtpe1) =>
+        ftpe2 match {
+          case MethodType(_, rtpe2) => rtpe1 <:< rtpe2 || rtpe2.typeSymbol == ObjectClass
+          case _                    => false
         }
+      case _ => false
+    }
+
+    /** error if arguments not within bounds. */
+    def checkBounds(tree: Tree, pre: Type, owner: Symbol, tparams: List[Symbol], targs: List[Type], prefix: String): Boolean = {
+      def issueBoundsError()                       = { NotWithinBounds(tree, prefix, targs, tparams, Nil) ; false }
+      def issueKindBoundErrors(errs: List[String]) = { KindBoundErrors(tree, prefix, targs, tparams, errs) ; false }
+      //@M validate variances & bounds of targs wrt variances & bounds of tparams
+      //@M TODO: better place to check this?
+      //@M TODO: errors for getters & setters are reported separately
+      def check() = checkKindBounds(tparams, targs, pre, owner) match {
+        case Nil  => isWithinBounds(pre, owner, tparams, targs) || issueBoundsError()
+        case errs => (targs contains WildcardType) || issueKindBoundErrors(errs)
       }
+
+      targs.exists(_.isErroneous) || tparams.exists(_.isErroneous) || check()
+    }
 
     def checkKindBounds(tparams: List[Symbol], targs: List[Type], pre: Type, owner: Symbol): List[String] = {
-      checkKindBounds0(tparams, targs, pre, owner, true) map {
+      checkKindBounds0(tparams, targs, pre, owner, explainErrors = true) map {
         case (targ, tparam, kindErrors) =>
           kindErrors.errorMessage(targ, tparam)
       }
@@ -1078,21 +903,13 @@ trait Infer extends Checkable {
      *  attempts fail, an error is produced.
      */
     def inferArgumentInstance(tree: Tree, undetparams: List[Symbol], strictPt: Type, lenientPt: Type) {
-      printInference(
-        ptBlock("inferArgumentInstance",
-          "tree"        -> tree,
-          "tree.tpe"    -> tree.tpe,
-          "undetparams" -> undetparams,
-          "strictPt"    -> strictPt,
-          "lenientPt"   -> lenientPt
-        )
-      )
-      var targs = exprTypeArgs(undetparams, tree.tpe, strictPt)._1
+      printTyping(tree, s"inferring arg instance based on pt0=$strictPt, pt1=$lenientPt")
+      var targs = exprTypeArgs(undetparams, tree.tpe, strictPt, useWeaklyCompatible = false)
       if ((targs eq null) || !(tree.tpe.subst(undetparams, targs) <:< strictPt))
-        targs = exprTypeArgs(undetparams, tree.tpe, lenientPt)._1
+        targs = exprTypeArgs(undetparams, tree.tpe, lenientPt, useWeaklyCompatible = false)
 
       substExpr(tree, undetparams, targs, lenientPt)
-      printInference("[inferArgumentInstance] finished, targs = " + targs)
+      printTyping(tree, s"infer arg instance from pt0=$strictPt, pt1=$lenientPt; targs=$targs")
     }
 
     /** Infer type arguments `targs` for `tparams` of polymorphic expression in `tree`, given prototype `pt`.
@@ -1101,31 +918,28 @@ trait Infer extends Checkable {
      * If passed, infers against specified type `treeTp` instead of `tree.tp`.
      */
     def inferExprInstance(tree: Tree, tparams: List[Symbol], pt: Type = WildcardType, treeTp0: Type = null, keepNothings: Boolean = true, useWeaklyCompatible: Boolean = false): List[Symbol] = {
-      val treeTp = if(treeTp0 eq null) tree.tpe else treeTp0 // can't refer to tree in default for treeTp0
-      val (targs, tvars) = exprTypeArgs(tparams, treeTp, pt, useWeaklyCompatible)
-      printInference(
-        ptBlock("inferExprInstance",
-          "tree"    -> tree,
-          "tree.tpe"-> tree.tpe,
-          "tparams" -> tparams,
-          "pt"      -> pt,
-          "targs"   -> targs,
-          "tvars"   -> tvars
-        )
-      )
+      val treeTp = if (treeTp0 eq null) tree.tpe else treeTp0 // can't refer to tree in default for treeTp0
+      val tvars  = tparams map freshVar
+      val targs  = exprTypeArgs(tvars, tparams, treeTp, pt, useWeaklyCompatible)
+      def infer_s = map3(tparams, tvars, targs)((tparam, tvar, targ) => s"$tparam=$tvar/$targ") mkString ","
+      printTyping(tree, s"infer expr instance from pt=$pt, $infer_s")
+
+      // SI-7899 infering by-name types is unsound. The correct behaviour is conditional because the hole is
+      //         exploited in Scalaz (Free.scala), as seen in: run/t7899-regression.
+      def dropByNameIfStrict(tp: Type): Type = if (settings.inferByName) tp else dropByName(tp)
+      def targsStrict = if (targs eq null) null else targs mapConserve dropByNameIfStrict
 
       if (keepNothings || (targs eq null)) { //@M: adjustTypeArgs fails if targs==null, neg/t0226
-        substExpr(tree, tparams, targs, pt)
+        substExpr(tree, tparams, targsStrict, pt)
         List()
       } else {
-        val AdjustedTypeArgs.Undets(okParams, okArgs, leftUndet) = adjustTypeArgs(tparams, tvars, targs)
-        printInference(
-          ptBlock("inferExprInstance/AdjustedTypeArgs",
-            "okParams" -> okParams,
-            "okArgs" -> okArgs,
-            "leftUndet" -> leftUndet
-          )
-        )
+        val AdjustedTypeArgs.Undets(okParams, okArgs, leftUndet) = adjustTypeArgs(tparams, tvars, targsStrict)
+        def solved_s = map2(okParams, okArgs)((p, a) => s"$p=$a") mkString ","
+        def undet_s = leftUndet match {
+          case Nil => ""
+          case ps  => ps.mkString(", undet=", ",", "")
+        }
+        printTyping(tree, s"infer solved $solved_s$undet_s")
         substExpr(tree, okParams, okArgs, pt)
         leftUndet
       }
@@ -1133,30 +947,25 @@ trait Infer extends Checkable {
 
     /** Substitute free type variables `undetparams` of polymorphic argument
      *  expression `tree` to `targs`, Error if `targs` is null.
-     *
-     *  @param tree ...
-     *  @param undetparams ...
-     *  @param targs ...
-     *  @param pt ...
      */
-    private def substExpr(tree: Tree, undetparams: List[Symbol],
-                          targs: List[Type], pt: Type) {
+    private def substExpr(tree: Tree, undetparams: List[Symbol], targs: List[Type], pt: Type) {
       if (targs eq null) {
         if (!tree.tpe.isErroneous && !pt.isErroneous)
           PolymorphicExpressionInstantiationError(tree, undetparams, pt)
-      } else {
+      }
+      else {
         new TreeTypeSubstituter(undetparams, targs).traverse(tree)
         notifyUndetparamsInferred(undetparams, targs)
       }
     }
 
-    /** Substitute free type variables <code>undetparams</code> of application
-     *  <code>fn(args)</code>, given prototype <code>pt</code>.
+    /** Substitute free type variables `undetparams` of application
+     *  `fn(args)`, given prototype `pt`.
      *
      *  @param fn          fn: the function that needs to be instantiated.
      *  @param undetparams the parameters that need to be determined
      *  @param args        the actual arguments supplied in the call.
-     *  @param pt          the expected type of the function application
+     *  @param pt0         the expected type of the function application
      *  @return            The type parameters that remain uninstantiated,
      *                     and that thus have not been substituted.
      */
@@ -1166,19 +975,11 @@ trait Infer extends Checkable {
         try {
           val pt      = if (pt0.typeSymbol == UnitClass) WildcardType else pt0
           val formals = formalTypes(mt.paramTypes, args.length)
-          val argtpes = actualTypes(args map (x => elimAnonymousClass(x.tpe.deconst)), formals.length)
+          val argtpes = tupleIfNecessary(formals, args map (x => elimAnonymousClass(x.tpe.deconst)))
           val restpe  = fn.tpe.resultType(argtpes)
 
           val AdjustedTypeArgs.AllArgsAndUndets(okparams, okargs, allargs, leftUndet) =
             methTypeArgs(undetparams, formals, restpe, argtpes, pt)
-
-          printInference("[infer method] solving for %s in %s based on (%s)%s (%s)".format(
-            undetparams.map(_.name).mkString(", "),
-            fn.tpe,
-            argtpes.mkString(", "),
-            restpe,
-            (okparams map (_.name), okargs).zipped.map(_ + "=" + _).mkString("solved: ", ", ", "")
-          ))
 
           if (checkBounds(fn, NoPrefix, NoSymbol, undetparams, allargs, "inferred ")) {
             val treeSubst = new TreeTypeSubstituter(okparams, okargs)
@@ -1202,25 +1003,22 @@ trait Infer extends Checkable {
         }
     }
 
-    def widen(tp: Type): Type = abstractTypesToBounds(tp)
-
-    /** Substitute free type variables <code>undetparams</code> of type constructor
-     *  <code>tree</code> in pattern, given prototype <code>pt</code>.
+    /** Substitute free type variables `undetparams` of type constructor
+     *  `tree` in pattern, given prototype `pt`.
      *
      *  @param tree        the constuctor that needs to be instantiated
      *  @param undetparams the undetermined type parameters
-     *  @param pt          the expected result type of the instance
+     *  @param pt0         the expected result type of the instance
      */
     def inferConstructorInstance(tree: Tree, undetparams: List[Symbol], pt0: Type) {
-      val pt       = widen(pt0)
+      val pt       = abstractTypesToBounds(pt0)
       val ptparams = freeTypeParamsOfTerms(pt)
       val ctorTp   = tree.tpe
       val resTp    = ctorTp.finalResultType
 
       debuglog("infer constr inst "+ tree +"/"+ undetparams +"/ pt= "+ pt +" pt0= "+ pt0 +" resTp: "+ resTp)
 
-      /** Compute type arguments for undetermined params
-       */
+      /* Compute type arguments for undetermined params */
       def inferFor(pt: Type): Option[List[Type]] = {
         val tvars   = undetparams map freshVar
         val resTpV  = resTp.instantiateTypeParams(undetparams, tvars)
@@ -1232,13 +1030,16 @@ trait Infer extends Checkable {
             val variances  =
               if (ctorTp.paramTypes.isEmpty) undetparams map varianceInType(ctorTp)
               else undetparams map varianceInTypes(ctorTp.paramTypes)
-            val targs      = solvedTypes(tvars, undetparams, variances, true, lubDepth(List(resTp, pt)))
+
+            // Note: this is the only place where solvedTypes (or, indirectly, solve) is called
+            // with upper = true.
+            val targs = solvedTypes(tvars, undetparams, variances, upper = true, lubDepth(resTp :: pt :: Nil))
             // checkBounds(tree, NoPrefix, NoSymbol, undetparams, targs, "inferred ")
             // no checkBounds here. If we enable it, test bug602 fails.
             // TODO: reinstate checkBounds, return params that fail to meet their bounds to undetparams
             Some(targs)
           } catch ifNoInstance { msg =>
-            debuglog("NO INST "+ (tvars, tvars map (_.constr)))
+            debuglog("NO INST "+ ((tvars, tvars map (_.constr))))
             NoConstructorInstanceError(tree, resTp, pt, msg)
             None
           }
@@ -1272,108 +1073,67 @@ trait Infer extends Checkable {
           }
         } else None
 
-      (inferFor(pt) orElse inferForApproxPt) map { targs =>
-        new TreeTypeSubstituter(undetparams, targs).traverse(tree)
-        notifyUndetparamsInferred(undetparams, targs)
-      } getOrElse {
-        debugwarn("failed inferConstructorInstance for "+ tree  +" : "+ tree.tpe +" under "+ undetparams +" pt = "+ pt +(if(isFullyDefined(pt)) " (fully defined)" else " (not fully defined)"))
-        // if (settings.explaintypes.value) explainTypes(resTp.instantiateTypeParams(undetparams, tvars), pt)
-        ConstrInstantiationError(tree, resTp, pt)
+      inferFor(pt) orElse inferForApproxPt match {
+        case Some(targs) =>
+          new TreeTypeSubstituter(undetparams, targs).traverse(tree)
+          notifyUndetparamsInferred(undetparams, targs)
+        case _ =>
+          def not = if (isFullyDefined(pt)) "" else "not "
+          devWarning(s"failed inferConstructorInstance for $tree: ${tree.tpe} undet=$undetparams, pt=$pt (${not}fully defined)")
+          ConstrInstantiationError(tree, resTp, pt)
       }
     }
 
-
-    def instBounds(tvar: TypeVar): (Type, Type) = {
-      val tparam = tvar.origin.typeSymbol
-      val instType = toOrigin(tvar.constr.inst)
+    def instBounds(tvar: TypeVar): TypeBounds = {
+      val tparam               = tvar.origin.typeSymbol
+      val instType             = toOrigin(tvar.constr.inst)
+      val TypeBounds(lo, hi)   = tparam.info.bounds
       val (loBounds, hiBounds) =
-        if (instType != NoType && isFullyDefined(instType)) (List(instType), List(instType))
+        if (isFullyDefined(instType)) (List(instType), List(instType))
         else (tvar.constr.loBounds, tvar.constr.hiBounds)
-      val lo = lub(tparam.info.bounds.lo :: loBounds map toOrigin)
-      val hi = glb(tparam.info.bounds.hi :: hiBounds map toOrigin)
-      (lo, hi)
+
+      TypeBounds(
+        lub(lo :: loBounds map toOrigin),
+        glb(hi :: hiBounds map toOrigin)
+      )
     }
 
     def isInstantiatable(tvars: List[TypeVar]) = {
       val tvars1 = tvars map (_.cloneInternal)
       // Note: right now it's not clear that solving is complete, or how it can be made complete!
       // So we should come back to this and investigate.
-      solve(tvars1, tvars1 map (_.origin.typeSymbol), tvars1 map (x => COVARIANT), false)
+      solve(tvars1, tvars1 map (_.origin.typeSymbol), tvars1 map (_ => Variance.Covariant), upper = false, Depth.AnyDepth)
     }
 
-    // this is quite nasty: it destructively changes the info of the syms of e.g., method type params (see #3692, where the type param T's bounds were set to >: T <: T, so that parts looped)
+    // this is quite nasty: it destructively changes the info of the syms of e.g., method type params
+    // (see #3692, where the type param T's bounds were set to > : T <: T, so that parts looped)
     // the changes are rolled back by restoreTypeBounds, but might be unintentially observed in the mean time
     def instantiateTypeVar(tvar: TypeVar) {
-      val tparam = tvar.origin.typeSymbol
-      if (false &&
-          tvar.constr.inst != NoType &&
-          isFullyDefined(tvar.constr.inst) &&
-          (tparam.info.bounds containsType tvar.constr.inst)) {
-        context.nextEnclosing(_.tree.isInstanceOf[CaseDef]).pushTypeBounds(tparam)
-        tparam setInfo tvar.constr.inst
-        tparam resetFlag DEFERRED
-        debuglog("new alias of " + tparam + " = " + tparam.info)
-      } else {
-        val (lo, hi) = instBounds(tvar)
-        if (lo <:< hi) {
-          if (!((lo <:< tparam.info.bounds.lo) && (tparam.info.bounds.hi <:< hi)) // bounds were improved
-             && tparam != lo.typeSymbolDirect && tparam != hi.typeSymbolDirect) { // don't create illegal cycles
-            context.nextEnclosing(_.tree.isInstanceOf[CaseDef]).pushTypeBounds(tparam)
-            tparam setInfo TypeBounds(lo, hi)
-            debuglog("new bounds of " + tparam + " = " + tparam.info)
-          } else {
-            debuglog("redundant: "+tparam+" "+tparam.info+"/"+lo+" "+hi)
-          }
-        } else {
-          debuglog("inconsistent: "+tparam+" "+lo+" "+hi)
+      val tparam                    = tvar.origin.typeSymbol
+      val TypeBounds(lo0, hi0)      = tparam.info.bounds
+      val tb @ TypeBounds(lo1, hi1) = instBounds(tvar)
+      val enclCase                  = context.enclosingCaseDef
+      def enclCase_s                = enclCase.toString.replaceAll("\\n", " ").take(60)
+
+      if (enclCase.savedTypeBounds.nonEmpty) log(
+        sm"""|instantiateTypeVar with nonEmpty saved type bounds {
+             |  enclosing  $enclCase_s
+             |      saved  ${enclCase.savedTypeBounds}
+             |     tparam  ${tparam.shortSymbolClass} ${tparam.defString}
+             |}""")
+
+      if (lo1 <:< hi1) {
+        if (lo1 <:< lo0 && hi0 <:< hi1) // bounds unimproved
+          log(s"redundant bounds: discarding TypeBounds($lo1, $hi1) for $tparam, no improvement on TypeBounds($lo0, $hi0)")
+        else if (tparam == lo1.typeSymbolDirect || tparam == hi1.typeSymbolDirect)
+          log(s"cyclical bounds: discarding TypeBounds($lo1, $hi1) for $tparam because $tparam appears as bounds")
+        else {
+          enclCase pushTypeBounds tparam
+          tparam setInfo logResult(s"updated bounds: $tparam from ${tparam.info} to")(tb)
         }
       }
+      else log(s"inconsistent bounds: discarding TypeBounds($lo1, $hi1)")
     }
-
-    /** Does `tp` contain any types that cannot be checked at run-time (i.e., after erasure, will isInstanceOf[erased(tp)] imply conceptualIsInstanceOf[tp]?)
-     * we should find a way to ask erasure: hey, is `tp` going to make it through you with all of its isInstanceOf resolving powers intact?
-     * TODO: at the very least, reduce duplication wrt checkCheckable
-     */
-    def containsUnchecked(tp: Type): Boolean = {
-      def check(tp: Type, bound: List[Symbol]): Boolean = {
-        def isSurroundingTypeParam(sym: Symbol) = {
-          val e = context.scope.lookupEntry(sym.name)
-            (    (e ne null)
-              && (e.sym == sym )
-              && !e.sym.isTypeParameterOrSkolem
-              && (e.owner == context.scope)
-            )
-        }
-        def isLocalBinding(sym: Symbol) = (
-          sym.isAbstractType && (
-               (bound contains sym)
-            || (sym.name == tpnme.WILDCARD)
-            || isSurroundingTypeParam(sym)
-          )
-        )
-        tp.normalize match {
-          case SingleType(pre, _) =>
-            check(pre, bound)
-          case TypeRef(_, ArrayClass, arg :: _) =>
-            check(arg, bound)
-          case tp @ TypeRef(pre, sym, args) =>
-            (  (sym.isAbstractType && !isLocalBinding(sym))
-            || (args exists (x => !isLocalBinding(x.typeSymbol)))
-            || check(pre, bound)
-            )
-          // case RefinedType(_, decls) if decls.nonEmpty =>
-          //   patternWarning(tp, "refinement ")
-          case RefinedType(parents, _) =>
-            parents exists (p => check(p, bound))
-          case ExistentialType(quantified, tp1) =>
-            check(tp1, bound ::: quantified)
-          case _ =>
-            false
-        }
-      }
-      check(tp, Nil)
-    }
-
 
     /** Type intersection of simple type tp1 with general type tp2.
      *  The result eliminates some redundancies.
@@ -1393,16 +1153,16 @@ trait Infer extends Checkable {
     }
 
     def inferTypedPattern(tree0: Tree, pattp: Type, pt0: Type, canRemedy: Boolean): Type = {
-      val pt        = widen(pt0)
+      val pt        = abstractTypesToBounds(pt0)
       val ptparams  = freeTypeParamsOfTerms(pt)
       val tpparams  = freeTypeParamsOfTerms(pattp)
 
       def ptMatchesPattp = pt matchesPattern pattp.widen
       def pattpMatchesPt = pattp matchesPattern pt
 
-      /** If we can absolutely rule out a match we can fail early.
-       *  This is the case if the scrutinee has no unresolved type arguments
-       *  and is a "final type", meaning final + invariant in all type parameters.
+      /* If we can absolutely rule out a match we can fail early.
+       * This is the case if the scrutinee has no unresolved type arguments
+       * and is a "final type", meaning final + invariant in all type parameters.
        */
       if (pt.isFinalType && ptparams.isEmpty && !ptMatchesPattp) {
         IncompatibleScrutineeTypeError(tree0, pattp, pt)
@@ -1438,9 +1198,9 @@ trait Infer extends Checkable {
         }
         tvars foreach instantiateTypeVar
       }
-      /** If the scrutinee has free type parameters but the pattern does not,
-       *  we have to flip the arguments so the expected type is treated as more
-       *  general when calculating the intersection.  See run/bug2755.scala.
+      /* If the scrutinee has free type parameters but the pattern does not,
+       * we have to flip the arguments so the expected type is treated as more
+       * general when calculating the intersection.  See run/bug2755.scala.
        */
       if (tpparams.isEmpty && ptparams.nonEmpty) intersect(pattp, pt)
       else intersect(pt, pattp)
@@ -1500,193 +1260,152 @@ trait Infer extends Checkable {
 
     /* -- Overload Resolution ---------------------------------------------- */
 
-/*
-    def checkNotShadowed(pos: Position, pre: Type, best: Symbol, eligible: List[Symbol]) =
-      if (!phase.erasedTypes)
-        for (alt <- eligible) {
-          if (isProperSubClassOrObject(alt.owner, best.owner))
-            error(pos,
-                  "erroneous reference to overloaded definition,\n"+
-                  "most specific definition is: "+best+best.locationString+" of type "+pre.memberType(best)+
-                  ",\nyet alternative definition   "+alt+alt.locationString+" of type "+pre.memberType(alt)+
-                  "\nis defined in a subclass")
-        }
-*/
-
-    /** Assign <code>tree</code> the symbol and type of the alternative which
-     *  matches prototype <code>pt</code>, if it exists.
+    /** Assign `tree` the symbol and type of the alternative which
+     *  matches prototype `pt`, if it exists.
      *  If several alternatives match `pt`, take parameterless one.
      *  If no alternative matches `pt`, take the parameterless one anyway.
      */
-    def inferExprAlternative(tree: Tree, pt: Type) = tree.tpe match {
-      case OverloadedType(pre, alts) => tryTwice { isSecondTry =>
-        val alts0          = alts filter (alt => isWeaklyCompatible(pre.memberType(alt), pt))
-        val noAlternatives = alts0.isEmpty
-        val alts1          = if (noAlternatives) alts else alts0
+    def inferExprAlternative(tree: Tree, pt: Type): Tree = {
+      def tryOurBests(pre: Type, alts: List[Symbol], isSecondTry: Boolean): Unit = {
+        val alts0 = alts filter (alt => isWeaklyCompatible(pre memberType alt, pt))
+        val alts1 = if (alts0.isEmpty) alts else alts0
+        val bests = bestAlternatives(alts1) { (sym1, sym2) =>
+          val tp1 = pre memberType sym1
+          val tp2 = pre memberType sym2
 
-        //println("trying "+alts1+(alts1 map (_.tpe))+(alts1 map (_.locationString))+" for "+pt)
-        def improves(sym1: Symbol, sym2: Symbol): Boolean =
-          sym2 == NoSymbol || sym2.hasAnnotation(BridgeClass) ||
-          { val tp1 = pre.memberType(sym1)
-            val tp2 = pre.memberType(sym2)
-            (tp2 == ErrorType ||
-             !global.typer.infer.isWeaklyCompatible(tp2, pt) && global.typer.infer.isWeaklyCompatible(tp1, pt) ||
-             isStrictlyMoreSpecific(tp1, tp2, sym1, sym2)) }
-
-        val best = ((NoSymbol: Symbol) /: alts1) ((best, alt) =>
-          if (improves(alt, best)) alt else best)
-
-        val competing = alts1 dropWhile (alt => best == alt || improves(best, alt))
-
-        if (best == NoSymbol) {
-          if (settings.debug.value) {
-            tree match {
-              case Select(qual, _) =>
-                Console.println("qual: " + qual + ":" + qual.tpe +
-                                   " with decls " + qual.tpe.decls +
-                                   " with members " + qual.tpe.members +
-                                   " with members " + qual.tpe.member(newTermName("$minus")))
-              case _ =>
-            }
-          }
-          // todo: missing test case
-          NoBestExprAlternativeError(tree, pt, isSecondTry)
-        } else if (!competing.isEmpty) {
-          if (noAlternatives) NoBestExprAlternativeError(tree, pt, isSecondTry)
-          else if (!pt.isErroneous) AmbiguousExprAlternativeError(tree, pre, best, competing.head, pt, isSecondTry)
-          else {
+          (    (tp2 eq ErrorType)
+            || isWeaklyCompatible(tp1, pt) && !isWeaklyCompatible(tp2, pt)
+            || isStrictlyMoreSpecific(tp1, tp2, sym1, sym2)
+          )
+        }
+        // todo: missing test case for bests.isEmpty
+        bests match {
+          case best :: Nil                              => tree setSymbol best setType (pre memberType best)
+          case best :: competing :: _ if alts0.nonEmpty =>
             // SI-6912 Don't give up and leave an OverloadedType on the tree.
             //         Originally I wrote this as `if (secondTry) ... `, but `tryTwice` won't attempt the second try
             //         unless an error is issued. We're not issuing an error, in the assumption that it would be
             //         spurious in light of the erroneous expected type
-            setError(tree)
-          }
-        } else {
-//          val applicable = alts1 filter (alt =>
-//            global.typer.infer.isWeaklyCompatible(pre.memberType(alt), pt))
-//          checkNotShadowed(tree.pos, pre, best, applicable)
-          tree.setSymbol(best).setType(pre.memberType(best))
+            if (pt.isErroneous) setError(tree)
+            else AmbiguousExprAlternativeError(tree, pre, best, competing, pt, isSecondTry)
+          case _                                        => if (bests.isEmpty || alts0.isEmpty) NoBestExprAlternativeError(tree, pt, isSecondTry)
         }
       }
-    }
-
-    @inline private def inSilentMode(context: Context)(expr: => Boolean): Boolean = {
-      val oldState = context.state
-      context.setBufferErrors()
-      val res = expr
-      val contextWithErrors = context.hasErrors
-      context.flushBuffer()
-      context.restoreState(oldState)
-      res && !contextWithErrors
+      tree.tpe match {
+        case OverloadedType(pre, alts) => tryTwice(tryOurBests(pre, alts, _)) ; tree
+        case _                         => tree
+      }
     }
 
     // Checks against the name of the parameter and also any @deprecatedName.
     private def paramMatchesName(param: Symbol, name: Name) =
       param.name == name || param.deprecatedParamName.exists(_ == name)
 
-    // Check the first parameter list the same way.
-    private def methodMatchesName(method: Symbol, name: Name) = method.paramss match {
-      case ps :: _  => ps exists (p => paramMatchesName(p, name))
-      case _        => false
+    private def containsNamedType(argtpes: List[Type]): Boolean = argtpes match {
+      case Nil                  => false
+      case NamedType(_, _) :: _ => true
+      case _ :: rest            => containsNamedType(rest)
     }
+    private def namesOfNamedArguments(argtpes: List[Type]) =
+      argtpes collect { case NamedType(name, _) => name }
 
-    private def resolveOverloadedMethod(argtpes: List[Type], eligible: List[Symbol]) = {
+    /** Given a list of argument types and eligible method overloads, whittle the
+     *  list down to the methods which should be considered for specificity
+     *  testing, taking into account here:
+     *   - named arguments at the call site (keep only methods with name-matching parameters)
+     *   - if multiple methods are eligible, drop any methods which take default arguments
+     *   - drop any where arity cannot match under any conditions (allowing for
+     *     overloaded applies, varargs, and tupling conversions)
+     *  This method is conservative; it can tolerate some varieties of false positive,
+     *  but no false negatives.
+     *
+     *  @param  eligible     the overloaded method symbols
+     *  @param  argtpes      the argument types at the call site
+     *  @param  varargsStar  true if the call site has a `: _*` attached to the last argument
+     */
+    private def overloadsToConsiderBySpecificity(eligible: List[Symbol], argtpes: List[Type], varargsStar: Boolean): List[Symbol] = {
+      // TODO spec: this namesMatch business is not spec'ed, and is the wrong fix for SI-4592
+      // we should instead clarify what the spec means by "typing each argument with an undefined expected type".
+      // What does typing a named argument entail when we don't know what the valid parameter names are?
+      // (Since we're doing overload resolution, there are multiple alternatives that can define different names.)
+      // Luckily, the next step checks applicability to the individual alternatives, so it knows whether an assignment is:
+      // 1) a valid named argument
+      // 2) a well-typed assignment
+      // 3) an error (e.g., rhs does not refer to a variable)
+      //
+      // For now, the logic is:
       // If there are any foo=bar style arguments, and any of the overloaded
-      // methods has a parameter named `foo`, then only those methods are considered.
-      val namesOfArgs = argtpes collect { case NamedType(name, _) => name }
-      val namesMatch = (
-        if (namesOfArgs.isEmpty) Nil
-        else eligible filter { m =>
-          namesOfArgs forall { name =>
-            methodMatchesName(m, name)
-          }
-        }
-      )
-
-      if (namesMatch.nonEmpty) namesMatch
-      else if (eligible.isEmpty || eligible.tail.isEmpty) eligible
-      else eligible filter { alt =>
-        // for functional values, the `apply` method might be overloaded
-        val mtypes = followApply(alt.tpe) match {
-          case OverloadedType(_, alts) => alts map (_.tpe)
-          case t                       => t :: Nil
-        }
-        // Drop those that use a default; keep those that use vararg/tupling conversion.
-        mtypes exists (t =>
-          !t.typeSymbol.hasDefaultFlag && (
-               compareLengths(t.params, argtpes) < 0  // tupling (*)
-            || hasExactlyNumParams(t, argtpes.length) // same nb or vararg
-          )
-        )
-        // (*) more arguments than parameters, but still applicable: tupling conversion works.
-        //     todo: should not return "false" when paramTypes = (Unit) no argument is given
-        //     (tupling would work)
+      // methods has a parameter named `foo`, then only those methods are considered when we must disambiguate.
+      def namesMatch = namesOfNamedArguments(argtpes) match {
+        case Nil   => Nil
+        case names => eligible filter (m => names forall (name => m.info.params exists (p => paramMatchesName(p, name))))
       }
+      if (eligible.isEmpty || eligible.tail.isEmpty) eligible
+      else
+        namesMatch match {
+          case namesMatch if namesMatch.nonEmpty => namesMatch // TODO: this has no basis in the spec, remove!
+          case _ =>
+            // If there are multiple applicable alternatives, drop those using default arguments.
+            // This is done indirectly by checking applicability based on arity in `isApplicableBasedOnArity`.
+            // If defaults are required in the application, the arities won't match up exactly.
+            // TODO: should we really allow tupling here?? (If we don't, this is the only call-site with `tuplingAllowed = true`)
+            eligible filter (alt => isApplicableBasedOnArity(alt.tpe, argtpes.length, varargsStar, tuplingAllowed = true))
+        }
     }
 
-    /** Assign <code>tree</code> the type of an alternative which is applicable
-     *  to <code>argtpes</code>, and whose result type is compatible with `pt`.
+    /** Assign `tree` the type of an alternative which is applicable
+     *  to `argtpes`, and whose result type is compatible with `pt`.
      *  If several applicable alternatives exist, drop the alternatives which use
      *  default arguments, then select the most specialized one.
      *  If no applicable alternative exists, and pt != WildcardType, try again
      *  with pt = WildcardType.
      *  Otherwise, if there is no best alternative, error.
      *
-     *  @param argtpes contains the argument types. If an argument is named, as
+     *  @param argtpes0 contains the argument types. If an argument is named, as
      *    "a = 3", the corresponding type is `NamedType("a", Int)'. If the name
      *    of some NamedType does not exist in an alternative's parameter names,
      *    the type is replaces by `Unit`, i.e. the argument is treated as an
      *    assignment expression.
+     *
+     *  @pre  tree.tpe is an OverloadedType.
      */
-    def inferMethodAlternative(tree: Tree, undetparams: List[Symbol],
-                               argtpes: List[Type], pt0: Type, varArgsOnly: Boolean = false, lastInferAttempt: Boolean = true): Unit = tree.tpe match {
-      case OverloadedType(pre, alts) =>
-        val pt = if (pt0.typeSymbol == UnitClass) WildcardType else pt0
-        tryTwice { isSecondTry =>
-          debuglog(s"infer method alt ${tree.symbol} with alternatives ${alts map pre.memberType} argtpes=$argtpes pt=$pt")
-
-          def varargsApplicableCheck(alt: Symbol) = !varArgsOnly || (
-               isVarArgsList(alt.tpe.params)
-            && (argtpes.size >= alt.tpe.params.size) // must be checked now due to SI-5859
-          )
-          val applicable = resolveOverloadedMethod(argtpes,
-            alts filter (alt =>
-                 varargsApplicableCheck(alt)
-              && inSilentMode(context)(isApplicable(undetparams, followApply(pre memberType alt), argtpes, pt))
-            )
-          )
-
-          def improves(sym1: Symbol, sym2: Symbol) = {
-            // util.trace("improve "+sym1+sym1.locationString+" on "+sym2+sym2.locationString)
-            sym2 == NoSymbol || sym2.isError || sym2.hasAnnotation(BridgeClass) ||
-            isStrictlyMoreSpecific(followApply(pre.memberType(sym1)),
-                                   followApply(pre.memberType(sym2)), sym1, sym2)
-          }
-
-          val best = ((NoSymbol: Symbol) /: applicable) ((best, alt) =>
-            if (improves(alt, best)) alt else best)
-          val competing = applicable.dropWhile(alt => best == alt || improves(best, alt))
-          if (best == NoSymbol) {
-            if (pt == WildcardType) NoBestMethodAlternativeError(tree, argtpes, pt, isSecondTry && lastInferAttempt)
-            else inferMethodAlternative(tree, undetparams, argtpes, WildcardType, lastInferAttempt = isSecondTry)
-          } else if (!competing.isEmpty) {
-            AmbiguousMethodAlternativeError(tree, pre, best, competing.head, argtpes, pt, isSecondTry && lastInferAttempt)
-          } else {
-//            checkNotShadowed(tree.pos, pre, best, applicable)
-            tree.setSymbol(best).setType(pre.memberType(best))
-          }
+    def inferMethodAlternative(tree: Tree, undetparams: List[Symbol], argtpes0: List[Type], pt0: Type): Unit = {
+      val OverloadedType(pre, alts) = tree.tpe
+      var varargsStar = false
+      val argtpes = argtpes0 mapConserve {
+        case RepeatedType(tp) => varargsStar = true ; tp
+        case tp               => tp
+      }
+      def followType(sym: Symbol) = followApply(pre memberType sym)
+      def bestForExpectedType(pt: Type, isLastTry: Boolean): Unit = {
+        val applicable0 = alts filter (alt => context inSilentMode isApplicable(undetparams, followType(alt), argtpes, pt))
+        val applicable  = overloadsToConsiderBySpecificity(applicable0, argtpes, varargsStar)
+        val ranked      = bestAlternatives(applicable)((sym1, sym2) =>
+          isStrictlyMoreSpecific(followType(sym1), followType(sym2), sym1, sym2)
+        )
+        ranked match {
+          case best :: competing :: _ => AmbiguousMethodAlternativeError(tree, pre, best, competing, argtpes, pt, isLastTry) // ambiguous
+          case best :: Nil            => tree setSymbol best setType (pre memberType best)           // success
+          case Nil if pt.isWildcard   => NoBestMethodAlternativeError(tree, argtpes, pt, isLastTry)  // failed
+          case Nil                    => bestForExpectedType(WildcardType, isLastTry)                // failed, but retry with WildcardType
         }
-      case _ =>
+      }
+      // This potentially makes up to four attempts: tryTwice may execute
+      // with and without views enabled, and bestForExpectedType will try again
+      // with pt = WildcardType if it fails with pt != WildcardType.
+      tryTwice { isLastTry =>
+        val pt = if (pt0.typeSymbol == UnitClass) WildcardType else pt0
+        debuglog(s"infer method alt ${tree.symbol} with alternatives ${alts map pre.memberType} argtpes=$argtpes pt=$pt")
+        bestForExpectedType(pt, isLastTry)
+      }
     }
 
     /** Try inference twice, once without views and once with views,
      *  unless views are already disabled.
-     *
-     *  @param infer ...
      */
     def tryTwice(infer: Boolean => Unit): Unit = {
       if (context.implicitsEnabled) {
-        val saved = context.state
+        val savedContextMode = context.contextMode
         var fallback = false
         context.setBufferErrors()
         // We cache the current buffer because it is impossible to
@@ -1700,65 +1419,59 @@ trait Infer extends Checkable {
           context.withImplicitsDisabled(infer(false))
           if (context.hasErrors) {
             fallback = true
-            context.restoreState(saved)
+            context.contextMode = savedContextMode
             context.flushBuffer()
             infer(true)
           }
         } catch {
           case ex: CyclicReference  => throw ex
           case ex: TypeError        => // recoverable cyclic references
-            context.restoreState(saved)
+            context.contextMode = savedContextMode
             if (!fallback) infer(true) else ()
         } finally {
-          context.restoreState(saved)
+          context.contextMode = savedContextMode
           context.updateBuffer(errorsToRestore)
         }
       }
       else infer(true)
     }
 
-    /** Assign <code>tree</code> the type of all polymorphic alternatives
-     *  with <code>nparams</code> as the number of type parameters, if it exists.
+    /** Assign `tree` the type of all polymorphic alternatives
+     *  which have the same number of type parameters as does `argtypes`
+     *  with all argtypes are within the corresponding type parameter bounds.
      *  If no such polymorphic alternative exist, error.
-     *
-     *  @param tree ...
-     *  @param nparams ...
      */
     def inferPolyAlternatives(tree: Tree, argtypes: List[Type]): Unit = {
       val OverloadedType(pre, alts) = tree.tpe
-      val sym0 = tree.symbol filter (alt => sameLength(alt.typeParams, argtypes))
-      def fail(kind: PolyAlternativeErrorKind.ErrorType) =
-        PolyAlternativeError(tree, argtypes, sym0, kind)
-
-      if (sym0 == NoSymbol) return (
-        if (alts exists (_.typeParams.nonEmpty))
-          fail(PolyAlternativeErrorKind.WrongNumber)
-        else fail(PolyAlternativeErrorKind.NoParams))
-
-      val (resSym, resTpe) = {
-        if (!sym0.isOverloaded)
-          (sym0, pre.memberType(sym0))
-        else {
-          val sym = sym0 filter (alt => isWithinBounds(pre, alt.owner, alt.typeParams, argtypes))
-          if (sym == NoSymbol) {
-            if (argtypes forall (x => !x.isErroneous))
-              fail(PolyAlternativeErrorKind.ArgsDoNotConform)
-            return
-          }
-          else if (sym.isOverloaded) {
-            val xs      = sym.alternatives
-            val tparams = new AsSeenFromMap(pre, xs.head.owner) mapOver xs.head.typeParams
-            val bounds  = tparams map (_.tpeHK) // see e.g., #1236
-            val tpe     = PolyType(tparams, OverloadedType(AntiPolyType(pre, bounds), xs))
-
-            (sym setInfo tpe, tpe)
-          }
-          else (sym, pre.memberType(sym))
-        }
+      // Alternatives with a matching length type parameter list
+      val matchingLength   = tree.symbol filter (alt => sameLength(alt.typeParams, argtypes))
+      def allMonoAlts      = alts forall (_.typeParams.isEmpty)
+      def errorKind        = matchingLength match {
+        case NoSymbol if allMonoAlts => PolyAlternativeErrorKind.NoParams          // no polymorphic method alternative
+        case NoSymbol                => PolyAlternativeErrorKind.WrongNumber       // wrong number of tparams
+        case _                       => PolyAlternativeErrorKind.ArgsDoNotConform  // didn't conform to bounds
       }
-      // Side effects tree with symbol and type
-      tree setSymbol resSym setType resTpe
+      def fail() = PolyAlternativeError(tree, argtypes, matchingLength, errorKind)
+      def finish(sym: Symbol, tpe: Type) = tree setSymbol sym setType tpe
+      // Alternatives which conform to bounds
+      def checkWithinBounds(sym: Symbol) = sym.alternatives match {
+        case Nil if argtypes.exists(_.isErroneous) =>
+        case Nil                                   => fail()
+        case alt :: Nil                            => finish(alt, pre memberType alt)
+        case alts @ (hd :: _)                      =>
+          log(s"Attaching AntiPolyType-carrying overloaded type to $sym")
+          // Multiple alternatives which are within bounds; spin up an
+          // overloaded type which carries an "AntiPolyType" as a prefix.
+          val tparams = newAsSeenFromMap(pre, hd.owner) mapOver hd.typeParams
+          val bounds  = tparams map (_.tpeHK) // see e.g., #1236
+          val tpe     = PolyType(tparams, OverloadedType(AntiPolyType(pre, bounds), alts))
+          finish(sym setInfo tpe, tpe)
+      }
+      matchingLength.alternatives match {
+        case Nil        => fail()
+        case alt :: Nil => finish(alt, pre memberType alt)
+        case _          => checkWithinBounds(matchingLength filter (alt => isWithinBounds(pre, alt.owner, alt.typeParams, argtypes)))
+      }
     }
   }
 }
-

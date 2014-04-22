@@ -6,9 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-
-
-package scala.collection
+package scala
+package collection
 package mutable
 
 import generic._
@@ -61,8 +60,7 @@ extends AbstractSeq[A]
     tl
   }
 
-  // this method must be private for binary compatibility
-  private final def tailImpl(tl: MutableList[A]) {
+  protected final def tailImpl(tl: MutableList[A]) {
     require(nonEmpty, "tail of empty list")
     tl.first0 = first0.tail
     tl.len = len - 1
@@ -149,11 +147,9 @@ extends AbstractSeq[A]
   override def clone(): MutableList[A]  = {
     val bf = newBuilder
     bf ++= seq
-    bf.result
+    bf.result()
   }
-
 }
-
 
 object MutableList extends SeqFactory[MutableList] {
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, MutableList[A]] =

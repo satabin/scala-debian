@@ -1,10 +1,10 @@
-import scala.reflect.macros.{Context => Ctx}
+import scala.reflect.macros.blackbox.Context
 
 object Impls {
-  def foo(c: Ctx)(x: c.Expr[Int]) = {
-    val x1 = c.Expr[Int](c.resetAllAttrs(x.tree))
-// was:    c.literal(x1.splice)
-    c.literal(c.eval(x1))
+  def foo(c: Context)(x: c.Expr[Int]) = {
+    import c.universe._
+    val x1 = c.Expr[Int](c.untypecheck(x.tree))
+    c.Expr[Int](Literal(Constant(c.eval(x1))))
   }
 }
 

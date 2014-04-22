@@ -4,15 +4,14 @@
  * @author Adriaan Moors
  */
 
-package scala.tools.nsc.transform.patmat
+package scala
+package tools.nsc.transform.patmat
 
-import scala.tools.nsc.symtab._
 import scala.language.postfixOps
 import scala.collection.mutable
 import scala.reflect.internal.util.Statistics
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.HashSet
-
 
 trait Logic extends Debugging  {
   import PatternMatchingStats._
@@ -113,8 +112,8 @@ trait Logic extends Debugging  {
     case object False extends Prop
 
     // symbols are propositions
-    abstract case class Sym(val variable: Var, val const: Const) extends Prop {
-      private[this] val id = Sym.nextSymId
+    abstract case class Sym(variable: Var, const: Const) extends Prop {
+      private val id: Int = Sym.nextSymId
 
       override def toString = variable +"="+ const +"#"+ id
     }
@@ -126,6 +125,7 @@ trait Logic extends Debugging  {
         (uniques findEntryOrUpdate newSym)
       }
       private def nextSymId = {_symId += 1; _symId}; private var _symId = 0
+      implicit val SymOrdering: Ordering[Sym] = Ordering.by(_.id)
     }
 
     def /\(props: Iterable[Prop]) = if (props.isEmpty) True else props.reduceLeft(And(_, _))
@@ -162,13 +162,17 @@ trait Logic extends Debugging  {
 
     // to govern how much time we spend analyzing matches for unreachability/exhaustivity
     object AnalysisBudget {
-      import scala.tools.cmd.FromString.IntFromString
-      val max = sys.props.get("scalac.patmat.analysisBudget").collect(IntFromString.orElse{case "off" => Integer.MAX_VALUE}).getOrElse(256)
+      private val budgetProp = scala.sys.Prop[Int]("scalac.patmat.analysisBudget")
+      private val budgetOff = "off"
+      val max: Int = {
+        val DefaultBudget = 256
+        budgetProp.option.getOrElse(if (budgetProp.get.equalsIgnoreCase("off")) Integer.MAX_VALUE else DefaultBudget)
+      }
 
       abstract class Exception(val advice: String) extends RuntimeException("CNF budget exceeded")
 
       object exceeded extends Exception(
-          s"(The analysis required more space than allowed. Please try with scalac -Dscalac.patmat.analysisBudget=${AnalysisBudget.max*2} or -Dscalac.patmat.analysisBudget=off.)")
+          s"(The analysis required more space than allowed. Please try with scalac -D${budgetProp.key}=${AnalysisBudget.max*2} or -D${budgetProp.key}=${budgetOff}.)")
 
     }
 
@@ -212,7 +216,7 @@ trait Logic extends Debugging  {
       }
 
       props foreach gatherEqualities.apply
-      if (modelNull) vars foreach (_.registerNull)
+      if (modelNull) vars foreach (_.registerNull())
 
       val pure = props map (p => eqFreePropToSolvable(rewriteEqualsToProp(p)))
 
@@ -280,7 +284,7 @@ trait Logic extends Debugging  {
     def eqFreePropToSolvable(p: Prop): Formula
     def cnfString(f: Formula): String
 
-    type Model = Map[Sym, Boolean]
+    type Model = collection.immutable.SortedMap[Sym, Boolean]
     val EmptyModel: Model
     val NoModel: Model
 
@@ -293,6 +297,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
   trait TreesAndTypesDomain extends PropositionalLogic with CheckableTreeAndTypeAnalysis {
     type Type = global.Type
     type Tree = global.Tree
+    import global.definitions.ConstantNull
 
     // resets hash consing -- only supposed to be called by TreeMakersToProps
     def prepareNewAnalysis(): Unit = { Var.resetUniques(); Const.resetUniques() }
@@ -321,7 +326,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
       val staticTpCheckable: Type = checkableType(staticTp)
 
       private[this] var _mayBeNull = false
-      def registerNull(): Unit = { ensureCanModify; if (NullTp <:< staticTpCheckable) _mayBeNull = true }
+      def registerNull(): Unit = { ensureCanModify(); if (ConstantNull <:< staticTpCheckable) _mayBeNull = true }
       def mayBeNull: Boolean = _mayBeNull
 
       // case None => domain is unknown,
@@ -345,16 +350,16 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
           } else
             subConsts
 
-        observed; allConsts
+        observed(); allConsts
       }
 
       // populate equalitySyms
       // don't care about the result, but want only one fresh symbol per distinct constant c
-      def registerEquality(c: Const): Unit = {ensureCanModify; symForEqualsTo getOrElseUpdate(c, Sym(this, c))}
+      def registerEquality(c: Const): Unit = {ensureCanModify(); symForEqualsTo getOrElseUpdate(c, Sym(this, c))}
 
       // return the symbol that represents this variable being equal to the constant `c`, if it exists, otherwise False (for robustness)
       // (registerEquality(c) must have been called prior, either when constructing the domain or from outside)
-      def propForEqualsTo(c: Const): Prop = {observed; symForEqualsTo.getOrElse(c, False)}
+      def propForEqualsTo(c: Const): Prop = {observed(); symForEqualsTo.getOrElse(c, False)}
 
       // [implementation NOTE: don't access until all potential equalities have been registered using registerEquality]p
       /** the information needed to construct the boolean proposition that encods the equality proposition (V = C)
@@ -366,7 +371,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
        * and thus in this variable's equality symbols), but reachability also requires us to model things like V = 1 precluding V = "1"
        */
       lazy val implications = {
-        /** when we know V = C, which other equalities must hold
+        /* when we know V = C, which other equalities must hold
          *
          * in general, equality to some type implies equality to its supertypes
          * (this multi-valued kind of equality is necessary for unreachability)
@@ -479,7 +484,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
       lazy val symForStaticTp: Option[Sym]  = symForEqualsTo.get(TypeConst(staticTpCheckable))
 
       // don't access until all potential equalities have been registered using registerEquality
-      private lazy val equalitySyms = {observed; symForEqualsTo.values.toList}
+      private lazy val equalitySyms = {observed(); symForEqualsTo.values.toList}
 
       // don't call until all equalities have been registered and registerNull has been called (if needed)
       def describe = {
@@ -494,7 +499,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
 
 
     import global.{ConstantType, Constant, SingletonType, Literal, Ident, singleType}
-    import global.definitions.{AnyClass, UnitClass}
+    import global.definitions._
 
 
     // all our variables range over types
@@ -514,11 +519,11 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
         uniques.get(tp).getOrElse(
           uniques.find {case (oldTp, oldC) => oldTp =:= tp} match {
             case Some((_, c)) =>
-              debug.patmat("unique const: "+ (tp, c))
+              debug.patmat("unique const: "+ ((tp, c)))
               c
             case _ =>
               val fresh = mkFresh
-              debug.patmat("uniqued const: "+ (tp, fresh))
+              debug.patmat("uniqued const: "+ ((tp, fresh)))
               uniques(tp) = fresh
               fresh
           })
@@ -534,12 +539,12 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
         if (!t.symbol.isStable) t.tpe.narrow
         else trees find (a => a.correspondsStructure(t)(sameValue)) match {
           case Some(orig) =>
-            debug.patmat("unique tp for tree: "+ (orig, orig.tpe))
+            debug.patmat("unique tp for tree: "+ ((orig, orig.tpe)))
             orig.tpe
           case _ =>
             // duplicate, don't mutate old tree (TODO: use a map tree -> type instead?)
             val treeWithNarrowedType = t.duplicate setType t.tpe.narrow
-            debug.patmat("uniqued: "+ (t, t.tpe, treeWithNarrowedType.tpe))
+            debug.patmat("uniqued: "+ ((t, t.tpe, treeWithNarrowedType.tpe)))
             trees += treeWithNarrowedType
             treeWithNarrowedType.tpe
         }
@@ -549,7 +554,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
       def tp: Type
       def wideTp: Type
 
-      def isAny = wideTp.typeSymbol == AnyClass
+      def isAny = wideTp =:= AnyTpe
       def isValue: Boolean //= tp.isStable
 
       // note: use reference equality on Const since they're hash-consed (doing type equality all the time is too expensive)
@@ -564,11 +569,12 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
     // (At least conceptually: `true` is an instance of class `Boolean`)
     private def widenToClass(tp: Type): Type =
       if (tp.typeSymbol.isClass) tp
+      else if (tp.baseClasses.isEmpty) sys.error("Bad type: " + tp)
       else tp.baseType(tp.baseClasses.head)
 
     object TypeConst extends TypeConstExtractor {
       def apply(tp: Type) = {
-        if (tp =:= NullTp) NullConst
+        if (tp =:= ConstantNull) NullConst
         else if (tp.isInstanceOf[SingletonType]) ValueConst.fromType(tp)
         else Const.unique(tp, new TypeConst(tp))
       }
@@ -577,7 +583,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
 
     // corresponds to a type test that does not imply any value-equality (well, except for outer checks, which we don't model yet)
     sealed class TypeConst(val tp: Type) extends Const {
-      assert(!(tp =:= NullTp))
+      assert(!(tp =:= ConstantNull))
       /*private[this] val id: Int = */ Const.nextTypeId
 
       val wideTp = widenToClass(tp)
@@ -598,7 +604,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
       }
       def apply(p: Tree) = {
         val tp = p.tpe.normalize
-        if (tp =:= NullTp) NullConst
+        if (tp =:= ConstantNull) NullConst
         else {
           val wideTp = widenToClass(tp)
 
@@ -606,7 +612,7 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
             if (tp.isInstanceOf[SingletonType]) tp
             else p match {
               case Literal(c) =>
-                if (c.tpe.typeSymbol == UnitClass) c.tpe
+                if (c.tpe =:= UnitTpe) c.tpe
                 else ConstantType(c)
               case Ident(_) if p.symbol.isStable =>
                 // for Idents, can encode uniqueness of symbol as uniqueness of the corresponding singleton type
@@ -626,16 +632,14 @@ trait ScalaLogic extends Interface with Logic with TreeAndTypeAnalysis {
     }
     sealed class ValueConst(val tp: Type, val wideTp: Type, override val toString: String) extends Const {
       // debug.patmat("VC"+(tp, wideTp, toString))
-      assert(!(tp =:= NullTp)) // TODO: assert(!tp.isStable)
+      assert(!(tp =:= ConstantNull)) // TODO: assert(!tp.isStable)
       /*private[this] val id: Int = */Const.nextValueId
       def isValue = true
     }
 
-
-    lazy val NullTp = ConstantType(Constant(null))
     case object NullConst extends Const {
-      def tp     = NullTp
-      def wideTp = NullTp
+      def tp     = ConstantNull
+      def wideTp = ConstantNull
 
       def isValue = true
       override def toString = "null"

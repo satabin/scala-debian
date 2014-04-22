@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection
+package scala
+package collection
 
 
 import generic._
@@ -238,7 +239,7 @@ trait GenTraversableLike[+A, +Repr] extends Any with GenTraversableOnce[A] with 
    *      // lettersOf will return a Set[Char], not a Seq
    *      def lettersOf(words: Seq[String]) = words.toSet flatMap (word => word.toSeq)
    *
-   *      // xs will be a an Iterable[Int]
+   *      // xs will be an Iterable[Int]
    *      val xs = Map("a" -> List(11,111), "b" -> List(22,222)).flatMap(_._2)
    *
    *      // ys will be a Map[Int, Int]
@@ -266,20 +267,20 @@ trait GenTraversableLike[+A, +Repr] extends Any with GenTraversableOnce[A] with 
    *
    *    Example:
    *    {{{
-   *      scala> val a = LinkedList(1)
-   *      a: scala.collection.mutable.LinkedList[Int] = LinkedList(1)
-   *
-   *      scala> val b = LinkedList(2)
-   *      b: scala.collection.mutable.LinkedList[Int] = LinkedList(2)
-   *
+   *      scala> val a = List(1)
+   *      a: List[Int] = List(1)
+   *      
+   *      scala> val b = List(2)
+   *      b: List[Int] = List(2)
+   *      
    *      scala> val c = a ++ b
-   *      c: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2)
-   *
-   *      scala> val d = LinkedList('a')
-   *      d: scala.collection.mutable.LinkedList[Char] = LinkedList(a)
-   *
+   *      c: List[Int] = List(1, 2)
+   *      
+   *      scala> val d = List('a')
+   *      d: List[Char] = List(a)
+   *      
    *      scala> val e = c ++ d
-   *      e: scala.collection.mutable.LinkedList[AnyVal] = LinkedList(1, 2, a)
+   *      e: List[AnyVal] = List(1, 2, a)
    *    }}}
    *
    *    @return       a new $coll which contains all elements of this $coll
@@ -323,7 +324,7 @@ trait GenTraversableLike[+A, +Repr] extends Any with GenTraversableOnce[A] with 
    *  @tparam K    the type of keys returned by the discriminator function.
    *  @return      A map from keys to ${coll}s such that the following invariant holds:
    *               {{{
-   *                 (xs partition f)(k) = xs filter (x => f(x) == k)
+   *                 (xs groupBy f)(k) = xs filter (x => f(x) == k)
    *               }}}
    *               That is, every key `k` is bound to a $coll of those elements `x`
    *               for which `f(x)` equals `k`.

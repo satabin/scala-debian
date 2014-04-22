@@ -1,4 +1,4 @@
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 import language.experimental.macros
 
 object MyAttachment
@@ -6,10 +6,11 @@ object MyAttachment
 object Macros {
   def impl(c: Context) = {
     import c.universe._
-    val ident = Ident(newTermName("bar")) updateAttachment MyAttachment
-    assert(ident.attachments.get[MyAttachment.type].isDefined, ident.attachments)
-    val typed = c.typeCheck(ident)
-    assert(typed.attachments.get[MyAttachment.type].isDefined, typed.attachments)
+    import internal._
+    val ident = updateAttachment(Ident(TermName("bar")), MyAttachment)
+    assert(attachments(ident).get[MyAttachment.type].isDefined, attachments(ident))
+    val typed = c.typecheck(ident)
+    assert(attachments(typed).get[MyAttachment.type].isDefined, attachments(typed))
     c.Expr[Int](typed)
   }
 
