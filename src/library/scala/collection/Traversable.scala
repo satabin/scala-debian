@@ -6,12 +6,11 @@
 **                          |/                                          **
 \*                                                                      */
 
-
-
-package scala.collection
+package scala
+package collection
 
 import generic._
-import mutable.{Builder, Buffer, ArrayBuffer, ListBuffer}
+import mutable.Builder
 import scala.util.control.Breaks
 
 /** A trait for traversable collections.
@@ -102,4 +101,4 @@ object Traversable extends TraversableFactory[Traversable] { self =>
 }
 
 /** Explicit instantiation of the `Traversable` trait to reduce class file size in subclasses. */
-private[scala] abstract class AbstractTraversable[+A] extends Traversable[A]
+abstract class AbstractTraversable[+A] extends Traversable[A]

@@ -24,6 +24,7 @@ import scala.util.Random
  * @version 0.9.9
  * @author Philipp Haller
  */
+@deprecated("Use the akka.actor package instead. For migration from the scala.actors package refer to the Actors Migration Guide.", "2.11.0")
 object TcpService {
   private val random = new Random
   private val ports = new mutable.HashMap[Int, TcpService]
@@ -34,7 +35,7 @@ object TcpService {
         service
       case None =>
         val service = new TcpService(port, cl)
-        ports += Pair(port, service)
+        ports(port) = service
         service.start()
         Debug.info("created service at "+service.node)
         service
@@ -66,7 +67,7 @@ object TcpService {
       timeout =>
         try {
           val to = timeout.toInt
-          Debug.info("Using socket timeout $to")
+          Debug.info(s"Using socket timeout $to")
           Some(to)
         } catch {
           case e: NumberFormatException =>
@@ -84,6 +85,7 @@ object TcpService {
  * @version 0.9.10
  * @author Philipp Haller
  */
+@deprecated("Use the akka.actor package instead. For migration from the scala.actors package refer to the Actors Migration Guide.", "2.11.0")
 class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
   val serializer: JavaSerializer = new JavaSerializer(this, cl)
 
@@ -104,9 +106,9 @@ class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
       // when remote net kernel comes up
       (pendingSends.get(node): @unchecked) match {
         case None =>
-          pendingSends += Pair(node, List(data))
+          pendingSends(node) = List(data)
         case Some(msgs) if msgs.length < TcpService.BufSize =>
-          pendingSends += Pair(node, data :: msgs)
+          pendingSends(node) = data :: msgs
       }
     }
 
@@ -181,7 +183,7 @@ class TcpService(port: Int, cl: ClassLoader) extends Thread with Service {
     new mutable.HashMap[Node, TcpServiceWorker]
 
   private[actors] def addConnection(node: Node, worker: TcpServiceWorker) = synchronized {
-    connections += Pair(node, worker)
+    connections(node) = worker
   }
 
   def getConnection(n: Node) = synchronized {

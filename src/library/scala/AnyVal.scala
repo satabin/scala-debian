@@ -33,7 +33,7 @@ package scala
  *
  * User-defined value classes which avoid object allocation...
  *
- *   - must have a single, public `val` parameter that is the underlying runtime representation.
+ *   - must have a single `val` parameter that is the underlying runtime representation.
  *   - can define `def`s, but no `val`s, `var`s, or nested `traits`s, `class`es or `object`s.
  *   - typically extend no other trait apart from `AnyVal`.
  *   - cannot be used in type tests or pattern matching.
@@ -52,6 +52,6 @@ package scala
  * as well as in [[http://docs.scala-lang.org/sips/pending/value-classes.html SIP-15: Value Classes]],
  * the Scala Improvement Proposal.
  */
-abstract class AnyVal extends Any with NotNull {
+abstract class AnyVal extends Any {
   def getClass(): Class[_ <: AnyVal] = null
 }

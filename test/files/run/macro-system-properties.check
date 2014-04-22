@@ -1,26 +1,22 @@
 Type in expressions to have them evaluated.
 Type :help for more information.
 
-scala> 
-
-scala>     import language.experimental._, reflect.macros.Context
-import language.experimental._
-import reflect.macros.Context
+scala> import scala.language.experimental._, scala.reflect.macros.blackbox.Context
+import scala.language.experimental._
+import scala.reflect.macros.blackbox.Context
 
 scala>     object GrabContext {
       def lastContext = Option(System.getProperties.get("lastContext").asInstanceOf[reflect.macros.runtime.Context])
       // System.properties lets you stash true globals (unlike statics which are classloader scoped)
-      def impl(c: Context)() = { System.getProperties.put("lastContext", c); c.literalUnit }
-      def grab() = macro impl
+      def impl(c: Context)() = { import c.universe._; System.getProperties.put("lastContext", c); c.Expr[Unit](q"()") }
+      def grab(): Unit = macro impl
     }
-defined module GrabContext
+defined object GrabContext
 
 scala>     object Test { class C(implicit a: Any) { GrabContext.grab } }
-defined module Test
+defined object Test
 
 scala>     object Test { class C(implicit a: Any) { GrabContext.grab } }
-defined module Test
-
-scala> 
+defined object Test
 
 scala> 

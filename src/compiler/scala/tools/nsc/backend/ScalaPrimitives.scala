@@ -3,10 +3,10 @@
  * @author  Martin Odersky
  */
 
-package scala.tools.nsc
+package scala
+package tools.nsc
 package backend
 
-import scala.tools.nsc.backend.icode._
 import scala.collection.{ mutable, immutable }
 
 /** Scala primitive operations are represented as methods in `Any` and
@@ -442,15 +442,17 @@ abstract class ScalaPrimitives {
   }
 
   def addPrimitives(cls: Symbol, method: Name, code: Int) {
-    val tpe = cls.info
-    val sym = tpe.member(method)
-    if (sym == NoSymbol)
-      inform("Unknown primitive method " + cls + "." + method)
-    for (s <- sym.alternatives)
-      addPrimitive(
-        s,
-        if (code == ADD && s.info.paramTypes.head == definitions.StringClass.tpe) CONCAT
-        else code)
+    val alts = (cls.info member method).alternatives
+    if (alts.isEmpty)
+      inform(s"Unknown primitive method $cls.$method")
+    else alts foreach (s =>
+      addPrimitive(s,
+        s.info.paramTypes match {
+          case tp :: _ if code == ADD && tp =:= StringTpe => CONCAT
+          case _                                          => code
+        }
+      )
+    )
   }
 
   def isCoercion(code: Int): Boolean = (code >= B2B) && (code <= D2D)
@@ -495,8 +497,8 @@ abstract class ScalaPrimitives {
   def isArraySet(code: Int): Boolean = code match {
     case ZARRAY_SET | BARRAY_SET | SARRAY_SET | CARRAY_SET |
          IARRAY_SET | LARRAY_SET | FARRAY_SET | DARRAY_SET |
-         OARRAY_SET | UPDATE => true;
-    case _ => false;
+         OARRAY_SET | UPDATE => true
+    case _ => false
   }
 
   /** Check whether the given code is a comparison operator */
@@ -515,7 +517,7 @@ abstract class ScalaPrimitives {
          DIV | MOD       => true; // binary
     case OR  | XOR | AND |
          LSL | LSR | ASR => true; // bitwise
-    case _ => false;
+    case _ => false
   }
 
   def isLogicalOp(code: Int): Boolean = code match {
@@ -565,7 +567,7 @@ abstract class ScalaPrimitives {
     import definitions._
     val code = getPrimitive(fun)
 
-    def elementType = beforeTyper {
+    def elementType = enteringTyper {
       val arrayParent = tpe :: tpe.parents collectFirst {
         case TypeRef(_, ArrayClass, elem :: Nil) => elem
       }

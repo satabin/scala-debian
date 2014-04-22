@@ -34,23 +34,25 @@ import scala.reflect.internal.util.Position
   *  - recover GADT typing by locally inserting implicit witnesses to type equalities derived from the current case, and considering these witnesses during subtyping (?)
   *  - recover exhaustivity/unreachability of user-defined extractors by partitioning the types they match on using an HList or similar type-level structure
   */
-trait PatternMatching extends Transform with TypingTransformers
+trait PatternMatching extends Transform
+                      with TypingTransformers
                       with Debugging
                       with Interface
                       with MatchTranslation
                       with MatchTreeMaking
                       with MatchCodeGen
+                      with MatchCps
                       with ScalaLogic
                       with Solving
                       with MatchAnalysis
-                      with MatchOptimization {
+                      with MatchOptimization
+                      with MatchWarnings
+                      with ScalacPatternExpanders {
   import global._
 
   val phaseName: String = "patmat"
 
-  def newTransformer(unit: CompilationUnit): Transformer =
-    if (opt.virtPatmat) new MatchTransformer(unit)
-    else noopTransformer
+  def newTransformer(unit: CompilationUnit): Transformer = new MatchTransformer(unit)
 
   class MatchTransformer(unit: CompilationUnit) extends TypingTransformer(unit) {
     override def transform(tree: Tree): Tree = tree match {
@@ -96,24 +98,26 @@ trait Debugging {
   // TODO: the inliner fails to inline the closures to debug.patmat unless the method is nested in an object
   object debug {
     val printPatmat = global.settings.Ypatmatdebug.value
-    @inline final def patmat(s: => String) = if (printPatmat) println(s)
+    @inline final def patmat(s: => String) = if (printPatmat) Console.err.println(s)
+    @inline final def patmatResult[T](s: => String)(result: T): T = {
+      if (printPatmat) Console.err.println(s + ": " + result)
+      result
+    }
   }
 }
 
 trait Interface extends ast.TreeDSL {
-  import global.{newTermName, analyzer, Type, ErrorType, Symbol, Tree}
+  import global._
   import analyzer.Typer
 
   // 2.10/2.11 compatibility
-  protected final def dealiasWiden(tp: Type)   = tp.dealias                       // 2.11: dealiasWiden
-  protected final def mkTRUE                   = CODE.TRUE_typed                  // 2.11: CODE.TRUE
-  protected final def mkFALSE                  = CODE.FALSE_typed                 // 2.11: CODE.FALSE
-  protected final def hasStableSymbol(p: Tree) = p.hasSymbol && p.symbol.isStable // 2.11: p.hasSymbolField && p.symbol.isStable
-  protected final def devWarning(str: String)  = global.debugwarn(str)            // 2.11: omit
+  protected final def dealiasWiden(tp: Type)   = tp.dealiasWiden
+  protected final def mkTRUE                   = CODE.TRUE
+  protected final def mkFALSE                  = CODE.FALSE
+  protected final def hasStableSymbol(p: Tree) = p.hasSymbolField && p.symbol.isStable
 
   object vpmName {
     val one       = newTermName("one")
-    val drop      = newTermName("drop")
     val flatMap   = newTermName("flatMap")
     val get       = newTermName("get")
     val guard     = newTermName("guard")
@@ -132,8 +136,9 @@ trait Interface extends ast.TreeDSL {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /** Interface with user-defined match monad?
-   * if there's a `__match` in scope, we use this as the match strategy, assuming it conforms to MatchStrategy as defined below:
+   * if there's a <code>__match</code> in scope, we use this as the match strategy, assuming it conforms to MatchStrategy as defined below:
 
+       {{{
        type Matcher[P[_], M[+_], A] = {
          def flatMap[B](f: P[A] => M[B]): M[B]
          def orElse[B >: A](alternative: => M[B]): M[B]
@@ -147,12 +152,14 @@ trait Interface extends ast.TreeDSL {
          def one[T](x: P[T]): M[T]
          def guard[T](cond: P[Boolean], then: => P[T]): M[T]
        }
+       }}}
 
    * P and M are derived from one's signature (`def one[T](x: P[T]): M[T]`)
 
 
-   * if no `__match` is found, we assume the following implementation (and generate optimized code accordingly)
+   * if no <code>__match</code> is found, we assume the following implementation (and generate optimized code accordingly)
 
+       {{{
        object __match extends MatchStrategy[({type Id[x] = x})#Id, Option] {
          def zero = None
          def one[T](x: T) = Some(x)
@@ -160,11 +167,13 @@ trait Interface extends ast.TreeDSL {
          def guard[T](cond: Boolean, then: => T): Option[T] = if(cond) Some(then) else None
          def runOrElse[T, U](x: T)(f: T => Option[U]): U = f(x) getOrElse (throw new MatchError(x))
        }
+       }}}
 
    */
   trait MatchMonadInterface {
     val typer: Typer
     val matchOwner = typer.context.owner
+    def pureType(tp: Type): Type = tp
 
     def reportUnreachable(pos: Position) = typer.context.unit.warning(pos, "unreachable code")
     def reportMissingCases(pos: Position, counterExamples: List[String]) = {
@@ -174,16 +183,6 @@ trait Interface extends ast.TreeDSL {
 
       typer.context.unit.warning(pos, "match may not be exhaustive.\nIt would fail on the following "+ ceString)
     }
-
-    def inMatchMonad(tp: Type): Type
-    def pureType(tp: Type): Type
-    final def matchMonadResult(tp: Type): Type =
-      tp.baseType(matchMonadSym).typeArgs match {
-        case arg :: Nil => arg
-        case _ => ErrorType
-      }
-
-    protected def matchMonadSym: Symbol
   }
 
 

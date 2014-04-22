@@ -30,7 +30,7 @@ abstract class RangeTest(kind: String) extends Properties("Range "+kind) {
   def myGen: Gen[Range]
 
   def genReasonableSizeRange = oneOf(genArbitraryRange, genBoundaryRange)
-    
+
   def genArbitraryRange = for {
     start <- choose(Int.MinValue, Int.MaxValue)
     end <- choose(Int.MinValue, Int.MaxValue)
@@ -56,7 +56,7 @@ abstract class RangeTest(kind: String) extends Properties("Range "+kind) {
   } yield if (start < end) Range(start, end, step) else Range(start, end, -step)
 
   def genRangeByOne = oneOf(genRangeOpenByOne, genRangeClosedByOne)
-    
+
   def genRangeOpenByOne = for {
     r <- oneOf(genSmallRange, genBoundaryRange)
     if (r.end.toLong - r.start.toLong).abs <= 10000000L
@@ -126,6 +126,47 @@ abstract class RangeTest(kind: String) extends Properties("Range "+kind) {
 //    println("visited: " + visited)
     (visited == expectedSize(r)) :| str(r)
   }
+
+  property("sum") = forAll(myGen) { r =>
+//    println("----------")
+//    println("sum "+str(r))
+    val rSum = r.sum
+    val expected = r.length match {
+      case 0 => 0
+      case 1 => r.head
+      case _ => ((r.head + r.last).toLong * r.length  / 2).toInt
+    }
+//   println("size: " + r.length)
+//   println("expected: " + expected)
+//   println("obtained: " + rSum)
+
+   (rSum == expected) :| str(r)
+  }
+
+/* checks that sum respects custom Numeric */
+  property("sumCustomNumeric") = forAll(myGen) { r =>
+    val mod = 65536
+    object mynum extends Numeric[Int] {
+        def plus(x: Int, y: Int): Int = (x + y) % mod
+        override def zero = 0
+
+        def fromInt(x: Int): Int = ???
+        def minus(x: Int, y: Int): Int = ???
+        def negate(x: Int): Int = ???
+        def times(x: Int, y: Int): Int = ???
+        def toDouble(x: Int): Double = ???
+        def toFloat(x: Int): Float = ???
+        def toInt(x: Int): Int = ((x % mod) + mod * 2) % mod
+        def toLong(x: Int): Long = ???
+        def compare(x: Int, y: Int): Int = ???
+      }
+
+    val rSum = r.sum(mynum)
+    val expected = mynum.toInt(r.sum)
+
+    (rSum == expected) :| str(r)
+  }
+
 
   property("length") = forAll(myGen suchThat (r => expectedSize(r).toInt == expectedSize(r))) { r =>
 //    println("length "+str(r))
@@ -224,7 +265,8 @@ object TooLargeRange extends Properties("Too Large Range") {
   property("Too large range throws exception") = forAll(genTooLargeStart) { start =>
     try   {
       val r = Range.inclusive(start, Int.MaxValue, 1)
-      println("how here? r = " + r.toString)
+      val l = r.length
+      println("how here? length = " + l + ", r = " + r.toString)
       false
     }
     catch { case _: IllegalArgumentException => true }

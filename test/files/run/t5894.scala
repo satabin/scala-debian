@@ -1,10 +1,11 @@
-import language.experimental.macros
+import scala.reflect.macros.blackbox.Context
+import scala.language.experimental.macros
 
 class Test
 
 object Test {
-  def foo = macro fooImpl
-  def fooImpl(c: reflect.macros.Context) = c.literalUnit
+  def foo: Unit = macro fooImpl
+  def fooImpl(c: Context) = { import c.universe._; c.Expr[Unit](q"()") }
 
   def main(args: Array[String]) {
     try {

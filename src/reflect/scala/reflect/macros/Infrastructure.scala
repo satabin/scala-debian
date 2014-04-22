@@ -1,14 +1,15 @@
-package scala.reflect
+package scala
+package reflect
 package macros
 
 /**
  * <span class="badge badge-red" style="float: right;">EXPERIMENTAL</span>
  *
- *  A slice of [[scala.reflect.macros.Context the Scala macros context]] that
+ *  A slice of [[scala.reflect.macros.blackbox.Context the Scala macros context]] that
  *  provides facilities to communicate with the compiler's infrastructure.
  */
 trait Infrastructure {
-  self: Context =>
+  self: blackbox.Context =>
 
   /** Exposes macro-specific settings as a list of strings.
    *  These settings are passed to the compiler via the "-Xmacro-settings:setting1,setting2...,settingN" command-line option.

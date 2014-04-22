@@ -1,10 +1,6 @@
 Type in expressions to have them evaluated.
 Type :help for more information.
 
-scala> 
-
-scala> 
-
 scala> class Annot(obj: Any) extends annotation.Annotation with annotation.TypeConstraint
 defined class Annot
 
@@ -14,7 +10,7 @@ scala> class A {
   val x = "hello"
   val y: Int @Annot(x) = 10
   override def toString = "an A"
-} 
+}
 defined class A
 
 scala> 
@@ -22,7 +18,7 @@ scala>
 scala> val a = new A
 a: A = an A
 
-scala> val y = a.y   // should rewrite "this.x" to "a.x" 
+scala> val y = a.y   // should rewrite "this.x" to "a.x"
 y: Int @Annot(a.x) = 10
 
 scala> var a2 = new A
@@ -37,7 +33,7 @@ scala> object Stuff {
   val x = "hello"
   val y : Int @Annot(x) = 10
 }
-defined module Stuff
+defined object Stuff
 
 scala> 
 
@@ -127,7 +123,7 @@ defined class rep
 scala> 
 
 scala> object A { val x = "hello" : String @ rep }
-defined module A
+defined object A
 warning: previously defined class A is not a companion to object A.
 Companions must be defined together; you may wish to use :paste mode for this.
 
@@ -142,17 +138,14 @@ scala> val x = 3 : Int @Annot(e+f+g+h) // should have a graceful error message
 <console>:8: error: not found: value e
        val x = 3 : Int @Annot(e+f+g+h) // should have a graceful error message
                               ^
-
-scala> 
-
-scala> class Where(condition: Boolean) extends annotation.Annotation
-defined class Where
-
-scala> 
-
-scala> val x : Int @Where(self > 0 && self < 100) = 3
-x: Int @Where(self.>(0).&&(self.<(100))) = 3
-
-scala> 
+<console>:8: error: not found: value f
+       val x = 3 : Int @Annot(e+f+g+h) // should have a graceful error message
+                                ^
+<console>:8: error: not found: value g
+       val x = 3 : Int @Annot(e+f+g+h) // should have a graceful error message
+                                  ^
+<console>:8: error: not found: value h
+       val x = 3 : Int @Annot(e+f+g+h) // should have a graceful error message
+                                    ^
 
 scala> 

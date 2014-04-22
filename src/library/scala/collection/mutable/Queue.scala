@@ -8,7 +8,8 @@
 
 
 
-package scala.collection
+package scala
+package collection
 package mutable
 
 import generic._
@@ -142,6 +143,7 @@ extends MutableList[A]
   /** Return the proper suffix of this list which starts with the first element that satisfies `p`.
    *  That element is unlinked from the list. If no element satisfies `p`, return None.
    */
+  @deprecated("extractFirst inappropriately exposes implementation details.  Use dequeue or dequeueAll.", "2.11.0")
   def extractFirst(start: LinkedList[A], p: A => Boolean): Option[LinkedList[A]] = {
     if (isEmpty) None
     else {
@@ -167,13 +169,6 @@ extends MutableList[A]
    */
   def front: A = head
 
-  // this method (duplicated from MutableList) must be private for binary compatibility
-  private final def tailImpl(tl: Queue[A]) {
-    require(nonEmpty, "tail of empty list")
-    tl.first0 = first0.tail
-    tl.len = len - 1
-    tl.last0 = if (tl.len == 0) tl.first0 else last0
-  }
 
   // TODO - Don't override this just for new to create appropriate type....
   override def tail: Queue[A] = {
@@ -185,7 +180,7 @@ extends MutableList[A]
   override def clone(): Queue[A] = {
     val bf = newBuilder
     bf ++= seq
-    bf.result
+    bf.result()
   }
 
   private[this] def decrementLength() {

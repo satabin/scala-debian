@@ -1,14 +1,15 @@
-package scala.reflect
+package scala
+package reflect
 package macros
 
 /**
  * <span class="badge badge-red" style="float: right;">EXPERIMENTAL</span>
  *
- *  A slice of [[scala.reflect.macros.Context the Scala macros context]] that defines shorthands for the
+ *  A slice of [[scala.reflect.macros.blackbox.Context the Scala macros context]] that defines shorthands for the
  *  most frequently used types and functions of the underlying compiler universe.
  */
 trait Aliases {
-  self: Context =>
+  self: blackbox.Context =>
 
   /** The type of symbols representing declarations. */
   type Symbol = universe.Symbol
@@ -39,10 +40,16 @@ trait Aliases {
   /** The type of tree modifiers. */
   type Modifiers = universe.Modifiers
 
-  /** The type of compilation runs. */
+  /** The type of compilation runs.
+   *  @see [[scala.reflect.macros.Enclosures]]
+   */
+  @deprecated("c.enclosingTree-style APIs are now deprecated; consult the scaladoc for more information", "2.11.0")
   type Run = universe.Run
 
-  /** The type of compilation units. */
+  /** The type of compilation units.
+   *  @see [[scala.reflect.macros.Enclosures]]
+   */
+  @deprecated("c.enclosingTree-style APIs are now deprecated; consult the scaladoc for more information", "2.11.0")
   type CompilationUnit = universe.CompilationUnit
 
   /** Expr wraps an abstract syntax tree and tags it with its type. */
@@ -109,4 +116,9 @@ trait Aliases {
    * Shortcut for `implicitly[TypeTag[T]].tpe`
    */
   def typeOf[T](implicit ttag: TypeTag[T]): Type = ttag.tpe
+
+  /**
+   * Type symbol of `x` as derived from a type tag.
+   */
+  def symbolOf[T: WeakTypeTag]: universe.TypeSymbol = universe.symbolOf[T]
 }

@@ -1,3 +1,6 @@
+/*
+ * filter: inliner warning\(s\); re-run with -Yinline-warnings for details
+ */
 object Test {
   def x = BigInt("10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
   def y = BigDecimal("" + (Short.MaxValue + 1) + ".0")
@@ -16,25 +19,27 @@ object Test {
     assert(!x.isValidChar, x)
     assert(!x.isValidShort, x)
     assert(!x.isValidByte, x)
-//    assert(y.isWhole, y)
+    assert(y.isWhole, y)
     assert(!y.isValidShort, y)
     assert(y.isValidChar, y)
     assert(y.isValidInt, y)
-    assert(y.isValidFloat, y)
-    assert(y.isValidDouble, y)
+    assert(y.isDecimalFloat, y)
+    assert(y.isDecimalDouble, y)
     assert(y.isValidLong, y)
     assert(!y.isValidByte, y)
-//    assert(!y1.isWhole)
+    assert(!y1.isWhole)
     assert(!y1.isValidLong, y1)
-    assert(!y1.isValidFloat, y1)
-    assert(!y1.isValidDouble, y1)
+    assert(y1.isDecimalFloat, y1)
+    assert(y1.isDecimalDouble, y1)
+    assert(!y1.isExactFloat, y1)
+    assert(!y1.isExactDouble, y1)
     assert(!y1.isValidInt, y1)
     assert(!y1.isValidChar, y1)
     assert(!y1.isValidShort, y1)
     assert(!y1.isValidByte, y1)
     assert(!y2.isValidLong, y2)
-    assert(y2.isValidFloat, y2)
-    assert(y2.isValidDouble, y2)
+    assert(y2.isExactFloat, y2)
+    assert(y2.isExactDouble, y2)
 
     assert(!l1.isValidInt && (l1 - 1).isValidInt, l1)
     assert(!l2.isValidInt && (l2 + 1).isValidInt, l2)
@@ -124,7 +129,7 @@ object Test {
     checkBigInt2(biExp2(128) - biExp2(128 - pf))
     checkBigInt2(biExp2(128) - biExp2(128 - pf - 1))
     checkBigInt2(biExp2(128))
-    
+
     checkBigInt2(biExp2(1023))
     checkBigInt2(biExp2(1024) - biExp2(1024 - pd))
     checkBigInt2(biExp2(1024) - biExp2(1024 - pd - 1))
@@ -167,8 +172,8 @@ object Test {
     if (!d.isInfinity) {
       val bd = BigDecimal(new java.math.BigDecimal(d))
 //      assert(!bd.isWhole, bd)
-      assert(bd.isValidDouble, bd)
-      assert(bd.isValidFloat == isFloat, bd)
+      assert(bd.isExactDouble, bd)
+      assert(bd.isExactFloat == isFloat, bd)
       assert(!bd.isValidLong, bd)
       assert(!bd.isValidInt, bd)
       assert(!bd.isValidChar, bd)
@@ -207,9 +212,9 @@ object Test {
     val isFloat = !bi.toFloat.isInfinity && bd.compare(BigDecimal(new java.math.BigDecimal(bi.toFloat))) == 0
     val isDouble = !bi.toDouble.isInfinity && bd.compare(BigDecimal(new java.math.BigDecimal(bi.toDouble))) == 0
 
-//    assert(bd.isWhole, bd)
-    assert(bd.isValidDouble == isDouble, bd)
-    assert(bd.isValidFloat == isFloat, bd)
+    assert(bd.isWhole, bd)
+    assert(bd.isBinaryDouble == isDouble, bd)
+    assert(bd.isBinaryFloat == isFloat, bd)
     assert(bd.isValidLong == isLong, bd)
     assert(bd.isValidInt == isInt, bd)
     assert(bd.isValidChar == isChar, bd)

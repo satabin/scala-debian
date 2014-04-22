@@ -11,9 +11,9 @@ object Test extends App {
   }
   println(label.eval)
   val tb = cm.mkToolBox()
-  val tlabel = tb.typeCheck(label.tree)
+  val tlabel = tb.typecheck(label.tree)
   println(tlabel)
-  val rtlabel = tb.resetAllAttrs(tlabel)
+  val rtlabel = tb.untypecheck(tlabel)
   try {
     println(tb.eval(rtlabel))
   } catch {

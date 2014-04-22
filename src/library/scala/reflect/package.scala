@@ -1,5 +1,7 @@
 package scala
 
+import java.lang.reflect.{ AccessibleObject => jAccessibleObject }
+
 package object reflect {
 
   // in the new scheme of things ClassManifests are aliased to ClassTags
@@ -42,26 +44,23 @@ package object reflect {
 
   def classTag[T](implicit ctag: ClassTag[T]) = ctag
 
+  /** Make a java reflection object accessible, if it is not already
+   *  and it is possible to do so. If a SecurityException is thrown in the
+   *  attempt, it is caught and discarded.
+   */
+  def ensureAccessible[T <: jAccessibleObject](m: T): T = {
+    if (!m.isAccessible) {
+      try m setAccessible true
+      catch { case _: SecurityException => } // does nothing
+    }
+    m
+  }
+
   // anchor for the class tag materialization macro emitted during tag materialization in Implicits.scala
   // implementation is hardwired into `scala.reflect.reify.Taggers`
   // using the mechanism implemented in `scala.tools.reflect.FastTrack`
   // todo. once we have implicit macros for tag generation, we can remove this anchor
-  private[scala] def materializeClassTag[T](): ClassTag[T] = ??? // macro
-
-  @deprecated("Use `@scala.beans.BeanDescription` instead", "2.10.0")
-  type BeanDescription = scala.beans.BeanDescription
-  @deprecated("Use `@scala.beans.BeanDisplayName` instead", "2.10.0")
-  type BeanDisplayName = scala.beans.BeanDisplayName
-  @deprecated("Use `@scala.beans.BeanInfo` instead", "2.10.0")
-  type BeanInfo = scala.beans.BeanInfo
-  @deprecated("Use `@scala.beans.BeanInfoSkip` instead", "2.10.0")
-  type BeanInfoSkip = scala.beans.BeanInfoSkip
-  @deprecated("Use `@scala.beans.BeanProperty` instead", "2.10.0")
-  type BeanProperty = scala.beans.BeanProperty
-  @deprecated("Use `@scala.beans.BooleanBeanProperty` instead", "2.10.0")
-  type BooleanBeanProperty = scala.beans.BooleanBeanProperty
-  @deprecated("Use `@scala.beans.ScalaBeanInfo` instead", "2.10.0")
-  type ScalaBeanInfo = scala.beans.ScalaBeanInfo
+  private[scala] def materializeClassTag[T](): ClassTag[T] = macro ???
 }
 
 /** An exception that indicates an error during Scala reflection */

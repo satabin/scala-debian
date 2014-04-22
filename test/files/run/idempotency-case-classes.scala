@@ -10,9 +10,9 @@ object Test extends App {
   }
   println(casee.eval)
   val tb = cm.mkToolBox()
-  val tcasee = tb.typeCheck(casee.tree)
+  val tcasee = tb.typecheck(casee.tree)
   println(tcasee)
-  val rtcasee = tb.resetAllAttrs(tcasee)
+  val rtcasee = tb.untypecheck(tcasee)
   try {
     println(tb.eval(rtcasee))
   } catch {

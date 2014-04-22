@@ -15,12 +15,12 @@ testing Any.!=: false
 testing Any.##: 50
 testing Any.==: true
 testing Any.asInstanceOf: class scala.ScalaReflectionException: Any.asInstanceOf requires a type argument, it cannot be invoked with mirrors
-testing Any.asInstanceOf: class scala.ScalaReflectionException: scala.Any.asInstanceOf[T0]: T0 takes 0 arguments
+testing Any.asInstanceOf: class scala.ScalaReflectionException: final def asInstanceOf[T0]: T0 takes 0 arguments
 testing Any.equals: true
 testing Any.getClass: class java.lang.String
 testing Any.hashCode: 50
 testing Any.isInstanceOf: class scala.ScalaReflectionException: Any.isInstanceOf requires a type argument, it cannot be invoked with mirrors
-testing Any.isInstanceOf: class scala.ScalaReflectionException: scala.Any.isInstanceOf[T0]: Boolean takes 0 arguments
+testing Any.isInstanceOf: class scala.ScalaReflectionException: final def isInstanceOf[T0]: Boolean takes 0 arguments
 testing Any.toString: 2
 ============
 AnyVal
@@ -28,7 +28,7 @@ it's important to print the list of AnyVal's members
 if some of them change (possibly, adding and/or removing magic symbols), we must update this test
 constructor AnyVal: ()AnyVal
 method getClass: ()Class[_ <: AnyVal]
-testing AnyVal.<init>: class java.lang.InstantiationException: null
+testing AnyVal.<init>: class scala.ScalaReflectionException: unsupported symbol constructor AnyVal when invoking bytecodeless method mirror for def <init>(): AnyVal (bound to null)
 testing AnyVal.getClass: class scala.ScalaReflectionException: expected a member of class Integer, you provided method scala.AnyVal.getClass
 ============
 AnyRef
@@ -36,12 +36,10 @@ it's important to print the list of AnyRef's members
 if some of them change (possibly, adding and/or removing magic symbols), we must update this test
 constructor Object: ()java.lang.Object
 method !=: (x$1: Any)Boolean
-method !=: (x$1: AnyRef)Boolean
 method ##: ()Int
 method $asInstanceOf: [T0]()T0
 method $isInstanceOf: [T0]()Boolean
 method ==: (x$1: Any)Boolean
-method ==: (x$1: AnyRef)Boolean
 method asInstanceOf: [T0]=> T0
 method clone: ()java.lang.Object
 method eq: (x$1: AnyRef)Boolean
@@ -61,9 +59,9 @@ method wait: (x$1: Long, x$2: Int)Unit
 testing Object.!=: false
 testing Object.##: 50
 testing Object.$asInstanceOf: class scala.ScalaReflectionException: AnyRef.$asInstanceOf is an internal method, it cannot be invoked with mirrors
-testing Object.$asInstanceOf: class scala.ScalaReflectionException: java.lang.Object.$asInstanceOf[T0](): T0 takes 0 arguments
+testing Object.$asInstanceOf: class scala.ScalaReflectionException: final def $asInstanceOf[T0](): T0 takes 0 arguments
 testing Object.$isInstanceOf: class scala.ScalaReflectionException: AnyRef.$isInstanceOf is an internal method, it cannot be invoked with mirrors
-testing Object.$isInstanceOf: class scala.ScalaReflectionException: java.lang.Object.$isInstanceOf[T0](): Boolean takes 0 arguments
+testing Object.$isInstanceOf: class scala.ScalaReflectionException: final def $isInstanceOf[T0](): Boolean takes 0 arguments
 testing Object.==: true
 testing Object.clone: class java.lang.CloneNotSupportedException: java.lang.String
 testing Object.eq: true
@@ -82,14 +80,11 @@ Array
 it's important to print the list of Array's members
 if some of them change (possibly, adding and/or removing magic symbols), we must update this test
 constructor Array: (_length: Int)Array[T]
-constructor Cloneable: ()java.lang.Cloneable
 method !=: (x$1: Any)Boolean
-method !=: (x$1: AnyRef)Boolean
 method ##: ()Int
 method $asInstanceOf: [T0]()T0
 method $isInstanceOf: [T0]()Boolean
 method ==: (x$1: Any)Boolean
-method ==: (x$1: AnyRef)Boolean
 method apply: (i: Int)T
 method asInstanceOf: [T0]=> T0
 method clone: ()Array[T]
@@ -120,5 +115,5 @@ testing String.+: 23
 ============
 CTM
 testing Predef.classOf: class scala.ScalaReflectionException: Predef.classOf is a compile-time function, it cannot be invoked with mirrors
-testing Predef.classOf: class scala.ScalaReflectionException: scala.Predef.classOf[T]: Class[T] takes 0 arguments
+testing Predef.classOf: class scala.ScalaReflectionException: def classOf[T]: Class[T] takes 0 arguments
 testing Universe.reify: class scala.ScalaReflectionException: scala.reflect.api.Universe.reify is a macro, i.e. a compile-time function, it cannot be invoked with mirrors

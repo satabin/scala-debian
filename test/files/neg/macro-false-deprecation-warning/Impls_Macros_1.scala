@@ -1,4 +1,4 @@
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 
 object Helper {
   def unapplySeq[T](x: List[T]): Option[Seq[T]] =

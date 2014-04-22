@@ -1,10 +1,10 @@
 object Test {
-  val c: reflect.macros.Context = ???
+  val c: scala.reflect.macros.blackbox.Context = ???
   import c.universe._
   reify {
     // The lookup of the implicit WeakTypeTag[Any]
     // was triggering an unpositioned tree.
-    c.Expr[Any](Literal(Constant(0))).splice
+    c.Expr[Any](q"0").splice
   }
 
   import scala.reflect.ClassTag

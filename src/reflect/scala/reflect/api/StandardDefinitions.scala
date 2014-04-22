@@ -2,7 +2,8 @@
  * Copyright 2005-2013 LAMP/EPFL
  * @author  Martin Odersky
  */
-package scala.reflect
+package scala
+package reflect
 package api
 
 /**
@@ -130,10 +131,10 @@ trait StandardDefinitions {
      *  scala> val m = typeOf[C].member(newTermName("m")).asMethod
      *  m: reflect.runtime.universe.MethodSymbol = method m
      *
-     *  scala> m.params(0)(0).typeSignature
+     *  scala> m.params(0)(0).info
      *  res1: reflect.runtime.universe.Type = => scala.Int
      *
-     *  scala> showRaw(m.params(0)(0).typeSignature)
+     *  scala> showRaw(m.params(0)(0).info)
      *  res2: String = TypeRef(
      *      ThisType(scala),
      *      scala.<byname>, // <-- ByNameParamClass
@@ -158,10 +159,10 @@ trait StandardDefinitions {
      *  scala> val m = typeOf[C].member(newTermName("m")).asMethod
      *  m: reflect.runtime.universe.MethodSymbol = method m
      *
-     *  scala> m.params(0)(0).typeSignature
+     *  scala> m.params(0)(0).info
      *  res1: reflect.runtime.universe.Type = <repeated...>[Object]
      *
-     *  scala> showRaw(m.params(0)(0).typeSignature)
+     *  scala> showRaw(m.params(0)(0).info)
      *  res2: String = TypeRef(
      *      ThisType(scala),
      *      scala.<repeated...>, // <-- JavaRepeatedParamClass
@@ -183,10 +184,10 @@ trait StandardDefinitions {
      *  scala> val m = typeOf[C].member(newTermName("m")).asMethod
      *  m: reflect.runtime.universe.MethodSymbol = method m
      *
-     *  scala> m.params(0)(0).typeSignature
+     *  scala> m.params(0)(0).info
      *  res1: reflect.runtime.universe.Type = scala.Int*
      *
-     *  scala> showRaw(m.params(0)(0).typeSignature)
+     *  scala> showRaw(m.params(0)(0).info)
      *  res2: String = TypeRef(
      *      ThisType(scala),
      *      scala.<repeated>, // <-- RepeatedParamClass
@@ -213,29 +214,43 @@ trait StandardDefinitions {
     /** The module symbol of module `scala.Some`. */
     def SomeModule: ModuleSymbol
 
-    /** The array of class symbols for classes `scala.ProductX`.
+    /** Function-like api that lets you acess symbol
+     *  of the definition with given arity and also look
+     *  through all known symbols via `seq`.
+     */
+    abstract class VarArityClassApi extends (Int => Symbol) {
+      def seq: Seq[ClassSymbol]
+    }
+
+    /** Function-like object that maps arity to symbols for classes `scala.ProductX`.
      *   -  0th element is `Unit`
      *   -  1st element is `Product1`
      *   -  ...
      *   - 22nd element is `Product22`
+     *   - 23nd element is `NoSymbol`
+     *   - ...
      */
-    def ProductClass  : Array[ClassSymbol]
+    def ProductClass: VarArityClassApi
 
-    /** The array of class symbols for classes `scala.FunctionX`.
+    /** Function-like object that maps arity to symbols for classes `scala.FunctionX`.
      *   -  0th element is `Function0`
      *   -  1st element is `Function1`
      *   -  ...
      *   - 22nd element is `Function22`
+     *   - 23nd element is `NoSymbol`
+     *   - ...
      */
-    def FunctionClass : Array[ClassSymbol]
+    def FunctionClass: VarArityClassApi
 
-    /** The array of class symbols for classes `scala.TupleX`.
+    /** Function-like object that maps arity to symbols for classes `scala.TupleX`.
      *   -  0th element is `NoSymbol`
-     *   -  1st element is `Product1`
+     *   -  1st element is `Tuple1`
      *   -  ...
-     *   - 22nd element is `Product22`
+     *   - 22nd element is `Tuple22`
+     *   - 23nd element is `NoSymbol`
+     *   - ...
      */
-    def TupleClass: Array[Symbol] // cannot make it Array[ClassSymbol], because TupleClass(0) is supposed to be NoSymbol. weird
+    def TupleClass: VarArityClassApi
 
     /** Contains Scala primitive value classes:
      *   - Byte

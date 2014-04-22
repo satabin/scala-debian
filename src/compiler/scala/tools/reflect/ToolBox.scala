@@ -21,13 +21,39 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
    */
   def frontEnd: FrontEnd
 
-  /** Typechecks a tree using this ToolBox.
+  /** Represents mode of operations of the typechecker underlying `c.typecheck` calls.
+   *  Is necessary since the shape of the typechecked tree alone is not enough to guess how it should be typechecked.
+   *  Can be EXPRmode (typecheck as a term), TYPEmode (typecheck as a type) or PATTERNmode (typecheck as a pattern).
+   */
+  type TypecheckMode
+
+  /** Indicates that an argument to `c.typecheck` should be typechecked as a term.
+   *  This is the default typechecking mode in Scala 2.11 and the only one supported in Scala 2.10.
+   */
+  val TERMmode: TypecheckMode
+
+  /** Indicates that an argument to `c.typecheck` should be typechecked as a type.
+   */
+  val TYPEmode: TypecheckMode
+
+  /** Indicates that an argument to `c.typecheck` should be typechecked as a pattern.
+   */
+  val PATTERNmode: TypecheckMode
+
+  /** @see `Typers.typecheck`
+   */
+  @deprecated("Use `tb.typecheck` instead", "2.11.0")
+  def typeCheck(tree: u.Tree, pt: u.Type = u.WildcardType, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): u.Tree =
+    typecheck(tree, TERMmode, pt, silent, withImplicitViewsDisabled, withMacrosDisabled)
+
+  /** Typechecks a tree against the expected type `pt`
+   *  under typechecking mode specified in `mode` with [[EXPRmode]] being default.
    *  This populates symbols and types of the tree and possibly transforms it to reflect certain desugarings.
    *
    *  If the tree has unresolved type variables (represented as instances of `FreeTypeSymbol` symbols),
    *  then they all have to be resolved first using `Tree.substituteTypes`, or an error occurs.
    *
-   *  If `silent` is false, `TypeError` will be thrown in case of a typecheck error.
+   *  If `silent` is false, `ToolBoxError` will be thrown in case of a typecheck error.
    *  If `silent` is true, the typecheck is silent and will return `EmptyTree` if an error occurs.
    *  Such errors don't vanish and can be inspected by turning on -Ydebug.
    *
@@ -35,7 +61,7 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
    *    `withImplicitViewsDisabled` recursively prohibits implicit views (though, implicit vals will still be looked up and filled in), default value is false
    *    `withMacrosDisabled` recursively prohibits macro expansions and macro-based implicits, default value is false
    */
-  def typeCheck(tree: u.Tree, pt: u.Type = u.WildcardType, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): u.Tree
+  def typecheck(tree: u.Tree, mode: TypecheckMode = TERMmode, pt: u.Type = u.WildcardType, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): u.Tree
 
   /** Infers an implicit value of the expected type `pt` in top-level context.
    *  Optional `pos` parameter provides a position that will be associated with the implicit search.
@@ -44,10 +70,10 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
    *  this API won't take into account the lexical context of the callsite, because
    *  currently it's impossible to reify it.
    *
-   *  If `silent` is false, `TypeError` will be thrown in case of an inference error.
+   *  If `silent` is false, `ToolBoxError` will be thrown in case of an inference error.
    *  If `silent` is true, the typecheck is silent and will return `EmptyTree` if an error occurs.
    *  Such errors don't vanish and can be inspected by turning on -Xlog-implicits.
-   *  Unlike in `typeCheck`, `silent` is true by default.
+   *  Unlike in `typecheck`, `silent` is true by default.
    */
   def inferImplicitValue(pt: u.Type, silent: Boolean = true, withMacrosDisabled: Boolean = false, pos: u.Position = u.NoPosition): u.Tree
 
@@ -58,26 +84,23 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
    *  this API won't take into account the lexical context of the callsite, because
    *  currently it's impossible to reify it.
    *
-   *  If `silent` is false, `TypeError` will be thrown in case of an inference error.
+   *  If `silent` is false, `ToolBoxError` will be thrown in case of an inference error.
    *  If `silent` is true, the typecheck is silent and will return `EmptyTree` if an error occurs.
    *  Such errors don't vanish and can be inspected by turning on -Xlog-implicits.
-   *  Unlike in `typeCheck`, `silent` is true by default.
+   *  Unlike in `typecheck`, `silent` is true by default.
    */
   def inferImplicitView(tree: u.Tree, from: u.Type, to: u.Type, silent: Boolean = true, withMacrosDisabled: Boolean = false, pos: u.Position = u.NoPosition): u.Tree
 
-  /** Recursively resets symbols and types in a given tree.
-   *
-   *  Note that this does not revert the tree to its pre-typer shape.
-   *  For more info, read up https://issues.scala-lang.org/browse/SI-5464.
-   */
-  def resetAllAttrs(tree: u.Tree): u.Tree
-
   /** Recursively resets locally defined symbols and types in a given tree.
-   *
-   *  Note that this does not revert the tree to its pre-typer shape.
-   *  For more info, read up https://issues.scala-lang.org/browse/SI-5464.
+   *  WARNING: Don't use this API, go for [[untypecheck]] instead.
    */
+  @deprecated("Use `tb.untypecheck` instead", "2.11.0")
   def resetLocalAttrs(tree: u.Tree): u.Tree
+
+  /**
+   *  @see [[scala.reflect.macros.Typers.untypecheck]]
+   */
+  def untypecheck(tree: u.Tree): u.Tree
 
   /** .. */
   def parse(code: String): u.Tree
@@ -93,6 +116,15 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
    */
   def compile(tree: u.Tree): () => Any
 
+  /** Defines a top-level class, trait or module in this ToolBox,
+   *  putting it into a uniquely-named package and returning a symbol that references the defined entity.
+   *  For a ClassDef, a ClassSymbol is returned, and for a ModuleDef, a ModuleSymbol is returned (not a module class, but a module itself).
+   *
+   *  This method can be used to generate definitions that will later be re-used by subsequent calls to
+   *  `compile`, `define` or `eval`. To refer to the generated definition in a tree, use q"$sym".
+   */
+  def define(tree: u.ImplDef): u.Symbol
+
   /** Compiles and runs a tree using this ToolBox.
    *  Is equivalent to `compile(tree)()`.
    */
@@ -101,4 +133,4 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
 
 /** Represents an error during toolboxing
  */
-case class ToolBoxError(val message: String, val cause: Throwable = null) extends Throwable(message, cause)
+case class ToolBoxError(message: String, cause: Throwable = null) extends Throwable(message, cause)

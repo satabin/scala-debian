@@ -6,7 +6,7 @@ object Test {
    *  Type inference overlooks constraints posed by type parameters in annotations on types.
    */
   
-  val testCode = <code>
+  val testCode = """
   
     class posingAs[A] extends annotation.TypeConstraint
     
@@ -14,14 +14,14 @@ object Test {
     
     val x = resolve(7: @posingAs[Any])
   
-  </code>.text
+  """
   
-  def main(args: Array[String]) = {
+  def main(args: Array[String]) {
     
     val settings = new Settings()
     settings.classpath.value = System.getProperty("java.class.path")
     val tool = new interpreter.IMain(settings)
-    val global = tool.compiler
+    val global = tool.global
 
     import global._
     import definitions._

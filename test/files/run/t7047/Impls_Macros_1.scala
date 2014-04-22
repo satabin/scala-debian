@@ -1,4 +1,4 @@
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 import language.experimental.macros
 
 class Foo
@@ -12,7 +12,7 @@ object Macros {
     } catch {
       case _: Exception =>
     }
-    c.literalNull
+    c.Expr[Null](Literal(Constant(null)))
   }
 
   def foo = macro impl

@@ -5,7 +5,6 @@ trait Calculate {
   self: Reifier =>
 
   import global._
-  import definitions._
 
   implicit class RichCalculateSymbol(sym: Symbol) {
     def metalevel: Int = { assert(sym != null && sym != NoSymbol); localSymbols.getOrElse(sym, 0) }
@@ -27,10 +26,10 @@ trait Calculate {
     }
 
   /**
-   *  Merely traverses the reifiee and records local symbols along with their metalevels.
+   *  Merely traverses the reifiee and records symbols local to the reifee along with their metalevels.
    */
   val calculate = new Traverser {
-    // see the explanation of metalevels in ``Metalevels''
+    // see the explanation of metalevels in `Metalevels`
     var currMetalevel = 1
 
     override def traverse(tree: Tree): Unit = tree match {

@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package internal
 
 import Flags._
@@ -80,8 +81,11 @@ trait HasFlags {
   // identically, testing for a single flag.
   def hasAbstractFlag    = hasFlag(ABSTRACT)
   def hasAccessorFlag    = hasFlag(ACCESSOR)
-  def hasDefault         = hasAllFlags(DEFAULTPARAM | PARAM)
+  def hasDefault         = hasFlag(DEFAULTPARAM) && hasFlag(METHOD | PARAM) // Second condition disambiguates with TRAIT
+  def hasEnumFlag        = hasFlag(ENUM)
+  @deprecated("Use isLocalToThis instead", "2.11.0")
   def hasLocalFlag       = hasFlag(LOCAL)
+  def isLocalToThis      = hasFlag(LOCAL)
   def hasModuleFlag      = hasFlag(MODULE)
   def hasPackageFlag     = hasFlag(PACKAGE)
   def hasStableFlag      = hasFlag(STABLE)
@@ -104,6 +108,7 @@ trait HasFlags {
   def isOverride         = hasFlag(OVERRIDE)
   def isParamAccessor    = hasFlag(PARAMACCESSOR)
   def isPrivate          = hasFlag(PRIVATE)
+  @deprecated ("Use `hasPackageFlag` instead", "2.11.0")
   def isPackage          = hasFlag(PACKAGE)
   def isPrivateLocal     = hasAllFlags(PrivateLocal)
   def isProtected        = hasFlag(PROTECTED)
@@ -161,15 +166,6 @@ trait HasFlags {
     else nonAccess + " " + access
   }
 
-  // Backward compat section
-  @deprecated( "Use isTrait", "2.10.0")
-  def hasTraitFlag = hasFlag(TRAIT)
-  @deprecated("Use hasDefault", "2.10.0")
-  def hasDefaultFlag = hasFlag(DEFAULTPARAM)
-  @deprecated("Use isValueParameter or isTypeParameter", "2.10.0")
+  // Guess this can't be deprecated seeing as it's in the reflect API.
   def isParameter = hasFlag(PARAM)
-  @deprecated("Use flagString", "2.10.0")
-  def defaultFlagString = flagString
-  @deprecated("Use flagString(mask)", "2.10.0")
-  def hasFlagsToString(mask: Long): String = flagString(mask)
 }

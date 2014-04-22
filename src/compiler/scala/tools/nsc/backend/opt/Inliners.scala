@@ -49,7 +49,10 @@ abstract class Inliners extends SubComponent {
 
   val phaseName = "inliner"
 
+  override val enabled: Boolean = settings.inline
+
   /** Debug - for timing the inliner. */
+  /****
   private def timed[T](s: String, body: => T): T = {
     val t1 = System.currentTimeMillis()
     val res = body
@@ -60,6 +63,7 @@ abstract class Inliners extends SubComponent {
 
     res
   }
+  ****/
 
   /** Look up implementation of method 'sym in 'clazz'.
    */
@@ -68,18 +72,18 @@ abstract class Inliners extends SubComponent {
     def needsLookup = (
          (clazz != NoSymbol)
       && (clazz != sym.owner)
-      && !sym.isEffectivelyFinal
-      && clazz.isEffectivelyFinal
+      && !sym.isEffectivelyFinalOrNotOverridden
+      && clazz.isEffectivelyFinalOrNotOverridden
     )
     def lookup(clazz: Symbol): Symbol = {
       // println("\t\tlooking up " + meth + " in " + clazz.fullName + " meth.owner = " + meth.owner)
       assert(clazz != NoSymbol, "Walked up past Object.superClass looking for " + sym +
                                 ", most likely this reveals the TFA at fault (receiver and callee don't match).")
       if (sym.owner == clazz || isBottomType(clazz)) sym
-      else sym.overridingSymbol(clazz) match {
-        case NoSymbol  => if (sym.owner.isTrait) sym else lookup(clazz.superClass)
-        case imp       => imp
-      }
+      else sym.overridingSymbol(clazz) orElse (
+        if (sym.owner.isTrait) sym
+        else lookup(clazz.superClass)
+      )
     }
     if (needsLookup) {
       val concreteMethod = lookup(clazz)
@@ -193,7 +197,7 @@ abstract class Inliners extends SubComponent {
     private var currentIClazz: IClass = _
     private def warn(pos: Position, msg: String) = currentIClazz.cunit.inlinerWarning(pos, msg)
 
-    private def ownedName(sym: Symbol): String = afterUncurry {
+    private def ownedName(sym: Symbol): String = exitingUncurry {
       val count = (
         if (!sym.isMethod) 1
         else if (sym.owner.isAnonymousFunction) 3
@@ -230,7 +234,7 @@ abstract class Inliners extends SubComponent {
 
       val hasRETURN = containsRETURN(incm.code.blocksList) || (incm.exh exists { eh => containsRETURN(eh.blocks) })
       var a: analysis.MethodTFA = null
-      if(hasRETURN) { a = new analysis.MethodTFA(incm); a.run }
+      if(hasRETURN) { a = new analysis.MethodTFA(incm); a.run() }
 
       if(forceable) { recentTFAs.put(incm.symbol, (hasRETURN, a)) }
 
@@ -240,7 +244,7 @@ abstract class Inliners extends SubComponent {
     def clearCaches() {
       // methods
       NonPublicRefs.usesNonPublics.clear()
-      recentTFAs.clear
+      recentTFAs.clear()
       tfa.knownUnsafe.clear()
       tfa.knownSafe.clear()
       tfa.knownNever.clear()
@@ -263,7 +267,7 @@ abstract class Inliners extends SubComponent {
     }
 
     def analyzeClass(cls: IClass): Unit =
-      if (settings.inline.value) {
+      if (settings.inline) {
         inlineLog("class", s"${cls.symbol.decodedName}", s"analyzing ${cls.methods.size} methods in $cls")
 
         this.currentIClazz = cls
@@ -279,7 +283,7 @@ abstract class Inliners extends SubComponent {
       }
 
     val tfa   = new analysis.MTFAGrowable()
-    tfa.stat  = global.opt.printStats
+    tfa.stat  = global.settings.Ystatistics.value
     val staleOut      = new mutable.ListBuffer[BasicBlock]
     val splicedBlocks = mutable.Set.empty[BasicBlock]
     val staleIn       = mutable.Set.empty[BasicBlock]
@@ -317,11 +321,11 @@ abstract class Inliners extends SubComponent {
      * */
     def analyzeMethod(m: IMethod): Unit = {
       // m.normalize
-      if (settings.debug.value)
+      if (settings.debug)
         inlineLog("caller", ownedName(m.symbol), "in " + m.symbol.owner.fullName)
 
-      var sizeBeforeInlining  = m.code.blockCount
-      var instrBeforeInlining = m.code.instructionCount
+      val sizeBeforeInlining  = m.code.blockCount
+      val instrBeforeInlining = m.code.instructionCount
       var retry = false
       var count = 0
 
@@ -340,7 +344,7 @@ abstract class Inliners extends SubComponent {
         inlineWithoutTFA(inputBlocks, callsites)
       }
 
-      /**
+      /*
        *  Inline straightforward callsites (those that can be inlined without a TFA).
        *
        *  To perform inlining, all we need to know is listed as formal params in `analyzeInc()`:
@@ -358,10 +362,10 @@ abstract class Inliners extends SubComponent {
         for(x <- inputBlocks; easyCake = callsites(x); if easyCake.nonEmpty) {
           breakable {
             for(ocm <- easyCake) {
-              assert(ocm.method.isEffectivelyFinal && ocm.method.owner.isEffectivelyFinal)
+              assert(ocm.method.isEffectivelyFinalOrNotOverridden && ocm.method.owner.isEffectivelyFinalOrNotOverridden)
               if(analyzeInc(ocm, x, ocm.method.owner, -1, ocm.method)) {
                 inlineCount += 1
-                break
+                break()
               }
             }
           }
@@ -370,7 +374,7 @@ abstract class Inliners extends SubComponent {
         inlineCount
       }
 
-      /**
+      /*
        *  Decides whether it's feasible and desirable to inline the body of the method given by `concreteMethod`
        *  at the program point given by `i` (a callsite). The boolean result indicates whether inlining was performed.
        *
@@ -380,8 +384,8 @@ abstract class Inliners extends SubComponent {
         val shouldWarn = hasInline(i.method)
 
         def warnNoInline(reason: String): Boolean = {
-          def msg = "Could not inline required method %s because %s.".format(i.method.originalName.decode, reason)
-          if (settings.debug.value)
+          def msg = "Could not inline required method %s because %s.".format(i.method.unexpandedName.decode, reason)
+          if (settings.debug)
             inlineLog("fail", i.method.fullName, reason)
           if (shouldWarn)
             warn(i.pos, msg)
@@ -405,8 +409,8 @@ abstract class Inliners extends SubComponent {
 
         def isCandidate = (
              isClosureClass(receiver)
-          || concreteMethod.isEffectivelyFinal
-          || receiver.isEffectivelyFinal
+          || concreteMethod.isEffectivelyFinalOrNotOverridden
+          || receiver.isEffectivelyFinalOrNotOverridden
         )
 
         def isApply     = concreteMethod.name == nme.apply
@@ -421,7 +425,7 @@ abstract class Inliners extends SubComponent {
         debuglog("Treating " + i
               + "\n\treceiver: " + receiver
               + "\n\ticodes.available: " + isAvailable
-              + "\n\tconcreteMethod.isEffectivelyFinal: " + concreteMethod.isEffectivelyFinal)
+              + "\n\tconcreteMethod.isEffectivelyFinalOrNotOverridden: " + concreteMethod.isEffectivelyFinalOrNotOverridden)
 
         if (!isCandidate) warnNoInline("it can be overridden")
         else if (!isAvailable) warnNoInline("bytecode unavailable")
@@ -439,7 +443,6 @@ abstract class Inliners extends SubComponent {
               case DontInlineHere(msg)                       => warnNoInline(msg)
               case NeverSafeToInline                         => false
               case InlineableAtThisCaller                    => true
-              case inl @ FeasibleInline(_, _) if !inl.isSafe => false
               case FeasibleInline(required, toPublicize)     =>
                 for (f <- toPublicize) {
                   inlineLog("access", f, "making public")
@@ -477,9 +480,9 @@ abstract class Inliners extends SubComponent {
        * As a whole, both `preInline()` invocations amount to priming the inlining process,
        * so that the first TFA that is run afterwards is able to gain more information as compared to a cold-start.
        */
-      val totalPreInlines = {
-        val firstRound = preInline(true)
-        if(firstRound == 0) 0 else (firstRound + preInline(false))
+      /*val totalPreInlines = */ { // Val name commented out to emphasize it is never used
+        val firstRound = preInline(isFirstRound = true)
+        if(firstRound == 0) 0 else (firstRound + preInline(isFirstRound = false))
       }
       staleOut.clear()
       splicedBlocks.clear()
@@ -511,7 +514,7 @@ abstract class Inliners extends SubComponent {
             for (cm <- cms; if tfa.remainingCALLs.isDefinedAt(cm)) {
               val analysis.CallsiteInfo(_, receiver, stackLength, concreteMethod) = tfa.remainingCALLs(cm)
               if (analyzeInc(cm, bb, receiver, stackLength, concreteMethod)) {
-                break
+                break()
               }
             }
           }
@@ -563,13 +566,12 @@ abstract class Inliners extends SubComponent {
       while (retry && count < MAX_INLINE_RETRY)
 
       for(inlFail <- tfa.warnIfInlineFails) {
-        warn(inlFail.pos, "At the end of the day, could not inline @inline-marked method " + inlFail.method.originalName.decode)
+        warn(inlFail.pos, "At the end of the day, could not inline @inline-marked method " + inlFail.method.unexpandedName.decode)
       }
 
-      m.normalize
+      m.normalize()
       if (sizeBeforeInlining > 0) {
         val instrAfterInlining = m.code.instructionCount
-        val prefix = if ((instrAfterInlining > 2 * instrBeforeInlining) && (instrAfterInlining > 200)) "!!" else ""
         val inlinings = caller.inlinedCalls
         if (inlinings > 0) {
           val s1      = s"instructions $instrBeforeInlining -> $instrAfterInlining"
@@ -584,13 +586,13 @@ abstract class Inliners extends SubComponent {
 
     private def isHigherOrderMethod(sym: Symbol) = (
          sym.isMethod
-      && beforeExplicitOuter(sym.info.paramTypes exists isFunctionType) // was "at erasurePhase.prev"
+      && enteringExplicitOuter(sym.info.paramTypes exists isFunctionType) // was "at erasurePhase.prev"
     )
 
     /** Should method 'sym' being called in 'receiver' be loaded from disk? */
     def shouldLoadImplFor(sym: Symbol, receiver: Symbol): Boolean = {
       def alwaysLoad    = (receiver.enclosingPackage == RuntimePackage) || (receiver == PredefModule.moduleClass)
-      def loadCondition = sym.isEffectivelyFinal && isMonadicMethod(sym) && isHigherOrderMethod(sym)
+      def loadCondition = sym.isEffectivelyFinalOrNotOverridden && isMonadicMethod(sym) && isHigherOrderMethod(sym)
 
       val res = hasInline(sym) || alwaysLoad || loadCondition
       debuglog("shouldLoadImplFor: " + receiver + "." + sym + ": " + res)
@@ -601,7 +603,6 @@ abstract class Inliners extends SubComponent {
       override def toString = m.toString
 
       val sym           = m.symbol
-      val name          = sym.name
       def owner         = sym.owner
       def paramTypes    = sym.info.paramTypes
       def minimumStack  = paramTypes.length + 1
@@ -617,13 +618,11 @@ abstract class Inliners extends SubComponent {
       def length        = blocks.length
       def openBlocks    = blocks filterNot (_.closed)
       def instructions  = m.code.instructions
-      // def linearized    = linearizer linearize m
 
       def isSmall         = (length <= SMALL_METHOD_SIZE) && blocks(0).length < 10
       def isLarge         = length > MAX_INLINE_SIZE
       def isRecursive     = m.recursive
       def hasHandlers     = handlers.nonEmpty || m.bytecodeHasEHs
-      def hasClosureParam = paramTypes exists (tp => isByNameParamType(tp) || isFunctionType(tp))
 
       def isSynchronized         = sym.hasFlag(Flags.SYNCHRONIZED)
       def hasNonFinalizerHandler = handlers exists {
@@ -681,9 +680,18 @@ abstract class Inliners extends SubComponent {
         }
         */
 
-        def checkField(f: Symbol)   = check(f, f.isPrivate && !canMakePublic(f))
-        def checkSuper(n: Symbol)   = check(n, n.isPrivate || !n.isClassConstructor)
-        def checkMethod(n: Symbol)  = check(n, n.isPrivate)
+
+        def isPrivateForInlining(sym: Symbol): Boolean = {
+          if (sym.isJavaDefined) {
+            def check(sym: Symbol) = !(sym.isPublic || sym.isProtected)
+            check(sym) || check(sym.owner) // SI-7582 Must check the enclosing class *and* the symbol for Java.
+          }
+          else sym.isPrivate // Scala never emits package-private bytecode
+        }
+
+        def checkField(f: Symbol)   = check(f, isPrivateForInlining(f) && !canMakePublic(f))
+        def checkSuper(n: Symbol)   = check(n, isPrivateForInlining(n) || !n.isClassConstructor)
+        def checkMethod(n: Symbol)  = check(n, isPrivateForInlining(n))
 
         def getAccess(i: Instruction) = i match {
           case CALL_METHOD(n, SuperCall(_)) => checkSuper(n)
@@ -729,17 +737,11 @@ abstract class Inliners extends SubComponent {
      *   - either log the reason for failure --- case (b) ---,
      *   - or perform inlining --- case (a) ---.
      */
-    sealed abstract class InlineSafetyInfo {
-      def isSafe   = false
-      def isUnsafe = !isSafe
-    }
+    sealed abstract class InlineSafetyInfo
     case object NeverSafeToInline           extends InlineSafetyInfo
-    case object InlineableAtThisCaller      extends InlineSafetyInfo { override def isSafe = true }
+    case object InlineableAtThisCaller      extends InlineSafetyInfo
     case class  DontInlineHere(msg: String) extends InlineSafetyInfo
-    case class  FeasibleInline(accessNeeded: NonPublicRefs.Value,
-                               toBecomePublic: List[Symbol]) extends InlineSafetyInfo {
-      override def isSafe = true
-    }
+    case class  FeasibleInline(accessNeeded: NonPublicRefs.Value, toBecomePublic: List[Symbol]) extends InlineSafetyInfo
 
     case class AccessReq(
       accessNeeded:   NonPublicRefs.Value,
@@ -791,7 +793,7 @@ abstract class Inliners extends SubComponent {
 
         val varsInScope = mutable.HashSet[Local]() ++= block.varsInScope
 
-        /** Side effects varsInScope when it sees SCOPE_ENTERs. */
+        /* Side effects varsInScope when it sees SCOPE_ENTERs. */
         def instrBeforeFilter(i: Instruction): Boolean = {
           i match { case SCOPE_ENTER(l) => varsInScope += l ; case _ => () }
           i ne instr
@@ -804,7 +806,7 @@ abstract class Inliners extends SubComponent {
         // store the '$this' into the special local
         val inlinedThis = newLocal("$inlThis", REFERENCE(ObjectClass))
 
-        /** buffer for the returned value */
+        /* buffer for the returned value */
         val retVal = inc.m.returnType match {
           case UNIT  => null
           case x     => newLocal("$retVal", x)
@@ -812,9 +814,9 @@ abstract class Inliners extends SubComponent {
 
         val inlinedLocals = mutable.HashMap.empty[Local, Local]
 
-        /** Add a new block in the current context. */
+        /* Add a new block in the current context. */
         def newBlock() = {
-          val b = caller.m.code.newBlock
+          val b = caller.m.code.newBlock()
           activeHandlers foreach (_ addCoveredBlock b)
           if (retVal ne null) b.varsInScope += retVal
           b.varsInScope += inlinedThis
@@ -829,7 +831,7 @@ abstract class Inliners extends SubComponent {
           handler
         }
 
-        /** alfa-rename `l` in caller's context. */
+        /* alfa-rename `l` in caller's context. */
         def dupLocal(l: Local): Local = {
           val sym = caller.sym.newVariable(freshName(l.sym.name.toString), l.sym.pos)
           // sym.setInfo(l.sym.tpe)
@@ -840,10 +842,10 @@ abstract class Inliners extends SubComponent {
 
         val afterBlock = newBlock()
 
-        /** Map from nw.init instructions to their matching NEW call */
+        /* Map from nw.init instructions to their matching NEW call */
         val pending: mutable.Map[Instruction, NEW] = new mutable.HashMap
 
-        /** Map an instruction from the callee to one suitable for the caller. */
+        /* Map an instruction from the callee to one suitable for the caller. */
         def map(i: Instruction): Instruction = {
           def assertLocal(l: Local) = {
             assert(caller.locals contains l, "Could not find local '" + l + "' in locals, nor in inlinedLocals: " + inlinedLocals)
@@ -872,7 +874,7 @@ abstract class Inliners extends SubComponent {
               r
 
             case CALL_METHOD(meth, Static(true)) if meth.isClassConstructor =>
-              CALL_METHOD(meth, Static(true))
+              CALL_METHOD(meth, Static(onInstance = true))
 
             case _ => i.clone()
           }
@@ -893,8 +895,8 @@ abstract class Inliners extends SubComponent {
         }
 
         // re-emit the instructions before the call
-        block.open
-        block.clear
+        block.open()
+        block.clear()
         block emit instrBefore
 
         // store the arguments into special locals
@@ -903,7 +905,7 @@ abstract class Inliners extends SubComponent {
 
         // jump to the start block of the callee
         blockEmit(JUMP(inlinedBlock(inc.m.startBlock)))
-        block.close
+        block.close()
 
         // duplicate the other blocks in the callee
         val calleeLin = inc.m.linearizedBlocks()
@@ -926,11 +928,11 @@ abstract class Inliners extends SubComponent {
             emitInlined(map(i))
             info = if(hasRETURN) a.interpret(info, i) else null
           }
-          inlinedBlock(bb).close
+          inlinedBlock(bb).close()
         }
 
         afterBlock emit instrAfter
-        afterBlock.close
+        afterBlock.close()
 
         staleIn        += afterBlock
         splicedBlocks ++= (calleeLin map inlinedBlock)
@@ -938,7 +940,7 @@ abstract class Inliners extends SubComponent {
         // add exception handlers of the callee
         caller addHandlers (inc.handlers map translateExh)
         assert(pending.isEmpty, "Pending NEW elements: " + pending)
-        if (settings.debug.value) icodes.checkValid(caller.m)
+        if (settings.debug) icodes.checkValid(caller.m)
       }
 
       def isStampedForInlining(stackLength: Int): InlineSafetyInfo = {
@@ -973,7 +975,7 @@ abstract class Inliners extends SubComponent {
           }
 
           if(sameSymbols) { // TODO but this also amounts to recursive, ie should lead to adding to tfa.knownNever, right?
-            tfa.knownUnsafe += inc.sym;
+            tfa.knownUnsafe += inc.sym
             return DontInlineHere("sameSymbols (ie caller == callee)")
           }
 
@@ -1032,7 +1034,6 @@ abstract class Inliners extends SubComponent {
         case Public     => true
       }
       private def sameSymbols = caller.sym == inc.sym
-      private def sameOwner   = caller.owner == inc.owner
 
       /** Gives green light for inlining (which may still be vetoed later). Heuristics:
        *   - it's bad to make the caller larger (> SMALL_METHOD_SIZE) if it was small
@@ -1048,9 +1049,9 @@ abstract class Inliners extends SubComponent {
         if (caller.isInClosure)           score -= 2
         else if (caller.inlinedCalls < 1) score -= 1 // only monadic methods can trigger the first inline
 
-        if (inc.isSmall) score += 1;
+        if (inc.isSmall) score += 1
         // if (inc.hasClosureParam) score += 2
-        if (inc.isLarge) score -= 1;
+        if (inc.isLarge) score -= 1
         if (caller.isSmall && isLargeSum) {
           score -= 1
           debuglog(s"inliner score decreased to $score because small caller $caller would become large")

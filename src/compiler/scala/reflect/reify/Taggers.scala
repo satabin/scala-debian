@@ -1,14 +1,15 @@
 package scala.reflect.reify
 
 import scala.reflect.macros.{ReificationException, UnexpectedReificationException, TypecheckException}
-import scala.reflect.macros.runtime.Context
+import scala.reflect.macros.contexts.Context
 
 abstract class Taggers {
   val c: Context
 
   import c.universe._
   import definitions._
-  import treeBuild._
+  private val runDefinitions = currentRun.runDefinitions
+  import runDefinitions._
 
   val coreTags = Map(
     ByteTpe -> nme.Byte,
@@ -59,18 +60,18 @@ abstract class Taggers {
     val result =
       tpe match {
         case coreTpe if coreTags contains coreTpe =>
-          val ref = if (tagModule.owner.isPackageClass) Ident(tagModule) else Select(prefix, tagModule.name)
+          val ref = if (tagModule.isTopLevel) Ident(tagModule) else Select(prefix, tagModule.name)
           Select(ref, coreTags(coreTpe))
         case _ =>
           translatingReificationErrors(materializer)
       }
-    try c.typeCheck(result)
+    try c.typecheck(result)
     catch { case terr @ TypecheckException(pos, msg) => failTag(result, terr) }
   }
 
   def materializeExpr(universe: Tree, mirror: Tree, expr: Tree): Tree = {
     val result = translatingReificationErrors(c.reifyTree(universe, mirror, expr))
-    try c.typeCheck(result)
+    try c.typecheck(result)
     catch { case terr @ TypecheckException(pos, msg) => failExpr(result, terr) }
   }
 

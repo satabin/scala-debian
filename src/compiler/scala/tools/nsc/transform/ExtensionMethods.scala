@@ -8,9 +8,6 @@ package transform
 import symtab._
 import Flags._
 import scala.collection.{ mutable, immutable }
-import scala.collection.mutable
-import scala.tools.nsc.util.FreshNameCreator
-import scala.runtime.ScalaRunTime.{ isAnyVal, isTuple }
 
 /**
  * Perform Step 1 in the inline classes SIP: Creates extension methods for all
@@ -23,7 +20,6 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
 
   import global._ // the global environment
   import definitions._ // standard classes and methods
-  import typer.{ typed, atOwner } // methods to type trees
 
   /** the following two members override abstract members in Transform */
   val phaseName: String = "extmethods"
@@ -70,7 +66,7 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
   }
 
   /** Return the extension method that corresponds to given instance method `meth`. */
-  def extensionMethod(imeth: Symbol): Symbol = atPhase(currentRun.refchecksPhase) {
+  def extensionMethod(imeth: Symbol): Symbol = enteringPhase(currentRun.refchecksPhase) {
     val companionInfo = companionModuleForce(imeth.owner).info
     val candidates = extensionNames(imeth) map (companionInfo.decl(_)) filter (_.exists)
     val matching = candidates filter (alt => normalize(alt.tpe, imeth.owner) matches imeth.tpe)
@@ -87,7 +83,7 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
            |
            | ${candidates.map(c => c.name+":"+normalize(c.tpe, imeth.owner)).mkString("\n")}
            |
-           | Eligible Names: ${extensionNames(imeth).mkString(",")}"""")
+           | Eligible Names: ${extensionNames(imeth).mkString(",")}" """)
     matching.head
   }
 
@@ -133,7 +129,7 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
       if (seen contains clazz)
         unit.error(pos, "value class may not unbox to itself")
       else {
-        val unboxed = erasure.underlyingOfValueClass(clazz).typeSymbol
+        val unboxed = definitions.underlyingOfValueClass(clazz).typeSymbol
         if (unboxed.isDerivedValueClass) checkNonCyclic(pos, seen + clazz, unboxed)
       }
 
@@ -185,6 +181,7 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
       //  bad: [B#16154 >: A#16149, A#16155 <: AnyRef#2189]($this#16156: Foo#6965[A#16155])(x#16157: B#16154)List#2457[B#16154]
       // good: [B#16151 >: A#16149, A#16149 <: AnyRef#2189]($this#16150: Foo#6965[A#16149])(x#16153: B#16151)List#2457[B#16151]
     }
+
     override def transform(tree: Tree): Tree = {
       tree match {
         case Template(_, _, _) =>
@@ -194,6 +191,9 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
             checkNonCyclic(currentOwner.pos, Set(), currentOwner) */
             extensionDefs(currentOwner.companionModule) = new mutable.ListBuffer[Tree]
             currentOwner.primaryConstructor.makeNotPrivate(NoSymbol)
+            // SI-7859 make param accessors accessible so the erasure can generate unbox operations.
+            val paramAccessors = currentOwner.info.decls.filter(sym => sym.isParamAccessor && sym.isMethod)
+            paramAccessors.foreach(_.makeNotPrivate(currentOwner))
             super.transform(tree)
           } else if (currentOwner.isStaticOwner) {
             super.transform(tree)
@@ -206,11 +206,12 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
           val companion     = origThis.companionModule
 
           def makeExtensionMethodSymbol = {
-            val extensionName = extensionNames(origMeth).head
+            val extensionName = extensionNames(origMeth).head.toTermName
             val extensionMeth = (
-              companion.moduleClass.newMethod(extensionName, origMeth.pos, origMeth.flags & ~OVERRIDE & ~PROTECTED | FINAL)
+              companion.moduleClass.newMethod(extensionName, tree.pos.focus, origMeth.flags & ~OVERRIDE & ~PROTECTED | FINAL)
                 setAnnotations origMeth.annotations
             )
+            origMeth.removeAnnotation(TailrecClass) // it's on the extension method, now.
             companion.info.decls.enter(extensionMeth)
           }
 
@@ -224,21 +225,22 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
           val extensionParams = allParameters(extensionMono)
           val extensionThis   = gen.mkAttributedStableRef(thiz setPos extensionMeth.pos)
 
-          val extensionBody = (
-            rhs
+          val extensionBody: Tree = {
+            val tree = rhs
               .substituteSymbols(origTpeParams, extensionTpeParams)
               .substituteSymbols(origParams, extensionParams)
               .substituteThis(origThis, extensionThis)
               .changeOwner(origMeth -> extensionMeth)
-          )
+            new SubstututeRecursion(origMeth, extensionMeth, unit).transform(tree)
+          }
           val castBody =
             if (extensionBody.tpe <:< extensionMono.finalResultType)
               extensionBody
             else
               gen.mkCastPreservingAnnotations(extensionBody, extensionMono.finalResultType) // SI-7818 e.g. mismatched existential skolems
 
-          // Record the extension method ( FIXME: because... ? )
-          extensionDefs(companion) += atPos(tree.pos)(DefDef(extensionMeth, castBody))
+          // Record the extension method. Later, in `Extender#transformStats`, these will be added to the companion object.
+          extensionDefs(companion) += DefDef(extensionMeth, castBody)
 
           // These three lines are assembling Foo.bar$extension[T1, T2, ...]($this)
           // which leaves the actual argument application for extensionCall.
@@ -261,14 +263,43 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
 
     override def transformStats(stats: List[Tree], exprOwner: Symbol): List[Tree] =
       super.transformStats(stats, exprOwner) map {
-        case md @ ModuleDef(_, _, _) if extensionDefs contains md.symbol =>
-          val defns = extensionDefs(md.symbol).toList map (member =>
-            atOwner(md.symbol)(localTyper.typedPos(md.pos.focus)(member))
-          )
-          extensionDefs -= md.symbol
-          deriveModuleDef(md)(tmpl => deriveTemplate(tmpl)(_ ++ defns))
+        case md @ ModuleDef(_, _, _) =>
+          val extraStats = extensionDefs remove md.symbol match {
+            case Some(defns) => defns.toList map (defn => atOwner(md.symbol)(localTyper.typedPos(md.pos.focus)(defn.duplicate)))
+            case _           => Nil
+          }
+          if (extraStats.isEmpty) md
+          else deriveModuleDef(md)(tmpl => deriveTemplate(tmpl)(_ ++ extraStats))
         case stat =>
           stat
       }
+  }
+
+  final class SubstututeRecursion(origMeth: Symbol, extensionMeth: Symbol,
+                            unit: CompilationUnit) extends TypingTransformer(unit) {
+    override def transform(tree: Tree): Tree = tree match {
+      // SI-6574 Rewrite recursive calls against the extension method so they can
+      //         be tail call optimized later. The tailcalls phases comes before
+      //         erasure, which performs this translation more generally at all call
+      //         sites.
+      //
+      //         // Source
+      //         class C[C] { def meth[M](a: A) = { { <expr>: C[C'] }.meth[M'] } }
+      //
+      //         // Translation
+      //         class C[C] { def meth[M](a: A) = { { <expr>: C[C'] }.meth[M'](a1) } }
+      //         object C   { def meth$extension[M, C](this$: C[C], a: A)
+      //                        = { meth$extension[M', C']({ <expr>: C[C'] })(a1) } }
+      case treeInfo.Applied(sel @ Select(qual, _), targs, argss) if sel.symbol == origMeth =>
+        localTyper.typedPos(tree.pos) {
+          val allArgss = List(qual) :: argss
+          val origThis = extensionMeth.owner.companionClass
+          val baseType = qual.tpe.baseType(origThis)
+          val allTargs = targs.map(_.tpe) ::: baseType.typeArgs
+          val fun = gen.mkAttributedTypeApply(gen.mkAttributedThis(extensionMeth.owner), extensionMeth, allTargs)
+          allArgss.foldLeft(fun)(Apply(_, _))
+        }
+      case _ => super.transform(tree)
+    }
   }
 }

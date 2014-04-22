@@ -68,7 +68,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
       curTree = tree
 
       tree match {
-        
+
         case Block(_, _) =>
           val block1 = super.transform(tree)
           val Block(stats, expr) = block1
@@ -79,7 +79,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
               List(stat)
           })
           treeCopy.Block(block1, stats1, expr)
-          
+
         case DefDef(_, _, _, _, _, rhs) => atOwner(tree.symbol) {
           val (res, slowPathDef) = if (!sym.owner.isClass && sym.isLazy) {
             val enclosingClassOrDummyOrMethod = {
@@ -100,9 +100,9 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
             val (rhs1, sDef) = mkLazyDef(enclosingClassOrDummyOrMethod, transform(rhs), idx, sym)
             sym.resetFlag((if (lazyUnit(sym)) 0 else LAZY) | ACCESSOR)
             (rhs1, sDef)
-          } else            
+          } else
             (transform(rhs), EmptyTree)
-            
+
           val ddef1 = deriveDefDef(tree)(_ => if (LocalLazyValFinder.find(res)) typed(addBitmapDefs(sym, res)) else res)
           if (slowPathDef != EmptyTree) Block(slowPathDef, ddef1) else ddef1
         }
@@ -183,30 +183,31 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
 
       if (bmps.isEmpty) rhs else rhs match {
         case Block(assign, l @ LabelDef(name, params, _))
-          if name.toString == ("_" + methSym.name) && isMatch(params) =>
+          if (name string_== "_" + methSym.name) && isMatch(params) =>
             Block(assign, deriveLabelDef(l)(rhs => typed(prependStats(bmps, rhs))))
 
         case _ => prependStats(bmps, rhs)
       }
     }
-    
+
     def mkSlowPathDef(clazz: Symbol, lzyVal: Symbol, cond: Tree, syncBody: List[Tree],
                       stats: List[Tree], retVal: Tree): Tree = {
-      val defSym = clazz.newMethod(nme.newLazyValSlowComputeName(lzyVal.name), lzyVal.pos, STABLE | PRIVATE)
+      val defSym = clazz.newMethod(nme.newLazyValSlowComputeName(lzyVal.name.toTermName), lzyVal.pos, STABLE | PRIVATE)
       defSym setInfo MethodType(List(), lzyVal.tpe.resultType)
       defSym.owner = lzyVal.owner
       debuglog(s"crete slow compute path $defSym with owner ${defSym.owner} for lazy val $lzyVal")
       if (bitmaps.contains(lzyVal))
         bitmaps(lzyVal).map(_.owner = defSym)
       val rhs: Tree = (gen.mkSynchronizedCheck(clazz, cond, syncBody, stats)).changeOwner(currentOwner -> defSym)
-      DEF(defSym).mkTree(addBitmapDefs(lzyVal, BLOCK(rhs, retVal))) setSymbol defSym
+
+      DefDef(defSym, addBitmapDefs(lzyVal, BLOCK(rhs, retVal)))
     }
-  
-  
+
+
     def mkFastPathBody(clazz: Symbol, lzyVal: Symbol, cond: Tree, syncBody: List[Tree],
                        stats: List[Tree], retVal: Tree): (Tree, Tree) = {
       val slowPathDef: Tree = mkSlowPathDef(clazz, lzyVal, cond, syncBody, stats, retVal)
-      (If(cond, Apply(ID(slowPathDef.symbol), List()), retVal), slowPathDef)
+      (If(cond, Apply(Ident(slowPathDef.symbol), Nil), retVal), slowPathDef)
     }
 
     /** return a 'lazified' version of rhs. Rhs should conform to the
@@ -221,7 +222,7 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
      *  Similarly as for normal lazy val members (see Mixin), the result will be a tree of the form
      *  { if ((bitmap&n & MASK) == 0) this.l$compute()
      *    else l$
-     *    
+     *
      *    def l$compute() = { synchronized(enclosing_class_or_dummy) {
      *      if ((bitmap$n & MASK) == 0) {
      *       l$ = <rhs>
@@ -277,8 +278,8 @@ abstract class LazyVals extends Transform with TypingTransformers with ast.TreeD
       if (bmps.length > n)
         bmps(n)
       else {
-        val sym = meth.newVariable(nme.newBitmapName(nme.BITMAP_NORMAL, n), meth.pos).setInfo(ByteClass.tpe)
-        beforeTyper {
+        val sym = meth.newVariable(nme.newBitmapName(nme.BITMAP_NORMAL, n), meth.pos).setInfo(ByteTpe)
+        enteringTyper {
           sym addAnnotation VolatileAttr
         }
 

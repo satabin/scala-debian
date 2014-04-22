@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package api
 
 /**
@@ -40,7 +41,8 @@ package api
  *   res1: reflect.runtime.universe.Type = scala.Either[String,Int]
  *   }}}
  *
- * To obtain a `Universe` for use within a Scala macro, use [[scala.reflect.macros.Context#universe]]. For example:
+ * To obtain a `Universe` for use within a Scala macro, use [[scala.reflect.macros.blackbox.Context#universe]].
+ * or [[scala.reflect.macros.whitebox.Context#universe]]. For example:
  * {{{
  *  def printf(format: String, params: Any*): Unit = macro impl
  *  def impl(c: Context)(format: c.Expr[String], params: c.Expr[Any]*): c.Expr[Unit] = {
@@ -67,13 +69,15 @@ abstract class Universe extends Symbols
                            with Positions
                            with Exprs
                            with TypeTags
-                           with TagInterop
+                           with ImplicitTags
                            with StandardDefinitions
                            with StandardNames
-                           with BuildUtils
+                           with StandardLiftables
                            with Mirrors
                            with Printers
-                           with Importers
+                           with Liftables
+                           with Quasiquotes
+                           with Internals
 {
   /** Use `reify` to produce the abstract syntax tree representing a given Scala expression.
    *
@@ -92,5 +96,5 @@ abstract class Universe extends Symbols
    */
   // implementation is hardwired to `scala.reflect.reify.Taggers`
   // using the mechanism implemented in `scala.tools.reflect.FastTrack`
-  def reify[T](expr: T): Expr[T] = ??? // macro
+  def reify[T](expr: T): Expr[T] = macro ???
 }

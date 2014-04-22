@@ -6,12 +6,11 @@
 **                          |/                                          **
 \*                                                                      */
 
+package scala
+package collection
+package generic
 
-
-package scala.collection.generic
 import scala.collection._
-
-import scala.collection.mutable.Buffer
 
 /** This trait implements a forwarder for iterable objects. It forwards
  *  all calls to a different iterable object, except for
@@ -27,6 +26,7 @@ import scala.collection.mutable.Buffer
  *  @version 2.8
  *  @since   2.8
  */
+@deprecated("Forwarding is inherently unreliable since it is not automated and methods can be forgotten.", "2.11.0")
 trait IterableForwarder[+A] extends Iterable[A] with TraversableForwarder[A] {
 
   /** The iterable object to which calls are forwarded */

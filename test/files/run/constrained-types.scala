@@ -15,10 +15,10 @@ class A {
   val x = "hello"
   val y: Int @Annot(x) = 10
   override def toString = "an A"
-} 
+}
 
 val a = new A
-val y = a.y   // should rewrite "this.x" to "a.x" 
+val y = a.y   // should rewrite "this.x" to "a.x"
 var a2 = new A
 val y2 = a2.y   // should drop the annotation
 
@@ -72,16 +72,10 @@ object A { val x = "hello" : String @ rep }
 val y = a.x // should drop the annotation
 
 val x = 3 : Int @Annot(e+f+g+h) // should have a graceful error message
-
-class Where(condition: Boolean) extends annotation.Annotation
-
-val x : Int @Where(self > 0 && self < 100) = 3
-
 """
 
   override def transformSettings(s: Settings): Settings = {
     s.Xexperimental.value = true
-    s.selfInAnnots.value = true
     s.deprecation.value = true
     // when running that compiler, give it a scala-library to the classpath
     s.classpath.value = sys.props("java.class.path")

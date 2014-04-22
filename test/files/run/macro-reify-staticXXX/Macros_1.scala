@@ -1,4 +1,4 @@
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 
 object B { override def toString = "object" }
 class C { override def toString = "class" }

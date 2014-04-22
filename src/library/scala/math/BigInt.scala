@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.math
+package scala
+package math
 
 import java.math.BigInteger
 import scala.language.implicitConversions
@@ -23,12 +24,6 @@ object BigInt {
   private val cache = new Array[BigInt](maxCached - minCached + 1)
   private val minusOne = BigInteger.valueOf(-1)
 
-  @deprecated("Use Long.MinValue", "2.9.0")
-  val MinLong = BigInt(Long.MinValue)
-
-  @deprecated("Use Long.MaxValue", "2.9.0")
-  val MaxLong = BigInt(Long.MaxValue)
-
   /** Constructs a `BigInt` whose value is equal to that of the
    *  specified integer value.
    *
@@ -39,9 +34,9 @@ object BigInt {
     if (minCached <= i && i <= maxCached) {
       val offset = i - minCached
       var n = cache(offset)
-      if (n eq null) { n = new BigInt(BigInteger.valueOf(i)); cache(offset) = n }
+      if (n eq null) { n = new BigInt(BigInteger.valueOf(i.toLong)); cache(offset) = n }
       n
-    } else new BigInt(BigInteger.valueOf(i))
+    } else new BigInt(BigInteger.valueOf(i.toLong))
 
   /** Constructs a `BigInt` whose value is equal to that of the
    *  specified long value.
@@ -114,18 +109,17 @@ object BigInt {
  *  @author  Martin Odersky
  *  @version 1.0, 15/07/2003
  */
-@deprecatedInheritance("This class will be made final.", "2.10.0")
-class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericConversions with Serializable {
+final class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericConversions with Serializable {
   /** Returns the hash code for this BigInt. */
   override def hashCode(): Int =
-    if (isValidLong) unifiedPrimitiveHashcode
+    if (isValidLong) unifiedPrimitiveHashcode()
     else bigInteger.##
 
   /** Compares this BigInt with the specified value for equality.
    */
   override def equals(that: Any): Boolean = that match {
     case that: BigInt     => this equals that
-    case that: BigDecimal => that.toBigIntExact exists (this equals _)
+    case that: BigDecimal => that equals this
     case that: Double     => isValidDouble && toDouble == that
     case that: Float      => isValidFloat && toFloat == that
     case x                => isValidLong && unifiedPrimitiveEquals(x)
@@ -295,9 +289,6 @@ class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericCo
    */
   def signum: Int = this.bigInteger.signum()
 
-  @deprecated("Use ~bigInt (the unary_~ method) instead", "2.10.0")
-  def ~ : BigInt = ~this
-
   /** Returns the bitwise complement of this BigInt
    */
   def unary_~ : BigInt = new BigInt(this.bigInteger.not())
@@ -364,7 +355,7 @@ class BigInt(val bigInteger: BigInteger) extends ScalaNumber with ScalaNumericCo
   def charValue   = intValue.toChar
 
   /** Converts this BigInt to an <tt>int</tt>.
-   *  If the BigInt is too big to fit in a int, only the low-order 32 bits
+   *  If the BigInt is too big to fit in an int, only the low-order 32 bits
    *  are returned. Note that this conversion can lose information about the
    *  overall magnitude of the BigInt value as well as return a result with
    *  the opposite sign.

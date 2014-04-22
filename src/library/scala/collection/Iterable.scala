@@ -8,10 +8,10 @@
 
 
 
-package scala.collection
+package scala
+package collection
 
 import generic._
-import scala.util.control.Breaks._
 import mutable.Builder
 
 /** A base trait for iterable collections.
@@ -51,4 +51,4 @@ object Iterable extends TraversableFactory[Iterable] {
 }
 
 /** Explicit instantiation of the `Iterable` trait to reduce class file size in subclasses. */
-private[scala] abstract class AbstractIterable[+A] extends AbstractTraversable[A] with Iterable[A]
+abstract class AbstractIterable[+A] extends AbstractTraversable[A] with Iterable[A]

@@ -41,9 +41,7 @@ package object parallel {
 
   private[parallel] def outofbounds(idx: Int) = throw new IndexOutOfBoundsException(idx.toString)
 
-  private[parallel] def getTaskSupport: TaskSupport =
-    if (scala.util.Properties.isJavaAtLeast("1.6")) new ForkJoinTaskSupport
-    else new ThreadPoolTaskSupport
+  private[parallel] def getTaskSupport: TaskSupport = new ExecutionContextTaskSupport
 
   val defaultTaskSupport: TaskSupport = getTaskSupport
 
@@ -55,43 +53,52 @@ package object parallel {
     c
   }
 
-  /* implicit conversions */
-
-  implicit def factory2ops[From, Elem, To](bf: CanBuildFrom[From, Elem, To]) = new FactoryOps[From, Elem, To] {
-    def isParallel = bf.isInstanceOf[Parallel]
-    def asParallel = bf.asInstanceOf[CanCombineFrom[From, Elem, To]]
-    def ifParallel[R](isbody: CanCombineFrom[From, Elem, To] => R) = new Otherwise[R] {
-      def otherwise(notbody: => R) = if (isParallel) isbody(asParallel) else notbody
-    }
-  }
-  implicit def traversable2ops[T](t: scala.collection.GenTraversableOnce[T]) = new TraversableOps[T] {
-    def isParallel = t.isInstanceOf[Parallel]
-    def isParIterable = t.isInstanceOf[ParIterable[_]]
-    def asParIterable = t.asInstanceOf[ParIterable[T]]
-    def isParSeq = t.isInstanceOf[ParSeq[_]]
-    def asParSeq = t.asInstanceOf[ParSeq[T]]
-    def ifParSeq[R](isbody: ParSeq[T] => R) = new Otherwise[R] {
-      def otherwise(notbody: => R) = if (isParallel) isbody(asParSeq) else notbody
-    }
-    def toParArray = if (t.isInstanceOf[ParArray[_]]) t.asInstanceOf[ParArray[T]] else {
-      val it = t.toIterator
-      val cb = mutable.ParArrayCombiner[T]()
-      while (it.hasNext) cb += it.next
-      cb.result
-    }
-  }
-  implicit def throwable2ops(self: Throwable) = new ThrowableOps {
-    def alongWith(that: Throwable) = (self, that) match {
-      case (self: CompositeThrowable, that: CompositeThrowable) => new CompositeThrowable(self.throwables ++ that.throwables)
-      case (self: CompositeThrowable, _) => new CompositeThrowable(self.throwables + that)
-      case (_, that: CompositeThrowable) => new CompositeThrowable(that.throwables + self)
-      case _ => new CompositeThrowable(Set(self, that))
+  /** Adds toParArray method to collection classes. */
+  implicit class CollectionsHaveToParArray[C, T](c: C)(implicit asGto: C => scala.collection.GenTraversableOnce[T]) {
+    def toParArray = {
+      val t = asGto(c)
+      if (t.isInstanceOf[ParArray[_]]) t.asInstanceOf[ParArray[T]]
+      else {
+        val it = t.toIterator
+        val cb = mutable.ParArrayCombiner[T]()
+        while (it.hasNext) cb += it.next
+        cb.result
+      }
     }
   }
 }
 
 
 package parallel {
+  /** Implicit conversions used in the implementation of parallel collections. */
+  private[collection] object ParallelCollectionImplicits {
+    implicit def factory2ops[From, Elem, To](bf: CanBuildFrom[From, Elem, To]) = new FactoryOps[From, Elem, To] {
+      def isParallel = bf.isInstanceOf[Parallel]
+      def asParallel = bf.asInstanceOf[CanCombineFrom[From, Elem, To]]
+      def ifParallel[R](isbody: CanCombineFrom[From, Elem, To] => R) = new Otherwise[R] {
+        def otherwise(notbody: => R) = if (isParallel) isbody(asParallel) else notbody
+      }
+    }
+    implicit def traversable2ops[T](t: scala.collection.GenTraversableOnce[T]) = new TraversableOps[T] {
+      def isParallel = t.isInstanceOf[Parallel]
+      def isParIterable = t.isInstanceOf[ParIterable[_]]
+      def asParIterable = t.asInstanceOf[ParIterable[T]]
+      def isParSeq = t.isInstanceOf[ParSeq[_]]
+      def asParSeq = t.asInstanceOf[ParSeq[T]]
+      def ifParSeq[R](isbody: ParSeq[T] => R) = new Otherwise[R] {
+        def otherwise(notbody: => R) = if (isParallel) isbody(asParSeq) else notbody
+      }
+    }
+    implicit def throwable2ops(self: Throwable) = new ThrowableOps {
+      def alongWith(that: Throwable) = (self, that) match {
+        case (self: CompositeThrowable, that: CompositeThrowable) => new CompositeThrowable(self.throwables ++ that.throwables)
+        case (self: CompositeThrowable, _) => new CompositeThrowable(self.throwables + that)
+        case (_, that: CompositeThrowable) => new CompositeThrowable(that.throwables + self)
+        case _ => new CompositeThrowable(Set(self, that))
+      }
+    }
+  }
+  
   trait FactoryOps[From, Elem, To] {
     trait Otherwise[R] {
       def otherwise(notbody: => R): R
@@ -113,10 +120,11 @@ package parallel {
     def isParSeq: Boolean
     def asParSeq: ParSeq[T]
     def ifParSeq[R](isbody: ParSeq[T] => R): Otherwise[R]
-    def toParArray: ParArray[T]
   }
 
+  @deprecated("This trait will be removed.", "2.11.0")
   trait ThrowableOps {
+    @deprecated("This method will be removed.", "2.11.0")
     def alongWith(that: Throwable): Throwable
   }
 
@@ -135,9 +143,8 @@ package parallel {
   }
 
   /** Composite throwable - thrown when multiple exceptions are thrown at the same time. */
-  final case class CompositeThrowable(
-    val throwables: Set[Throwable]
-  ) extends Exception(
+  @deprecated("This class will be removed.", "2.11.0")
+  final case class CompositeThrowable(throwables: Set[Throwable]) extends Exception(
     "Multiple exceptions thrown during a parallel computation: " +
       throwables.map(t => t + "\n" + t.getStackTrace.take(10).++("...").mkString("\n")).mkString("\n\n")
   )

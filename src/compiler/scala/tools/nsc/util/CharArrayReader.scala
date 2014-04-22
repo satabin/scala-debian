@@ -8,15 +8,7 @@ package util
 
 import scala.reflect.internal.Chars._
 
-abstract class CharArrayReader { self =>
-
-  val buf: Array[Char]
-
-  def decodeUni: Boolean = true
-
-  /** An error routine to call on bad unicode escapes \\uxxxx. */
-  protected def error(offset: Int, msg: String): Unit
-
+trait CharArrayReaderData {
   /** the last read character */
   var ch: Char = _
 
@@ -29,13 +21,32 @@ abstract class CharArrayReader { self =>
   /** The start offset of the line before the current one */
   var lastLineStartOffset: Int = 0
 
-  private var lastUnicodeOffset = -1
+  protected var lastUnicodeOffset = -1
+
+  def copyFrom(cd: CharArrayReaderData): this.type = {
+    this.ch = cd.ch
+    this.charOffset = cd.charOffset
+    this.lineStartOffset = cd.lineStartOffset
+    this.lastLineStartOffset = cd.lastLineStartOffset
+    this.lastUnicodeOffset = cd.lastUnicodeOffset
+    this
+  }
+}
+
+abstract class CharArrayReader extends CharArrayReaderData { self =>
+
+  val buf: Array[Char]
+
+  def decodeUni: Boolean = true
+
+  /** An error routine to call on bad unicode escapes \\uxxxx. */
+  protected def error(offset: Int, msg: String): Unit
 
   /** Is last character a unicode escape \\uxxxx? */
   def isUnicodeEscape = charOffset == lastUnicodeOffset
 
   /** Advance one character; reducing CR;LF pairs to just LF */
-  final def nextChar() {
+  final def nextChar(): Unit = {
     if (charOffset >= buf.length) {
       ch = SU
     } else {
@@ -43,7 +54,10 @@ abstract class CharArrayReader { self =>
       ch = c
       charOffset += 1
       if (c == '\\') potentialUnicode()
-      else if (c < ' ') { skipCR(); potentialLineEnd() }
+      if (ch < ' ') {
+        skipCR()
+        potentialLineEnd()
+      }
     }
   }
 
@@ -63,7 +77,7 @@ abstract class CharArrayReader { self =>
   }
 
   /** Interpret \\uxxxx escapes */
-  private def potentialUnicode() {
+  private def potentialUnicode() = {
     def evenSlashPrefix: Boolean = {
       var p = charOffset - 2
       while (p >= 0 && buf(p) == '\\') p -= 1
@@ -94,13 +108,17 @@ abstract class CharArrayReader { self =>
   }
 
   /** replace CR;LF by LF */
-  private def skipCR() {
-    if (ch == CR)
-      if (charOffset < buf.length && buf(charOffset) == LF) {
-        charOffset += 1
-        ch = LF
+  private def skipCR() =
+    if (ch == CR && charOffset < buf.length)
+      buf(charOffset) match {
+        case LF =>
+          charOffset += 1
+          ch = LF
+        case '\\' =>
+          if (lookaheadReader.getu == LF)
+            potentialUnicode()
+        case _ =>
       }
-  }
 
   /** Handle line ends */
   private def potentialLineEnd() {
@@ -121,5 +139,6 @@ abstract class CharArrayReader { self =>
     def error(offset: Int, msg: String) = self.error(offset, msg)
     /** A mystery why CharArrayReader.nextChar() returns Unit */
     def getc() = { nextChar() ; ch }
+    def getu() = { require(buf(charOffset) == '\\') ; ch = '\\' ; charOffset += 1 ; potentialUnicode() ; ch }
   }
 }

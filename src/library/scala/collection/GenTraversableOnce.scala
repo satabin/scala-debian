@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection
+package scala
+package collection
 
 import scala.reflect.ClassTag
 import scala.collection.generic.CanBuildFrom
@@ -119,19 +120,6 @@ trait GenTraversableOnce[+A] extends Any {
    */
   def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): A1
 
-  /** A syntactic sugar for out of order folding. See `fold`.
-   *
-   * Example:
-   * {{{
-   *      scala> val a = LinkedList(1,2,3,4)
-   *      a: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2, 3, 4)
-   *
-   *      scala> val b = (a /:\ 5)(_+_)
-   *      b: Int = 15
-   * }}}*/
-  @deprecated("use fold instead", "2.10.0")
-  def /:\[A1 >: A](z: A1)(op: (A1, A1) => A1): A1 = fold(z)(op)
-
   /** Applies a binary operator to a start value and all elements of this $coll,
    *  going left to right.
    *
@@ -142,8 +130,8 @@ trait GenTraversableOnce[+A] extends Any {
    *
    *  Note that the folding function used to compute b is equivalent to that used to compute c.
    *  {{{
-   *      scala> val a = LinkedList(1,2,3,4)
-   *      a: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2, 3, 4)
+   *      scala> val a = List(1,2,3,4)
+   *      a: List[Int] = List(1, 2, 3, 4)
    *
    *      scala> val b = (5 /: a)(_+_)
    *      b: Int = 15
@@ -179,8 +167,8 @@ trait GenTraversableOnce[+A] extends Any {
    *
    *  Note that the folding function used to compute b is equivalent to that used to compute c.
    *  {{{
-   *      scala> val a = LinkedList(1,2,3,4)
-   *      a: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2, 3, 4)
+   *      scala> val a = List(1,2,3,4)
+   *      a: List[Int] = List(1, 2, 3, 4)
    *
    *      scala> val b = (a :\ 5)(_+_)
    *      b: Int = 15
@@ -261,11 +249,12 @@ trait GenTraversableOnce[+A] extends Any {
    *  @tparam B        the type of accumulated results
    *  @param z         the initial value for the accumulated result of the partition - this
    *                   will typically be the neutral element for the `seqop` operator (e.g.
-   *                   `Nil` for list concatenation or `0` for summation)
+   *                   `Nil` for list concatenation or `0` for summation) and may be evaluated
+   *                   more than once
    *  @param seqop     an operator used to accumulate results within a partition
    *  @param combop    an associative operator used to combine results from different partitions
    */
-  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): B
+  def aggregate[B](z: =>B)(seqop: (B, A) => B, combop: (B, B) => B): B
 
   /** Applies a binary operator to all elements of this $coll, going right to left.
    *  $willNotTerminateInf
@@ -352,7 +341,7 @@ trait GenTraversableOnce[+A] extends Any {
    *
    *  @param    ord   An ordering to be used for comparing elements.
    *  @tparam   A1    The type over which the ordering is defined.
-   *  @return   the smallest element of this $coll with respect to the ordering `cmp`.
+   *  @return   the smallest element of this $coll with respect to the ordering `ord`.
    *
    *  @usecase def min: A
    *    @inheritdoc
@@ -365,7 +354,7 @@ trait GenTraversableOnce[+A] extends Any {
    *
    *  @param    ord   An ordering to be used for comparing elements.
    *  @tparam   A1    The type over which the ordering is defined.
-   *  @return   the largest element of this $coll with respect to the ordering `cmp`.
+   *  @return   the largest element of this $coll with respect to the ordering `ord`.
    *
    *  @usecase def max: A
    *    @inheritdoc
@@ -374,8 +363,34 @@ trait GenTraversableOnce[+A] extends Any {
    */
   def max[A1 >: A](implicit ord: Ordering[A1]): A
 
+  /** Finds the first element which yields the largest value measured by function f.
+   *
+   *  @param    cmp   An ordering to be used for comparing elements.
+   *  @tparam   B     The result type of the function f.
+   *  @param    f     The measuring function.
+   *  @return   the first element of this $coll with the largest value measured by function f
+   *  with respect to the ordering `cmp`.
+   *
+   *  @usecase def maxBy[B](f: A => B): A
+   *    @inheritdoc
+   *
+   *    @return   the first element of this $coll with the largest value measured by function f.
+   */
   def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): A
 
+  /** Finds the first element which yields the smallest value measured by function f.
+   *
+   *  @param    cmp   An ordering to be used for comparing elements.
+   *  @tparam   B     The result type of the function f.
+   *  @param    f     The measuring function.
+   *  @return   the first element of this $coll with the smallest value measured by function f
+   *  with respect to the ordering `cmp`.
+   *
+   *  @usecase def minBy[B](f: A => B): A
+   *    @inheritdoc
+   *
+   *    @return   the first element of this $coll with the smallest value measured by function f.
+   */
   def minBy[B](f: A => B)(implicit cmp: Ordering[B]): A
 
   def forall(pred: A => Boolean): Boolean
@@ -491,7 +506,6 @@ trait GenTraversableOnce[+A] extends Any {
   def toIndexedSeq: immutable.IndexedSeq[A]
 
   /** Converts this $coll to a stream.
-   *  $willNotTerminateInf
    *  @return a stream containing all elements of this $coll.
    */
   def toStream: Stream[A]
@@ -503,7 +517,7 @@ trait GenTraversableOnce[+A] extends Any {
    */
   def toIterator: Iterator[A]
 
-  /** Converts this $coll to a mutable buffer.
+  /** Uses the contents of this $coll to create a new mutable buffer.
    *  $willNotTerminateInf
    *  @return a buffer containing all elements of this $coll.
    */

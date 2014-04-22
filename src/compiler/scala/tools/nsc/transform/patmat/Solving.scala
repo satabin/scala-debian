@@ -8,18 +8,13 @@ package scala.tools.nsc.transform.patmat
 
 import scala.collection.mutable
 import scala.reflect.internal.util.Statistics
+import scala.language.postfixOps
+import scala.reflect.internal.util.Collections._
 
 // naive CNF translation and simple DPLL solver
 trait Solving extends Logic {
   import PatternMatchingStats._
   trait CNF extends PropositionalLogic {
-
-    /** Override Array creation for efficiency (to not go through reflection). */
-    private implicit val clauseTag: scala.reflect.ClassTag[Clause] = new scala.reflect.ClassTag[Clause] {
-      def runtimeClass: java.lang.Class[Clause] = classOf[Clause]
-      final override def newArray(len: Int): Array[Clause] = new Array[Clause](len)
-    }
-
     import scala.collection.mutable.ArrayBuffer
     type FormulaBuilder = ArrayBuffer[Clause]
     def formulaBuilder  = ArrayBuffer[Clause]()
@@ -31,9 +26,12 @@ trait Solving extends Logic {
     type Formula = FormulaBuilder
     def formula(c: Clause*): Formula = ArrayBuffer(c: _*)
 
-    type Clause  = Set[Lit]
+    type Clause  = collection.Set[Lit]
     // a clause is a disjunction of distinct literals
-    def clause(l: Lit*): Clause = l.toSet
+    def clause(l: Lit*): Clause = (
+      // neg/t7020.scala changes output 1% of the time, the non-determinism is quelled with this linked set
+      mutable.LinkedHashSet(l: _*)
+    )
 
     type Lit
     def Lit(sym: Sym, pos: Boolean = true): Lit
@@ -71,7 +69,7 @@ trait Solving extends Logic {
       val TrueF          = formula()
       val FalseF         = formula(clause())
       def lit(s: Sym)    = formula(clause(Lit(s)))
-      def negLit(s: Sym) = formula(clause(Lit(s, false)))
+      def negLit(s: Sym) = formula(clause(Lit(s, pos = false)))
 
       def conjunctiveNormalForm(p: Prop, budget: Int = AnalysisBudget.max): Formula = {
         def distribute(a: Formula, b: Formula, budget: Int): Formula =
@@ -139,7 +137,7 @@ trait Solving extends Logic {
     def cnfString(f: Formula) = alignAcrossRows(f map (_.toList) toList, "\\/", " /\\\n")
 
     // adapted from http://lara.epfl.ch/w/sav10:simple_sat_solver (original by Hossein Hojjat)
-    val EmptyModel = Map.empty[Sym, Boolean]
+    val EmptyModel = collection.immutable.SortedMap.empty[Sym, Boolean]
     val NoModel: Model = null
 
     // returns all solutions, if any (TODO: better infinite recursion backstop -- detect fixpoint??)
@@ -164,7 +162,7 @@ trait Solving extends Logic {
               else Nil
             }
             val forced = unassigned flatMap { s =>
-              force(Lit(s, true)) ++ force(Lit(s, false))
+              force(Lit(s, pos = true)) ++ force(Lit(s, pos = false))
             }
             debug.patmat("forced "+ forced)
             val negated = negateModel(model)
@@ -211,9 +209,8 @@ trait Solving extends Logic {
             // SI-7020 Linked- for deterministic counter examples.
             val pos = new mutable.LinkedHashSet[Sym]()
             val neg = new mutable.LinkedHashSet[Sym]()
-            f.foreach{_.foreach{ lit =>
-              if (lit.pos) pos += lit.sym else neg += lit.sym
-            }}
+            mforeach(f)(lit => if (lit.pos) pos += lit.sym else neg += lit.sym)
+
             // appearing in both positive and negative
             val impures: mutable.LinkedHashSet[Sym] = pos intersect neg
             // appearing only in either positive/negative positions
@@ -235,9 +232,8 @@ trait Solving extends Logic {
             }
         }
 
-        if (Statistics.canEnable) Statistics.stopTimer(patmatAnaDPLL, start)
-
-        satisfiableWithModel
+      if (Statistics.canEnable) Statistics.stopTimer(patmatAnaDPLL, start)
+      satisfiableWithModel
     }
   }
 }

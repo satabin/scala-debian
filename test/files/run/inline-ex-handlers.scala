@@ -1,7 +1,7 @@
-import scala.tools.partest.IcodeTest
+import scala.tools.partest.IcodeComparison
 
-object Test extends IcodeTest {
-  override def printIcodeAfterPhase = "inlineExceptionHandlers"
+object Test extends IcodeComparison {
+  override def printIcodeAfterPhase = "inlinehandlers"
 }
 
 import scala.util.Random._

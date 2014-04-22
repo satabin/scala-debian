@@ -1,5 +1,5 @@
 package pkg {
-  import scala.reflect.macros.Context
+  import scala.reflect.macros.blackbox.Context
   import scala.language.experimental.macros
 
   object Macros {
@@ -9,7 +9,7 @@ package pkg {
       val g = c.universe.asInstanceOf[scala.tools.nsc.Global]
       c.Expr[Boolean](Literal(Constant(g.currentRun.compiles(sym.asInstanceOf[g.Symbol]))))
     }
-    def compiles[T] = macro impl[T]
+    def compiles[T]: Boolean = macro impl[T]
   }
 }
 

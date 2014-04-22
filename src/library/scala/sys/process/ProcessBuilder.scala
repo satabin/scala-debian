@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.sys
+package scala
+package sys
 package process
 
 import processInternal._
@@ -23,15 +24,13 @@ import ProcessBuilder._
   * based on these factories made available in the package object
   * [[scala.sys.process]]. Here are some examples:
   * {{{
-  * import.scala.sys.process._
+  * import scala.sys.process._
   *
   * // Executes "ls" and sends output to stdout
   * "ls".!
   *
   * // Execute "ls" and assign a `Stream[String]` of its output to "contents".
-  * // Because [[scala.Predef]] already defines a `lines` method for `String`,
-  * // we use [[scala.sys.process.Process]]'s object companion to create it.
-  * val contents = Process("ls").lines
+  * val contents = Process("ls").lineStream
   *
   * // Here we use a `Seq` to make the parameter whitespace-safe
   * def contentsOf(dir: String): String = Seq("ls", dir).!!
@@ -46,14 +45,14 @@ import ProcessBuilder._
   *
   * Two existing `ProcessBuilder` can be combined in the following ways:
   *
-  *   * They can be executed in parallel, with the output of the first being fed
-  *   as input to the second, like Unix pipes. This is achieved with the `#|`
-  *   method.
-  *   * They can be executed in sequence, with the second starting as soon as
-  *   the first ends. This is done by the `###` method.
-  *   * The execution of the second one can be conditioned by the return code
-  *   (exit status) of the first, either only when it's zero, or only when it's
-  *   not zero. The methods `#&&` and `#||` accomplish these tasks.
+  *   - They can be executed in parallel, with the output of the first being fed
+  *     as input to the second, like Unix pipes. This is achieved with the `#|`
+  *     method.
+  *   - They can be executed in sequence, with the second starting as soon as
+  *     the first ends. This is done by the `###` method.
+  *   - The execution of the second one can be conditioned by the return code
+  *     (exit status) of the first, either only when it's zero, or only when it's
+  *     not zero. The methods `#&&` and `#||` accomplish these tasks.
   *
   * ==Redirecting Input/Output==
   *
@@ -61,7 +60,7 @@ import ProcessBuilder._
   * there's a few methods that create a new `ProcessBuilder` with a
   * pre-configured input or output. They are `#<`, `#>` and `#>>`, and may take
   * as input either another `ProcessBuilder` (like the pipe described above), or
-  * something else such as a `java.io.File` or a `java.lang.InputStream`.
+  * something else such as a `java.io.File` or a `java.io.InputStream`.
   * For example:
   * {{{
   * new URL("http://databinder.net/dispatch/About") #> "grep JSON" #>> new File("About_JSON") !
@@ -74,18 +73,18 @@ import ProcessBuilder._
   * overloads and variations to enable further control over the I/O. These
   * methods are:
   *
-  *   * `run`: the most general method, it returns a
-  *   [[scala.sys.process.Process]] immediately, and the external command
-  *   executes concurrently.
-  *   * `!`: blocks until all external commands exit, and returns the exit code
-  *   of the last one in the chain of execution.
-  *   * `!!`: blocks until all external commands exit, and returns a `String`
-  *   with the output generated.
-  *   * `lines`: returns immediately like `run`, and the output being generared
-  *   is provided through a `Stream[String]`. Getting the next element of that
-  *   `Stream` may block until it becomes available. This method will throw an
-  *   exception if the return code is different than zero -- if this is not
-  *   desired, use the `lines_!` method.
+  *   - `run`: the most general method, it returns a
+  *     [[scala.sys.process.Process]] immediately, and the external command
+  *     executes concurrently.
+  *   - `!`: blocks until all external commands exit, and returns the exit code
+  *     of the last one in the chain of execution.
+  *   - `!!`: blocks until all external commands exit, and returns a `String`
+  *     with the output generated.
+  *   - `lineStream`: returns immediately like `run`, and the output being generated
+  *     is provided through a `Stream[String]`. Getting the next element of that
+  *     `Stream` may block until it becomes available. This method will throw an
+  *     exception if the return code is different than zero -- if this is not
+  *     desired, use the `lineStream_!` method.
   *
   * ==Handling Input and Output==
   *
@@ -122,14 +121,22 @@ import ProcessBuilder._
   *   1. `#&&` conditionally executes the second command if the previous one finished with
   *      exit value 0. It mirrors shell's `&&`.
   *   1. `#||` conditionally executes the third command if the exit value of the previous
-  *      command is different than zero. It mirrors shell's `&&`.
+  *      command is different than zero. It mirrors shell's `||`.
   *
   * Finally, `!` at the end executes the commands, and returns the exit value.
   * Whatever is printed will be sent to the Scala process standard output. If
-  * we wanted to caputre it, we could run that with `!!` instead.
+  * we wanted to capture it, we could run that with `!!` instead.
   *
   * Note: though it is not shown above, the equivalent of a shell's `;` would be
   * `###`. The reason for this name is that `;` is a reserved token in Scala.
+  *
+  * Note: the `lines` method, though deprecated, may conflict with the `StringLike`
+  * method of the same name.  To avoid this, one may wish to call the builders in
+  * `Process` instead of importing `scala.sys.process._`.  The example above would be
+  * {{{
+  * import scala.sys.process.Process
+  * Process("find src -name *.scala -exec grep null {} ;") #| Process("xargs test -z") #&& Process("echo null-free") #|| Process("echo null detected") !
+  * }}}
   */
 trait ProcessBuilder extends Source with Sink {
   /** Starts the process represented by this builder, blocks until it exits, and
@@ -164,15 +171,23 @@ trait ProcessBuilder extends Source with Sink {
     * with a non-zero value, the Stream will provide all lines up to termination
     * and then throw an exception.
     */
-  def lines: Stream[String]
+  def lineStream: Stream[String]
+  
+  /** Deprecated (renamed). Use `lineStream` instead. */
+  @deprecated("Use lineStream instead.", "2.11.0")
+  def lines: Stream[String] = lineStream
 
   /** Starts the process represented by this builder.  The output is returned as
     * a Stream that blocks when lines are not available but the process has not
     * completed.  Standard error is sent to the provided ProcessLogger.  If the
     * process exits with a non-zero value, the Stream will provide all lines up
-    * to termination but will not throw an exception.
+    * to termination and then throw an exception.
     */
-  def lines(log: ProcessLogger): Stream[String]
+  def lineStream(log: ProcessLogger): Stream[String]
+  
+  /** Deprecated (renamed).  Use `lineStream(log: ProcessLogger)` instead. */
+  @deprecated("Use stream instead.", "2.11.0")
+  def lines(log: ProcessLogger): Stream[String] = lineStream(log)
 
   /** Starts the process represented by this builder.  The output is returned as
     * a Stream that blocks when lines are not available but the process has not
@@ -180,7 +195,11 @@ trait ProcessBuilder extends Source with Sink {
     * with a non-zero value, the Stream will provide all lines up to termination
     * but will not throw an exception.
     */
-  def lines_! : Stream[String]
+  def lineStream_! : Stream[String]
+  
+  /** Deprecated (renamed).  Use `lineStream_!` instead. */
+  @deprecated("Use lineStream_! instead.", "2.11.0")  
+  def lines_! : Stream[String] = lineStream_!
 
   /** Starts the process represented by this builder.  The output is returned as
     * a Stream that blocks when lines are not available but the process has not
@@ -188,7 +207,11 @@ trait ProcessBuilder extends Source with Sink {
     * process exits with a non-zero value, the Stream will provide all lines up
     * to termination but will not throw an exception.
     */
-  def lines_!(log: ProcessLogger): Stream[String]
+  def lineStream_!(log: ProcessLogger): Stream[String]
+  
+  /** Deprecated (renamed).  Use `lineStream_!(log: ProcessLogger)` instead. */
+  @deprecated("Use stream_! instead.", "2.11.0")
+  def lines_!(log: ProcessLogger): Stream[String] = lineStream_!(log)
 
   /** Starts the process represented by this builder, blocks until it exits, and
     * returns the exit code.  Standard output and error are sent to the console.
@@ -305,10 +328,10 @@ object ProcessBuilder extends ProcessBuilderImpl {
     protected def toSource: ProcessBuilder
 
     /** Writes the output stream of this process to the given file. */
-    def #> (f: File): ProcessBuilder = toFile(f, false)
+    def #> (f: File): ProcessBuilder = toFile(f, append = false)
 
     /** Appends the output stream of this process to the given file. */
-    def #>> (f: File): ProcessBuilder = toFile(f, true)
+    def #>> (f: File): ProcessBuilder = toFile(f, append = true)
 
     /** Writes the output stream of this process to the given OutputStream. The
       * argument is call-by-name, so the stream is recreated, written, and closed each

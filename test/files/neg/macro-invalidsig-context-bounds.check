@@ -1,4 +1,0 @@
-Macros_Test_1.scala:2: error: macro implementations cannot have implicit parameters other than WeakTypeTag evidences
-  def foo[U] = macro Impls.foo[U]
-                           ^
-one error found

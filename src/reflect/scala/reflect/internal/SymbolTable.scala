@@ -3,18 +3,22 @@
  * @author  Martin Odersky
  */
 
-package scala.reflect
+package scala
+package reflect
 package internal
 
 import scala.annotation.elidable
 import scala.collection.{ mutable, immutable }
 import util._
+import java.util.concurrent.TimeUnit
+import scala.reflect.internal.{TreeGen => InternalTreeGen}
 
 abstract class SymbolTable extends macros.Universe
                               with Collections
                               with Names
                               with Symbols
                               with Types
+                              with Variances
                               with Kinds
                               with ExistentialsAndSkolems
                               with FlagSets
@@ -37,36 +41,53 @@ abstract class SymbolTable extends macros.Universe
                               with CapturedVariables
                               with StdAttachments
                               with StdCreators
-                              with BuildUtils
+                              with ReificationSupport
+                              with PrivateWithin
+                              with pickling.Translations
+                              with FreshNames
+                              with Internals
 {
 
-  val gen = new TreeGen { val global: SymbolTable.this.type = SymbolTable.this }
-  lazy val treeBuild = gen
+  val gen = new InternalTreeGen { val global: SymbolTable.this.type = SymbolTable.this }
 
   def log(msg: => AnyRef): Unit
+  def deprecationWarning(pos: Position, msg: String): Unit = warning(msg)
   def warning(msg: String): Unit     = Console.err.println(msg)
+  def inform(msg: String): Unit      = Console.err.println(msg)
   def globalError(msg: String): Unit = abort(msg)
   def abort(msg: String): Nothing    = throw new FatalError(supplementErrorMessage(msg))
 
-  def shouldLogAtThisPhase = false
+  protected def elapsedMessage(msg: String, start: Long) =
+    msg + " in " + (TimeUnit.NANOSECONDS.toMillis(System.nanoTime()) - start) + "ms"
 
-  @deprecated("Give us a reason", "2.10.0")
-  def abort(): Nothing = abort("unknown error")
+  def informProgress(msg: String)          = if (settings.verbose) inform("[" + msg + "]")
+  def informTime(msg: String, start: Long) = informProgress(elapsedMessage(msg, start))
+
+  def shouldLogAtThisPhase = false
+  def isPastTyper = false
+  protected def isDeveloper: Boolean = settings.debug
+
+  @deprecated("Use devWarning if this is really a warning; otherwise use log", "2.11.0")
+  def debugwarn(msg: => String): Unit = devWarning(msg)
 
   /** Override with final implementation for inlining. */
-  def debuglog(msg:  => String): Unit = if (settings.debug.value) log(msg)
-  def debugwarn(msg: => String): Unit = if (settings.debug.value) Console.err.println(msg)
+  def debuglog(msg:  => String): Unit = if (settings.debug) log(msg)
+  def devWarning(msg: => String): Unit = if (isDeveloper) Console.err.println(msg)
   def throwableAsString(t: Throwable): String = "" + t
+  def throwableAsString(t: Throwable, maxFrames: Int): String = t.getStackTrace take maxFrames mkString "\n  at "
+
+  @inline final def devWarningDumpStack(msg: => String, maxFrames: Int): Unit =
+    devWarning(msg + "\n" + throwableAsString(new Throwable, maxFrames))
 
   /** Prints a stack trace if -Ydebug or equivalent was given, otherwise does nothing. */
-  def debugStack(t: Throwable): Unit  = debugwarn(throwableAsString(t))
+  def debugStack(t: Throwable): Unit  = devWarning(throwableAsString(t))
 
   /** Overridden when we know more about what was happening during a failure. */
   def supplementErrorMessage(msg: String): String = msg
 
   private[scala] def printCaller[T](msg: String)(result: T) = {
     Console.err.println("%s: %s\nCalled from: %s".format(msg, result,
-      (new Throwable).getStackTrace.drop(2).take(15).mkString("\n")))
+      (new Throwable).getStackTrace.drop(2).take(50).mkString("\n")))
 
     result
   }
@@ -81,11 +102,32 @@ abstract class SymbolTable extends macros.Universe
     result
   }
   @inline
+  final private[scala] def debuglogResult[T](msg: => String)(result: T): T = {
+    debuglog(msg + ": " + result)
+    result
+  }
+  @inline
+  final private[scala] def devWarningResult[T](msg: => String)(result: T): T = {
+    devWarning(msg + ": " + result)
+    result
+  }
+  @inline
   final private[scala] def logResultIf[T](msg: => String, cond: T => Boolean)(result: T): T = {
     if (cond(result))
       log(msg + ": " + result)
 
     result
+  }
+  @inline
+  final private[scala] def debuglogResultIf[T](msg: => String, cond: T => Boolean)(result: T): T = {
+    if (cond(result))
+      debuglog(msg + ": " + result)
+
+    result
+  }
+
+  @inline final def findSymbol(xs: TraversableOnce[Symbol])(p: Symbol => Boolean): Symbol = {
+    xs find p getOrElse NoSymbol
   }
 
   // For too long have we suffered in order to sort NAMES.
@@ -108,16 +150,12 @@ abstract class SymbolTable extends macros.Universe
     val global: SymbolTable.this.type = SymbolTable.this
   } with util.TraceSymbolActivity
 
+  val treeInfo: TreeInfo { val global: SymbolTable.this.type }
+
   /** Check that the executing thread is the compiler thread. No-op here,
    *  overridden in interactive.Global. */
   @elidable(elidable.WARNING)
   def assertCorrectThread() {}
-
-  /** Are we compiling for Java SE? */
-  // def forJVM: Boolean
-
-  /** Are we compiling for .NET? */
-  def forMSIL: Boolean = false
 
   /** A last effort if symbol in a select <owner>.<name> is not found.
    *  This is overridden by the reflection compiler to make up a package
@@ -139,7 +177,7 @@ abstract class SymbolTable extends macros.Universe
   type RunId = Int
   final val NoRunId = 0
 
-  // sigh, this has to be public or atPhase doesn't inline.
+  // sigh, this has to be public or enteringPhase doesn't inline.
   var phStack: List[Phase] = Nil
   private[this] var ph: Phase = NoPhase
   private[this] var per = NoPeriod
@@ -182,9 +220,6 @@ abstract class SymbolTable extends macros.Universe
   /** The phase identifier of the given period. */
   final def phaseId(period: Period): Phase#Id = period & 0xFF
 
-  /** The period at the start of run that includes `period`. */
-  final def startRun(period: Period): Period = period & 0xFFFFFF00
-
   /** The current period. */
   final def currentPeriod: Period = {
     //assert(per == (currentRunId << 8) + phase.id)
@@ -202,23 +237,37 @@ abstract class SymbolTable extends macros.Universe
     p != NoPhase && phase.id > p.id
 
   /** Perform given operation at given phase. */
-  @inline final def atPhase[T](ph: Phase)(op: => T): T = {
+  @inline final def enteringPhase[T](ph: Phase)(op: => T): T = {
     val saved = pushPhase(ph)
     try op
     finally popPhase(saved)
   }
 
+  final def findPhaseWithName(phaseName: String): Phase = {
+    var ph = phase
+    while (ph != NoPhase && ph.name != phaseName) {
+      ph = ph.prev
+    }
+    if (ph eq NoPhase) phase else ph
+  }
+  final def enteringPhaseWithName[T](phaseName: String)(body: => T): T = {
+    val phase = findPhaseWithName(phaseName)
+    enteringPhase(phase)(body)
+  }
 
-  /** Since when it is to be "at" a phase is inherently ambiguous,
-   *  a couple unambiguously named methods.
-   */
-  @inline final def beforePhase[T](ph: Phase)(op: => T): T = atPhase(ph)(op)
-  @inline final def afterPhase[T](ph: Phase)(op: => T): T  = atPhase(ph.next)(op)
-  @inline final def afterCurrentPhase[T](op: => T): T      = atPhase(phase.next)(op)
-  @inline final def beforePrevPhase[T](op: => T): T        = atPhase(phase.prev)(op)
+  def slowButSafeEnteringPhase[T](ph: Phase)(op: => T): T = {
+    if (isCompilerUniverse) enteringPhase(ph)(op)
+    else op
+  }
 
-  @inline final def atPhaseNotLaterThan[T](target: Phase)(op: => T): T =
-    if (isAtPhaseAfter(target)) atPhase(target)(op) else op
+  @inline final def exitingPhase[T](ph: Phase)(op: => T): T = enteringPhase(ph.next)(op)
+  @inline final def enteringPrevPhase[T](op: => T): T       = enteringPhase(phase.prev)(op)
+
+  @inline final def enteringPhaseNotLaterThan[T](target: Phase)(op: => T): T =
+    if (isAtPhaseAfter(target)) enteringPhase(target)(op) else op
+
+  def slowButSafeEnteringPhaseNotLaterThan[T](target: Phase)(op: => T): T =
+    if (isCompilerUniverse) enteringPhaseNotLaterThan(target)(op) else op
 
   final def isValid(period: Period): Boolean =
     period != 0 && runId(period) == currentRunId && {
@@ -231,7 +280,7 @@ abstract class SymbolTable extends macros.Universe
     def noChangeInBaseClasses(it: InfoTransformer, limit: Phase#Id): Boolean = (
       it.pid >= limit ||
       !it.changesBaseClasses && noChangeInBaseClasses(it.next, limit)
-    );
+    )
     period != 0 && runId(period) == currentRunId && {
       val pid = phaseId(period)
       if (phase.id > pid) noChangeInBaseClasses(infoTransformers.nextFrom(pid), phase.id)
@@ -302,27 +351,45 @@ abstract class SymbolTable extends macros.Universe
   }
 
   object perRunCaches {
-    import scala.runtime.ScalaRunTime.stringOf
     import scala.collection.generic.Clearable
 
     // Weak references so the garbage collector will take care of
     // letting us know when a cache is really out of commission.
-    private val caches = WeakHashSet[Clearable]()
+    import java.lang.ref.WeakReference
+    private var caches = List[WeakReference[Clearable]]()
 
     def recordCache[T <: Clearable](cache: T): T = {
-      caches += cache
+      caches ::= new WeakReference(cache)
       cache
     }
 
     def clearAll() = {
       debuglog("Clearing " + caches.size + " caches.")
-      caches foreach (_.clear)
+      caches foreach (ref => Option(ref.get).foreach(_.clear))
+      caches = caches.filterNot(_.get == null)
     }
 
     def newWeakMap[K, V]()        = recordCache(mutable.WeakHashMap[K, V]())
     def newMap[K, V]()            = recordCache(mutable.HashMap[K, V]())
     def newSet[K]()               = recordCache(mutable.HashSet[K]())
     def newWeakSet[K <: AnyRef]() = recordCache(new WeakHashSet[K]())
+
+    def newAnyRefMap[K <: AnyRef, V]() = recordCache(mutable.AnyRefMap[K, V]())
+    def newGeneric[T](f: => T): () => T = {
+      val NoCached: T = null.asInstanceOf[T]
+      var cached: T = NoCached
+      var cachedRunId = NoRunId
+      recordCache(new Clearable {
+        def clear(): Unit = cached = NoCached
+      })
+      () => {
+        if (currentRunId != cachedRunId || cached == NoCached) {
+          cached = f
+          cachedRunId = currentRunId
+        }
+        cached
+      }
+    }
   }
 
   /** The set of all installed infotransformers. */
@@ -339,26 +406,14 @@ abstract class SymbolTable extends macros.Universe
    */
   def isCompilerUniverse = false
 
+  @deprecated("Use enteringPhase", "2.10.0") // Used in SBT 0.12.4
+  @inline final def atPhase[T](ph: Phase)(op: => T): T = enteringPhase(ph)(op)
+
+
   /**
    * Adds the `sm` String interpolator to a [[scala.StringContext]].
    */
   implicit val StringContextStripMarginOps: StringContext => StringContextStripMarginOps = util.StringContextStripMarginOps
-
-  def importPrivateWithinFromJavaFlags(sym: Symbol, jflags: Int): Symbol = {
-    import ClassfileConstants._
-    if ((jflags & (JAVA_ACC_PRIVATE | JAVA_ACC_PROTECTED | JAVA_ACC_PUBLIC)) == 0)
-      // See ticket #1687 for an example of when topLevelClass is NoSymbol: it
-      // apparently occurs when processing v45.3 bytecode.
-      if (sym.enclosingTopLevelClass != NoSymbol)
-        sym.privateWithin = sym.enclosingTopLevelClass.owner
-
-    // protected in java means package protected. #3946
-    if ((jflags & JAVA_ACC_PROTECTED) != 0)
-      if (sym.enclosingTopLevelClass != NoSymbol)
-        sym.privateWithin = sym.enclosingTopLevelClass.owner
-
-    sym
-  }
 }
 
 object SymbolTableStats {

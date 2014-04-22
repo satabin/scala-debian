@@ -7,7 +7,8 @@
 \*                                                                      */
 
 
-package scala.util
+package scala
+package util
 
 import java.io.{ IOException, PrintWriter }
 import java.util.jar.Attributes.{ Name => AttributeName }
@@ -58,6 +59,8 @@ private[scala] trait PropertiesTrait {
 
   def envOrElse(name: String, alt: String)      = Option(System getenv name) getOrElse alt
   def envOrNone(name: String)                   = Option(System getenv name)
+
+  def envOrSome(name: String, alt: Option[String])       = envOrNone(name) orElse alt
 
   // for values based on propFilename
   def scalaPropOrElse(name: String, alt: String): String = scalaProps.getProperty(name, alt)
@@ -128,10 +131,9 @@ private[scala] trait PropertiesTrait {
   def javaVmName            = propOrEmpty("java.vm.name")
   def javaVmVendor          = propOrEmpty("java.vm.vendor")
   def javaVmVersion         = propOrEmpty("java.vm.version")
-  // this property must remain less-well-known until 2.11
-  private def javaSpecVersion       = propOrEmpty("java.specification.version")
-  //private def javaSpecVendor        = propOrEmpty("java.specification.vendor")
-  //private def javaSpecName          = propOrEmpty("java.specification.name")
+  def javaSpecVersion       = propOrEmpty("java.specification.version")
+  def javaSpecVendor        = propOrEmpty("java.specification.vendor")
+  def javaSpecName          = propOrEmpty("java.specification.name")
   def osName                = propOrEmpty("os.name")
   def scalaHome             = propOrEmpty("scala.home")
   def tmpDir                = propOrEmpty("java.io.tmpdir")
@@ -145,7 +147,10 @@ private[scala] trait PropertiesTrait {
   // See http://mail.openjdk.java.net/pipermail/macosx-port-dev/2012-November/005148.html for
   // the reason why we don't follow developer.apple.com/library/mac/#technotes/tn2002/tn2110.
   /** Returns `true` iff the underlying operating system is a version of Apple Mac OSX.  */
-  def isMac                 = osName startsWith "Mac OS X" 
+  def isMac                 = osName startsWith "Mac OS X"
+
+  /* Some runtime values. */
+  private[scala] def isAvian = javaVmName contains "Avian"
 
   // This is looking for javac, tools.jar, etc.
   // Tries JDK_HOME first, then the more common but likely jre JAVA_HOME,
@@ -168,7 +173,7 @@ private[scala] trait PropertiesTrait {
    * isJavaAtLeast("1.6")            // true
    * isJavaAtLeast("1.7")            // true
    * isJavaAtLeast("1.8")            // false
-   * }}
+   * }}}
    */
   def isJavaAtLeast(version: String): Boolean = {
     def parts(x: String) = {

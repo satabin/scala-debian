@@ -6,10 +6,10 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection
+package scala
+package collection
 package immutable
 
-import generic._
 import mutable.Builder
 import scala.util.matching.Regex
 import scala.math.ScalaNumber
@@ -19,12 +19,11 @@ import scala.reflect.ClassTag
  *  @since 2.8
  */
 object StringLike {
-
   // just statics for companion class.
-  private final val LF: Char = 0x0A
-  private final val FF: Char = 0x0C
-  private final val CR: Char = 0x0D
-  private final val SU: Char = 0x1A
+  private final val LF = 0x0A
+  private final val FF = 0x0C
+  private final val CR = 0x0D
+  private final val SU = 0x1A
 }
 
 import StringLike._
@@ -60,8 +59,8 @@ self =>
     val start = from max 0
     val end   = until min length
 
-    if (start >= end) newBuilder.result
-    else (newBuilder ++= toString.substring(start, end)).result
+    if (start >= end) newBuilder.result()
+    else (newBuilder ++= toString.substring(start, end)).result()
   }
 
   /** Return the current string concatenated `n` times.
@@ -132,6 +131,7 @@ self =>
    *  end characters, i.e. apply `.stripLineEnd` to all lines
    *  returned by `linesWithSeparators`.
    */
+  @deprecated("Use `lines` instead.","2.11.0")
   def linesIterator: Iterator[String] =
     linesWithSeparators map (line => new WrappedString(line).stripLineEnd)
 
@@ -165,8 +165,8 @@ self =>
    *  @return               the resulting string
    */
   def replaceAllLiterally(literal: String, replacement: String): String = {
-    val arg1 = java.util.regex.Pattern.quote(literal)
-    val arg2 = java.util.regex.Matcher.quoteReplacement(replacement)
+    val arg1 = Regex.quote(literal)
+    val arg2 = Regex.quoteReplacement(replacement)
 
     toString.replaceAll(arg1, arg2)
   }
@@ -223,12 +223,33 @@ self =>
    */
   def r(groupNames: String*): Regex = new Regex(toString, groupNames: _*)
 
+  /**
+   * @throws `java.lang.IllegalArgumentException` - If the string does not contain a parsable boolean.
+   */
   def toBoolean: Boolean = parseBoolean(toString)
+  /**
+   * @throws `java.lang.NumberFormatException` - If the string does not contain a parsable byte.
+   */
   def toByte: Byte       = java.lang.Byte.parseByte(toString)
+  /**
+   * @throws `java.lang.NumberFormatException` - If the string does not contain a parsable short.
+   */
   def toShort: Short     = java.lang.Short.parseShort(toString)
+  /**
+   * @throws `java.lang.NumberFormatException`  - If the string does not contain a parsable int.
+   */
   def toInt: Int         = java.lang.Integer.parseInt(toString)
+  /**
+   * @throws `java.lang.NumberFormatException`  - If the string does not contain a parsable long.
+   */
   def toLong: Long       = java.lang.Long.parseLong(toString)
+  /**
+   * @throws `java.lang.NumberFormatException` - If the string does not contain a parsable float.
+   */
   def toFloat: Float     = java.lang.Float.parseFloat(toString)
+  /**
+   * @throws `java.lang.NumberFormatException` - If the string does not contain a parsable double.
+   */
   def toDouble: Double   = java.lang.Double.parseDouble(toString)
 
   private def parseBoolean(s: String): Boolean =

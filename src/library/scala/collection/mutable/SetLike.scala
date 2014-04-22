@@ -6,12 +6,13 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection
+package scala
+package collection
 package mutable
 
 import generic._
 import script._
-import scala.annotation.{ migration, bridge }
+import scala.annotation.migration
 import parallel.mutable.ParSet
 
 /** A template trait for mutable sets of type `mutable.Set[A]`.
@@ -209,11 +210,12 @@ trait SetLike[A, +This <: SetLike[A, This] with Set[A]]
    *  @throws `Predef.UnsupportedOperationException`
    *  if the message was not understood.
    */
-   def <<(cmd: Message[A]): Unit = cmd match {
-     case Include(_, x)     => this += x
-     case Remove(_, x)      => this -= x
-     case Reset()           => clear
-     case s: Script[_]      => s.iterator foreach <<
-     case _                 => throw new UnsupportedOperationException("message " + cmd + " not understood")
-   }
+  @deprecated("Scripting is deprecated.", "2.11.0")
+  def <<(cmd: Message[A]): Unit = cmd match {
+    case Include(_, x)     => this += x
+    case Remove(_, x)      => this -= x
+    case Reset()           => clear()
+    case s: Script[_]      => s.iterator foreach <<
+    case _                 => throw new UnsupportedOperationException("message " + cmd + " not understood")
+  }
 }

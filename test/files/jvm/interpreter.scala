@@ -2,7 +2,7 @@ import scala.tools.nsc._
 import scala.tools.partest.ReplTest
 
 object Test extends ReplTest {
-  override def extraSettings = "-deprecation -Xoldpatmat"
+  override def extraSettings = "-deprecation"
   def code = <code>
 // basics
 3+4
@@ -25,7 +25,7 @@ println("hello")
 // ticket #1513
 val t1513 = Array(null)
 // ambiguous toString problem from #547
-val atom = new scala.xml.Atom()
+val atom = new scala.xml.Atom(())
 // overriding toString problem from #1404
 class S(override val toString : String)
 val fish = new S("fish")

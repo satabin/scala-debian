@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package api
 
 /**
@@ -28,12 +29,12 @@ package api
  * Compile-time `Mirror`s make use of only classloader `Mirror`s to load `Symbol`s
  * by name.
  *
- * The entry point to classloader `Mirror`s is via [[scala.reflect.macros.Context#mirror]].
+ * The entry point to classloader `Mirror`s is via [[scala.reflect.macros.blackbox.Context#mirror]] or [[scala.reflect.macros.whitebox.Context#mirror]].
  * Typical methods which use classloader `Mirror`s include [[scala.reflect.api.Mirror#staticClass]],
  * [[scala.reflect.api.Mirror#staticModule]], and [[scala.reflect.api.Mirror#staticPackage]]. For
  * example:
  * {{{
- *  import scala.reflect.macros.Context
+ *  import scala.reflect.macros.blackbox.Context
  *
  *  case class Location(filename: String, line: Int, column: Int)
  *
@@ -61,7 +62,7 @@ package api
  * The entry point to `Mirror`s for use at runtime is via `ru.runtimeMirror(<classloader>)`, where
  * `ru` is [[scala.reflect.runtime.universe]].
  *
- * The result of a [[scala.reflect.api.JavaMirrors#runtimeMirror]] call is a classloader mirror,
+ * The result of a [[scala.reflect.api.JavaUniverse#runtimeMirror]] call is a classloader mirror,
  * of type [[scala.reflect.api.Mirrors#ReflectiveMirror]], which can load symbols by names as
  * discussed above (in the “Compile-time” section).
  *
@@ -100,7 +101,7 @@ package api
  * via `ModuleMirror.instance`). Entry point: `val mm = im.reflectMethod(<method symbol>)`.
  * Example:
  * {{{
- *   scala> val methodX = typeOf[C].declaration(newTermName("x")).asMethod
+ *   scala> val methodX = typeOf[C].declaration(TermName("x")).asMethod
  *   methodX: reflect.runtime.universe.MethodSymbol = method x
  *
  *   scala> val mm = im.reflectMethod(methodX)
@@ -125,7 +126,7 @@ package api
  *   scala> val im = m.reflect(new C)
  *   im: reflect.runtime.universe.InstanceMirror = instance mirror for C@5f0c8ac1
  *
- *   scala> val fieldX = typeOf[C].declaration(newTermName("x")).asTerm.accessed.asTerm
+ *   scala> val fieldX = typeOf[C].declaration(TermName("x")).asTerm.accessed.asTerm
  *   fieldX: reflect.runtime.universe.TermSymbol = value x
  *   scala> val fmX = im.reflectField(fieldX)
  *   fmX: reflect.runtime.universe.FieldMirror = field mirror for C.x (bound to C@5f0c8ac1)
@@ -135,7 +136,7 @@ package api
  *
  *   scala> fmX.set(3) // NOTE: can set an underlying value of an immutable field!
  *
- *   scala> val fieldY = typeOf[C].declaration(newTermName("y")).asTerm.accessed.asTerm
+ *   scala> val fieldY = typeOf[C].declaration(TermName("y")).asTerm.accessed.asTerm
  *   fieldY: reflect.runtime.universe.TermSymbol = variable y
  *
  *   scala> val fmY = im.reflectField(fieldY)
@@ -152,7 +153,7 @@ package api
  *
  * '''[[scala.reflect.api.Mirrors#ClassMirror]]'''. Used for creating invoker mirrors for constructors.
  * Entry points: for ''static classes'' `val cm1 = m.reflectClass(<class symbol>)`,
- * for ''inner classes'' `val mm2 = im.reflectClass(<module symbol>)`.
+ * for ''inner classes'' `val mm2 = im.reflectClass(<class symbol>)`.
  * Example:
  * {{{
  *   scala> case class C(x: Int)
@@ -224,7 +225,12 @@ trait Mirrors { self: Universe =>
   /** Abstracts the runtime representation of a class on the underlying platform.
    *  @group Mirrors
    */
-  type RuntimeClass >: Null
+  type RuntimeClass >: Null <: AnyRef
+
+  /** Has no special methods. Is here to provides erased identity for `RuntimeClass`.
+   *  @group API
+   */
+  trait RuntimeClassApi
 
   // todo. an improvement might be having mirrors reproduce the structure of the reflection domain
   // e.g. a ClassMirror could also have a list of fields, methods, constructors and so on
@@ -254,8 +260,8 @@ trait Mirrors { self: Universe =>
      *  Note also that only accessor MethodMirrors, but not FieldMirrors will accurately reflect overriding behavior.
      *
      *  To get a field symbol by the name of the field you would like to reflect,
-     *  use `<this mirror>.symbol.typeSignature.member(newTermName(<name of the field>)).asTerm.accessed`.
-     *  For further information about member lookup refer to `Symbol.typeSignature`.
+     *  use `<this mirror>.symbol.info.member(TermName(<name of the field>)).asTerm.accessed`.
+     *  For further information about member lookup refer to `Symbol.info`.
      *
      *  The input symbol can be either private or non-private (Scala reflection transparently deals with visibility).
      *  It must be a member (declared or inherited) of the class of the instance underlying this mirror.
@@ -274,8 +280,8 @@ trait Mirrors { self: Universe =>
      *  that can be used to invoke the method provided.
      *
      *  To get a method symbol by the name of the method you would like to reflect,
-     *  use `<this mirror>.symbol.typeSignature.member(newTermName(<name of the method>)).asMethod`.
-     *  For further information about member lookup refer to `Symbol.typeSignature`.
+     *  use `<this mirror>.symbol.info.member(TermName(<name of the method>)).asMethod`.
+     *  For further information about member lookup refer to `Symbol.info`.
      *
      *  The input symbol can be either private or non-private (Scala reflection transparently deals with visibility).
      *  It must be a member (declared or inherited) of the instance underlying this mirror.
@@ -286,8 +292,8 @@ trait Mirrors { self: Universe =>
      *  that can be used to create instances of the class, inspect its companion object or perform further reflections.
      *
      *  To get a class symbol by the name of the class you would like to reflect,
-     *  use `<this mirror>.symbol.typeSignature.member(newTypeName(<name of the class>)).asClass`.
-     *  For further information about member lookup refer to `Symbol.typeSignature`.
+     *  use `<this mirror>.symbol.info.member(newTypeName(<name of the class>)).asClass`.
+     *  For further information about member lookup refer to `Symbol.info`.
      *
      *  The input symbol can be either private or non-private (Scala reflection transparently deals with visibility).
      *  It must be a member (declared or inherited) of the instance underlying this mirror.
@@ -298,8 +304,8 @@ trait Mirrors { self: Universe =>
      *  that can be used to get the instance of the object or inspect its companion class.
      *
      *  To get a module symbol by the name of the object you would like to reflect,
-     *  use `<this mirror>.symbol.typeSignature.member(newTermName(<name of the object>)).asModule`.
-     *  For further information about member lookup refer to `Symbol.typeSignature`.
+     *  use `<this mirror>.symbol.info.member(TermName(<name of the object>)).asModule`.
+     *  For further information about member lookup refer to `Symbol.info`.
      *
      *  The input symbol can be either private or non-private (Scala reflection transparently deals with visibility).
      *  It must be a member (declared or inherited) of the instance underlying this mirror.
@@ -350,6 +356,11 @@ trait Mirrors { self: Universe =>
      *  the value of the base field. To achieve overriding behavior, use reflectMethod on an accessor.
      */
     def set(value: Any): Unit
+
+    /** Creates a new mirror which uses the same symbol, but is bound to a different receiver.
+     *  This is significantly faster than recreating the mirror from scratch.
+     */
+    def bind(newReceiver: Any): FieldMirror
   }
 
   /** A mirror that reflects a method.
@@ -371,6 +382,11 @@ trait Mirrors { self: Universe =>
      *  with invoking the corresponding method or constructor.
      */
     def apply(args: Any*): Any
+
+    /** Creates a new mirror which uses the same symbol, but is bound to a different receiver.
+     *  This is significantly faster than recreating the mirror from scratch.
+     */
+    def bind(newReceiver: Any): MethodMirror
   }
 
   /** A mirror that reflects the instance or static parts of a runtime class.
@@ -421,8 +437,8 @@ trait Mirrors { self: Universe =>
      *  that can be used to invoke it and construct instances of this mirror's symbols.
      *
      *  To get a constructor symbol you would like to reflect,
-     *  use `<this mirror>.symbol.typeSignature.member(nme.CONSTRUCTOR).asMethod`.
-     *  For further information about member lookup refer to `Symbol.typeSignature`.
+     *  use `<this mirror>.symbol.info.member(termNames.CONSTRUCTOR).asMethod`.
+     *  For further information about member lookup refer to `Symbol.info`.
      *
      *  The input symbol can be either private or non-private (Scala reflection transparently deals with visibility).
      *  It must be a member (declared or inherited) of the class underlying this mirror.
@@ -488,7 +504,7 @@ trait Mirrors { self: Universe =>
     /** A class symbol for the specified runtime class.
      *  @return The class symbol for the runtime class in the current class loader.
      *  @throws java.lang.ClassNotFoundException if no class with that name exists
-     *  @throws scala.reflect.internal.MissingRequirementError if no corresponding symbol exists
+     *  @throws scala.reflect.ScalaReflectionException if no corresponding symbol exists
      *  to do: throws anything else?
      */
     def classSymbol(rtcls: RuntimeClass): ClassSymbol
@@ -496,7 +512,7 @@ trait Mirrors { self: Universe =>
     /** A module symbol for the specified runtime class.
      *  @return The module symbol for the runtime class in the current class loader.
      *  @throws java.lang.ClassNotFoundException if no class with that name exists
-     *  @throws scala.reflect.internal.MissingRequirementError if no corresponding symbol exists
+     *  @throws scala.reflect.ScalaReflectionException if no corresponding symbol exists
      *  to do: throws anything else?
      */
     def moduleSymbol(rtcls: RuntimeClass): ModuleSymbol

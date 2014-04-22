@@ -134,7 +134,7 @@ import scala.language.implicitConversions
  * reflection APIs provided by Java (for classes) and Scala (for types).</li>
  *
  * <li>'''Certain manifest operations(i.e., <:<, >:> and typeArguments) are not
- * supported.''' <br/>Instead, one culd use the reflection APIs provided by Java (for
+ * supported.''' <br/>Instead, one could use the reflection APIs provided by Java (for
  * classes) and Scala (for types).</li>
  *</ul>
  *
@@ -333,6 +333,12 @@ trait TypeTags { self: Universe =>
    * @group TypeTags
    */
   def typeOf[T](implicit ttag: TypeTag[T]): Type = ttag.tpe
+
+  /**
+   * Type symbol of `x` as derived from a type tag.
+   * @group TypeTags
+   */
+  def symbolOf[T: WeakTypeTag]: TypeSymbol
 }
 
 private[scala] class SerializedTypeTag(var tpec: TypeCreator, var concrete: Boolean) extends Serializable {

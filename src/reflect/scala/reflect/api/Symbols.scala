@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package api
 
 /**
@@ -29,7 +30,7 @@ package api
  *    scala> val test = typeOf[C[Int]].member(newTermName("test")).asMethod
  *    test: reflect.runtime.universe.MethodSymbol = method test
  *
- *    scala> test.typeSignature
+ *    scala> test.info
  *    res0: reflect.runtime.universe.Type = [U](x: T)(y: U)scala.Int
  *  }}}
  *
@@ -59,99 +60,39 @@ trait Symbols { self: Universe =>
    *  @group Symbols
    *  @template
    */
-  type Symbol >: Null <: SymbolApi
-
-  /** A tag that preserves the identity of the `Symbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val SymbolTag: ClassTag[Symbol]
+  type Symbol >: Null <: AnyRef with SymbolApi
 
   /** The type of type symbols representing type, class, and trait declarations,
    *  as well as type parameters.
    *  @group Symbols
    *  @template
    */
-  type TypeSymbol >: Null <: Symbol with TypeSymbolApi
-
-  /** A tag that preserves the identity of the `TypeSymbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val TypeSymbolTag: ClassTag[TypeSymbol]
+  type TypeSymbol >: Null <: TypeSymbolApi with Symbol
 
   /** The type of term symbols representing val, var, def, and object declarations as
    *  well as packages and value parameters.
    *  @group Symbols
    *  @template
    */
-  type TermSymbol >: Null <: Symbol with TermSymbolApi
-
-  /** A tag that preserves the identity of the `TermSymbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val TermSymbolTag: ClassTag[TermSymbol]
+  type TermSymbol >: Null <: TermSymbolApi with Symbol
 
   /** The type of method symbols representing def declarations.
    *  @group Symbols
    *  @template
    */
-  type MethodSymbol >: Null <: TermSymbol with MethodSymbolApi
-
-  /** A tag that preserves the identity of the `MethodSymbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val MethodSymbolTag: ClassTag[MethodSymbol]
+  type MethodSymbol >: Null <: MethodSymbolApi with TermSymbol
 
   /** The type of module symbols representing object declarations.
    *  @group Symbols
    *  @template
    */
-  type ModuleSymbol >: Null <: TermSymbol with ModuleSymbolApi
-
-  /** A tag that preserves the identity of the `ModuleSymbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val ModuleSymbolTag: ClassTag[ModuleSymbol]
+  type ModuleSymbol >: Null <: ModuleSymbolApi with TermSymbol
 
   /** The type of class symbols representing class and trait definitions.
    *  @group Symbols
    *  @template
    */
-  type ClassSymbol >: Null <: TypeSymbol with ClassSymbolApi
-
-  /** A tag that preserves the identity of the `ClassSymbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val ClassSymbolTag: ClassTag[ClassSymbol]
-
-  /** The type of free terms introduced by reification.
-   *  @group Symbols
-   *  @template
-   */
-  type FreeTermSymbol >: Null <: TermSymbol with FreeTermSymbolApi
-
-  /** A tag that preserves the identity of the `FreeTermSymbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val FreeTermSymbolTag: ClassTag[FreeTermSymbol]
-
-  /** The type of free types introduced by reification.
-   *  @group Symbols
-   *  @template
-   */
-  type FreeTypeSymbol >: Null <: TypeSymbol with FreeTypeSymbolApi
-
-  /** A tag that preserves the identity of the `FreeTypeSymbol` abstract type from erasure.
-   *  Can be used for pattern matching, instance tests, serialization and likes.
-   *  @group Tags
-   */
-  implicit val FreeTypeSymbolTag: ClassTag[FreeTypeSymbol]
+  type ClassSymbol >: Null <: ClassSymbolApi with TypeSymbol
 
   /** A special "missing" symbol. Commonly used in the API to denote a default or empty value.
    *  @group Symbols
@@ -178,12 +119,8 @@ trait Symbols { self: Universe =>
    *  @groupdesc Helpers       These methods enable collections-like operations on symbols.
    *  @groupname Type          TypeSymbol Members
    *  @groupprio Type          -1
-   *  @groupname FreeType      FreeType Symbol Members
-   *  @groupprio FreeType      -2
    *  @groupname Term          TermSymbol Members
    *  @groupprio Term          -1
-   *  @groupname FreeTerm      FreeTerm Symbol Members
-   *  @groupprio FreeTerm      -2
    *  @groupname Class         Class Symbol Members
    *  @groupprio Class         -2
    *  @groupname Method        Method Symbol Members
@@ -218,13 +155,16 @@ trait Symbols { self: Universe =>
     /** The name of the symbol as a member of the `Name` type.
      *  @group Basics
      */
-    def name: Name
+    def name: NameType
 
     /** The encoded full path name of this symbol, where outer names and inner names
      *  are separated by periods.
      *  @group Basics
      */
     def fullName: String
+
+    /** Position of the tree. */
+    def pos: Position
 
     /** Does this symbol represent the definition of a type?
      *  Note that every symbol is either a term or a type.
@@ -245,7 +185,7 @@ trait Symbols { self: Universe =>
     /** Does this symbol represent the definition of a term?
      *  Note that every symbol is either a term or a type.
      *  So for every symbol `sym` (except for `NoSymbol`),
-     *  either `sym.isTerm` is true or `sym.isTerm` is true.
+     *  either `sym.isTerm` is true or `sym.isType` is true.
      *
      *  @group Tests
      */
@@ -264,6 +204,15 @@ trait Symbols { self: Universe =>
      *  @group Tests
      */
     def isMethod: Boolean = false
+
+    /** Does this method represent a constructor?
+     *
+     *  If `owner` is a class, then this is a vanilla JVM constructor.
+     *  If `owner` is a trait, then this is a mixin constructor.
+     *
+     *  @group Method
+     */
+    def isConstructor: Boolean
 
     /** This symbol cast to a MethodSymbol.
      *  @throws ScalaReflectionException if `isMethod` is false.
@@ -322,45 +271,6 @@ trait Symbols { self: Universe =>
      */
     def asClass: ClassSymbol = throw new ScalaReflectionException(s"$this is not a class")
 
-    /** Does this symbol represent a free term captured by reification?
-     *  If yes, `isTerm` is also guaranteed to be true.
-     *
-     *  @group Tests
-     */
-    def isFreeTerm: Boolean = false
-
-    /** This symbol cast to a free term symbol.
-     *  @throws ScalaReflectionException if `isFreeTerm` is false.
-     *
-     *  @group Conversions
-     */
-    def asFreeTerm: FreeTermSymbol = throw new ScalaReflectionException(s"$this is not a free term")
-
-    /** Does this symbol represent a free type captured by reification?
-     *  If yes, `isType` is also guaranteed to be true.
-     *
-     *  @group Tests
-     */
-    def isFreeType: Boolean = false
-
-    /** This symbol cast to a free type symbol.
-     *  @throws ScalaReflectionException if `isFreeType` is false.
-     *
-     *  @group Conversions
-     */
-    def asFreeType: FreeTypeSymbol = throw new ScalaReflectionException(s"$this is not a free type")
-
-    /** @group Constructors */
-    def newTermSymbol(name: TermName, pos: Position = NoPosition, flags: FlagSet = NoFlags): TermSymbol
-    /** @group Constructors */
-    def newModuleAndClassSymbol(name: Name, pos: Position = NoPosition, flags: FlagSet = NoFlags): (ModuleSymbol, ClassSymbol)
-    /** @group Constructors */
-    def newMethodSymbol(name: TermName, pos: Position = NoPosition, flags: FlagSet = NoFlags): MethodSymbol
-    /** @group Constructors */
-    def newTypeSymbol(name: TypeName, pos: Position = NoPosition, flags: FlagSet = NoFlags): TypeSymbol
-    /** @group Constructors */
-    def newClassSymbol(name: TypeName, pos: Position = NoPosition, flags: FlagSet = NoFlags): ClassSymbol
-
     /** Source file if this symbol is created during this compilation run,
      *  or a class file if this symbol is loaded from a *.class or *.jar.
      *
@@ -370,6 +280,7 @@ trait Symbols { self: Universe =>
      *
      *  @group Basics
      */
+    @deprecated("Use `pos.source.file` instead", "2.11.0")
     def associatedFile: scala.reflect.io.AbstractFile
 
     /** A list of annotations attached to this Symbol.
@@ -382,15 +293,32 @@ trait Symbols { self: Universe =>
      *  For a module: the class with the same name in the same package.
      *  For all others: NoSymbol
      *
+     *  This API may return unexpected results for module classes, packages and package classes.
+     *  Use `companion` instead in order to get predictable results.
+     *
      *  @group Basics
      */
+    @deprecated("Use `companion` instead, but beware of possible changes in behavior", "2.11.0")
     def companionSymbol: Symbol
+
+    /** For a class: its companion object if exists.
+     *  For a module or a module class: companion class of the module if exists.
+     *  For a package or a package class: NoSymbol.
+     *  For all others: NoSymbol.
+     */
+    def companion: Symbol
+
+    /** @see [[infoIn]] */
+    def typeSignatureIn(site: Type): Type
 
     /** The type signature of this symbol seen as a member of given type `site`.
      *
      *  @group Basics
      */
-    def typeSignatureIn(site: Type): Type
+    def infoIn(site: Type): Type
+
+    /** @see [[info]] */
+    def typeSignature: Type
 
     /** The type signature of this symbol.
      *
@@ -398,17 +326,27 @@ trait Symbols { self: Universe =>
      *  instantiation of a generic type. For example, signature
      *  of the method `def map[B](f: (A) ⇒ B): List[B]`, which refers to the type parameter `A` of the declaring class `List[A]`,
      *  will always feature `A`, regardless of whether `map` is loaded from the `List[_]` or from `List[Int]`. To get a signature
-     *  with type parameters appropriately instantiated, one should use `typeSignatureIn`.
+     *  with type parameters appropriately instantiated, one should use `infoIn`.
      *
      *  @group Basics
      */
-    def typeSignature: Type
+    def info: Type
+
+    /** @see [[overrides]] */
+    @deprecated("Use `overrides` instead", "2.11.0")
+    def allOverriddenSymbols: List[Symbol]
 
     /** Returns all symbols overriden by this symbol.
      *
      *  @group Basics
      */
-    def allOverriddenSymbols: List[Symbol]
+    def overrides: List[Symbol]
+
+    /** The overloaded alternatives of this symbol
+     *
+     *  @group Basics
+     */
+    def alternatives: List[Symbol]
 
     /******************* tests *******************/
 
@@ -427,16 +365,13 @@ trait Symbols { self: Universe =>
      */
     def isImplementationArtifact: Boolean
 
-    /** Does this symbol represent a local declaration or definition?
-     *
-     *  If yes, either `isPrivate` or `isProtected` are guaranteed to be true.
-     *  Local symbols can only be accessed from the same object instance.
-     *
-     *  If yes, `privateWithin` might tell more about this symbol's visibility scope.
+    /** Does this symbol represent a declaration or definition written in a source file as `private[this]`
+     *  or generated in tree/symbol form with the combination of flags LOCAL and PRIVATE?
+     *  If yes, `isPrivate` is guaranteed to be true,
      *
      *  @group Tests
      */
-    def isLocal: Boolean
+    def isPrivateThis: Boolean
 
     /** Does this symbol represent a private declaration or definition?
      *  If yes, `privateWithin` might tell more about this symbol's visibility scope.
@@ -444,6 +379,14 @@ trait Symbols { self: Universe =>
      *  @group Tests
      */
     def isPrivate: Boolean
+
+    /** Does this symbol represent a declaration or definition written in a source file as `protected[this]`
+     *  or generated in tree/symbol form with the combination of flags LOCAL and PROTECTED?
+     *  If yes, `isProtected` is guaranteed to be true,
+     *
+     *  @group Tests
+     */
+    def isProtectedThis: Boolean
 
     /** Does this symbol represent a protected declaration or definition?
      *  If yes, `privateWithin` might tell more about this symbol's visibility scope.
@@ -459,7 +402,7 @@ trait Symbols { self: Universe =>
     def isPublic: Boolean
 
     /**
-     * Set when symbol has a modifier of the form private[X], NoSymbol otherwise.
+     *  Set when symbol has a modifier of the form private[X] or protected[X], NoSymbol otherwise.
      *
      *  Access level encoding: there are three scala flags (PRIVATE, PROTECTED,
      *  and LOCAL) which combine with value privateWithin (the "foo" in private[foo])
@@ -488,7 +431,7 @@ trait Symbols { self: Universe =>
     def privateWithin: Symbol
 
     /** Does this symbol represent the definition of a package?
-     *  If yes, `isTerm` is also guaranteed to be true.
+     *  Known issues: [[https://issues.scala-lang.org/browse/SI-6732]].
      *
      *  @group Tests
      */
@@ -500,12 +443,6 @@ trait Symbols { self: Universe =>
      *  @group Tests
      */
     def isPackageClass: Boolean
-
-    /** Does this symbol or its underlying type represent a typechecking error?
-     *
-     *  @group Tests
-     */
-    def isErroneous : Boolean
 
     /** Is this symbol static (i.e. with no outer instance)?
      *  Q: When exactly is a sym marked as STATIC?
@@ -522,11 +459,11 @@ trait Symbols { self: Universe =>
      */
     def isFinal: Boolean
 
-    /** Is this symbol overriding something?
+    /** Is this symbol abstract (i.e. an abstract class, an abstract method, value or type member)?
      *
      *  @group Tests
      */
-    def isOverride: Boolean
+    def isAbstract: Boolean
 
     /** Is this symbol labelled as "abstract override"?
      *
@@ -660,12 +597,6 @@ trait Symbols { self: Universe =>
      */
     def isLazy: Boolean
 
-    /** The overloaded alternatives of this symbol
-     *
-     *  @group Term
-     */
-    def alternatives: List[Symbol]
-
     /** Used to provide a better error message for `asMethod` */
     override protected def isOverloadedMethod = alternatives exists (_.isMethod)
 
@@ -751,7 +682,7 @@ trait Symbols { self: Universe =>
       *  Example: Given a class declaration `class C[T] { ... } `, that generates a symbol
       *  `C`. Then `C.toType` is the type `C[T]`.
       *
-      *  By contrast, `C.typeSignature` would be a type signature of form
+      *  By contrast, `C.info` would be a type signature of form
       *  `PolyType(ClassInfoType(...))` that describes type parameters, value
       *  parameters, parent types, and members of `C`.
      *
@@ -774,13 +705,6 @@ trait Symbols { self: Universe =>
      */
     def isCovariant     : Boolean
 
-    /** Does this symbol represent the definition of a skolem?
-     *  Skolems are used during typechecking to represent type parameters viewed from inside their scopes.
-     *
-     *  @group Type
-     */
-    def isSkolem       : Boolean
-
     /** Does this symbol represent the definition of a type alias?
      *
      *  @group Type
@@ -791,6 +715,7 @@ trait Symbols { self: Universe =>
      *
      *  @group Type
      */
+    @deprecated("Use isAbstract instead", "2.11.0")
     def isAbstractType : Boolean
 
     /** Does this symbol represent an existentially bound type?
@@ -816,15 +741,6 @@ trait Symbols { self: Universe =>
     final override def isMethod = true
     final override def asMethod = this
 
-    /** Does this method represent a constructor?
-     *
-     *  If `owner` is a class, then this is a vanilla JVM constructor.
-     *  If `owner` is a trait, then this is a mixin constructor.
-     *
-     *  @group Method
-     */
-    def isConstructor: Boolean
-
     /** Does this symbol denote the primary constructor of its enclosing class?
      *
      *  @group Method
@@ -837,6 +753,10 @@ trait Symbols { self: Universe =>
      */
     def typeParams: List[Symbol]
 
+    /** @see [[paramLists]] */
+    @deprecated("Use `paramLists` instead", "2.11.0")
+    def paramss: List[List[Symbol]]
+
     /** All parameter lists of the method.
      *  The name ending with "ss" indicates that the result type is a list of lists.
      *
@@ -846,7 +766,7 @@ trait Symbols { self: Universe =>
      *
      *  @group Method
      */
-    def paramss: List[List[Symbol]]
+    def paramLists: List[List[Symbol]]
 
     /** Does this method support variable length argument lists?
      *
@@ -859,6 +779,14 @@ trait Symbols { self: Universe =>
      *  @group Method
      */
     def returnType: Type
+
+    /** Exceptions that this method is known to throw.
+     *  For Scala methods, the list is calculated from [[throws]] annotations present on a method.
+     *  For Java methods, the list is calculated from `throws` clauses attached to the method and stored in bytecode.
+     *
+     *  @group Method
+     */
+    def exceptions: List[Symbol]
   }
 
   /** The API of module symbols.
@@ -924,6 +852,7 @@ trait Symbols { self: Universe =>
      *
      *  @group Class
      */
+    @deprecated("Use isAbstract instead", "2.11.0")
     def isAbstractClass: Boolean
 
     /** Does this symbol represent a case class?
@@ -973,50 +902,37 @@ trait Symbols { self: Universe =>
      */
     def thisPrefix: Type
 
+    /** The type `C.super[M]`, where `C` is the current class and `M` is supertpe.
+     *
+     *  @group Class
+     */
+    def superPrefix(supertpe: Type): Type
+
     /** For a polymorphic class/trait, its type parameters, the empty list for all other classes/trait
      *
      *  @group Class
      */
     def typeParams: List[Symbol]
-  }
 
-  /** The API of free term symbols.
-   *  The main source of information about symbols is the [[Symbols]] page.
-   *
-   *  $SYMACCESSORS
-   *  @group API
-   */
-  trait FreeTermSymbolApi extends TermSymbolApi { this: FreeTermSymbol =>
-    final override def isFreeTerm = true
-    final override def asFreeTerm = this
-
-    /** The place where this symbol has been spawned
+    /** For a Scala class or module class, the primary constructor of the class.
+     *  For a Scala trait, its mixin constructor.
+     *  For a Scala package class, NoSymbol.
+     *  For a Java class, NoSymbol.
      *
-     *  @group FreeTerm
-     */
-    def origin: String
-
-    /** The valus this symbol refers to
+     *  Known issues: Due to SI-8367, primaryConstructor may return unexpected results
+     *  when called for Java classes (for some vague definition of a "Java class", which apparently
+     *  not only includes javac-produced classfiles, but also consists of classes defined in
+     *  Scala programs under the java.lang package). What's even worse, for some Java classes
+     *  we can't even guarantee stability of the return value - depending on your classloader configuration
+     *  and/or JDK version you might get different primaryConstructor for the same ClassSymbol.
+     *  We have logged these issues at SI-8193.
      *
-     *  @group FreeTerm
+     *  @group Class
      */
-    def value: Any
-  }
-
-  /** The API of free type symbols.
-   *  The main source of information about symbols is the [[Symbols]] page.
-   *
-   *  $SYMACCESSORS
-   *  @group API
-   */
-  trait FreeTypeSymbolApi extends TypeSymbolApi { this: FreeTypeSymbol =>
-    final override def isFreeType = true
-    final override def asFreeType = this
-
-    /** The place where this symbol has been spawned
-     *
-     *  @group FreeType
-     */
-    def origin: String
+    // TODO: SI-8193 I think we should only return a non-empty symbol if called for Scala classes
+    // returning something for traits and module classes is outright confusing
+    // This, however, will require some refactoring in the compiler, so I'll leave it for later
+    // as at the moment we don't have time or risk tolerance for that
+    def primaryConstructor: Symbol
   }
 }

@@ -6,10 +6,11 @@ import scala.reflect.macros.UnexpectedReificationException
 import scala.reflect.reify.utils.Utils
 
 /** Given a tree or a type, generate a tree that when executed at runtime produces the original tree or type.
- *  See more info in the comments to ``reify'' in scala.reflect.api.Universe.
+ *  See more info in the comments to `reify` in scala.reflect.api.Universe.
  *
- *  @author Martin Odersky
- *  @version 2.10
+ *  @author   Martin Odersky
+ *  @version  2.10
+ *  @since    2.10
  */
 abstract class Reifier extends States
                           with Phases
@@ -19,6 +20,8 @@ abstract class Reifier extends States
   val global: Global
   import global._
   import definitions._
+  private val runDefinitions = currentRun.runDefinitions
+  import runDefinitions._
 
   val typer: global.analyzer.Typer
   val universe: Tree
@@ -31,20 +34,20 @@ abstract class Reifier extends States
     this.asInstanceOf[Reifier { val global: Reifier.this.global.type }]
   override def hasReifier = true
 
-  /**
-   *  For ``reifee'' and other reification parameters, generate a tree of the form
-   *
+  /** For `reifee` and other reification parameters, generate a tree of the form
+   *  {{{
    *    {
-   *      val $u: universe.type = <[ universe ]>
-   *      val $m: $u.Mirror = <[ mirror ]>
-   *      $u.Expr[T](rtree)       // if data is a Tree
-   *      $u.TypeTag[T](rtree)    // if data is a Type
+   *      val \$u: universe.type = <[ universe ]>
+   *      val \$m: \$u.Mirror = <[ mirror ]>
+   *      \$u.Expr[T](rtree)       // if data is a Tree
+   *      \$u.TypeTag[T](rtree)    // if data is a Type
    *    }
+   *  }}}
    *
    *  where
    *
-   *    - `universe` is the tree that represents the universe the result will be bound to
-   *    - `mirror` is the tree that represents the mirror the result will be initially bound to
+   *    - `universe` is the tree that represents the universe the result will be bound to.
+   *    - `mirror` is the tree that represents the mirror the result will be initially bound to.
    *    - `rtree` is code that generates `reifee` at runtime.
    *    - `T` is the type that corresponds to `data`.
    *
@@ -57,7 +60,7 @@ abstract class Reifier extends States
 
       val result = reifee match {
         case tree: Tree =>
-          reifyTrace("reifying = ")(if (opt.showTrees) "\n" + nodePrinters.nodeToString(tree).trim else tree.toString)
+          reifyTrace("reifying = ")(if (settings.Xshowtrees || settings.XshowtreesCompact || settings.XshowtreesStringified) "\n" + nodePrinters.nodeToString(tree).trim else tree.toString)
           reifyTrace("reifee is located at: ")(tree.pos)
           reifyTrace("universe = ")(universe)
           reifyTrace("mirror = ")(mirror)
@@ -83,7 +86,7 @@ abstract class Reifier extends States
           throw new Error("reifee %s of type %s is not supported".format(reifee, if (reifee == null) "null" else reifee.getClass.toString))
       }
 
-      // todo. why do we resetAllAttrs?
+      // todo. why do we reset attrs?
       //
       // typically we do some preprocessing before reification and
       // the code emitted/moved around during preprocessing is very hard to typecheck, so we leave it as it is
@@ -106,15 +109,15 @@ abstract class Reifier extends States
       //
       // todo. this is a common problem with non-trivial macros in our current macro system
       // needs to be solved some day
-      // maybe try `resetLocalAttrs` once the dust settles
+      // upd. a new hope: https://groups.google.com/forum/#!topic/scala-internals/TtCTPlj_qcQ
       var importantSymbols = Set[Symbol](
         NothingClass, AnyClass, SingletonClass, PredefModule, ScalaRunTimeModule, TypeCreatorClass, TreeCreatorClass, MirrorClass,
-        ApiUniverseClass, JavaUniverseClass, ReflectRuntimePackage, ReflectRuntimeCurrentMirror)
+        ApiUniverseClass, JavaUniverseClass, ReflectRuntimePackage, runDefinitions.ReflectRuntimeCurrentMirror)
       importantSymbols ++= importantSymbols map (_.companionSymbol)
       importantSymbols ++= importantSymbols map (_.moduleClass)
       importantSymbols ++= importantSymbols map (_.linkedClassOfClass)
       def isImportantSymbol(sym: Symbol): Boolean = sym != null && sym != NoSymbol && importantSymbols(sym)
-      val untyped = resetAllAttrs(result, leaveAlone = {
+      val untyped = brutallyResetAttrs(result, leaveAlone = {
         case ValDef(_, u, _, _) if u == nme.UNIVERSE_SHORT => true
         case ValDef(_, m, _, _) if m == nme.MIRROR_SHORT => true
         case tree if symtab.syms contains tree.symbol => true

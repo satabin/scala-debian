@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection
+package scala
+package collection
 
 import mutable.{ Buffer, Builder, ListBuffer, ArrayBuffer }
 import generic.CanBuildFrom
@@ -96,7 +97,7 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
   // for internal use
   protected[this] def reversed = {
     var elems: List[A] = Nil
-    self.seq foreach (elems ::= _)
+    self foreach (elems ::= _)
     elems
   }
 
@@ -128,10 +129,8 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
    *  @example    `Seq("a", 1, 5L).collectFirst({ case x: Int => x*10 }) = Some(10)`
    */
   def collectFirst[B](pf: PartialFunction[A, B]): Option[B] = {
-    for (x <- self.toIterator) { // make sure to use an iterator or `seq`
-      if (pf isDefinedAt x)
-        return Some(pf(x))
-    }
+    // make sure to use an iterator or `seq`
+    self.toIterator.foreach(pf.runWith(b => return Some(b)))
     None
   }
 
@@ -141,7 +140,7 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
 
   def foldLeft[B](z: B)(op: (B, A) => B): B = {
     var result = z
-    this.seq foreach (x => result = op(result, x))
+    this foreach (x => result = op(result, x))
     result
   }
 
@@ -198,7 +197,7 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
 
   def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): A1 = foldLeft(z)(op)
 
-  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): B = foldLeft(z)(seqop)
+  def aggregate[B](z: =>B)(seqop: (B, A) => B, combop: (B, B) => B): B = foldLeft(z)(seqop)
 
   def sum[B >: A](implicit num: Numeric[B]): B = foldLeft(num.zero)(num.plus)
 
@@ -222,13 +221,37 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
     if (isEmpty)
       throw new UnsupportedOperationException("empty.maxBy")
 
-    reduceLeft((x, y) => if (cmp.gteq(f(x), f(y))) x else y)
+    var maxF: B = null.asInstanceOf[B]
+    var maxElem: A = null.asInstanceOf[A]
+    var first = true
+
+    for (elem <- self) {
+      val fx = f(elem)
+      if (first || cmp.gt(fx, maxF)) {
+        maxElem = elem
+        maxF = fx
+        first = false
+      }
+    }
+    maxElem
   }
   def minBy[B](f: A => B)(implicit cmp: Ordering[B]): A = {
     if (isEmpty)
       throw new UnsupportedOperationException("empty.minBy")
 
-    reduceLeft((x, y) => if (cmp.lteq(f(x), f(y))) x else y)
+    var minF: B = null.asInstanceOf[B]
+    var minElem: A = null.asInstanceOf[A]
+    var first = true
+
+    for (elem <- self) {
+      val fx = f(elem)
+      if (first || cmp.lt(fx, minF)) {
+        minElem = elem
+        minF = fx
+        first = false
+      }
+    }
+    minElem
   }
 
   /** Copies all elements of this $coll to a buffer.
@@ -271,7 +294,7 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
   def to[Col[_]](implicit cbf: CanBuildFrom[Nothing, A, Col[A @uV]]): Col[A @uV] = {
     val b = cbf()
     b ++= seq
-    b.result
+    b.result()
   }
 
   def toMap[T, U](implicit ev: A <:< (T, U)): immutable.Map[T, U] = {
@@ -279,7 +302,7 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
     for (x <- self)
       b += x
 
-    b.result
+    b.result()
   }
 
   def mkString(start: String, sep: String, end: String): String =
@@ -297,14 +320,14 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
    * Example:
    *
    * {{{
-   *      scala> val a = LinkedList(1,2,3,4)
-   *      a: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2, 3, 4)
-   *
+   *      scala> val a = List(1,2,3,4)
+   *      a: List[Int] = List(1, 2, 3, 4)
+   *      
    *      scala> val b = new StringBuilder()
-   *      b: StringBuilder =
-   *
-   *      scala> a.addString(b, "LinkedList(", ", ", ")")
-   *      res1: StringBuilder = LinkedList(1, 2, 3, 4)
+   *      b: StringBuilder = 
+   *      
+   *      scala> a.addString(b , "List(" , ", " , ")")
+   *      res5: StringBuilder = List(1, 2, 3, 4)
    * }}}
    *
    *  @param  b    the string builder to which elements are appended.
@@ -339,9 +362,9 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
    * Example:
    *
    * {{{
-   *      scala> val a = LinkedList(1,2,3,4)
-   *      a: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2, 3, 4)
-   *
+   *      scala> val a = List(1,2,3,4)
+   *      a: List[Int] = List(1, 2, 3, 4)
+   *      
    *      scala> val b = new StringBuilder()
    *      b: StringBuilder =
    *
@@ -362,14 +385,14 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
    * Example:
    *
    * {{{
-   *      scala> val a = LinkedList(1,2,3,4)
-   *      a: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2, 3, 4)
-   *
+   *      scala> val a = List(1,2,3,4)
+   *      a: List[Int] = List(1, 2, 3, 4)
+   *      
    *      scala> val b = new StringBuilder()
    *      b: StringBuilder =
    *
    *      scala> val h = a.addString(b)
-   *      b: StringBuilder = 1234
+   *      h: StringBuilder = 1234
    * }}}
 
    *  @param  b    the string builder to which elements are appended.
@@ -380,27 +403,22 @@ trait TraversableOnce[+A] extends Any with GenTraversableOnce[A] {
 
 
 object TraversableOnce {
-  @deprecated("use OnceCanBuildFrom instead", "2.10.0")
-  def traversableOnceCanBuildFrom[T] = new OnceCanBuildFrom[T]
-  @deprecated("use MonadOps instead", "2.10.0")
-  def wrapTraversableOnce[A](trav: TraversableOnce[A]) = new MonadOps(trav)
-
   implicit def alternateImplicit[A](trav: TraversableOnce[A]) = new ForceImplicitAmbiguity
   implicit def flattenTraversableOnce[A, CC[_]](travs: TraversableOnce[CC[A]])(implicit ev: CC[A] => TraversableOnce[A]) =
     new FlattenOps[A](travs map ev)
 
   /* Functionality reused in Iterator.CanBuildFrom */
-  private[collection] abstract class BufferedCanBuildFrom[A, Coll[X] <: TraversableOnce[X]] extends generic.CanBuildFrom[Coll[_], A, Coll[A]] {
-    def bufferToColl[B](buff: ArrayBuffer[B]): Coll[B]
-    def traversableToColl[B](t: GenTraversable[B]): Coll[B]
+  private[collection] abstract class BufferedCanBuildFrom[A, CC[X] <: TraversableOnce[X]] extends generic.CanBuildFrom[CC[_], A, CC[A]] {
+    def bufferToColl[B](buff: ArrayBuffer[B]): CC[B]
+    def traversableToColl[B](t: GenTraversable[B]): CC[B]
 
-    def newIterator: Builder[A, Coll[A]] = new ArrayBuffer[A] mapResult bufferToColl
+    def newIterator: Builder[A, CC[A]] = new ArrayBuffer[A] mapResult bufferToColl
 
     /** Creates a new builder on request of a collection.
      *  @param from  the collection requesting the builder to be created.
      *  @return the result of invoking the `genericBuilder` method on `from`.
      */
-    def apply(from: Coll[_]): Builder[A, Coll[A]] = from match {
+    def apply(from: CC[_]): Builder[A, CC[A]] = from match {
       case xs: generic.GenericTraversableTemplate[_, _] => xs.genericBuilder.asInstanceOf[Builder[A, Traversable[A]]] mapResult {
         case res => traversableToColl(res.asInstanceOf[GenTraversable[A]])
       }
@@ -429,7 +447,7 @@ object TraversableOnce {
     def flatten: Iterator[A] = new AbstractIterator[A] {
       val its = travs.toIterator
       private var it: Iterator[A] = Iterator.empty
-      def hasNext: Boolean = it.hasNext || its.hasNext && { it = its.next.toIterator; hasNext }
+      def hasNext: Boolean = it.hasNext || its.hasNext && { it = its.next().toIterator; hasNext }
       def next(): A = if (hasNext) it.next() else Iterator.empty.next()
     }
   }

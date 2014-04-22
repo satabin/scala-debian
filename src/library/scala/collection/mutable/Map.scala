@@ -8,7 +8,8 @@
 
 
 
-package scala.collection
+package scala
+package collection
 package mutable
 
 import generic._
@@ -42,22 +43,10 @@ trait Map[A, B]
    *
    *  Invoking transformer methods (e.g. `map`) will not preserve the default value.
    *
-   *  @param d     the function mapping keys to values, used for non-present keys
+   *  @param d     default value used for non-present keys
    *  @return      a wrapper of the map with a default value
    */
   def withDefaultValue(d: B): mutable.Map[A, B] = new Map.WithDefault[A, B](this, x => d)
-
-  /** Return a read-only projection of this map.  !!! or just use an (immutable) MapProxy?
-  def readOnly : scala.collection.Map[A, B] = new scala.collection.Map[A, B] {
-    override def size = self.size
-    override def update(key: A, value: B) = self.update(key, value)
-    override def - (elem: A) = self - elem
-    override def iterator = self.iterator
-    override def foreach[U](f: ((A, B)) =>  U) = self.foreach(f)
-    override def empty[C] = self.empty[C]
-    def get(key: A) = self.get(key)
-  }
-  */
 }
 
 /** $factoryInfo
@@ -88,4 +77,4 @@ object Map extends MutableMapFactory[Map] {
 }
 
 /** Explicit instantiation of the `Map` trait to reduce class file size in subclasses. */
-private[scala] abstract class AbstractMap[A, B] extends scala.collection.AbstractMap[A, B] with Map[A, B]
+abstract class AbstractMap[A, B] extends scala.collection.AbstractMap[A, B] with Map[A, B]

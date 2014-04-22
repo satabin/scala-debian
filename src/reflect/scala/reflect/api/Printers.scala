@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package api
 
 import java.io.{ PrintWriter, StringWriter }
@@ -47,7 +48,7 @@ import java.io.{ PrintWriter, StringWriter }
  *  res1: String = Block(List(
  *    ClassDef(Modifiers(FINAL), newTypeName("C"), List(), Template(
  *      List(Ident(newTypeName("AnyRef"))),
- *      emptyValDef,
+ *      noSelfType,
  *      List(
  *        DefDef(Modifiers(), nme.CONSTRUCTOR, List(), List(List()), TypeTree(),
  *          Block(List(
@@ -67,11 +68,11 @@ import java.io.{ PrintWriter, StringWriter }
  *  scala> import scala.reflect.runtime.{currentMirror => cm}
  *  import scala.reflect.runtime.{currentMirror=>cm}
  *
- *  scala> showRaw(cm.mkToolBox().typeCheck(tree), printTypes = true)
+ *  scala> showRaw(cm.mkToolBox().typecheck(tree), printTypes = true)
  *  res2: String = Block[1](List(
  *    ClassDef[2](Modifiers(FINAL), newTypeName("C"), List(), Template[3](
  *      List(Ident[4](newTypeName("AnyRef"))),
- *      emptyValDef,
+ *      noSelfType,
  *      List(
  *        DefDef[2](Modifiers(), nme.CONSTRUCTOR, List(), List(List()), TypeTree[3](),
  *          Block[1](List(
@@ -141,66 +142,97 @@ trait Printers { self: Universe =>
     def print(args: Any*)
     protected var printTypes = false
     protected var printIds = false
+    protected var printOwners = false
     protected var printKinds = false
     protected var printMirrors = false
+    protected var printPositions = false
     def withTypes: this.type = { printTypes = true; this }
     def withoutTypes: this.type = { printTypes = false; this }
     def withIds: this.type = { printIds = true; this }
     def withoutIds: this.type = { printIds = false; this }
+    def withOwners: this.type = { printOwners = true; this }
+    def withoutOwners: this.type = { printOwners = false; this }
     def withKinds: this.type = { printKinds = true; this }
     def withoutKinds: this.type = { printKinds = false; this }
     def withMirrors: this.type = { printMirrors = true; this }
     def withoutMirrors: this.type = { printMirrors = false; this }
+    def withPositions: this.type = { printPositions = true; this }
+    def withoutPositions: this.type = { printPositions = false; this }
   }
 
   /** @group Printers */
-  case class BooleanFlag(val value: Option[Boolean])
+  case class BooleanFlag(value: Option[Boolean])
   /** @group Printers */
   object BooleanFlag {
     import scala.language.implicitConversions
     implicit def booleanToBooleanFlag(value: Boolean): BooleanFlag = BooleanFlag(Some(value))
     implicit def optionToBooleanFlag(value: Option[Boolean]): BooleanFlag = BooleanFlag(value)
+    import scala.reflect.internal.settings.MutableSettings
+    implicit def settingToBooleanFlag(setting: MutableSettings#BooleanSetting): BooleanFlag = BooleanFlag(Some(setting.value))
   }
 
   /** @group Printers */
-  protected def render(what: Any, mkPrinter: PrintWriter => TreePrinter, printTypes: BooleanFlag = None, printIds: BooleanFlag = None, printKinds: BooleanFlag = None, printMirrors: BooleanFlag = None): String = {
+  protected def render(what: Any, mkPrinter: PrintWriter => TreePrinter, printTypes: BooleanFlag = None, printIds: BooleanFlag = None, printOwners: BooleanFlag = None, printKinds: BooleanFlag = None, printMirrors: BooleanFlag = None, printPositions: BooleanFlag = None): String = {
     val buffer = new StringWriter()
     val writer = new PrintWriter(buffer)
-    var printer = mkPrinter(writer)
+    val printer = mkPrinter(writer)
     printTypes.value.map(printTypes => if (printTypes) printer.withTypes else printer.withoutTypes)
     printIds.value.map(printIds => if (printIds) printer.withIds else printer.withoutIds)
+    printOwners.value.map(printOwners => if (printOwners) printer.withOwners else printer.withoutOwners)
     printKinds.value.map(printKinds => if (printKinds) printer.withKinds else printer.withoutKinds)
     printMirrors.value.map(printMirrors => if (printMirrors) printer.withMirrors else printer.withoutMirrors)
+    printPositions.value.map(printPositions => if (printPositions) printer.withPositions else printer.withoutPositions)
     printer.print(what)
     writer.flush()
     buffer.toString
   }
 
   /** By default trees are printed with `show`
-   * @group Printers
+   *  @group Printers
    */
   override protected def treeToString(tree: Tree) = show(tree)
 
   /** Renders a representation of a reflection artifact
-   * as desugared Java code.
+   *  as desugared Scala code.
    *
-   * @group Printers
+   *  @group Printers
    */
-  def show(any: Any, printTypes: BooleanFlag = None, printIds: BooleanFlag = None, printKinds: BooleanFlag = None, printMirrors: BooleanFlag = None): String =
-    render(any, newTreePrinter(_), printTypes, printIds, printKinds, printMirrors)
+  def show(any: Any, printTypes: BooleanFlag = None, printIds: BooleanFlag = None, printOwners: BooleanFlag = None, printKinds: BooleanFlag = None, printMirrors: BooleanFlag = None, printPositions: BooleanFlag = None): String =
+    render(any, newTreePrinter(_), printTypes, printIds, printOwners, printKinds, printMirrors, printPositions)
 
   /** Hook to define what `show(...)` means.
    * @group Printers
    */
   protected def newTreePrinter(out: PrintWriter): TreePrinter
 
-  /** Renders internal structure of a reflection artifact as the
-   * visualization of a Scala syntax tree.
+  /**
+   * Renders the code of the passed tree, so that:
+   *  1) it can be later compiled by scalac retaining the same meaning,
+   *  2) it looks pretty.
+   *  #1 is available for unattributed trees and attributed trees
+   *  #2 is more or less okay indentation-wise, but at the moment there's a lot of desugaring
+   *  left in place, and that's what we plan to improve in the future.
+   *  printTypes, printIds, printPositions options have the same meaning as for TreePrinter
+   *  printRootPkg option is available only for attributed trees.
    *
+   *  @group Printers
+   */
+  def showCode(tree: Tree, printTypes: BooleanFlag = None, printIds: BooleanFlag = None, printOwners: BooleanFlag = None, printPositions: BooleanFlag = None, printRootPkg: Boolean = false) =
+    render(tree, newCodePrinter(_, tree, printRootPkg), printTypes, printIds, printOwners, printKinds = None, printMirrors = None, printPositions)
+
+  /**
+   * Hook to define what `showCode(...)` means.
    * @group Printers
    */
-  def showRaw(any: Any, printTypes: BooleanFlag = None, printIds: BooleanFlag = None, printKinds: BooleanFlag = None, printMirrors: BooleanFlag = None): String =
-    render(any, newRawTreePrinter(_), printTypes, printIds, printKinds, printMirrors)
+  protected def newCodePrinter(out: PrintWriter, tree: Tree, printRootPkg: Boolean): TreePrinter
+
+  /** Renders internal structure of a reflection artifact as the
+   *  visualization of a Scala syntax tree.
+   *
+   *  @group Printers
+   */
+  def showRaw(any: Any, printTypes: BooleanFlag = None, printIds: BooleanFlag = None, printOwners: BooleanFlag = None, printKinds: BooleanFlag = None, printMirrors: BooleanFlag = None, printPositions: BooleanFlag = None): String =
+    render(any, newRawTreePrinter(_), printTypes, printIds, printOwners, printKinds, printMirrors, printPositions)
 
   /** Hook to define what `showRaw(...)` means.
    * @group Printers
@@ -222,8 +254,23 @@ trait Printers { self: Universe =>
    */
   def show(flags: FlagSet): String
 
+  /** Renders a prettified representation of a position.
+   * @group Printers
+   */
+  def show(position: Position): String
+
   /** Renders internal structure of a flag set.
    * @group Printers
    */
   def showRaw(flags: FlagSet): String = flags.toString
+
+  /** Renders internal structure of a position.
+   * @group Printers
+   */
+  def showRaw(position: Position): String = position.toString
+
+  /** Renders a string that represents a declaration of this symbol written in Scala.
+   * @group Printers
+   */
+  def showDecl(sym: Symbol): String
 }

@@ -8,7 +8,7 @@ package nsc
 package settings
 
 import util.ClassPath
-import io.{ Directory, Path, AbstractFile }
+import io.{ Path, AbstractFile }
 
 class FscSettings(error: String => Unit) extends Settings(error) {
   outer =>
@@ -38,13 +38,13 @@ class FscSettings(error: String => Unit) extends Settings(error) {
   private def holdsPath = Set[Settings#Setting](
     d, dependencyfile, pluginsDir, Ygenjavap
   )
-  
+
   override def processArguments(arguments: List[String], processAll: Boolean): (Boolean, List[String]) = {
     val (r, args) = super.processArguments(arguments, processAll)
     // we need to ensure the files specified with relative locations are absolutized based on the currentDir
     (r, args map {a => absolutizePath(a)})
   }
-  
+
   /**
    * Take an individual path and if it's not absolute turns it into an absolute path based on currentDir.
    * If it's already absolute then it's left alone.

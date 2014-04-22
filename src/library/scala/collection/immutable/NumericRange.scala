@@ -6,12 +6,11 @@
 **                          |/                                          **
 \*                                                                      */
 
-
-package scala.collection
+package scala
+package collection
 package immutable
 
 import mutable.{ Builder, ListBuffer }
-import generic._
 
 /** `NumericRange` is a more generic version of the
  *  `Range` class which works with arbitrary types.
@@ -81,17 +80,6 @@ extends AbstractSeq[T] with IndexedSeq[T] with Serializable {
   // to guard against any (most likely illusory) performance drop.  They should
   // be eliminated one way or another.
 
-  // Counts how many elements from the start meet the given test.
-  private def skipCount(p: T => Boolean): Int = {
-    var current = start
-    var counted = 0
-
-    while (counted < length && p(current)) {
-      counted += 1
-      current += step
-    }
-    counted
-  }
   // Tests whether a number is within the endpoints, without testing
   // whether it is a member of the sequence (i.e. when step > 1.)
   private def isWithinBoundaries(elem: T) = !isEmpty && (
@@ -124,21 +112,21 @@ extends AbstractSeq[T] with IndexedSeq[T] with Serializable {
     if (idx < 0 || idx >= length) throw new IndexOutOfBoundsException(idx.toString)
     else locationAfterN(idx)
   }
-  
+
   import NumericRange.defaultOrdering
-  
+
   override def min[T1 >: T](implicit ord: Ordering[T1]): T =
     if (ord eq defaultOrdering(num)) {
       if (num.signum(step) > 0) start
       else last
     } else super.min(ord)
-  
-  override def max[T1 >: T](implicit ord: Ordering[T1]): T = 
+
+  override def max[T1 >: T](implicit ord: Ordering[T1]): T =
     if (ord eq defaultOrdering(num)) {
       if (num.signum(step) > 0) last
       else start
     } else super.max(ord)
-  
+
   // Motivated by the desire for Double ranges with BigDecimal precision,
   // we need some way to map a Range and get another Range.  This can't be
   // done in any fully general way because Ranges are not arbitrary
@@ -182,15 +170,41 @@ extends AbstractSeq[T] with IndexedSeq[T] with Serializable {
   def containsTyped(x: T): Boolean =
     isWithinBoundaries(x) && (((x - start) % step) == zero)
 
-  override def contains(x: Any): Boolean =
+  override def contains[A1 >: T](x: A1): Boolean =
     try containsTyped(x.asInstanceOf[T])
     catch { case _: ClassCastException => false }
 
   final override def sum[B >: T](implicit num: Numeric[B]): B = {
-    import num.Ops
-    if (isEmpty) this.num fromInt 0
-    else if (numRangeElements == 1) head
-    else ((this.num fromInt numRangeElements) * (head + last) / (this.num fromInt 2))
+    // arithmetic series formula  can be used for regular addition
+    if ((num eq scala.math.Numeric.IntIsIntegral)||
+        (num eq scala.math.Numeric.BigIntIsIntegral)||
+        (num eq scala.math.Numeric.ShortIsIntegral)||
+        (num eq scala.math.Numeric.ByteIsIntegral)||
+        (num eq scala.math.Numeric.CharIsIntegral)||
+        (num eq scala.math.Numeric.LongIsIntegral)||
+        (num eq scala.math.Numeric.FloatAsIfIntegral)||
+        (num eq scala.math.Numeric.BigDecimalIsFractional)||
+        (num eq scala.math.Numeric.DoubleAsIfIntegral)) {
+      val numAsIntegral = num.asInstanceOf[Integral[B]]
+      import numAsIntegral._
+      if (isEmpty) num fromInt 0
+      else if (numRangeElements == 1) head
+      else ((num fromInt numRangeElements) * (head + last) / (num fromInt 2))
+    } else {
+      // user provided custom Numeric, we cannot rely on arithmetic series formula
+      if (isEmpty) num.zero
+      else {
+        var acc = num.zero
+        var i = head
+        var idx = 0
+        while(idx < length) {
+          acc = num.plus(acc, i)
+          i = i + step
+          idx = idx + 1
+        }
+        acc
+      }
+    }
   }
 
   override lazy val hashCode = super.hashCode()
@@ -213,7 +227,7 @@ extends AbstractSeq[T] with IndexedSeq[T] with Serializable {
 /** A companion object for numeric ranges.
  */
 object NumericRange {
-  
+
   /** Calculates the number of elements in a range given start, end, step, and
    *  whether or not it is inclusive.  Throws an exception if step == 0 or
    *  the number of elements exceeds the maximum Int.
@@ -227,28 +241,79 @@ object NumericRange {
     else if (start == end) if (isInclusive) 1 else 0
     else if (upward != posStep) 0
     else {
-      val diff      = num.minus(end, start)
-      val jumps     = num.toLong(num.quot(diff, step))
-      val remainder = num.rem(diff, step)
-      val longCount = jumps + (
-        if (!isInclusive && zero == remainder) 0 else 1
-      )
-
-      /** The edge cases keep coming.  Since e.g.
-       *    Long.MaxValue + 1 == Long.MinValue
-       *  we do some more improbable seeming checks lest
-       *  overflow turn up as an empty range.
+      /* We have to be frightfully paranoid about running out of range.
+       * We also can't assume that the numbers will fit in a Long.
+       * We will assume that if a > 0, -a can be represented, and if
+       * a < 0, -a+1 can be represented.  We also assume that if we
+       * can't fit in Int, we can represent 2*Int.MaxValue+3 (at least).
+       * And we assume that numbers wrap rather than cap when they overflow.
        */
-      // The second condition contradicts an empty result.
-      val isOverflow = longCount == 0 && num.lt(num.plus(start, step), end) == upward
-
-      if (longCount > scala.Int.MaxValue || longCount < 0L || isOverflow) {
-        val word  = if (isInclusive) "to" else "until"
-        val descr = List(start, word, end, "by", step) mkString " "
-
-        throw new IllegalArgumentException(descr + ": seqs cannot contain more than Int.MaxValue elements.")
+      // Check whether we can short-circuit by deferring to Int range.
+      val startint = num.toInt(start)
+      if (start == num.fromInt(startint)) {
+        val endint = num.toInt(end)
+        if (end == num.fromInt(endint)) {
+          val stepint = num.toInt(step)
+          if (step == num.fromInt(stepint)) {
+            return {
+              if (isInclusive) Range.inclusive(startint, endint, stepint).length
+              else             Range          (startint, endint, stepint).length
+            }
+          }
+        }
       }
-      longCount.toInt
+      // If we reach this point, deferring to Int failed.
+      // Numbers may be big.
+      val one = num.one
+      val limit = num.fromInt(Int.MaxValue)
+      def check(t: T): T = 
+        if (num.gt(t, limit)) throw new IllegalArgumentException("More than Int.MaxValue elements.")
+        else t
+      // If the range crosses zero, it might overflow when subtracted
+      val startside = num.signum(start)
+      val endside = num.signum(end)
+      num.toInt{
+        if (startside*endside >= 0) {
+          // We're sure we can subtract these numbers.
+          // Note that we do not use .rem because of different conventions for Long and BigInt
+          val diff = num.minus(end, start)
+          val quotient = check(num.quot(diff, step))
+          val remainder = num.minus(diff, num.times(quotient, step))
+          if (!isInclusive && zero == remainder) quotient else check(num.plus(quotient, one))
+        }
+        else {
+          // We might not even be able to subtract these numbers.
+          // Jump in three pieces:
+          //   * start to -1 or 1, whichever is closer (waypointA)
+          //   * one step, which will take us at least to 0 (ends at waypointB)
+          //   * there to the end
+          val negone = num.fromInt(-1)
+          val startlim  = if (posStep) negone else one
+          val startdiff = num.minus(startlim, start)
+          val startq    = check(num.quot(startdiff, step))
+          val waypointA = if (startq == zero) start else num.plus(start, num.times(startq, step))
+          val waypointB = num.plus(waypointA, step)
+          check {
+            if (num.lt(waypointB, end) != upward) {
+              // No last piece
+              if (isInclusive && waypointB == end) num.plus(startq, num.fromInt(2))
+              else num.plus(startq, one)
+            }
+            else {
+              // There is a last piece
+              val enddiff = num.minus(end,waypointB)
+              val endq    = check(num.quot(enddiff, step))
+              val last    = if (endq == zero) waypointB else num.plus(waypointB, num.times(endq, step))
+              // Now we have to tally up all the pieces
+              //   1 for the initial value
+              //   startq steps to waypointA
+              //   1 step to waypointB
+              //   endq steps to the end (one less if !isInclusive and last==end)
+              num.plus(startq, num.plus(endq, if (!isInclusive && last==end) one else num.fromInt(2)))
+            }
+          }
+        }
+      }
     }
   }
 
@@ -272,7 +337,7 @@ object NumericRange {
     new Exclusive(start, end, step)
   def inclusive[T](start: T, end: T, step: T)(implicit num: Integral[T]): Inclusive[T] =
     new Inclusive(start, end, step)
-  
+
   private[collection] val defaultOrdering = Map[Numeric[_], Ordering[_]](
     Numeric.BigIntIsIntegral -> Ordering.BigInt,
     Numeric.IntIsIntegral -> Ordering.Int,
@@ -284,6 +349,6 @@ object NumericRange {
     Numeric.DoubleAsIfIntegral -> Ordering.Double,
     Numeric.BigDecimalAsIfIntegral -> Ordering.BigDecimal
   )
-  
+
 }
 

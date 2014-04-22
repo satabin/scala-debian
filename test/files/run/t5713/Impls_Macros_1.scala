@@ -1,7 +1,7 @@
 package m
 
 import language.experimental.macros
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 
 object Level extends Enumeration {
   val Error = Value(5)

@@ -3,17 +3,19 @@
  * @author  Martin Odersky
  */
 
-package scala.reflect
+package scala
+package reflect
 package internal
 
-import util._
 import pickling.ByteCodecs
 import scala.annotation.tailrec
 import scala.collection.immutable.ListMap
+import scala.language.postfixOps
 
 /** AnnotationInfo and its helpers */
 trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
-  import definitions.{ ThrowsClass, StaticAnnotationClass, isMetaAnnotation }
+  import definitions._
+  import treeInfo._
 
   // Common annotation code between Symbol and Type.
   // For methods altering the annotation list, on Symbol it mutates
@@ -26,6 +28,8 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
     def withAnnotations(annots: List[AnnotationInfo]): Self   // Add annotations to this type.
     def filterAnnotations(p: AnnotationInfo => Boolean): Self // Retain only annotations meeting the condition.
     def withoutAnnotations: Self                              // Remove all annotations from this type.
+
+    def staticAnnotations = annotations filter (_.isStatic)
 
     /** Symbols of any @throws annotations on this symbol.
      */
@@ -40,14 +44,13 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
         // monomorphic one by introducing existentials, see SI-7009 for details
         existentialAbstraction(throwableSym.typeParams, throwableSym.tpe)
       }
-      val throwsAnn = AnnotationInfo(appliedType(definitions.ThrowsClass, throwableTpe), List(Literal(Constant(throwableTpe))), Nil)
-      withAnnotations(List(throwsAnn))
+      this withAnnotation AnnotationInfo(appliedType(ThrowsClass, throwableTpe), List(Literal(Constant(throwableTpe))), Nil)
     }
 
     /** Tests for, get, or remove an annotation */
     def hasAnnotation(cls: Symbol): Boolean =
       //OPT inlined from exists to save on #closures; was:  annotations exists (_ matches cls)
-      dropOtherAnnotations(annotations, cls).nonEmpty
+      dropOtherAnnotations(annotations, cls) ne Nil
 
     def getAnnotation(cls: Symbol): Option[AnnotationInfo] =
       //OPT inlined from exists to save on #closures; was:  annotations find (_ matches cls)
@@ -74,7 +77,7 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
    *  - arrays of constants
    *  - or nested classfile annotations
    */
-  abstract class ClassfileAnnotArg extends Product
+  sealed abstract class ClassfileAnnotArg extends Product with JavaArgumentApi
   implicit val JavaArgumentTag = ClassTag[ClassfileAnnotArg](classOf[ClassfileAnnotArg])
   case object UnmappableAnnotArg extends ClassfileAnnotArg
 
@@ -122,25 +125,32 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
    *  must be `String`. This specialised class is used to encode Scala
    *  signatures for reasons of efficiency, both in term of class-file size
    *  and in term of compiler performance.
+   *  Details about the storage format of pickles at the bytecode level (classfile annotations) can be found in SIP-10.
    */
   case class ScalaSigBytes(bytes: Array[Byte]) extends ClassfileAnnotArg {
     override def toString = (bytes map { byte => (byte & 0xff).toHexString }).mkString("[ ", " ", " ]")
-    lazy val encodedBytes = ByteCodecs.encode(bytes)    // TODO remove after migration to ASM-based GenJVM complete
-    def isLong: Boolean = (encodedBytes.length > 65535) // TODO remove after migration to ASM-based GenJVM complete
     lazy val sevenBitsMayBeZero: Array[Byte] = {
       mapToNextModSevenBits(scala.reflect.internal.pickling.ByteCodecs.encode8to7(bytes))
     }
+
+    /* In order to store a byte array (the pickle) using a bytecode-level annotation,
+     * the most compact representation is used (which happens to be string-constant and not byte array as one would expect).
+     * However, a String constant in a classfile annotation is limited to a maximum of 65535 characters.
+     * Method `fitsInOneString` tells us whether the pickle can be held by a single classfile-annotation of string-type.
+     * Otherwise an array of strings will be used.
+     */
     def fitsInOneString: Boolean = {
+      // due to escaping, a zero byte in a classfile-annotation of string-type takes actually two characters.
       val numZeros = (sevenBitsMayBeZero count { b => b == 0 })
-      val res = (sevenBitsMayBeZero.length + numZeros) <= 65535
-      assert(this.isLong == !res, "As things stand, can't just swap in `fitsInOneString()` for `isLong()`")
-      res
+
+      (sevenBitsMayBeZero.length + numZeros) <= 65535
     }
+
     def sigAnnot: Type =
-      if (this.isLong)
-        definitions.ScalaLongSignatureAnnotation.tpe
-      else
+      if (fitsInOneString)
         definitions.ScalaSignatureAnnotation.tpe
+      else
+        definitions.ScalaLongSignatureAnnotation.tpe
 
     private def mapToNextModSevenBits(src: Array[Byte]): Array[Byte] = {
       var i = 0
@@ -282,8 +292,8 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
      *  metaAnnotations = List(setter, field).
      */
     def metaAnnotations: List[AnnotationInfo] = atp match {
-      case AnnotatedType(metas, _, _) => metas
-      case _                          => Nil
+      case AnnotatedType(metas, _) => metas
+      case _                       => Nil
     }
 
     /** The default kind of members to which this annotation is attached.
@@ -303,10 +313,6 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
 
     /** Check whether any of the arguments mention a symbol */
     def refsSymbol(sym: Symbol) = hasArgWhich(_.symbol == sym)
-
-    /** Change all ident's with Symbol "from" to instead use symbol "to" */
-    def substIdentSyms(from: Symbol, to: Symbol) =
-      AnnotationInfo(atp, args map (_ substituteSymbols (List(from), List(to))), assocs) setPos pos
 
     def stringArg(index: Int) = constantAtIndex(index) map (_.stringValue)
     def intArg(index: Int)    = constantAtIndex(index) map (_.intValue)
@@ -340,7 +346,66 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
   }
   implicit val AnnotationTag = ClassTag[AnnotationInfo](classOf[AnnotationInfo])
 
+  protected[scala] def annotationToTree(ann: Annotation): Tree = {
+    def reverseEngineerArgs(): List[Tree] = {
+      def reverseEngineerArg(jarg: ClassfileAnnotArg): Tree = jarg match {
+        case LiteralAnnotArg(const) =>
+          val tpe = if (const.tag == UnitTag) UnitTpe else ConstantType(const)
+          Literal(const) setType tpe
+        case ArrayAnnotArg(jargs) =>
+          val args = jargs map reverseEngineerArg
+          // TODO: I think it would be a good idea to typecheck Java annotations using a more traditional algorithm
+          // sure, we can't typecheck them as is using the `new jann(foo = bar)` syntax (because jann is going to be an @interface)
+          // however we can do better than `typedAnnotation` by desugaring the aforementioned expression to
+          // something like `new jann() { override def annotatedType() = ...; override def foo = bar }`
+          // and then using the results of that typecheck to produce a Java-compatible classfile entry
+          // in that case we're going to have correctly typed Array.apply calls, however that's 2.12 territory
+          // and for 2.11 exposing an untyped call to ArrayModule should suffice
+          Apply(Ident(ArrayModule), args.toList)
+        case NestedAnnotArg(ann: Annotation) =>
+          annotationToTree(ann)
+        case _ =>
+          EmptyTree
+      }
+      def reverseEngineerArgs(jargs: List[(Name, ClassfileAnnotArg)]): List[Tree] = jargs match {
+        case (name, jarg) :: rest => AssignOrNamedArg(Ident(name), reverseEngineerArg(jarg)) :: reverseEngineerArgs(rest)
+        case Nil => Nil
+      }
+      if (ann.javaArgs.isEmpty) ann.scalaArgs
+      else reverseEngineerArgs(ann.javaArgs.toList)
+    }
+
+    // TODO: at the moment, constructor selection is unattributed, because AnnotationInfos lack necessary information
+    // later on, in 2.12, for every annotation we could save an entire tree instead of just bits and pieces
+    // but for 2.11 the current situation will have to do
+    val ctorSelection = Select(New(TypeTree(ann.atp)), nme.CONSTRUCTOR)
+    Apply(ctorSelection, reverseEngineerArgs()) setType ann.atp
+  }
+
+  protected[scala] def treeToAnnotation(tree: Tree): Annotation = tree match {
+    case Apply(Select(New(tpt), nme.CONSTRUCTOR), args) =>
+      def encodeJavaArg(arg: Tree): ClassfileAnnotArg = arg match {
+        case Literal(const) => LiteralAnnotArg(const)
+        case Apply(ArrayModule, args) => ArrayAnnotArg(args map encodeJavaArg toArray)
+        case Apply(Select(New(tpt), nme.CONSTRUCTOR), args) => NestedAnnotArg(treeToAnnotation(arg))
+        case _ => throw new Exception("unexpected java argument shape $arg: literals, arrays and nested annotations are supported")
+      }
+      def encodeJavaArgs(args: List[Tree]): List[(Name, ClassfileAnnotArg)] = args match {
+        case AssignOrNamedArg(Ident(name), arg) :: rest => (name, encodeJavaArg(arg)) :: encodeJavaArgs(rest)
+        case arg :: rest => throw new Exception("unexpected java argument shape $arg: only AssignOrNamedArg trees are supported")
+        case Nil => Nil
+      }
+      val atp = tpt.tpe
+      if (atp != null && (atp.typeSymbol isNonBottomSubClass StaticAnnotationClass)) AnnotationInfo(atp, args, Nil)
+      else if (atp != null && (atp.typeSymbol isNonBottomSubClass ClassfileAnnotationClass)) AnnotationInfo(atp, Nil, encodeJavaArgs(args))
+      else throw new Exception(s"unexpected annotation type $atp: only subclasses of StaticAnnotation and ClassfileAnnotation are supported")
+    case _ =>
+      throw new Exception("""unexpected tree shape: only q"new $annType(..$args)" is supported""")
+  }
+
   object UnmappableAnnotation extends CompleteAnnotationInfo(NoType, Nil, Nil)
+
+  object ErroneousAnnotation extends CompleteAnnotationInfo(ErrorType, Nil, Nil)
 
   /** Extracts symbol of thrown exception from AnnotationInfo.
     *
@@ -348,7 +413,7 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
     * as well as “new-stye” `@throws[Exception]("cause")` annotations.
     */
   object ThrownException {
-    def unapply(ann: AnnotationInfo): Option[Symbol] =
+    def unapply(ann: AnnotationInfo): Option[Symbol] = {
       ann match {
         case AnnotationInfo(tpe, _, _) if tpe.typeSymbol != ThrowsClass =>
           None
@@ -356,8 +421,11 @@ trait AnnotationInfos extends api.Annotations { self: SymbolTable =>
         case AnnotationInfo(_, List(Literal(Constant(tpe: Type))), _) =>
           Some(tpe.typeSymbol)
         // new-style: @throws[Exception], @throws[Exception]("cause")
-        case AnnotationInfo(TypeRef(_, _, args), _, _) =>
-          Some(args.head.typeSymbol)
+        case AnnotationInfo(TypeRef(_, _, arg :: _), _, _) =>
+          Some(arg.typeSymbol)
+        case AnnotationInfo(TypeRef(_, _, Nil), _, _) =>
+          Some(ThrowableClass)
       }
+    }
   }
 }

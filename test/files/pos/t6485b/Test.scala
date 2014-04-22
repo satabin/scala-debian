@@ -1,5 +1,5 @@
 import scala.language.experimental.macros
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 
 final class Ops[T](val x: T) extends AnyVal {
   def f = macro Macros.crash

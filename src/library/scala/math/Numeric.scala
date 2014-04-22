@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.math
+package scala
+package math
 
 import scala.language.implicitConversions
 
@@ -50,9 +51,9 @@ object Numeric {
     def negate(x: Int): Int = -x
     def fromInt(x: Int): Int = x
     def toInt(x: Int): Int = x
-    def toLong(x: Int): Long = x
-    def toFloat(x: Int): Float = x
-    def toDouble(x: Int): Double = x
+    def toLong(x: Int): Long = x.toLong
+    def toFloat(x: Int): Float = x.toFloat
+    def toDouble(x: Int): Double = x.toDouble
   }
   implicit object IntIsIntegral extends IntIsIntegral with Ordering.IntOrdering
 
@@ -108,11 +109,11 @@ object Numeric {
     def quot(x: Long, y: Long): Long = x / y
     def rem(x: Long, y: Long): Long = x % y
     def negate(x: Long): Long = -x
-    def fromInt(x: Int): Long = x
+    def fromInt(x: Int): Long = x.toLong
     def toInt(x: Long): Int = x.toInt
     def toLong(x: Long): Long = x
-    def toFloat(x: Long): Float = x
-    def toDouble(x: Long): Double = x
+    def toFloat(x: Long): Float = x.toFloat
+    def toDouble(x: Long): Double = x.toDouble
   }
   implicit object LongIsIntegral extends LongIsIntegral with Ordering.LongOrdering
 
@@ -121,11 +122,13 @@ object Numeric {
     def minus(x: Float, y: Float): Float = x - y
     def times(x: Float, y: Float): Float = x * y
     def negate(x: Float): Float = -x
-    def fromInt(x: Int): Float = x
+    def fromInt(x: Int): Float = x.toFloat
     def toInt(x: Float): Int = x.toInt
     def toLong(x: Float): Long = x.toLong
     def toFloat(x: Float): Float = x
-    def toDouble(x: Float): Double = x
+    def toDouble(x: Float): Double = x.toDouble
+    // logic in Numeric base trait mishandles abs(-0.0f)
+    override def abs(x: Float): Float = math.abs(x)
   }
   trait FloatIsFractional extends FloatIsConflicted with Fractional[Float] {
     def div(x: Float, y: Float): Float = x / y
@@ -143,11 +146,13 @@ object Numeric {
     def minus(x: Double, y: Double): Double = x - y
     def times(x: Double, y: Double): Double = x * y
     def negate(x: Double): Double = -x
-    def fromInt(x: Int): Double = x
+    def fromInt(x: Int): Double = x.toDouble
     def toInt(x: Double): Int = x.toInt
     def toLong(x: Double): Long = x.toLong
     def toFloat(x: Double): Float = x.toFloat
     def toDouble(x: Double): Double = x
+    // logic in Numeric base trait mishandles abs(-0.0)
+    override def abs(x: Double): Double = math.abs(x)
   }
   trait DoubleIsFractional extends DoubleIsConflicted with Fractional[Double] {
     def div(x: Double, y: Double): Double = x / y

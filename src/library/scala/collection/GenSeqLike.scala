@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.collection
+package scala
+package collection
 
 import generic._
 
@@ -37,8 +38,8 @@ trait GenSeqLike[+A, +Repr] extends Any with GenIterableLike[A, Repr] with Equal
    * Example:
    *
    * {{{
-   *    scala> val x = LinkedList(1, 2, 3, 4, 5)
-   *    x: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2, 3, 4, 5)
+   *    scala> val x = List(1, 2, 3, 4, 5)
+   *    x: List[Int] = List(1, 2, 3, 4, 5)
    *
    *    scala> x(3)
    *    res1: Int = 4
@@ -189,7 +190,7 @@ trait GenSeqLike[+A, +Repr] extends Any with GenIterableLike[A, Repr] with Equal
    */
   def lastIndexWhere(p: A => Boolean, end: Int): Int
 
-  /** Returns new $coll wih elements in reversed order.
+  /** Returns new $coll with elements in reversed order.
    *
    *  $willNotTerminateInf
    *
@@ -301,14 +302,14 @@ trait GenSeqLike[+A, +Repr] extends Any with GenIterableLike[A, Repr] with Equal
    *
    *    Example:
    *    {{{
-   *      scala> val x = LinkedList(1)
-   *      x: scala.collection.mutable.LinkedList[Int] = LinkedList(1)
+   *      scala> val x = List(1)
+   *      x: List[Int] = List(1)
    *
    *      scala> val y = 2 +: x
-   *      y: scala.collection.mutable.LinkedList[Int] = LinkedList(2, 1)
+   *      y: List[Int] = List(2, 1)
    *
    *      scala> println(x)
-   *      LinkedList(1)
+   *      List(1)
    *    }}}
    *
    *    @return a new $coll consisting of `elem` followed
@@ -334,17 +335,14 @@ trait GenSeqLike[+A, +Repr] extends Any with GenIterableLike[A, Repr] with Equal
    *
    *    Example:
    *    {{{
-   *       scala> import scala.collection.mutable.LinkedList
-   *       import scala.collection.mutable.LinkedList
-   *
-   *       scala> val a = LinkedList(1)
-   *       a: scala.collection.mutable.LinkedList[Int] = LinkedList(1)
-   *
+   *       scala> val a = List(1)
+   *       a: List[Int] = List(1)
+   *       
    *       scala> val b = a :+ 2
-   *       b: scala.collection.mutable.LinkedList[Int] = LinkedList(1, 2)
-   *
+   *       b: List[Int] = List(1, 2)
+   *       
    *       scala> println(a)
-   *       LinkedList(1)
+   *       List(1)
    *    }}}
    *
    *    @return a new $coll consisting of

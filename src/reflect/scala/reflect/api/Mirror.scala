@@ -1,4 +1,5 @@
-package scala.reflect
+package scala
+package reflect
 package api
 
 /**
@@ -49,16 +50,16 @@ abstract class Mirror[U <: Universe with Singleton] {
    *  If you need a symbol that corresponds to the type alias itself, load it directly from the package class:
    *
    *    scala> cm.staticClass("scala.List")
-   *    res0: reflect.runtime.universe.ClassSymbol = class List
+   *    res0: scala.reflect.runtime.universe.ClassSymbol = class List
    *
    *    scala> res0.fullName
    *    res1: String = scala.collection.immutable.List
    *
    *    scala> cm.staticPackage("scala")
-   *    res2: reflect.runtime.universe.ModuleSymbol = package scala
+   *    res2: scala.reflect.runtime.universe.ModuleSymbol = package scala
    *
-   *    scala> res2.moduleClass.typeSignature member newTypeName("List")
-   *    res3: reflect.runtime.universe.Symbol = type List
+   *    scala> res2.moduleClass.info member newTypeName("List")
+   *    res3: scala.reflect.runtime.universe.Symbol = type List
    *
    *    scala> res3.fullName
    *    res4: String = scala.List
@@ -78,11 +79,10 @@ abstract class Mirror[U <: Universe with Singleton] {
    *    }
    *
    *  staticClass("foo.B") will resolve to the symbol corresponding to the class B declared in the package foo, and
-   *  staticClass("foo.A") will throw a MissingRequirementException (which is exactly what scalac would do if this
-   *  fully qualified class name is written inside any package in a Scala program).
+   *  staticClass("foo.A") will throw a ScalaReflectionException.
    *
    *  In the example above, to load a symbol that corresponds to the class B declared in the object foo,
-   *  use staticModule("foo") to load the module symbol and then navigate typeSignature.members of its moduleClass.
+   *  use staticModule("foo") to load the module symbol and then navigate info.members of its moduleClass.
    *  @group Mirror
    */
   def staticClass(fullName: String): U#ClassSymbol
@@ -105,11 +105,10 @@ abstract class Mirror[U <: Universe with Singleton] {
    *    }
    *
    *  staticModule("foo.B") will resolve to the symbol corresponding to the object B declared in the package foo, and
-   *  staticModule("foo.A") will throw a MissingRequirementException (which is exactly what scalac would do if this
-   *  fully qualified class name is written inside any package in a Scala program).
+   *  staticModule("foo.A") will throw a ScalaReflectionException
    *
    *  In the example above, to load a symbol that corresponds to the object B declared in the object foo,
-   *  use staticModule("foo") to load the module symbol and then navigate typeSignature.members of its moduleClass.
+   *  use staticModule("foo") to load the module symbol and then navigate info.members of its moduleClass.
    *  @group Mirror
    */
   def staticModule(fullName: String): U#ModuleSymbol
@@ -119,4 +118,22 @@ abstract class Mirror[U <: Universe with Singleton] {
    *  @group Mirror
    */
   def staticPackage(fullName: String): U#ModuleSymbol
+
+  /**
+   * Shortcut for `implicitly[WeakTypeTag[T]].tpe`
+   * @group TypeTags
+   */
+  def weakTypeOf[T: universe.WeakTypeTag]: U#Type = universe.weakTypeTag[T].in(this).tpe
+
+  /**
+   * Shortcut for `implicitly[TypeTag[T]].tpe`
+   * @group TypeTags
+   */
+  def typeOf[T: universe.TypeTag]: U#Type = universe.typeTag[T].in(this).tpe
+
+  /**
+   * Type symbol of `x` as derived from a type tag.
+   * @group TypeTags
+   */
+  def symbolOf[T: universe.WeakTypeTag]: U#TypeSymbol
 }

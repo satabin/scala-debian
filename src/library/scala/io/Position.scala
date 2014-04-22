@@ -6,7 +6,8 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.io
+package scala
+package io
 
 /** The object Position provides convenience methods to encode
  *  line and column number in one single integer.  The encoded line
@@ -33,7 +34,7 @@ package scala.io
  *  @author Burak Emir (translated from work by Matthias Zenger and others)
  */
 @deprecated("This class will be removed.", "2.10.0")
-abstract class Position {
+private[scala] abstract class Position {
   /** Definable behavior for overflow conditions.
    */
   def checkInput(line: Int, column: Int): Unit
@@ -67,15 +68,7 @@ abstract class Position {
   def toString(pos: Int): String = line(pos) + ":" + column(pos)
 }
 
-object Position extends Position {
-  /** The undefined position */
-  @deprecated("This will be removed", "2.9.0")
-  final val NOPOS = 0
-
-  /** The first position in a source file */
-  @deprecated("This will be removed", "2.9.0")
-  final val FIRSTPOS = encode(1, 1)
-
+private[scala] object Position extends Position {
   def checkInput(line: Int, column: Int) {
     if (line < 0)
       throw new IllegalArgumentException(line + " < 0")

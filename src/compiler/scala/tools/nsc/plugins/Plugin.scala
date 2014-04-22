@@ -6,14 +6,15 @@
 package scala.tools.nsc
 package plugins
 
-import io.{ File, Path, Jar }
-import java.net.URLClassLoader
-import java.util.jar.JarFile
+import scala.tools.nsc.io.{ Jar }
+import scala.tools.nsc.util.ScalaClassLoader
+import scala.reflect.io.{ Directory, File, Path }
+import java.io.InputStream
 import java.util.zip.ZipException
 
 import scala.collection.mutable
 import mutable.ListBuffer
-import scala.xml.XML
+import scala.util.{ Try, Success, Failure }
 
 /** Information about a plugin loaded from a jar file.
  *
@@ -37,14 +38,35 @@ abstract class Plugin {
   val description: String
 
   /** The compiler that this plugin uses.  This is normally equated
-   *  to a constructor parameter in the concrete subclass. */
+   *  to a constructor parameter in the concrete subclass.
+   */
   val global: Global
 
-  /** Handle any plugin-specific options.  The `-P:plugname:` part
-   *  will not be present. */
-  def processOptions(options: List[String], error: String => Unit) {
-    if (!options.isEmpty)
-      error("Error: " + name + " has no options")
+  def options: List[String] = {
+    // Process plugin options of form plugin:option
+    def namec = name + ":"
+    global.settings.pluginOptions.value filter (_ startsWith namec) map (_ stripPrefix namec)
+  }
+
+  /** Handle any plugin-specific options.
+   *  The user writes `-P:plugname:opt1,opt2`,
+   *  but the plugin sees `List(opt1, opt2)`.
+   *  The plugin can opt out of further processing
+   *  by returning false.  For example, if the plugin
+   *  has an "enable" flag, now would be a good time
+   *  to sit on the bench.
+   *  @param options plugin arguments
+   *  @param error error function
+   *  @return true to continue, or false to opt out
+   */
+  def init(options: List[String], error: String => Unit): Boolean = {
+    processOptions(options, error)
+    true
+  }
+
+  @deprecated("use Plugin#init instead", since="2.11")
+  def processOptions(options: List[String], error: String => Unit): Unit = {
+    if (!options.isEmpty) error(s"Error: $name takes no options")
   }
 
   /** A description of this plugin's options, suitable as a response
@@ -63,90 +85,116 @@ object Plugin {
 
   private val PluginXML = "scalac-plugin.xml"
 
-  /** Create a class loader with the specified file plus
+  /** Create a class loader with the specified locations plus
    *  the loader that loaded the Scala compiler.
    */
-  private def loaderFor(jarfiles: Seq[Path]): ClassLoader = {
+  private def loaderFor(locations: Seq[Path]): ScalaClassLoader = {
     val compilerLoader = classOf[Plugin].getClassLoader
-    val jarurls = jarfiles map (_.toURL)
+    val urls = locations map (_.toURL)
 
-    new URLClassLoader(jarurls.toArray, compilerLoader)
+    ScalaClassLoader fromURLs (urls, compilerLoader)
   }
 
-  /** Try to load a plugin description from the specified
-   *  file, returning <code>None</code> if it does not work.
+  /** Try to load a plugin description from the specified location.
    */
-  private def loadDescription(jarfile: Path): Option[PluginDescription] =
-    // XXX Return to this once we have some ARM support
-    if (!jarfile.exists) None
-    else try {
-      val jar = new JarFile(jarfile.jfile)
-
-      try {
-        jar getEntry PluginXML match {
-          case null  => None
-          case entry =>
-            val in = jar getInputStream entry
-            val packXML = XML load in
-            in.close()
-
-            PluginDescription fromXML packXML
-        }
-      }
-      finally jar.close()
+  private def loadDescriptionFromJar(jarp: Path): Try[PluginDescription] = {
+    // XXX Return to this once we have more ARM support
+    def read(is: Option[InputStream]) = is match {
+      case None     => throw new PluginLoadException(jarp.path, s"Missing $PluginXML in $jarp")
+      case Some(is) => PluginDescription.fromXML(is)
     }
-    catch {
-      case _: ZipException => None
-    }
+    Try(new Jar(jarp.jfile).withEntryStream(PluginXML)(read))
+  }
+
+  private def loadDescriptionFromFile(f: Path): Try[PluginDescription] =
+    Try(PluginDescription.fromXML(new java.io.FileInputStream(f.jfile)))
 
   type AnyClass = Class[_]
 
-  /** Loads a plugin class from the named jar file.
-   *
-   *  @return `None` if the jar file has no plugin in it or
-   *                 if the plugin is badly formed.
+  /** Use a class loader to load the plugin class.
    */
-  def loadFrom(jarfile: Path, loader: ClassLoader): Option[AnyClass] =
-    loadDescription(jarfile) match {
-      case None =>
-        println("Warning: could not load descriptor for plugin %s".format(jarfile))
-        None
-      case Some(pdesc) =>
-        try Some(loader loadClass pdesc.classname) catch {
-        case _: Exception =>
-          println("Warning: class not found for plugin in %s (%s)".format(jarfile, pdesc.classname))
-          None
+  def load(classname: String, loader: ClassLoader): Try[AnyClass] = {
+    import scala.util.control.NonFatal
+    try {
+      Success[AnyClass](loader loadClass classname)
+    } catch {
+      case NonFatal(e) =>
+        Failure(new PluginLoadException(classname, s"Error: unable to load class: $classname"))
+      case e: NoClassDefFoundError =>
+        Failure(new PluginLoadException(classname, s"Error: class not found: ${e.getMessage} required by $classname"))
+    }
+  }
+
+  /** Load all plugins specified by the arguments.
+   *  Each location of `paths` must be a valid plugin archive or exploded archive.
+   *  Each of `paths` must define one plugin.
+   *  Each of `dirs` may be a directory containing arbitrary plugin archives.
+   *  Skips all plugins named in `ignoring`.
+   *  A classloader is created to load each plugin.
+   */
+  def loadAllFrom(
+    paths: List[List[Path]],
+    dirs: List[Path],
+    ignoring: List[String]): List[Try[AnyClass]] =
+  {
+    // List[(jar, Try(descriptor))] in dir
+    def scan(d: Directory) =
+      d.files.toList sortBy (_.name) filter (Jar isJarOrZip _) map (j => (j, loadDescriptionFromJar(j)))
+
+    type PDResults = List[Try[(PluginDescription, ScalaClassLoader)]]
+
+    // scan plugin dirs for jars containing plugins, ignoring dirs with none and other jars
+    val fromDirs: PDResults = dirs filter (_.isDirectory) flatMap { d =>
+      scan(d.toDirectory) collect {
+        case (j, Success(pd)) => Success((pd, loaderFor(Seq(j))))
       }
     }
 
-  /** Load all plugins found in the argument list, both in the
-   *  jar files explicitly listed, and in the jar files in the
-   *  directories specified. Skips all plugins in `ignoring`.
-   *  A single classloader is created and used to load all of them.
-   */
-  def loadAllFrom(
-    jars: List[Path],
-    dirs: List[Path],
-    ignoring: List[String]): List[AnyClass] =
-  {
-    val alljars = (jars ::: (for {
-      dir <- dirs if dir.isDirectory
-      entry <- dir.toDirectory.files.toList sortBy (_.name)
-// was:      if Path.isJarOrZip(entry)
-      if Jar.isJarOrZip(entry)
-      pdesc <- loadDescription(entry)
-      if !(ignoring contains pdesc.name)
-    } yield entry)).distinct
+    // scan jar paths for plugins, taking the first plugin you find.
+    // a path element can be either a plugin.jar or an exploded dir.
+    def findDescriptor(ps: List[Path]) = {
+      def loop(qs: List[Path]): Try[PluginDescription] = qs match {
+        case Nil       => Failure(new MissingPluginException(ps))
+        case p :: rest =>
+          if (p.isDirectory) loadDescriptionFromFile(p.toDirectory / PluginXML)
+          else if (p.isFile) loadDescriptionFromJar(p.toFile)
+          else loop(rest)
+      }
+      loop(ps)
+    }
+    val fromPaths: PDResults = paths map (p => (p, findDescriptor(p))) map {
+      case (p, Success(pd)) => Success((pd, loaderFor(p)))
+      case (_, Failure(e))  => Failure(e)
+    }
 
-    val loader = loaderFor(alljars)
-    (alljars map (loadFrom(_, loader))).flatten
+    val seen = mutable.HashSet[String]()
+    val enabled = (fromPaths ::: fromDirs) map {
+      case Success((pd, loader)) if seen(pd.classname)        =>
+        // a nod to SI-7494, take the plugin classes distinctly
+        Failure(new PluginLoadException(pd.name, s"Ignoring duplicate plugin ${pd.name} (${pd.classname})"))
+      case Success((pd, loader)) if ignoring contains pd.name =>
+        Failure(new PluginLoadException(pd.name, s"Disabling plugin ${pd.name}"))
+      case Success((pd, loader)) =>
+        seen += pd.classname
+        Plugin.load(pd.classname, loader)
+      case Failure(e)            =>
+        Failure(e)
+    }
+    enabled   // distinct and not disabled
   }
 
   /** Instantiate a plugin class, given the class and
    *  the compiler it is to be used in.
    */
   def instantiate(clazz: AnyClass, global: Global): Plugin = {
-    val constructor = clazz getConstructor classOf[Global]
-    (constructor newInstance global).asInstanceOf[Plugin]
+    (clazz getConstructor classOf[Global] newInstance global).asInstanceOf[Plugin]
   }
+}
+
+class PluginLoadException(val path: String, message: String, cause: Exception) extends Exception(message, cause) {
+  def this(path: String, message: String) = this(path, message, null)
+}
+
+class MissingPluginException(path: String) extends PluginLoadException(path, s"No plugin in path $path") {
+  def this(paths: List[Path]) = this(paths mkString File.pathSeparator)
 }

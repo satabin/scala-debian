@@ -6,12 +6,10 @@
 **                          |/                                          **
 \*                                                                      */
 
-
-
-package scala.collection
+package scala
+package collection
 package mutable
 
-import generic._
 import script._
 
 /** This is a simple proxy class for <a href="Buffer.html"
@@ -28,6 +26,7 @@ import script._
  *  @define Coll `BufferProxy`
  *  @define coll buffer proxy
  */
+@deprecated("Proxying is deprecated due to lack of use and compiler-level support.", "2.11.0")
 trait BufferProxy[A] extends Buffer[A] with Proxy {
 
   def self: Buffer[A]
@@ -127,12 +126,13 @@ trait BufferProxy[A] extends Buffer[A] with Proxy {
 
   /** Clears the buffer contents.
    */
-  def clear() { self.clear }
+  def clear() { self.clear() }
 
   /** Send a message to this scriptable object.
    *
    *  @param cmd  the message to send.
    */
+  @deprecated("Scripting is deprecated.", "2.11.0")
   override def <<(cmd: Message[A]) { self << cmd }
 
   /** Return a clone of this buffer.

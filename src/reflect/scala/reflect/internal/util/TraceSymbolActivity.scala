@@ -1,4 +1,5 @@
-package scala.reflect.internal
+package scala
+package reflect.internal
 package util
 
 import scala.collection.{ mutable, immutable }
@@ -12,13 +13,9 @@ trait TraceSymbolActivity {
   if (enabled && global.isCompilerUniverse)
     scala.sys addShutdownHook showAllSymbols()
 
-  private type Set[T] = scala.collection.immutable.Set[T]
-  private val Set = scala.collection.immutable.Set
-
   val allSymbols  = mutable.Map[Int, Symbol]()
   val allChildren = mutable.Map[Int, List[Int]]() withDefaultValue Nil
   val prevOwners  = mutable.Map[Int, List[(Int, Phase)]]() withDefaultValue Nil
-  val symsCaused  = mutable.Map[Int, Int]() withDefaultValue 0
   val allTrees    = mutable.Set[Tree]()
 
   def recordSymbolsInTree(tree: Tree) {
@@ -44,39 +41,8 @@ trait TraceSymbolActivity {
     }
   }
 
-  /** TODO.
-   */
-  private def reachableDirectlyFromSymbol(sym: Symbol): List[Symbol] = (
-       List(sym.owner, sym.alias, sym.thisSym)
-    ++ sym.children
-    ++ sym.info.parents.map(_.typeSymbol)
-    ++ sym.typeParams
-    ++ sym.paramss.flatten
-  )
-  private def reachable[T](inputs: Traversable[T], mkSymbol: T => Symbol): Set[Symbol] = {
-    def loop(seen: Set[Symbol], remaining: List[Symbol]): Set[Symbol] = {
-      remaining match {
-        case Nil          => seen
-        case head :: rest =>
-          if ((head eq null) || (head eq NoSymbol) || seen(head)) loop(seen, rest)
-          else loop(seen + head, rest ++ reachableDirectlyFromSymbol(head).filterNot(seen))
-      }
-    }
-    loop(immutable.Set(), inputs.toList map mkSymbol filterNot (_ eq null) distinct)
-  }
-  private def treeList(t: Tree) = {
-    val buf = mutable.ListBuffer[Tree]()
-    t foreach (buf += _)
-    buf.toList
-  }
-
-  private def reachableFromSymbol(root: Symbol): Set[Symbol] =
-    reachable[Symbol](List(root, root.info.typeSymbol), x => x)
-
-  private def reachableFromTree(tree: Tree): Set[Symbol] =
-    reachable[Tree](treeList(tree), _.symbol)
-
-  private def signature(id: Int) = runBeforeErasure(allSymbols(id).defString)
+  private lazy val erasurePhase = findPhaseWithName("erasure")
+  private def signature(id: Int) = enteringPhase(erasurePhase)(allSymbols(id).defString)
 
   private def dashes(s: Any): String = ("" + s) map (_ => '-')
   private def show(s1: Any, ss: Any*) {
@@ -119,17 +85,9 @@ trait TraceSymbolActivity {
     }
     println("\n")
   }
-  private def showFreq[T, U](xs: Traversable[T])(groupFn: T => U, showFn: U => String = (x: U) => "" + x) = {
+  private def showFreq[T, U](xs: Traversable[T])(groupFn: T => U, showFn: U => String) = {
     showMapFreq(xs.toList groupBy groupFn)(showFn)
   }
-  private lazy val findErasurePhase: Phase = {
-    var ph = phase
-    while (ph != NoPhase && ph.name != "erasure") {
-      ph = ph.prev
-    }
-    ph
-  }
-  private def runBeforeErasure[T](body: => T): T = atPhase(findErasurePhase)(body)
 
   def showAllSymbols() {
     if (!enabled) return
