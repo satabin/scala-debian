@@ -1,3 +1,19 @@
+scala (2.11.0-1) UNRELEASED; urgency=medium
+
+  [ Frank S. Thomas ]
+  * Remove myself from Uploaders
+
+  [ Lucas Satabin ]
+  * Imported Upstream version 2.11.0
+  * Update the clean target
+  * Update watch file
+  * Add reflect jar in compiler classpath
+  * Update paths for files to install
+  * Update build target
+  * Remove legacy scala-swing patch
+
+ -- Lucas Satabin <lucas.satabin@gnieh.org>  Tue, 22 Apr 2014 19:43:47 +0200
+
 scala (2.9.2+dfsg-2) unstable; urgency=low
 
   * Team upload.
