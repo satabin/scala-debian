@@ -34,7 +34,7 @@ Subject: Adapt SCALA_HOME and TOOL_CLASSPATH to the package layout
  SEP=":"
  
  # Possible additional command line options
-@@ -84,16 +74,7 @@
+@@ -83,16 +73,7 @@
  fi
  
  # Constructing the extension classpath

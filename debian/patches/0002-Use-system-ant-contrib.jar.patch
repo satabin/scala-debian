@@ -8,12 +8,12 @@ Subject: Use system ant-contrib.jar
 
 --- a/build.xml
 +++ b/build.xml
-@@ -202,7 +202,7 @@
+@@ -258,7 +258,7 @@
  
-   <target name="init" depends="boot">
+   <target name="init" depends="init.git">
      <!-- Set up Ant contrib tasks so we can use <if><then><else> instead of the clunky `unless` attribute -->
 -    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${lib-ant.dir}/ant-contrib.jar"/>
 +    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${javalib.dir}/ant-contrib.jar"/>
  
-     <!-- Add our maven ant tasks -->
-     <path id="maven-ant-tasks.classpath" path="${lib-ant.dir}/maven-ant-tasks-2.1.1.jar" />
+     <property name="scala.ant.min.version" value="1.8.2"/>
+     <if><not><antversion atleast="${scala.ant.min.version}"/></not>

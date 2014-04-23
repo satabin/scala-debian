@@ -8,7 +8,7 @@ Subject: Define system locations
 
 --- a/build.xml
 +++ b/build.xml
-@@ -97,6 +97,10 @@
+@@ -138,6 +138,10 @@
    <!-- Prevents system classpath from being used -->
    <property name="build.sysclasspath"     value="ignore"/>
  
@@ -17,11 +17,11 @@ Subject: Define system locations
 +  <property name="scalalib.dir" value="${javalib.dir}/scala" />
 +
    <!-- Defines the repository layout -->
-   <property name="docs.dir"               value="${basedir}/docs"/>
+   <property name="doc.dir"                value="${basedir}/doc"/>
    <property name="lib.dir"                value="${basedir}/lib"/>
-@@ -117,6 +121,11 @@
-   <!-- read starr.version -->
-   <property file="${basedir}/starr.number"/>
+@@ -158,6 +162,11 @@
+   <!-- read versions.properties -->
+   <property file="${basedir}/versions.properties"/>
  
 +  <!-- Sets location of system libraries -->
 +  <property name="junit.jar" value="${javalib.dir}/junit4.jar"/>
@@ -29,5 +29,5 @@ Subject: Define system locations
 +  <property name="jansi-native.jar" value="${javalib.dir}/jansi-native.jar"/>
 +
    <!-- Sets location of pre-compiled libraries -->
-   <property name="library.starr.jar"       value="${lib.dir}/scala-library.jar"/>
-   <property name="reflect.starr.jar"       value="${lib.dir}/scala-reflect.jar"/>
+   <property name="ant.jar"                 value="${ant.home}/lib/ant.jar"/>
+ 
