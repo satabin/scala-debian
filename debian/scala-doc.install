@@ -1,2 +1,2 @@
-dists/latest/api/*		usr/share/doc/scala-doc/html/
-dists/latest/doc/tools/*	usr/share/doc/scala-doc/tools/
+build/scaladoc/library/*		usr/share/doc/scala-doc/html/
+build/pack/doc/tools/*	usr/share/doc/scala-doc/tools/

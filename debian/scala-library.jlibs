@@ -1,5 +1,3 @@
-dists/latest/lib/scala-library.jar
-dists/latest/lib/scala-actors.jar
-dists/latest/lib/scala-reflect.jar
-dists/latest/lib/scala-swing.jar
-dists/latest/lib/scala-partest.jar
+build/pack/lib/scala-library.jar
+build/pack/lib/scala-actors.jar
+build/pack/lib/scala-reflect.jar

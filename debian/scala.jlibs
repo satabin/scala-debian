@@ -1,2 +1,2 @@
-dists/latest/lib/scala-compiler.jar
-dists/latest/lib/scalap.jar
+build/pack/lib/scala-compiler.jar
+build/pack/lib/scalap.jar

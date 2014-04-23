@@ -1,6 +1,6 @@
-dists/latest/bin/fsc                usr/bin/
-dists/latest/bin/scala              usr/bin/
-dists/latest/bin/scalac             usr/bin/
-dists/latest/bin/scaladoc           usr/bin/
-dists/latest/bin/scalap             usr/bin/
-lib/jline.jar                       usr/share/java/scala/
+build/pack/bin/fsc                usr/bin/
+build/pack/bin/scala              usr/bin/
+build/pack/bin/scalac             usr/bin/
+build/pack/bin/scaladoc           usr/bin/
+build/pack/bin/scalap             usr/bin/
+build/pack/lib/jline.jar          usr/share/java/scala/

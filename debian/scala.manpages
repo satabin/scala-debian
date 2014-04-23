@@ -1,2 +1,2 @@
-dists/latest/man/man1/scala*.1
-dists/latest/man/man1/fsc.1
+build/pack/man/man1/scala*.1
+build/pack/man/man1/fsc.1
