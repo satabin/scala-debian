@@ -9,7 +9,7 @@ override_dh_auto_build:
 	# Build Jline
 	ant -f debian/build-jline.xml -propertyfile debian/ant-jline.properties
 	# Build Scala
-	ANT_OPTS="-Xmx1024M -Xss64M" ant -Dversion.number=$(BUNDLE_VERSION) fastdist
+	ANT_OPTS="-Xmx1024M -Xss64M" ant -Dversion.number=$(BUNDLE_VERSION) distpack-opt
 
 	for file in scala scala-library; do \
 		sed "s/@VERSION@/$(BUNDLE_VERSION)/" debian/$${file}.pom.xml.in > debian/$${file}.pom.xml; \
@@ -17,6 +17,7 @@ override_dh_auto_build:
 
 override_dh_auto_clean:
 	rm -rf build dists
+	rm -f lib/*.jar test/files/lib/*.jar tools/push.jar buildcharacter.properties test/files/speclib/instrumented.jar test/files/codelib/code.jar
 
 override_dh_compress:
 	dh_compress -X.js -X.scala
