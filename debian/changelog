@@ -1,18 +1,3 @@
-scala (2.10.4-1) UNRELEASED; urgency=medium
-
-  [ Frank S. Thomas ]
-  * Remove myself from Uploaders
-
-  [ Lucas Satabin ]
-  * Imported Upstream version 2.10.4
-  * Update patches
-  * Update the clean target
-  * Update paths of elements to install
-  * Add scala-reflect to compiler package
-  * Update watch file
-
- -- Frank S. Thomas <fst@debian.org>  Thu, 10 Apr 2014 21:58:51 +0200
-
 scala (2.9.2+dfsg-2) unstable; urgency=low
 
   * Team upload.
